@@ -34,56 +34,56 @@ beforeEach(async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore()
     await setDoc(doc(db, `branches/${B}`), { name: B, status: 'active', timezone: 'America/New_York', settings: {} })
-    await setDoc(doc(db, `branches/${B}/members/tutor@a.test`), { email: 'tutor@a.test', role: 'tutor', status: 'active', staffId: 's-tutor', restrictions: [] })
+    await setDoc(doc(db, `branches/${B}/members/coach@a.test`), { email: 'coach@a.test', role: 'coach', status: 'active', staffId: 's-coach', restrictions: [] })
     await setDoc(doc(db, `users/u-other/devices/d1`), device('other@a.test'))
-    await setDoc(doc(db, `users/u-tutor/private/accountEmails`), { verify: [], reset: [] })
+    await setDoc(doc(db, `users/u-coach/private/accountEmails`), { verify: [], reset: [] })
   })
 })
 
 describe('email and password accounts', () => {
   it('an unconfirmed email reaches nothing in a branch, even with a member doc', async () => {
-    const db = user('u-tutor', 'tutor@a.test', false)
+    const db = user('u-coach', 'coach@a.test', false)
     await assertFails(getDoc(doc(db, `branches/${B}`)))
-    await assertFails(getDoc(doc(db, `branches/${B}/members/tutor@a.test`)))
-    await assertFails(getDocs(query(collectionGroup(db, 'members'), where('email', '==', 'tutor@a.test'))))
+    await assertFails(getDoc(doc(db, `branches/${B}/members/coach@a.test`)))
+    await assertFails(getDocs(query(collectionGroup(db, 'members'), where('email', '==', 'coach@a.test'))))
   })
 
   it('once confirmed, the same account is in', async () => {
-    const db = user('u-tutor', 'tutor@a.test')
+    const db = user('u-coach', 'coach@a.test')
     await assertSucceeds(getDoc(doc(db, `branches/${B}`)))
-    await assertSucceeds(getDoc(doc(db, `branches/${B}/members/tutor@a.test`)))
+    await assertSucceeds(getDoc(doc(db, `branches/${B}/members/coach@a.test`)))
   })
 
   it('the server-only account email limits are closed to everyone', async () => {
-    await assertFails(getDoc(doc(user('u-tutor', 'tutor@a.test'), 'users/u-tutor/private/accountEmails')))
-    await assertFails(setDoc(doc(user('u-tutor', 'tutor@a.test'), 'users/u-tutor/private/accountEmails'), { verify: [] }))
+    await assertFails(getDoc(doc(user('u-coach', 'coach@a.test'), 'users/u-coach/private/accountEmails')))
+    await assertFails(setDoc(doc(user('u-coach', 'coach@a.test'), 'users/u-coach/private/accountEmails'), { verify: [] }))
   })
 })
 
 describe('phone devices', () => {
   it('people register, read and remove their own phone', async () => {
-    const db = user('u-tutor', 'tutor@a.test')
-    await assertSucceeds(setDoc(doc(db, 'users/u-tutor/devices/install-1'), device('tutor@a.test')))
-    await assertSucceeds(getDoc(doc(db, 'users/u-tutor/devices/install-1')))
-    await assertSucceeds(deleteDoc(doc(db, 'users/u-tutor/devices/install-1')))
+    const db = user('u-coach', 'coach@a.test')
+    await assertSucceeds(setDoc(doc(db, 'users/u-coach/devices/install-1'), device('coach@a.test')))
+    await assertSucceeds(getDoc(doc(db, 'users/u-coach/devices/install-1')))
+    await assertSucceeds(deleteDoc(doc(db, 'users/u-coach/devices/install-1')))
   })
 
   it('a device carries the signed-in email, nothing else and nothing extra', async () => {
-    const db = user('u-tutor', 'tutor@a.test')
-    await assertFails(setDoc(doc(db, 'users/u-tutor/devices/install-1'), device('someone@else.test')))
-    await assertFails(setDoc(doc(db, 'users/u-tutor/devices/install-1'), device('tutor@a.test', { admin: true })))
-    await assertFails(setDoc(doc(db, 'users/u-tutor/devices/install-1'), device('tutor@a.test', { platform: 'web' })))
-    await assertFails(setDoc(doc(db, 'users/u-tutor/devices/install-1'), device('tutor@a.test', { token: '' })))
+    const db = user('u-coach', 'coach@a.test')
+    await assertFails(setDoc(doc(db, 'users/u-coach/devices/install-1'), device('someone@else.test')))
+    await assertFails(setDoc(doc(db, 'users/u-coach/devices/install-1'), device('coach@a.test', { admin: true })))
+    await assertFails(setDoc(doc(db, 'users/u-coach/devices/install-1'), device('coach@a.test', { platform: 'web' })))
+    await assertFails(setDoc(doc(db, 'users/u-coach/devices/install-1'), device('coach@a.test', { token: '' })))
   })
 
   it('nobody reads or writes someone else’s devices', async () => {
-    const db = user('u-tutor', 'tutor@a.test')
+    const db = user('u-coach', 'coach@a.test')
     await assertFails(getDoc(doc(db, 'users/u-other/devices/d1')))
     await assertFails(deleteDoc(doc(db, 'users/u-other/devices/d1')))
-    await assertFails(setDoc(doc(db, 'users/u-other/devices/d2'), device('tutor@a.test')))
+    await assertFails(setDoc(doc(db, 'users/u-other/devices/d2'), device('coach@a.test')))
   })
 
   it('an unconfirmed account can’t register a phone', async () => {
-    await assertFails(setDoc(doc(user('u-tutor', 'tutor@a.test', false), 'users/u-tutor/devices/install-1'), device('tutor@a.test')))
+    await assertFails(setDoc(doc(user('u-coach', 'coach@a.test', false), 'users/u-coach/devices/install-1'), device('coach@a.test')))
   })
 })

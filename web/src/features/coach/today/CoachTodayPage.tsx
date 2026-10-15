@@ -10,7 +10,7 @@ import { ClockCard, ClockStrip } from './ClockCard'
 import { NextUpCard } from './NextUpCard'
 import { TodaySessionsCard } from './TodaySessionsCard'
 import { ToDoCard } from './ToDoCard'
-import { useTutorDay, type TutorDay } from './useTutorDay'
+import { useCoachDay, type CoachDay } from './useCoachDay'
 import { WeekCard } from './WeekCard'
 
 function greeting(minutes: number) {
@@ -33,29 +33,29 @@ function useWide() {
 }
 
 /** "3 sessions today, the next at 4:00 PM." and the like. */
-function summary(t: TutorDay): string {
+function summary(t: CoachDay): string {
   const { active, current, later } = t.day
   if (!active.length) {
     const next = t.day.next
-    if (next.kind !== 'day') return 'No sessions today.'
+    if (next.kind !== 'day') return 'No classes today.'
     const when = next.dateKey === addDays(t.today, 1) ? 'tomorrow' : `on ${formatDateKey(next.dateKey, 'weekdayMedium')}`
-    return `No sessions today. Your next is ${when} at ${formatMinutes(next.sessions[0].startMin)}.`
+    return `No classes today. Your next is ${when} at ${formatMinutes(next.sessions[0].startMin)}.`
   }
-  const count = `${plural(active.length, 'session')} today`
+  const count = `${plural(active.length, 'class')} today`
   if (current.length) return `${count}, ${current.length > 1 ? `${current.length} on now` : 'one on now'}.`
   if (later.length) return later.length === active.length ? `${count}, the first at ${formatMinutes(later[0].startMin)}.` : `${count}, the next at ${formatMinutes(later[0].startMin)}.`
   return `${count}, all done.`
 }
 
 /**
- * Tutor → Today (the portal's first page, as in the phone app): a greeting,
+ * Coach → Today (the portal's first page, as in the phone app): a greeting,
  * the session that's on now or next, today's sessions, what's left to do, the
  * time clock and the week. Two columns on computers, one on phones.
  */
-export function TutorTodayPage() {
+export function CoachTodayPage() {
   const { staffId } = useBranch()
   const wide = useWide()
-  const t = useTutorDay()
+  const t = useCoachDay()
   if (!staffId) return <p className="text-sm text-muted-foreground">{NOT_LINKED}</p>
 
   const firstName = (t.me?.firstName || t.me?.name || '').trim().split(/\s+/)[0]
@@ -82,12 +82,12 @@ export function TutorTodayPage() {
       {wide ? (
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link to={`/tutor/availability`}>
+            <Link to={`/coach/availability`}>
               <LuCalendarClock /> Availability
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/tutor/schedule`}>
+            <Link to={`/coach/schedule`}>
               <LuCalendarDays /> Open schedule
             </Link>
           </Button>

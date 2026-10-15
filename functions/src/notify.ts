@@ -45,9 +45,9 @@ export async function sendNotifications(branchId: string, items: Outgoing[], ded
   await pushItems(branchId, created)
 }
 
-/** Active members with the tutor role (optionally only the given keys), with their notification preferences. */
-export async function tutorRecipients(branchId: string, keys?: string[]): Promise<Recipient[]> {
-  const snap = await db.collection(`${ROOT.branches}/${branchId}/${COL.members}`).where('role', '==', 'tutor').get()
+/** Active members with the coach role (optionally only the given keys), with their notification preferences. */
+export async function coachRecipients(branchId: string, keys?: string[]): Promise<Recipient[]> {
+  const snap = await db.collection(`${ROOT.branches}/${branchId}/${COL.members}`).where('role', '==', 'coach').get()
   const wanted = keys ? new Set(keys) : null
   const members = snap.docs
     .map((d) => ({ key: d.id, data: d.data() }))

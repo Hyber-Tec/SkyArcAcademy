@@ -26,17 +26,17 @@ export function useShifts(from: DateKey, to: DateKey, staffId: string | null, en
   return useQuery<ClockShift>(q, `shifts-${branchId}-${from}-${to}-${staffId}-${enabled}`, opts)
 }
 
-/** Sessions (teaching windows) in a date range (optionally one tutor). */
-export function useSessionsRange(from: DateKey, to: DateKey, tutorId: string | null, enabled = true, opts?: { keepPrevious?: boolean }) {
+/** Sessions (teaching windows) in a date range (optionally one coach). */
+export function useSessionsRange(from: DateKey, to: DateKey, coachId: string | null, enabled = true, opts?: { keepPrevious?: boolean }) {
   const { branchId } = useBranch()
   const q = useMemo((): Query<DocumentData> | null => {
     if (!enabled) return null
     const base = branchCol(branchId, COL.sessions)
-    return tutorId
-      ? query(base, where('tutorId', '==', tutorId), where('dateKey', '>=', from), where('dateKey', '<=', to))
+    return coachId
+      ? query(base, where('coachId', '==', coachId), where('dateKey', '>=', from), where('dateKey', '<=', to))
       : query(base, where('dateKey', '>=', from), where('dateKey', '<=', to))
-  }, [branchId, from, to, tutorId, enabled])
-  return useQuery<Session>(q, `pay-sessions-${branchId}-${from}-${to}-${tutorId}-${enabled}`, opts)
+  }, [branchId, from, to, coachId, enabled])
+  return useQuery<Session>(q, `pay-sessions-${branchId}-${from}-${to}-${coachId}-${enabled}`, opts)
 }
 
 export interface ShiftPay {
@@ -65,7 +65,7 @@ export function priceShifts(opts: {
     .map((shift) => {
       if (!shift.clockOutAt) return { shift, segments: [], open: true }
       const windows = opts.sessions
-        .filter((s) => s.tutorId === shift.staffId && !s.isDeleted && counted.has(s.status))
+        .filter((s) => s.coachId === shift.staffId && !s.isDeleted && counted.has(s.status))
         .map((s) => ({ startMs: s.startAt.toMillis(), endMs: s.endAt.toMillis() }))
       const { rates, role } = opts.ratesFor(shift.staffId)
       const model = payModelFor({ role, branchModel: payModelOn(opts.rules, shift.dateKey) })
@@ -82,7 +82,7 @@ export function priceShifts(opts: {
 
 export interface StaffPay {
   rates: Rates
-  /** Owners and admins are paid one rate; tutors follow the branch pay model. */
+  /** Owners and admins are paid one rate; coaches follow the branch pay model. */
   role: StaffRole | undefined
 }
 
@@ -138,8 +138,8 @@ export async function saveShift(branchId: string, actor: Actor, tz: string, inpu
     category: 'pay',
     entityType: 'shift',
     entityId: ref.id,
-    tutorId: input.staffId,
-    tutorName: input.staffName,
+    coachId: input.staffId,
+    coachName: input.staffName,
     dateKey: input.dateKey,
     summary: `${existing ? 'Changed' : 'Added'} a time entry for ${input.staffName}: ${formatDateKey(input.dateKey, 'weekdayMedium')} ${formatMinutes(input.inMin)} – ${formatMinutes(input.outMin)}`,
     changes: existing
@@ -165,8 +165,8 @@ export async function deleteShift(branchId: string, actor: Actor, shift: WithId<
     category: 'pay',
     entityType: 'shift',
     entityId: shift.id,
-    tutorId: shift.staffId,
-    tutorName: shift.staffName,
+    coachId: shift.staffId,
+    coachName: shift.staffName,
     dateKey: shift.dateKey,
     summary: `Deleted a time entry for ${shift.staffName} on ${formatDateKey(shift.dateKey, 'weekdayMedium')}`,
   })

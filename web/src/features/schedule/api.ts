@@ -15,13 +15,13 @@ export interface ScheduleCtx {
   actor: Actor
   timezone: string
   settings: BranchSettings
-  /** The branch rule: students a tutor can teach at the same time. */
-  maxStudentsPerTutor: number
+  /** The branch rule: students a coach can teach at the same time. */
+  maxStudentsPerCoach: number
 }
 
 export interface SessionDraft {
-  tutorId: string
-  tutorName: string
+  coachId: string
+  coachName: string
   studentId: string
   studentName: string
   studentGrade: string
@@ -49,7 +49,7 @@ export function sessionContext(s: Pick<Session, 'dateKey' | 'startMin' | 'endMin
   return `${formatDateKey(s.dateKey, 'weekdayLong').split(',')[0]}, ${formatDateKey(s.dateKey, 'short')} (${formatTimeRange(s.startMin, s.endMin)})`
 }
 
-function audit(batch: WriteBatch, ctx: ScheduleCtx, s: Pick<Session, 'dateKey' | 'startMin' | 'endMin' | 'studentId' | 'studentName' | 'tutorId' | 'tutorName'>, input: Omit<AuditInput, 'category' | 'entityType' | 'context' | 'dateKey' | 'studentId' | 'studentName' | 'tutorId' | 'tutorName'> & { context?: string }) {
+function audit(batch: WriteBatch, ctx: ScheduleCtx, s: Pick<Session, 'dateKey' | 'startMin' | 'endMin' | 'studentId' | 'studentName' | 'coachId' | 'coachName'>, input: Omit<AuditInput, 'category' | 'entityType' | 'context' | 'dateKey' | 'studentId' | 'studentName' | 'coachId' | 'coachName'> & { context?: string }) {
   addAudit(batch, ctx.branchId, ctx.actor, {
     category: 'schedule',
     entityType: 'session',
@@ -57,16 +57,16 @@ function audit(batch: WriteBatch, ctx: ScheduleCtx, s: Pick<Session, 'dateKey' |
     dateKey: s.dateKey,
     studentId: s.studentId,
     studentName: s.studentName,
-    tutorId: s.tutorId,
-    tutorName: s.tutorName,
+    coachId: s.coachId,
+    coachName: s.coachName,
     ...input,
   })
 }
 
 export function newSessionData(ctx: ScheduleCtx, d: SessionDraft, source: Session['source']) {
   return {
-    tutorId: d.tutorId,
-    tutorName: d.tutorName,
+    coachId: d.coachId,
+    coachName: d.coachName,
     studentId: d.studentId,
     studentName: d.studentName,
     studentGrade: d.studentGrade,
@@ -94,14 +94,14 @@ export async function createSession(ctx: ScheduleCtx, d: SessionDraft, source: S
   audit(batch, ctx, { ...d }, {
     action: 'session.create',
     entityId: ref.id,
-    summary: `Created a session for ${d.studentName} with ${d.tutorName}`,
+    summary: `Created a class for ${d.studentName} with ${d.coachName}`,
     changes: [{ field: 'status', label: 'Status', from: null, to: SESSION_STATUS_LABELS[d.status] }],
   })
   await batch.commit()
   return ref.id
 }
 
-export type SessionPatch = Partial<Pick<SessionDraft, 'tutorId' | 'tutorName' | 'studentId' | 'studentName' | 'studentGrade' | 'note' | 'status' | 'dateKey' | 'startMin' | 'endMin'>> & {
+export type SessionPatch = Partial<Pick<SessionDraft, 'coachId' | 'coachName' | 'studentId' | 'studentName' | 'studentGrade' | 'note' | 'status' | 'dateKey' | 'startMin' | 'endMin'>> & {
   visualOrder?: number
 }
 
@@ -110,9 +110,9 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
   const timeChanged = next.dateKey !== before.dateKey || next.startMin !== before.startMin || next.endMin !== before.endMin
   const changes: AuditChange[] = []
   const actions: string[] = []
-  if (next.tutorId !== before.tutorId) {
-    changes.push({ field: 'tutor', label: 'Tutor', from: before.tutorName, to: next.tutorName })
-    actions.push('session.tutor')
+  if (next.coachId !== before.coachId) {
+    changes.push({ field: 'coach', label: 'Coach', from: before.coachName, to: next.coachName })
+    actions.push('session.coach')
   }
   if (timeChanged) {
     if (next.dateKey !== before.dateKey) {
@@ -147,7 +147,7 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
   if (actions.length > 0) {
     const action = actions.length > 1 ? 'session.update' : actions[0]
     const verb: Record<string, string> = {
-      'session.tutor': 'Changed the tutor of',
+      'session.coach': 'Changed the coach of',
       'session.move': 'Moved',
       'session.status': 'Changed the status of',
       'session.note': 'Changed the note on',
@@ -157,7 +157,7 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
     audit(batch, ctx, before, {
       action,
       entityId: before.id,
-      summary: `${verb[action]} ${before.studentName}’s session`,
+      summary: `${verb[action]} ${before.studentName}’s class`,
       changes,
     })
   }
@@ -173,19 +173,19 @@ export async function deleteSession(ctx: ScheduleCtx, s: WithId<Session>) {
     updatedAt: serverTimestamp(),
     updatedBy: ctx.actor.email,
   })
-  audit(batch, ctx, s, { action: 'session.delete', entityId: s.id, summary: `Deleted ${s.studentName}’s session with ${s.tutorName}` })
+  audit(batch, ctx, s, { action: 'session.delete', entityId: s.id, summary: `Deleted ${s.studentName}’s class with ${s.coachName}` })
   await batch.commit()
 }
 
 export async function restoreSession(ctx: ScheduleCtx, s: WithId<Session>) {
-  // Coming back must not put the tutor over the students-per-tutor limit.
+  // Coming back must not put the coach over the students-per-coach limit.
   if (s.status !== 'canceled') {
-    const snap = await getDocs(query(branchCol(ctx.branchId, COL.sessions), where('tutorId', '==', s.tutorId), where('dateKey', '==', s.dateKey)))
+    const snap = await getDocs(query(branchCol(ctx.branchId, COL.sessions), where('coachId', '==', s.coachId), where('dateKey', '==', s.dateKey)))
     const others = snap.docs
       .map((d) => ({ id: d.id, ...(d.data() as Session) }))
       .filter((x) => x.id !== s.id && !x.isDeleted && x.status !== 'canceled')
-    if (!fitsCapacity(others, s.startMin, s.endMin, ctx.maxStudentsPerTutor)) {
-      throw new Error(`${s.tutorName} already has ${ctx.maxStudentsPerTutor} ${ctx.maxStudentsPerTutor === 1 ? 'student' : 'students'} at that time. Move a session first.`)
+    if (!fitsCapacity(others, s.startMin, s.endMin, ctx.maxStudentsPerCoach)) {
+      throw new Error(`${s.coachName} already has ${ctx.maxStudentsPerCoach} ${ctx.maxStudentsPerCoach === 1 ? 'student' : 'students'} at that time. Move a class first.`)
     }
   }
   const batch = writeBatch(db)
@@ -196,7 +196,7 @@ export async function restoreSession(ctx: ScheduleCtx, s: WithId<Session>) {
     updatedAt: serverTimestamp(),
     updatedBy: ctx.actor.email,
   })
-  audit(batch, ctx, s, { action: 'session.restore', entityId: s.id, summary: `Restored ${s.studentName}’s session from Trash` })
+  audit(batch, ctx, s, { action: 'session.restore', entityId: s.id, summary: `Restored ${s.studentName}’s class from Trash` })
   await batch.commit()
 }
 
@@ -210,7 +210,7 @@ export async function purgeSessions(ctx: ScheduleCtx, sessions: WithId<Session>[
         category: 'schedule',
         entityType: 'session',
         entityId: sessions.length === 1 ? sessions[0].id : 'many',
-        summary: sessions.length === 1 ? `Permanently deleted ${sessions[0].studentName}’s session` : `Emptied Trash (${sessions.length} sessions)`,
+        summary: sessions.length === 1 ? `Permanently deleted ${sessions[0].studentName}’s class` : `Emptied Trash (${sessions.length} classes)`,
       })
     }
     await batch.commit()
@@ -245,7 +245,7 @@ export async function clearDayConfig(ctx: ScheduleCtx, dateKey: DateKey) {
   await deleteDoc(branchDocRef(ctx.branchId, COL.dayConfigs, dateKey))
 }
 
-/** Edit Day → availability override for one tutor on one date. */
+/** Edit Day → availability override for one coach on one date. */
 export function setDayAvailability(
   batch: WriteBatch,
   ctx: ScheduleCtx,
@@ -267,8 +267,8 @@ export function setDayAvailability(
   })
 }
 
-export async function saveTutorOrder(ctx: ScheduleCtx, order: string[], currentOverrides: Record<string, unknown>) {
-  const schedule = { ...((currentOverrides.schedule as Record<string, unknown>) ?? {}), tutorOrder: order }
+export async function saveCoachOrder(ctx: ScheduleCtx, order: string[], currentOverrides: Record<string, unknown>) {
+  const schedule = { ...((currentOverrides.schedule as Record<string, unknown>) ?? {}), coachOrder: order }
   await updateDoc(doc(db, 'branches', ctx.branchId), {
     settings: { ...currentOverrides, schedule },
     updatedAt: serverTimestamp(),
@@ -283,8 +283,8 @@ export interface DuplicateSource {
   weekday: string
   startMin: number
   endMin: number
-  tutorId: string
-  tutorName: string
+  coachId: string
+  coachName: string
   studentId: string
   studentName: string
   studentGrade: string
@@ -317,23 +317,23 @@ export async function duplicateIntoWeek(
   const toClear = ctx.settings.schedule.duplicate.overwriteTargetDays
     ? opts.existingTarget.filter((s) => !s.isDeleted && days.some((d) => d.dateKey === s.dateKey))
     : []
-  // The branch's students-per-tutor limit: sessions that would go over it are skipped.
+  // The branch's students-per-coach limit: sessions that would go over it are skipped.
   const cleared = new Set(toClear.map((s) => s.id))
   const seated = new Map<string, LaneItem[]>()
-  const seat = (tutorId: string, dateKey: string) => {
-    const k = `${tutorId}|${dateKey}`
+  const seat = (coachId: string, dateKey: string) => {
+    const k = `${coachId}|${dateKey}`
     if (!seated.has(k)) seated.set(k, [])
     return seated.get(k)!
   }
   for (const s of opts.existingTarget) {
-    if (!s.isDeleted && !cleared.has(s.id) && s.status !== 'canceled') seat(s.tutorId, s.dateKey).push({ id: s.id, startMin: s.startMin, endMin: s.endMin })
+    if (!s.isDeleted && !cleared.has(s.id) && s.status !== 'canceled') seat(s.coachId, s.dateKey).push({ id: s.id, startMin: s.startMin, endMin: s.endMin })
   }
   const plan = wanted
     .slice()
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.src.startMin - b.src.startMin)
     .filter(({ src, dateKey }, i) => {
-      const placed = seat(src.tutorId, dateKey)
-      if (!fitsCapacity(placed, src.startMin, src.endMin, ctx.maxStudentsPerTutor)) return false
+      const placed = seat(src.coachId, dateKey)
+      if (!fitsCapacity(placed, src.startMin, src.endMin, ctx.maxStudentsPerCoach)) return false
       placed.push({ id: `new-${i}`, startMin: src.startMin, endMin: src.endMin })
       return true
     })
@@ -359,8 +359,8 @@ export async function duplicateIntoWeek(
           ...newSessionData(
             ctx,
             {
-              tutorId: src.tutorId,
-              tutorName: src.tutorName,
+              coachId: src.coachId,
+              coachName: src.coachName,
               studentId: src.studentId,
               studentName: src.studentName,
               studentGrade: opts.liveGrade(src.studentId) ?? src.studentGrade,
@@ -386,7 +386,7 @@ export async function duplicateIntoWeek(
         category: 'schedule',
         entityType: 'session',
         entityId: 'many',
-        summary: `Duplicated ${plan.length} sessions (${opts.label})${toClear.length ? `, replacing ${toClear.length}` : ''}${skipped ? `; skipped ${skipped} (tutor full)` : ''}`,
+        summary: `Duplicated ${plan.length} classes (${opts.label})${toClear.length ? `, replacing ${toClear.length}` : ''}${skipped ? `; skipped ${skipped} (coach full)` : ''}`,
       })
     }
     await batch.commit()

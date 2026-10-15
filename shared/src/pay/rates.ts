@@ -9,18 +9,18 @@ import type { StaffRole } from '../types'
  */
 export type RateKind = 'teaching' | 'admin'
 
-/** Tutors need an admin rate too while the branch pays admin time, today or from a later date. */
-export function tutorsNeedAdminRate(rules: Pick<BusinessRules, 'payModels'>, today: DateKey): boolean {
+/** Coaches need an admin rate too while the branch pays admin time, today or from a later date. */
+export function coachesNeedAdminRate(rules: Pick<BusinessRules, 'payModels'>, today: DateKey): boolean {
   return payModelOn(rules, today) === 'teaching_admin' || rules.payModels.some((p) => p.from > today && p.model === 'teaching_admin')
 }
 
 /**
- * Tutors: the teaching rate (and the admin rate under Teaching + Admin).
+ * Coaches: the teaching rate (and the admin rate under Teaching + Admin).
  * Admins: their one hourly rate, kept as the admin rate. Owners: none, since
  * an owner may not be paid by the hour.
  */
 export function requiredRates(role: StaffRole | null | undefined, needAdminRate: boolean): RateKind[] {
-  if (role === 'tutor') return needAdminRate ? ['teaching', 'admin'] : ['teaching']
+  if (role === 'coach') return needAdminRate ? ['teaching', 'admin'] : ['teaching']
   if (role === 'admin') return ['admin']
   return []
 }
@@ -36,6 +36,6 @@ export function missingRates(
 
 /** "teaching rate", "admin rate", "hourly rate" (admins and owners have one rate). */
 export function rateName(kind: RateKind, role: StaffRole | null | undefined): string {
-  if (role !== 'tutor') return 'hourly rate'
+  if (role !== 'coach') return 'hourly rate'
   return kind === 'teaching' ? 'teaching rate' : 'admin rate'
 }

@@ -6,10 +6,10 @@ import type { Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { branchCol, useQuery } from '@/lib/firestore'
 
-export interface StudentTutor {
+export interface StudentCoach {
   id: string
   name: string
-  /** Sessions with this tutor (canceled ones left out). */
+  /** Sessions with this coach (canceled ones left out). */
   sessions: number
 }
 
@@ -19,7 +19,7 @@ export interface StudentActivity {
   attendance: { attended: number; missed: number; percent: number | null }
   /** The next session that will happen (not canceled or a no-show). */
   next: WithId<Session> | null
-  tutors: StudentTutor[]
+  coaches: StudentCoach[]
   today: DateKey
   nowMin: number
   loading: boolean
@@ -27,13 +27,13 @@ export interface StudentActivity {
 
 /**
  * Everything the student page shows about a student's sessions, loaded once for the profile column and the tabs.
- * Tutors see their own sessions with the student.
+ * Coaches see their own sessions with the student.
  */
-export function useStudentActivity(student: WithId<Student>, mode: 'admin' | 'tutor'): StudentActivity {
+export function useStudentActivity(student: WithId<Student>, mode: 'admin' | 'coach'): StudentActivity {
   const { branchId, staffId, timezone } = useBranch()
   const sessQ = useMemo(() => {
     const base = branchCol(branchId, COL.sessions)
-    if (mode === 'tutor') return staffId ? query(base, where('studentId', '==', student.id), where('tutorId', '==', staffId), orderBy('dateKey', 'desc')) : null
+    if (mode === 'coach') return staffId ? query(base, where('studentId', '==', student.id), where('coachId', '==', staffId), orderBy('dateKey', 'desc')) : null
     return query(base, where('studentId', '==', student.id), orderBy('dateKey', 'desc'))
   }, [branchId, student.id, mode, staffId])
   const sessState = useQuery<Session>(sessQ, `student-sessions-${student.id}-${mode}`)
@@ -52,19 +52,19 @@ export function useStudentActivity(student: WithId<Student>, mode: 'admin' | 'tu
     const missed = past.filter((s) => s.status === 'no_show').length
     const next = sessions.find((s) => !happened(s) && s.status !== 'canceled' && s.status !== 'no_show') ?? null
 
-    // Tutors on the student's sessions, the most frequent first.
-    const byTutor = new Map<string, StudentTutor>()
+    // Coaches on the student's sessions, the most frequent first.
+    const byCoach = new Map<string, StudentCoach>()
     for (const s of sessions) {
       if (s.status === 'canceled') continue
-      const t = byTutor.get(s.tutorId) ?? { id: s.tutorId, name: s.tutorName, sessions: 0 }
+      const t = byCoach.get(s.coachId) ?? { id: s.coachId, name: s.coachName, sessions: 0 }
       t.sessions++
-      byTutor.set(s.tutorId, t)
+      byCoach.set(s.coachId, t)
     }
-    const tutors = [...byTutor.values()].sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name))
+    const coaches = [...byCoach.values()].sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name))
     return {
       attendance: { attended, missed, percent: attended + missed ? Math.round((attended / (attended + missed)) * 100) : null },
       next,
-      tutors,
+      coaches,
     }
   }, [sessions, today, nowMin])
 

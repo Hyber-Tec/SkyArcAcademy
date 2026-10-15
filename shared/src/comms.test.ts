@@ -3,7 +3,7 @@ import { announcementCategories, cleanCommentText, isInAudience, notificationMet
 
 describe('announcements', () => {
   it('turns HTML into searchable text', () => {
-    expect(stripHtmlToText('<style>p{}</style><p>Hello&nbsp;<b>tutors</b></p><ul><li>One</li></ul><script>x()</script>')).toBe('Hello tutors One')
+    expect(stripHtmlToText('<style>p{}</style><p>Hello&nbsp;<b>coaches</b></p><ul><li>One</li></ul><script>x()</script>')).toBe('Hello coaches One')
     expect(stripHtmlToText('<p>A &amp; B &lt;3</p>')).toBe('A & B <3')
   })
 

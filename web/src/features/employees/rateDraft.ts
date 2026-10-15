@@ -12,7 +12,7 @@ export function askedRates(role: StaffRole, needAdminRate: boolean): RateKind[] 
 }
 
 /**
- * Turns the typed rates into the record to save. Tutors and admins must have
+ * Turns the typed rates into the record to save. Coaches and admins must have
  * every rate their pay needs (above $0), so payroll never prices their time
  * at $0; an owner's rate may stay empty (no pay record then).
  */

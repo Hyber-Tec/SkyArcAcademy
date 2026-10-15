@@ -40,8 +40,8 @@ export function AcademyRulesCard() {
   const { data: payroll } = useDoc<{ lockedThrough?: DateKey | null }>(stateRef)
   const lockedThrough = payroll?.lockedThrough ?? null
   const [draft, setDraft] = useState<number | null>(null)
-  const value = draft ?? rules.maxStudentsPerTutor
-  const dirty = value !== rules.maxStudentsPerTutor
+  const value = draft ?? rules.maxStudentsPerCoach
+  const dirty = value !== rules.maxStudentsPerCoach
   const [busy, setBusy] = useState(false)
   const [changing, setChanging] = useState(false)
 
@@ -56,11 +56,11 @@ export function AcademyRulesCard() {
   }
 
   async function saveCapacity() {
-    const next: BusinessRules = { ...rules, maxStudentsPerTutor: value }
+    const next: BusinessRules = { ...rules, maxStudentsPerCoach: value }
     setBusy(true)
     try {
       await write(next, 'Changed the academy rules', [
-        { field: 'maxStudentsPerTutor', label: 'Students per tutor at once', from: rules.maxStudentsPerTutor, to: next.maxStudentsPerTutor },
+        { field: 'maxStudentsPerCoach', label: 'Students per coach at once', from: rules.maxStudentsPerCoach, to: next.maxStudentsPerCoach },
       ])
       setDraft(null)
       toast.success('Academy rules saved')
@@ -111,7 +111,7 @@ export function AcademyRulesCard() {
         <FieldGroup>
           <CapacityField value={value} onChange={setDraft} />
         </FieldGroup>
-        {value < rules.maxStudentsPerTutor ? (
+        {value < rules.maxStudentsPerCoach ? (
           <Alert>
             <LuClock />
             <AlertDescription>Classes already on the schedule stay as they are; new classes, moves and pastes follow the new limit.</AlertDescription>

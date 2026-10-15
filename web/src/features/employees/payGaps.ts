@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type RateKind, missingRates, rateName, requiredRates, tutorsNeedAdminRate } from '@shared/pay/rates'
+import { type RateKind, missingRates, rateName, requiredRates, coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
 import type { Staff, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -24,7 +24,7 @@ export function gapLabel(g: PayGap): string {
 export function usePayGaps(enabled = true): { gaps: PayGap[]; ready: boolean } {
   const { rules, timezone, can } = useBranch()
   const on = enabled && can('payRates')
-  const needAdmin = tutorsNeedAdminRate(rules, todayKey(timezone))
+  const needAdmin = coachesNeedAdminRate(rules, todayKey(timezone))
   const { data: staff, loading } = useStaffList(on)
   const paid = useMemo(() => (on ? staff.filter((s) => s.status === 'active' && requiredRates(s.role, needAdmin).length > 0) : []), [on, staff, needAdmin])
   const { map, failed, ready } = useCompensationState(paid.map((s) => s.id))

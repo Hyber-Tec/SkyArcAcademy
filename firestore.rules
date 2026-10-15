@@ -41,7 +41,7 @@ service cloud.firestore {
         && branchDoc(b).data.status == 'active';
     }
 
-    // One role per person: owner, admin, tutor, parent or student.
+    // One role per person: owner, admin, coach, parent or student.
     function hasRole(b, role) {
       return isMember(b) && member(b).get('role', '') == role;
     }
@@ -50,12 +50,12 @@ service cloud.firestore {
       return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
     }
 
-    function isTutor(b) {
-      return hasRole(b, 'tutor');
+    function isCoach(b) {
+      return hasRole(b, 'coach');
     }
 
     function isStaff(b) {
-      return isAdmin(b) || isTutor(b);
+      return isAdmin(b) || isCoach(b);
     }
 
     function isOwner(b) {
@@ -145,13 +145,13 @@ service cloud.firestore {
 
         function validMember(data) {
           return data.email == memberId
-            && data.role in ['owner', 'admin', 'tutor', 'parent', 'student']
+            && data.role in ['owner', 'admin', 'coach', 'parent', 'student']
             && data.status in ['active', 'disabled'];
         }
 
         allow read: if isAdmin(b) || (signedIn() && memberId == emailKey());
 
-        // Any admin manages tutors, parents and students; only owners manage admins.
+        // Any admin manages coaches, parents and students; only owners manage admins.
         allow create: if isAdmin(b) && validMember(request.resource.data)
           && (isOwner(b) || !grantsAdmin(request.resource.data));
 
@@ -194,16 +194,16 @@ service cloud.firestore {
       // ------------------------------------------------------ people
 
       match /staff/{staffId} {
-        allow read: if isAdmin(b) || (isTutor(b) && staffId == myStaffId(b));
+        allow read: if isAdmin(b) || (isCoach(b) && staffId == myStaffId(b));
         allow create, delete: if isAdmin(b);
         allow update: if isAdmin(b)
-          || (isTutor(b) && staffId == myStaffId(b)
+          || (isCoach(b) && staffId == myStaffId(b)
               && changed().hasOnly(['phone', 'dob', 'address', 'notificationPrefs', 'updatedAt', 'updatedBy']));
 
         match /private/{docId} {
           allow read: if (docId == 'compensation'
                           && ((isAdmin(b) && notRestricted(b, 'payRates'))
-                              || (isTutor(b) && staffId == myStaffId(b))))
+                              || (isCoach(b) && staffId == myStaffId(b))))
                       || (docId == 'notes' && isAdmin(b));
           allow write: if (docId == 'compensation' && isAdmin(b) && notRestricted(b, 'payRates'))
                        || (docId == 'notes' && isAdmin(b));
@@ -224,7 +224,7 @@ service cloud.firestore {
 
       // ------------------------------------------------------ availability
 
-      // Tutors can't touch days that start inside the lock window (or the lead time,
+      // Coaches can't touch days that start inside the lock window (or the lead time,
       // when the branch blocks late availability). Admins can change any day.
       function lockDays() {
         let a = branchDoc(b).data.get('settings', {}).get('availability', {});
@@ -233,7 +233,7 @@ service cloud.firestore {
         return a.get('leadTimeEnforcement', 'warn') == 'block' && lead > lock ? lead : lock;
       }
 
-      function tutorMayEdit(data) {
+      function coachMayEdit(data) {
         return data.dayStartAt is timestamp
           && data.dayStartAt > request.time + duration.value(lockDays(), 'd');
       }
@@ -248,15 +248,15 @@ service cloud.firestore {
       }
 
       match /availability/{docId} {
-        allow read: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b));
+        allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
         allow create: if validAvailability(docId, request.resource.data)
           && (isAdmin(b)
-              || (isTutor(b) && request.resource.data.staffId == myStaffId(b) && tutorMayEdit(request.resource.data)));
+              || (isCoach(b) && request.resource.data.staffId == myStaffId(b) && coachMayEdit(request.resource.data)));
         allow update: if validAvailability(docId, request.resource.data)
           && (isAdmin(b)
-              || (isTutor(b) && resource.data.staffId == myStaffId(b) && request.resource.data.staffId == myStaffId(b)
-                  && tutorMayEdit(resource.data) && tutorMayEdit(request.resource.data)));
-        allow delete: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b) && tutorMayEdit(resource.data));
+              || (isCoach(b) && resource.data.staffId == myStaffId(b) && request.resource.data.staffId == myStaffId(b)
+                  && coachMayEdit(resource.data) && coachMayEdit(request.resource.data)));
+        allow delete: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b) && coachMayEdit(resource.data));
       }
 
       match /dayConfigs/{dateKey} {
@@ -275,7 +275,7 @@ service cloud.firestore {
         }
 
         allow read: if isAdmin(b)
-          || (isTutor(b) && resource.data.tutorId == myStaffId(b))
+          || (isCoach(b) && resource.data.coachId == myStaffId(b))
           || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
           || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
         allow create: if isAdmin(b) && dayOpen(request.resource.data);
@@ -302,7 +302,7 @@ service cloud.firestore {
       }
 
       match /clockShifts/{shiftId} {
-        allow read: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b));
+        allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
         allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data);
         allow update: if isAdmin(b) && notRestricted(b, 'timeEntries')
           && shiftEditable(resource.data) && shiftEditable(request.resource.data);
@@ -311,7 +311,7 @@ service cloud.firestore {
 
       // Pointer to an employee's open shift (written by the kiosk functions).
       match /openShifts/{staffId} {
-        allow read: if isAdmin(b) || (isTutor(b) && staffId == myStaffId(b));
+        allow read: if isAdmin(b) || (isCoach(b) && staffId == myStaffId(b));
         allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries');
       }
 
@@ -324,7 +324,7 @@ service cloud.firestore {
         allow read, write: if isAdmin(b) && notRestricted(b, 'payroll');
 
         match /lines/{staffId} {
-          allow read: if (isAdmin(b) && notRestricted(b, 'payroll')) || (isTutor(b) && staffId == myStaffId(b));
+          allow read: if (isAdmin(b) && notRestricted(b, 'payroll')) || (isCoach(b) && staffId == myStaffId(b));
           allow write: if isAdmin(b) && notRestricted(b, 'payroll');
         }
       }
@@ -335,10 +335,10 @@ service cloud.firestore {
 
       // ------------------------------------------------------ communication
 
-      // Tutors see posts for everyone plus posts addressed to them; admins see all.
+      // Coaches see posts for everyone plus posts addressed to them; admins see all.
       function seesAnnouncement(data) {
         return isAdmin(b)
-          || (isTutor(b) && (data.audienceType == 'all' || emailKey() in data.audienceKeys));
+          || (isCoach(b) && (data.audienceType == 'all' || emailKey() in data.audienceKeys));
       }
 
       match /announcements/{announcementId} {

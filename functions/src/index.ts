@@ -7,7 +7,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { dayHours } from '@shared/availability'
 import { COL, ROOT, availabilityDocId } from '@shared/paths'
-import { type ConflictSession, sessionConflicts, staffTutorState } from '@shared/schedule/conflicts'
+import { type ConflictSession, sessionConflicts, staffCoachState } from '@shared/schedule/conflicts'
 import { resolveBusinessRules } from '@shared/settings/businessRules'
 import { sessionCreatedNotices } from '@shared/schedule/notify'
 import { resolveSettings } from '@shared/settings/resolve'
@@ -38,7 +38,7 @@ async function requireAdmin(branchId: string, auth: { uid: string; token: Record
 
 async function loadBranch(branchId: string): Promise<{ branch: Branch; settings: BranchSettings }> {
   const snap = await db.doc(`${ROOT.branches}/${branchId}`).get()
-  if (!snap.exists) throw new HttpsError('not-found', 'Branch not found.')
+  if (!snap.exists) throw new HttpsError('not-found', 'Academy not found.')
   const branch = snap.data() as Branch
   return { branch, settings: resolveSettings(branch.settings) }
 }
@@ -54,8 +54,8 @@ function audit(branchId: string, entry: Record<string, unknown>) {
     dateKey: null,
     studentId: null,
     studentName: null,
-    tutorId: null,
-    tutorName: null,
+    coachId: null,
+    coachName: null,
     changes: [],
     via: 'function',
     ...entry,
@@ -67,7 +67,7 @@ function audit(branchId: string, entry: Record<string, unknown>) {
 /** Admin sets (or clears) an employee's kiosk PIN. PINs are unique per branch. */
 export const setKioskPin = onCall(async (req) => {
   const { branchId, staffId, pin } = (req.data ?? {}) as { branchId?: string; staffId?: string; pin?: string | null }
-  if (!branchId || !staffId) throw new HttpsError('invalid-argument', 'Missing branch or employee.')
+  if (!branchId || !staffId) throw new HttpsError('invalid-argument', 'Missing academy or employee.')
   const caller = await requireAdmin(branchId, req.auth)
   const { settings } = await loadBranch(branchId)
   const staffRef = db.doc(`${ROOT.branches}/${branchId}/${COL.staff}/${staffId}`)
@@ -102,7 +102,7 @@ export const setKioskPin = onCall(async (req) => {
     category: 'pay',
     entityType: 'staff',
     entityId: staffId,
-    tutorId: staffId,
+    coachId: staffId,
     summary: pin != null ? 'Set a kiosk PIN' : 'Removed a kiosk PIN',
   })
   return { ok: true }
@@ -121,7 +121,7 @@ async function staffForPin(branchId: string, pin: string) {
 /** Kiosk step 1: who is this, and are they clocked in? */
 export const kioskIdentify = onCall(async (req) => {
   const { branchId, pin } = (req.data ?? {}) as { branchId?: string; pin?: string }
-  if (!branchId) throw new HttpsError('invalid-argument', 'Missing branch.')
+  if (!branchId) throw new HttpsError('invalid-argument', 'Missing academy.')
   await requireAdmin(branchId, req.auth)
   const { staffId, name } = await staffForPin(branchId, pin ?? '')
   const open = await db.doc(`${ROOT.branches}/${branchId}/${COL.openShifts}/${staffId}`).get()
@@ -131,7 +131,7 @@ export const kioskIdentify = onCall(async (req) => {
 /** Kiosk step 2: clock in, or clock out of the open shift. Server time only. */
 export const kioskPunch = onCall(async (req) => {
   const { branchId, pin } = (req.data ?? {}) as { branchId?: string; pin?: string }
-  if (!branchId) throw new HttpsError('invalid-argument', 'Missing branch.')
+  if (!branchId) throw new HttpsError('invalid-argument', 'Missing academy.')
   const caller = await requireAdmin(branchId, req.auth)
   const { branch } = await loadBranch(branchId)
   const tz = branch.timezone
@@ -185,8 +185,8 @@ export const kioskPunch = onCall(async (req) => {
     category: 'pay',
     entityType: 'shift',
     entityId: result.shiftId,
-    tutorId: staffId,
-    tutorName: name,
+    coachId: staffId,
+    coachName: name,
     dateKey: dateKeyOf(now.toDate(), tz),
     via: 'kiosk',
     summary: `${name} clocked ${result.action} at ${formatMinutes(minutesOf(now.toDate(), tz))}`,
@@ -235,8 +235,8 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
         category: 'pay',
         entityType: 'shift',
         entityId: shiftRef.id,
-        tutorId: s.staffId,
-        tutorName: s.staffName,
+        coachId: s.staffId,
+        coachName: s.staffName,
         dateKey: s.dateKey,
         summary: `${s.staffName} was clocked out automatically at ${formatMinutes(cutoffMin)}`,
       })
@@ -246,18 +246,18 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
 
 /**
  * Whether a session may not happen as booked (the same check the schedules show:
- * tutor unavailable or inactive, day closed, outside hours, too many students,
+ * coach unavailable or inactive, day closed, outside hours, too many students,
  * student double-booked or inactive).
  */
 async function inConflict(branchId: string, id: string, data: FirebaseFirestore.DocumentData, settings: BranchSettings, branch: Branch | undefined) {
   const base = `${ROOT.branches}/${branchId}`
   const [cfg, avail, staff, student, day, members] = await Promise.all([
     db.doc(`${base}/${COL.dayConfigs}/${data.dateKey}`).get(),
-    db.doc(`${base}/${COL.availability}/${availabilityDocId(data.tutorId, data.dateKey)}`).get(),
-    db.doc(`${base}/${COL.staff}/${data.tutorId}`).get(),
+    db.doc(`${base}/${COL.availability}/${availabilityDocId(data.coachId, data.dateKey)}`).get(),
+    db.doc(`${base}/${COL.staff}/${data.coachId}`).get(),
     db.doc(`${base}/${COL.students}/${data.studentId}`).get(),
     db.collection(`${base}/${COL.sessions}`).where('dateKey', '==', data.dateKey).get(),
-    db.collection(`${base}/${COL.members}`).where('staffId', '==', data.tutorId).get(),
+    db.collection(`${base}/${COL.members}`).where('staffId', '==', data.coachId).get(),
   ])
   const a = avail.data() as Availability | undefined
   const sessions = day.docs.map((d) => ({ id: d.id, ...(d.data() as Session) })).filter((s) => !s.isDeleted)
@@ -265,11 +265,11 @@ async function inConflict(branchId: string, id: string, data: FirebaseFirestore.
   const conflicts = sessionConflicts({ id, ...data } as ConflictSession, {
     hours: dayHours(data.dateKey, settings, cfg.exists ? new Map([[data.dateKey as string, cfg.data() as DayConfig]]) : null),
     availability: a ? { ranges: a.ranges, unavailable: a.unavailable } : null,
-    tutorState: staffTutorState(staff.exists ? (staff.data()?.status as StaffStatus) : null, memberActive),
+    coachState: staffCoachState(staff.exists ? (staff.data()?.status as StaffStatus) : null, memberActive),
     studentStatus: student.exists ? ((student.data()?.status as StudentStatus) ?? null) : null,
-    tutorSessions: sessions.filter((s) => s.tutorId === data.tutorId),
+    coachSessions: sessions.filter((s) => s.coachId === data.coachId),
     studentSessions: sessions.filter((s) => s.studentId === data.studentId),
-    maxPerTutor: resolveBusinessRules(branch?.businessRules).maxStudentsPerTutor,
+    maxPerCoach: resolveBusinessRules(branch?.businessRules).maxStudentsPerCoach,
   })
   return conflicts.length > 0
 }
@@ -297,9 +297,9 @@ async function confirmIfDue(
     dateKey: data.dateKey,
     studentId: data.studentId,
     studentName: data.studentName,
-    tutorId: data.tutorId,
-    tutorName: data.tutorName,
-    summary: `Confirmed ${data.studentName}’s session automatically`,
+    coachId: data.coachId,
+    coachName: data.coachName,
+    summary: `Confirmed ${data.studentName}’s class automatically`,
     changes: [{ field: 'status', label: 'Status', from: 'Pending', to: 'Confirmed' }],
   })
   return true
@@ -326,7 +326,7 @@ export const autoConfirmSessions = onSchedule({ schedule: 'every 60 minutes', ti
 
 /**
  * A session created inside the auto-confirm window is confirmed right away;
- * if it is confirmed and starts inside the notification window, the tutor
+ * if it is confirmed and starts inside the notification window, the coach
  * gets "Session Confirmed" in their inbox.
  */
 export const onSessionCreated = onDocumentCreated({ document: `${ROOT.branches}/{branchId}/${COL.sessions}/{sessionId}`, ...LIGHT }, async (event) => {

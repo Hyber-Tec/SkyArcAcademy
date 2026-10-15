@@ -81,13 +81,13 @@ export const studentLifecycleDaily = onSchedule({ schedule: '0 8 * * *', timeZon
           summary: `${d.name} is now ${STUDENT_STATUS_LABELS[status]} (automatic)`,
           context:
             status === 'paused'
-              ? `No session in ${settings.students.autoStatus.inactivityPauseDays} days and none scheduled`
-              : 'Has a recent or upcoming session',
+              ? `No class in ${settings.students.autoStatus.inactivityPauseDays} days and none scheduled`
+              : 'Has a recent or upcoming class',
           dateKey: today,
           studentId: st.id,
           studentName: d.name ?? null,
-          tutorId: null,
-          tutorName: null,
+          coachId: null,
+          coachName: null,
           changes: [{ field: 'status', label: 'Status', from: STUDENT_STATUS_LABELS[d.status as StudentStatus] ?? d.status, to: STUDENT_STATUS_LABELS[status] }],
           via: 'function',
         })

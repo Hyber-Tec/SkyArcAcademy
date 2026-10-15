@@ -86,7 +86,7 @@ export function AccountPage() {
   const studentById = useMemo(() => new Map(students.data.map((s) => [s.id, s])), [students.data])
 
   const counts = useMemo(() => {
-    const c: Record<RoleFilter, number> = { all: members.data.length, owner: 0, admin: 0, tutor: 0, parent: 0, student: 0 }
+    const c: Record<RoleFilter, number> = { all: members.data.length, owner: 0, admin: 0, coach: 0, parent: 0, student: 0 }
     for (const m of members.data) if (m.role in c) c[m.role] += 1
     return c
   }, [members.data])
@@ -230,7 +230,7 @@ export function AccountPage() {
             <Empty className="border border-dashed">
               <EmptyHeader>
                 <EmptyTitle>No sign-up requests</EmptyTitle>
-                <EmptyDescription>Share the sign-up page with new tutors, parents and students.</EmptyDescription>
+                <EmptyDescription>Share the sign-up page with new coaches, parents and students.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (

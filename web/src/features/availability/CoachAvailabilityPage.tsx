@@ -6,7 +6,7 @@ import { type DateKey, addDays, formatDateKey, isDateKey, todayKey } from '@shar
 import { useBranch } from '@/branch/BranchProvider'
 import { PageHeader } from '@/components/app/PageHeader'
 import { useAvailability, useDayConfigs } from '@/features/data/hooks'
-import { NOT_LINKED, useMyStaff } from '@/features/tutor/hooks'
+import { NOT_LINKED, useMyStaff } from '@/features/coach/hooks'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { AvailabilityCalendar, type AvailabilityCalendarHandle } from './AvailabilityCalendar'
@@ -21,11 +21,11 @@ function span(days: number): string {
 }
 
 /**
- * Tutor → Availability: where the tutor stands (how far ahead it's set and
+ * Coach → Availability: where the coach stands (how far ahead it's set and
  * which open days in the notice window still need times), then the calendar.
  * `?date=` opens that day (links from Today).
  */
-export function TutorAvailabilityPage() {
+export function CoachAvailabilityPage() {
   const { staffId, settings, timezone } = useBranch()
   const { data: staff } = useMyStaff()
   const calendar = useRef<AvailabilityCalendarHandle>(null)
@@ -142,7 +142,7 @@ export function TutorAvailabilityPage() {
           </span>
         ) : null}
       </section>
-      <AvailabilityCalendar ref={calendar} staffId={staffId} staffName={staff?.name ?? 'Me'} mode="tutor" />
+      <AvailabilityCalendar ref={calendar} staffId={staffId} staffName={staff?.name ?? 'Me'} mode="coach" />
     </div>
   )
 }

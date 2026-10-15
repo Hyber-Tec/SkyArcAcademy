@@ -22,12 +22,12 @@ import { SessionsTab } from './SessionsTab'
 import { StudentCalendarView } from './StudentCalendarView'
 
 const TABS: { key: ProfileTab; label: string; icon: IconType; adminOnly: boolean }[] = [
-  { key: 'sessions', label: 'Sessions', icon: LuNotebookPen, adminOnly: false },
+  { key: 'sessions', label: 'Classes', icon: LuNotebookPen, adminOnly: false },
   { key: 'info', label: 'Info', icon: LuUserRound, adminOnly: false },
   { key: 'calendar', label: 'Calendar', icon: LuCalendarDays, adminOnly: false },
 ]
 
-export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'tutor' }) {
+export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const { studentId = '' } = useParams()
   const { branchId, actor } = useBranch()
   const ref = useMemo(() => branchDocRef(branchId, COL.students, studentId), [branchId, studentId])
@@ -61,7 +61,7 @@ export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'tutor
  * The student page: who the student is on the left (it stays in view), and the Sessions, Info and Calendar tabs on the
  * right.
  */
-function StudentProfile({ student, mode, base }: { student: WithId<Student>; mode: 'admin' | 'tutor'; base: string }) {
+function StudentProfile({ student, mode, base }: { student: WithId<Student>; mode: 'admin' | 'coach'; base: string }) {
   const { tab = 'sessions' } = useParams()
   const navigate = useNavigate()
   const { branchId, settings } = useBranch()
@@ -69,7 +69,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
   const activity = useStudentActivity(student, mode)
   const privRef = useMemo(() => (isAdmin ? studentPrivateRef(branchId, student.id) : null), [isAdmin, branchId, student.id])
   const { data: priv, loading: privLoading } = useDoc<StudentPrivateProfile>(privRef)
-  // Tutors can't read the staff list; their page has no session dialog either.
+  // Coaches can't read the staff list; their page has no session dialog either.
   const { data: staff } = useStaffList(isAdmin)
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
   const sessionDialog = useSessionDialog({ enabled: isAdmin })
@@ -146,6 +146,6 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
   )
 }
 
-export function TutorStudentProfilePage() {
-  return <StudentProfilePage mode="tutor" />
+export function CoachStudentProfilePage() {
+  return <StudentProfilePage mode="coach" />
 }

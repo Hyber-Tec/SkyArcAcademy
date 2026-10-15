@@ -10,12 +10,12 @@ describe('settings resolver', () => {
   it('merges nested overrides and replaces arrays', () => {
     const s = resolveSettings({
       schedule: { snapMinutes: 10, autoConfirm: { hoursBefore: 48 } },
-      signup: { roles: ['tutor'] },
+      signup: { roles: ['coach'] },
     })
     expect(s.schedule.snapMinutes).toBe(10)
     expect(s.schedule.autoConfirm).toEqual({ enabled: true, hoursBefore: 48 })
     expect(s.schedule.defaultSessionMinutes).toBe(60)
-    expect(s.signup.roles).toEqual(['tutor'])
+    expect(s.signup.roles).toEqual(['coach'])
   })
 
   it('treats null on an object as "use the default" and null on a value as a value', () => {

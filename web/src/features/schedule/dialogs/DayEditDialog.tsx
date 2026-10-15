@@ -22,7 +22,7 @@ import { db } from '@/lib/firebase'
 import { branchDocRef } from '@/lib/firestore'
 import { type ScheduleCtx, saveDayConfig, setDayAvailability } from '../api'
 
-interface TutorDay {
+interface CoachDay {
   ranges: AvailabilityRange[]
   unavailable: boolean
   hidden: boolean
@@ -32,7 +32,7 @@ export function DayEditDialog({
   dateKey,
   onClose,
   ctx,
-  tutors,
+  coaches,
   sessions,
   availabilityByKey,
   dayConfigs,
@@ -40,7 +40,7 @@ export function DayEditDialog({
   dateKey: DateKey | null
   onClose: () => void
   ctx: ScheduleCtx
-  tutors: { id: string; name: string }[]
+  coaches: { id: string; name: string }[]
   sessions: WithId<Session>[]
   availabilityByKey: Map<string, WithId<Availability>>
   dayConfigs: Map<DateKey, DayConfig>
@@ -49,8 +49,8 @@ export function DayEditDialog({
   const [isOpen, setIsOpen] = useState(true)
   const [openMin, setOpenMin] = useState(840)
   const [closeMin, setCloseMin] = useState(1260)
-  const [rows, setRows] = useState<Record<string, TutorDay>>({})
-  const [initial, setInitial] = useState<Record<string, TutorDay>>({})
+  const [rows, setRows] = useState<Record<string, CoachDay>>({})
+  const [initial, setInitial] = useState<Record<string, CoachDay>>({})
   const [busy, setBusy] = useState(false)
   const range = settings.schedule.editorRange
 
@@ -60,8 +60,8 @@ export function DayEditDialog({
     setIsOpen(h.isOpen)
     setOpenMin(h.openMin)
     setCloseMin(h.closeMin)
-    const r: Record<string, TutorDay> = {}
-    for (const t of tutors) {
+    const r: Record<string, CoachDay> = {}
+    for (const t of coaches) {
       const a = availabilityByKey.get(`${t.id}|${dateKey}`)
       r[t.id] = a ? { ranges: a.ranges, unavailable: a.unavailable || a.ranges.length === 0, hidden: a.hidden } : { ranges: [], unavailable: true, hidden: false }
     }
@@ -74,27 +74,27 @@ export function DayEditDialog({
   if (!dateKey) return null
   const past = dateKey < todayKey(ctx.timezone)
 
-  const setRow = (id: string, patch: Partial<TutorDay>) => setRows((r) => ({ ...r, [id]: { ...r[id], ...patch } }))
+  const setRow = (id: string, patch: Partial<CoachDay>) => setRows((r) => ({ ...r, [id]: { ...r[id], ...patch } }))
 
   async function apply() {
     if (!dateKey) return
     if (closeMin < openMin + 60) return toast.error('The day must be open at least one hour.')
     const live = sessions.filter((s) => !s.isDeleted)
-    if (!isOpen && live.length > 0 && !window.confirm(`Close this day? This will delete all ${live.length} sessions on this day.`)) return
+    if (!isOpen && live.length > 0 && !window.confirm(`Close this day? This will delete all ${live.length} classes on this day.`)) return
     if (isOpen) {
       // Shorter hours or less availability can leave booked sessions uncovered: they stay, as conflicts.
-      const covered = (d: TutorDay | undefined, h: DayHours, s: Session) => !!d && !d.unavailable && rangesContain(effectiveRanges(d.ranges, h), s.startMin, s.endMin)
+      const covered = (d: CoachDay | undefined, h: DayHours, s: Session) => !!d && !d.unavailable && rangesContain(effectiveRanges(d.ranges, h), s.startMin, s.endMin)
       const before = dayHours(dateKey, settings, dayConfigs)
       const after = { isOpen, openMin, closeMin }
       const today = todayKey(ctx.timezone)
       const nowMin = nowMinutes(ctx.timezone)
-      const hit = live.filter((s) => isCheckable(s) && isAhead(s, today, nowMin) && initial[s.tutorId] && covered(initial[s.tutorId], before, s) && !covered(rows[s.tutorId], after, s))
+      const hit = live.filter((s) => isCheckable(s) && isAhead(s, today, nowMin) && initial[s.coachId] && covered(initial[s.coachId], before, s) && !covered(rows[s.coachId], after, s))
       if (
         hit.length &&
         !window.confirm(
-          `${hit.length} booked session${hit.length > 1 ? 's' : ''} (${hit
+          `${hit.length} booked class${hit.length > 1 ? 'es' : ''} (${hit
             .slice(0, 3)
-            .map((s) => `${s.studentName} with ${s.tutorName}`)
+            .map((s) => `${s.studentName} with ${s.coachName}`)
             .join(', ')}${hit.length > 3 ? '…' : ''}) will be outside the new hours or availability. ${hit.length > 1 ? 'They' : 'It'} will show as conflicts until moved, reassigned or canceled. Save anyway?`,
         )
       )
@@ -121,12 +121,12 @@ export function DayEditDialog({
             entityType: 'session',
             entityId: dateKey,
             dateKey,
-            summary: `Deleted ${live.length} sessions when closing ${formatDateKey(dateKey, 'weekdayMedium')}`,
+            summary: `Deleted ${live.length} classes when closing ${formatDateKey(dateKey, 'weekdayMedium')}`,
           })
         }
       }
       let changed = 0
-      for (const t of tutors) {
+      for (const t of coaches) {
         const now = rows[t.id]
         if (!now || JSON.stringify(now) === JSON.stringify(initial[t.id])) continue
         setDayAvailability(batch, ctx, t.id, dateKey, { ...now, ranges: normalizeRanges(now.ranges) })
@@ -139,7 +139,7 @@ export function DayEditDialog({
           entityType: 'availability',
           entityId: dateKey,
           dateKey,
-          summary: `Updated availability for ${changed} tutor${changed > 1 ? 's' : ''} on ${formatDateKey(dateKey, 'weekdayMedium')}`,
+          summary: `Updated availability for ${changed} coach${changed > 1 ? 'es' : ''} on ${formatDateKey(dateKey, 'weekdayMedium')}`,
         })
       }
       await batch.commit()
@@ -182,12 +182,12 @@ export function DayEditDialog({
                 </div>
               </Field>
             ) : (
-              <p className="text-sm text-muted-foreground">Closed days are hidden from the schedule. Closing a day moves its sessions to Trash.</p>
+              <p className="text-sm text-muted-foreground">Closed days are hidden from the schedule. Closing a day moves its classes to Trash.</p>
             )}
           </TabsContent>
           <TabsContent value="availability" className="pt-3">
             <div className="divide-y rounded-lg border">
-              {tutors.map((t) => {
+              {coaches.map((t) => {
                 const r = rows[t.id]
                 if (!r) return null
                 return (

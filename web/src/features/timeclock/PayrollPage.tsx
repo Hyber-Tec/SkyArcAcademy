@@ -7,6 +7,7 @@ import { COL } from '@shared/paths'
 import { missingRates, rateName } from '@shared/pay/rates'
 import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
+import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import { type BusinessRules, type PayModel } from '@shared/settings/businessRules'
 import { type DateKey, addDays, formatDateKey, formatInstantTime, todayKey } from '@shared/time'
 import type { Staff, StaffStatus, WithId } from '@shared/types'
@@ -40,7 +41,7 @@ const REPORT_PAGE = 70
 /** How far back the recent list first looks; it reaches further back as pages need it. */
 const BROWSE_DAYS = 30
 
-type RoleFilter = 'all' | 'tutor' | 'admin'
+type RoleFilter = 'all' | 'coach' | 'admin'
 
 interface PayRow {
   id: string
@@ -54,7 +55,7 @@ interface PayRow {
 const money = formatMoney
 
 /** Owners and admins are filtered as admins. */
-const roleGroup = (s: Pick<Staff, 'role'> | undefined): 'tutor' | 'admin' => (s?.role === 'owner' || s?.role === 'admin' ? 'admin' : 'tutor')
+const roleGroup = (s: Pick<Staff, 'role'> | undefined): 'coach' | 'admin' => (s?.role === 'owner' || s?.role === 'admin' ? 'admin' : 'coach')
 
 /** The pay models in force at some point between two dates. */
 function modelsBetween(rules: BusinessRules, from: DateKey, to: DateKey): PayModel[] {
@@ -78,7 +79,7 @@ export function PayrollPage() {
   const { lockedThrough } = usePayrollState()
 
   // Applied state (URL).
-  const role: RoleFilter = params.get('role') === 'tutor' || params.get('role') === 'admin' ? (params.get('role') as RoleFilter) : 'all'
+  const role: RoleFilter = params.get('role') === 'coach' || params.get('role') === 'admin' ? (params.get('role') as RoleFilter) : 'all'
   const statusParam = params.get('status')
   const status: StaffStatus | 'all' = statusParam === 'all' || STAFF_STATUSES.includes(statusParam as StaffStatus) ? (statusParam as StaffStatus | 'all') : 'active'
   const report = params.get('employee') && params.get('from') && params.get('to') ? { staffId: params.get('employee')!, from: params.get('from')!, to: params.get('to')! } : null
@@ -229,7 +230,7 @@ export function PayrollPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                <SelectItem value="tutor">Tutors</SelectItem>
+                <SelectItem value="coach">Coaches</SelectItem>
                 <SelectItem value="admin">Admins</SelectItem>
               </SelectContent>
             </Select>
@@ -332,7 +333,7 @@ export function PayrollPage() {
           ) : null}
           {!singleRate && models.includes('teaching_only') ? (
             <p className="text-xs text-muted-foreground">
-              {paysAdmin ? 'Part of this range uses Teaching only: ' : 'This branch pays Teaching only: '}clocked time outside sessions isn’t paid, so it isn’t listed.
+              {paysAdmin ? 'Part of this range uses Teaching only: ' : 'This academy pays Teaching only: '}clocked time outside classes isn’t paid, so it isn’t listed.
             </p>
           ) : null}
         </Card>
@@ -463,7 +464,9 @@ export function PayrollPage() {
         </div>
       </Card>
       <p className="mt-2 text-xs text-muted-foreground">
-        Teaching time = clocked time inside sessions in these statuses: {settings.payroll.teachingSessionStatuses.join(', ')}. Hours are rounded to 0.01 h; pay is computed from the rounded hours. Each row is part of a time entry: Edit and Delete change that whole entry.
+        Under Hourly, all of a coach’s clocked time is teaching time; otherwise it’s clocked time inside classes marked{' '}
+        {settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(', ')}. Hours are rounded to 0.01 h; pay is computed from the rounded hours. Each row is part of a
+        time entry: Edit and Delete change that whole entry.
       </p>
 
       <ShiftDialog

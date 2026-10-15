@@ -143,7 +143,7 @@ export function SignInSecurityDialog({ open, onOpenChange }: { open: boolean; on
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Sign-in & security</DialogTitle>
-            <DialogDescription>How you sign in to Hyber CRM. Your access to a center follows your email, whichever way you sign in.</DialogDescription>
+            <DialogDescription>How you sign in to Hyber CRM. Your access to an academy follows your email, whichever way you sign in.</DialogDescription>
           </DialogHeader>
           <SignInMethodsList onPassword={() => setPassword(true)} />
         </DialogContent>

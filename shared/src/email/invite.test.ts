@@ -5,7 +5,7 @@ import { inviteEmail } from './invite'
 const base = {
   to: 'maya@school.org',
   name: 'Maya Thompson',
-  role: 'tutor' as const,
+  role: 'coach' as const,
   branchName: 'Demo Academy',
   inviterName: 'Grace Liu',
   signInUrl: signInUrl('maya@school.org'),
@@ -16,7 +16,7 @@ describe('invite emails', () => {
     const e = inviteEmail({ ...base, kind: 'added' })
     expect(e.subject).toBe('You’ve been added to Demo Academy')
     expect(e.text).toContain('Hi Maya,')
-    expect(e.text).toContain('Grace Liu added you to Demo Academy on Hyber CRM as a tutor.')
+    expect(e.text).toContain('Grace Liu added you to Demo Academy on Hyber CRM as a coach.')
     expect(e.text).toContain('a password for maya@school.org')
     expect(e.html).toContain('href="https://hybercrm.com/login?email=maya%40school.org"')
     expect(e.text).toContain('Hyber CRM is software by HyberTec LLC.')
@@ -45,15 +45,15 @@ describe('invite emails', () => {
   })
 
   it('escapes names in the HTML', () => {
-    const e = inviteEmail({ ...base, branchName: 'A&B <Tutoring>', kind: 'added' })
-    expect(e.html).toContain('A&amp;B &lt;Tutoring&gt;')
-    expect(e.html).not.toContain('<Tutoring>')
+    const e = inviteEmail({ ...base, branchName: 'A&B <Coaching>', kind: 'added' })
+    expect(e.html).toContain('A&amp;B &lt;Coaching&gt;')
+    expect(e.html).not.toContain('<Coaching>')
   })
 })
 
 describe('reserved addresses', () => {
   it('never emails test and example domains', () => {
-    expect(isReservedEmail('tutor@e2e.test')).toBe(true)
+    expect(isReservedEmail('coach@e2e.test')).toBe(true)
     expect(isReservedEmail('someone@example.com')).toBe(true)
     expect(isReservedEmail('x@demo.invalid')).toBe(true)
     expect(isReservedEmail('maya@school.org')).toBe(false)

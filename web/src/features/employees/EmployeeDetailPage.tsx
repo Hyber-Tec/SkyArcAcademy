@@ -5,7 +5,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { STAFF_COLORS } from '@shared/colors'
 import { COL } from '@shared/paths'
-import { missingRates, rateName, tutorsNeedAdminRate } from '@shared/pay/rates'
+import { missingRates, rateName, coachesNeedAdminRate } from '@shared/pay/rates'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
 import { payModelOn } from '@shared/settings/businessRules'
@@ -97,8 +97,8 @@ function ProfileCard({ staff, member }: { staff: Staff & { id: string }; member:
     if (!form.firstName.trim()) return toast.error('Enter a first name.')
     setBusy(true)
     try {
-      // A tutor who stops teaching leaves their upcoming sessions as conflicts: ask first.
-      const stopsTeaching = staff.role === 'tutor' && staff.status === 'active' && (form.status !== 'active' || form.role !== 'tutor')
+      // A coach who stops teaching leaves their upcoming sessions as conflicts: ask first.
+      const stopsTeaching = staff.role === 'coach' && staff.status === 'active' && (form.status !== 'active' || form.role !== 'coach')
       if (stopsTeaching) {
         const what = form.status !== 'active' ? `set ${staff.firstName || staff.name} to ${STAFF_STATUS_LABELS[form.status]}` : 'change the role'
         const q = stopTeachingQuestion(staff.name, await countUpcomingSessions(branchId, staff.id, timezone), what)
@@ -181,7 +181,7 @@ function ProfileCard({ staff, member }: { staff: Staff & { id: string }; member:
                 </FieldDescription>
               ) : (
                 <RadioGroup value={form.role} onValueChange={(v) => set('role', v as StaffRole)} className="flex gap-6 pt-1.5">
-                  {(['tutor', 'admin'] as StaffRole[]).map((r) => (
+                  {(['coach', 'admin'] as StaffRole[]).map((r) => (
                     <label key={r} className="flex items-center gap-2 text-sm">
                       <RadioGroupItem value={r} />
                       {ROLE_LABELS[r]}
@@ -285,7 +285,7 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
   const [admin, setAdmin] = useState('')
   const [effective, setEffective] = useState(todayKey(timezone))
   const [busy, setBusy] = useState(false)
-  // Owners and admins have one hourly rate (kept as the admin rate); tutors follow the branch pay model.
+  // Owners and admins have one hourly rate (kept as the admin rate); coaches follow the branch pay model.
   const single = isAdminRole(staff.role)
   const today = todayKey(timezone)
   const modelNow = payModelOn(rules, today)
@@ -312,7 +312,7 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
   }
 
   // Rates their pay needs that are unset: their worked time is priced at $0 until they're saved.
-  const missing = loading || staff.status !== 'active' ? [] : missingRates(staff.role, comp?.rates, tutorsNeedAdminRate(rules, today))
+  const missing = loading || staff.status !== 'active' ? [] : missingRates(staff.role, comp?.rates, coachesNeedAdminRate(rules, today))
   const fields = single
     ? [{ id: 'admin', label: 'Hourly rate', value: admin, set: setAdmin }]
     : [
@@ -324,8 +324,8 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
     : modelNow === 'hourly'
       ? 'Paid the teaching rate for every clocked hour.'
       : modelNow === 'teaching_only'
-        ? 'Paid for teaching time only: time inside attended sessions. Other clocked time is unpaid.'
-        : 'Time inside attended sessions is paid at the teaching rate; the rest of the shift at the admin rate.'
+        ? 'Paid for teaching time only: time inside attended classes. Other clocked time is unpaid.'
+        : 'Time inside attended classes is paid at the teaching rate; the rest of the shift at the admin rate.'
 
   return (
     <Card ref={card} id="pay" className="scroll-mt-4">

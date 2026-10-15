@@ -34,7 +34,7 @@ const MODES: { value: CalendarMode; label: string; ready: boolean }[] = [
 export function EmployeeCalendarPage() {
   const { data: staff } = useStaffList()
   const [params, setParams] = useSearchParams()
-  const [role, setRole] = useState<'tutor' | 'admin' | 'all'>('tutor')
+  const [role, setRole] = useState<'coach' | 'admin' | 'all'>('coach')
   const [status, setStatus] = useState<StaffStatus | 'all'>('active')
   const mode = (params.get('mode') as CalendarMode) || 'availability'
   const staffId = params.get('staff')
@@ -64,7 +64,7 @@ export function EmployeeCalendarPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tutor">Tutors</SelectItem>
+            <SelectItem value="coach">Coaches</SelectItem>
             <SelectItem value="admin">Admins</SelectItem>
             <SelectItem value="all">All roles</SelectItem>
           </SelectContent>
@@ -127,7 +127,7 @@ function ScheduledHours({ staffId }: { staffId: string }) {
   const [range, setRange] = useState<{ from: string; to: string } | null>(null)
   const onRange = useCallback((from: string, to: string) => setRange({ from, to }), [])
   const q = useMemo(
-    () => (range ? query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', '>=', range.from), where('dateKey', '<=', range.to)) : null),
+    () => (range ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', range.from), where('dateKey', '<=', range.to)) : null),
     [branchId, staffId, range],
   )
   const { data } = useQuery<Session>(q, `emp-sched-${staffId}-${range?.from}-${range?.to}`, { keepPrevious: true })
@@ -141,7 +141,7 @@ function ScheduledHours({ staffId }: { staffId: string }) {
     }
     return m
   }, [data])
-  return <HoursCalendar cells={cells} tone="scheduled" onRange={onRange} footnote="Scheduled hours from assigned sessions. Canceled sessions are excluded; overlapping students count once." />
+  return <HoursCalendar cells={cells} tone="scheduled" onRange={onRange} footnote="Scheduled hours from assigned classes. Canceled classes are excluded; overlapping students count once." />
 }
 
 function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teaching' | 'admin' }) {

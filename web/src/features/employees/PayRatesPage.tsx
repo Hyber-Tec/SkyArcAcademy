@@ -28,18 +28,18 @@ export function PayRatesPage() {
   const { rules, timezone } = useBranch()
   const { data: staff } = useStaffList()
   const [search, setSearch] = useState('')
-  const [role, setRole] = useState<'tutor' | 'admin' | 'all'>('tutor')
+  const [role, setRole] = useState<'coach' | 'admin' | 'all'>('coach')
   const [status, setStatus] = useState<StaffStatus | 'all'>('active')
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     return staff.filter(
       (s) =>
-        (role === 'all' || (role === 'tutor' ? s.role === 'tutor' : isAdminRole(s.role))) &&
+        (role === 'all' || (role === 'coach' ? s.role === 'coach' : isAdminRole(s.role))) &&
         (status === 'all' || s.status === status) &&
         (!q || s.nameLower.includes(q)),
     )
   }, [staff, search, role, status])
-  // Tutors' admin rate only matters while the branch pays admin time.
+  // Coaches' admin rate only matters while the branch pays admin time.
   const usesAdminRate = rules.payModels.some((p) => p.model === 'teaching_admin')
   const modelNow = payModelOn(rules, todayKey(timezone))
   const { gaps } = usePayGaps()
@@ -59,12 +59,12 @@ export function PayRatesPage() {
           </InputGroupAddon>
           <InputGroupInput placeholder="Search by name…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </InputGroup>
-        <Select value={role} onValueChange={(v) => setRole(v as 'tutor' | 'admin' | 'all')}>
+        <Select value={role} onValueChange={(v) => setRole(v as 'coach' | 'admin' | 'all')}>
           <SelectTrigger className="sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tutor">Tutors</SelectItem>
+            <SelectItem value="coach">Coaches</SelectItem>
             <SelectItem value="admin">Owners & admins</SelectItem>
             <SelectItem value="all">All roles</SelectItem>
           </SelectContent>

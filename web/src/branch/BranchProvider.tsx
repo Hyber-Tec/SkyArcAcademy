@@ -20,7 +20,7 @@ import { useDoc } from '@/lib/firestore'
  */
 export type ViewAs =
   | { role: 'admin' }
-  | { role: 'tutor'; staffId: string; name: string }
+  | { role: 'coach'; staffId: string; name: string }
   | { role: 'parent'; studentIds: string[]; name: string }
   | { role: 'student'; studentId: string; name: string }
 
@@ -112,7 +112,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       isAdmin: isAdminRole(role),
       isOwner: !viewAs && ownRole === 'owner',
       canPreview,
-      staffId: viewAs ? (viewAs.role === 'tutor' ? viewAs.staffId : null) : (member?.staffId ?? null),
+      staffId: viewAs ? (viewAs.role === 'coach' ? viewAs.staffId : null) : (member?.staffId ?? null),
       studentId: viewAs ? (viewAs.role === 'student' ? viewAs.studentId : null) : (member?.studentId ?? null),
       studentIds: viewAs ? (viewAs.role === 'parent' ? viewAs.studentIds : []) : (member?.studentIds ?? []),
       can: (page) => ownRole === 'owner' || !restrictions.includes(page),

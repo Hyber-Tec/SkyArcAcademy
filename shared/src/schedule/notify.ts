@@ -4,7 +4,7 @@ import { SESSION_STATUS_LABELS } from './status'
 
 /** The session fields the notification rules look at. */
 export interface SessionSnapshot {
-  tutorId: string | null
+  coachId: string | null
   studentName: string
   status: string
   dateKey: DateKey
@@ -15,7 +15,7 @@ export interface SessionSnapshot {
   isDeleted?: boolean
 }
 
-/** Which of the tutor's notification switches governs an item. */
+/** Which of the coach's notification switches governs an item. */
 export type SessionPref = 'sessionCreated' | 'sessionChanged' | 'sessionCanceled'
 
 export interface SessionNotice {
@@ -50,12 +50,12 @@ function inWindow(s: SessionSnapshot, ctx: NoticeContext) {
  * Education's "Session Confirmed". Pending and confirmed sessions only.
  */
 export function sessionCreatedNotices(s: SessionSnapshot, ctx: NoticeContext): SessionNotice[] {
-  if (!s.tutorId || s.isDeleted || !['pending', 'confirmed'].includes(s.status) || !inWindow(s, ctx)) return []
+  if (!s.coachId || s.isDeleted || !['pending', 'confirmed'].includes(s.status) || !inWindow(s, ctx)) return []
   return [
     {
-      staffId: s.tutorId,
+      staffId: s.coachId,
       type: 'session_created',
-      title: 'Session Confirmed',
+      title: 'Class Confirmed',
       body: `${s.studentName} on ${day(s, ctx)} at ${range(s)} has been confirmed.`,
       dateKey: s.dateKey,
       pref: 'sessionCreated',
@@ -66,7 +66,7 @@ export function sessionCreatedNotices(s: SessionSnapshot, ctx: NoticeContext): S
 /**
  * True Education's decision table for session updates, limited to sessions
  * starting inside the window (before or after the change), plus Hyber's
- * delete/restore-from-trash notices. At most one notice per tutor.
+ * delete/restore-from-trash notices. At most one notice per coach.
  */
 export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnapshot, ctx: NoticeContext): SessionNotice[] {
   if (!inWindow(before, ctx) && !inWindow(after, ctx)) return []
@@ -78,13 +78,13 @@ export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnap
   // Moved to / back from the trash.
   if (!before.isDeleted && after.isDeleted) {
     if (before.status === 'confirmed') {
-      add(before.tutorId, { type: 'session_deleted', title: 'Session Deleted', body: `${before.studentName} on ${day(before, ctx)} at ${range(before)} was removed from the schedule.`, pref: 'sessionCanceled' }, before)
+      add(before.coachId, { type: 'session_deleted', title: 'Class Deleted', body: `${before.studentName} on ${day(before, ctx)} at ${range(before)} was removed from the schedule.`, pref: 'sessionCanceled' }, before)
     }
     return out
   }
   if (before.isDeleted && !after.isDeleted) {
     if (after.status === 'confirmed') {
-      add(after.tutorId, { type: 'session_restored', title: 'Session Restored', body: `${after.studentName} on ${day(after, ctx)} at ${range(after)} is back on your schedule.`, pref: 'sessionCanceled' }, after)
+      add(after.coachId, { type: 'session_restored', title: 'Class Restored', body: `${after.studentName} on ${day(after, ctx)} at ${range(after)} is back on your schedule.`, pref: 'sessionCanceled' }, after)
     }
     return out
   }
@@ -94,37 +94,37 @@ export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnap
   if (before.status === 'confirmed' && after.status === 'canceled') {
     const body =
       after.dateKey === ctx.today
-        ? `${after.studentName}’s ${time(after.startMin)} session today is canceled.`
+        ? `${after.studentName}’s ${time(after.startMin)} class today is canceled.`
         : `${after.studentName} on ${date(after.dateKey)} at ${time(after.startMin)} has been canceled.`
-    add(after.tutorId, { type: 'session_canceled', title: 'Cancellation Alert', body, pref: 'sessionCanceled' }, after)
+    add(after.coachId, { type: 'session_canceled', title: 'Cancellation Alert', body, pref: 'sessionCanceled' }, after)
     return out
   }
   if (before.status === 'canceled' && after.status !== 'canceled') {
     const body =
       after.dateKey === ctx.today
-        ? `Correction: ${after.studentName}’s ${time(after.startMin)} session today is NOT canceled. Status: ${statusLabel(after.status)}.`
+        ? `Correction: ${after.studentName}’s ${time(after.startMin)} class today is NOT canceled. Status: ${statusLabel(after.status)}.`
         : `Correction: ${after.studentName} on ${date(after.dateKey)} is NOT canceled. Status: ${statusLabel(after.status)}.`
-    add(after.tutorId, { type: 'session_restored', title: 'Session Restored', body, pref: 'sessionCanceled' }, after)
+    add(after.coachId, { type: 'session_restored', title: 'Class Restored', body, pref: 'sessionCanceled' }, after)
     return out
   }
   if (after.status === 'canceled') return out
   // Tentative sessions don't notify.
   if (before.status === 'pending' && after.status === 'pending') return out
 
-  // Another tutor: tell both, nothing else.
-  if (before.tutorId !== after.tutorId) {
-    add(before.tutorId, { type: 'session_reassigned_out', title: 'Session Removed', body: `You no longer have ${before.studentName} on ${date(before.dateKey)} at ${range(before)}.`, pref: 'sessionChanged' }, before)
-    add(after.tutorId, { type: 'session_reassigned_in', title: 'Session Assigned', body: `You've been assigned to ${after.studentName}'s session on ${date(after.dateKey)} at ${range(after)}.`, pref: 'sessionChanged' }, after)
+  // Another coach: tell both, nothing else.
+  if (before.coachId !== after.coachId) {
+    add(before.coachId, { type: 'session_reassigned_out', title: 'Class Removed', body: `You no longer have ${before.studentName} on ${date(before.dateKey)} at ${range(before)}.`, pref: 'sessionChanged' }, before)
+    add(after.coachId, { type: 'session_reassigned_in', title: 'Class Assigned', body: `You've been assigned to ${after.studentName}'s class on ${date(after.dateKey)} at ${range(after)}.`, pref: 'sessionChanged' }, after)
     return out
   }
 
-  const changed = (n: Omit<SessionNotice, 'staffId' | 'dateKey' | 'pref'>) => add(after.tutorId, { ...n, pref: 'sessionChanged' }, after)
+  const changed = (n: Omit<SessionNotice, 'staffId' | 'dateKey' | 'pref'>) => add(after.coachId, { ...n, pref: 'sessionChanged' }, after)
   if (after.status === 'no_show' && before.status !== 'no_show') {
-    changed({ type: 'session_no_show', title: 'No Show', body: `${after.studentName}'s session on ${date(after.dateKey)} at ${time(after.startMin)} was marked No Show.` })
+    changed({ type: 'session_no_show', title: 'No Show', body: `${after.studentName}'s class on ${date(after.dateKey)} at ${time(after.startMin)} was marked No Show.` })
   } else if (before.dateKey !== after.dateKey) {
-    changed({ type: 'session_date_changed', title: 'Session Date Changed', body: `${after.studentName}'s session moved from ${date(before.dateKey)} to ${date(after.dateKey)} at ${range(after)}.` })
+    changed({ type: 'session_date_changed', title: 'Class Date Changed', body: `${after.studentName}'s class moved from ${date(before.dateKey)} to ${date(after.dateKey)} at ${range(after)}.` })
   } else if (before.startMin !== after.startMin || before.endMin !== after.endMin) {
-    changed({ type: 'session_time_changed', title: 'Time Changed', body: `${after.studentName}'s session on ${date(after.dateKey)}: ${range(before)} → ${range(after)}.` })
+    changed({ type: 'session_time_changed', title: 'Time Changed', body: `${after.studentName}'s class on ${date(after.dateKey)}: ${range(before)} → ${range(after)}.` })
   }
   return out
 }

@@ -25,7 +25,7 @@ import { OrDivider } from '@/pages/public/authParts'
 import { GoogleSignInButton } from '@/pages/public/GoogleButton'
 
 const ROLE_CHOICES: { role: Role; title: string; text: string; icon: typeof LuUsers }[] = [
-  { role: 'tutor', title: 'Tutor or employee', text: 'I work at this center.', icon: LuUserRound },
+  { role: 'coach', title: 'Coach or employee', text: 'I work at this academy.', icon: LuUserRound },
   { role: 'parent', title: 'Parent or guardian', text: 'My child studies here.', icon: LuUsers },
   { role: 'student', title: 'Student', text: 'I take classes here.', icon: LuGraduationCap },
 ]
@@ -248,7 +248,7 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
               <Field>
                 <FieldLabel htmlFor="su-students">Child’s name</FieldLabel>
                 <Input id="su-students" value={studentNames} onChange={(e) => setStudentNames(e.target.value)} placeholder="e.g. Ava Patel" />
-                <FieldDescription>If you have several children at the center, list them all.</FieldDescription>
+                <FieldDescription>If you have several children at the academy, list them all.</FieldDescription>
               </Field>
             ) : null}
             <Field>

@@ -78,7 +78,7 @@ export async function setDateHours(opts: {
           entityType: 'session',
           entityId: dates[0],
           dateKey: dates[0],
-          summary: `Moved ${trash.length} session${trash.length > 1 ? 's' : ''} to Trash when closing ${dates.length === 1 ? formatDateKey(dates[0], 'weekdayMedium') : opts.summaryRange}`,
+          summary: `Moved ${trash.length} class${trash.length > 1 ? 'es' : ''} to Trash when closing ${dates.length === 1 ? formatDateKey(dates[0], 'weekdayMedium') : opts.summaryRange}`,
         })
       }
     }

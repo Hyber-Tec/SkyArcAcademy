@@ -93,7 +93,7 @@ export function DateHoursCard() {
     const d0 = week[weekdayOf(dates[0])]
     await setDateHours({ branchId, actor, dates, value, closedTimes: { openMin: d0.openMin, closeMin: d0.closeMin }, summaryRange, trashSessionIds })
     const what = dates.length === 1 ? `${formatDateKey(dates[0], 'weekdayMedium')}: ${describeHoursValue(value)}` : `${dates.length} dates set to ${describeHoursValue(value)}`
-    toast.success(what, trashSessionIds.length ? { description: `${trashSessionIds.length} session${trashSessionIds.length > 1 ? 's' : ''} moved to Trash.` } : undefined)
+    toast.success(what, trashSessionIds.length ? { description: `${trashSessionIds.length} class${trashSessionIds.length > 1 ? 'es' : ''} moved to Trash.` } : undefined)
   }
 
   return (
@@ -101,7 +101,7 @@ export function DateHoursCard() {
       <CardHeader>
         <CardTitle>Opening hours by date</CardTitle>
         <CardDescription>
-          Holidays, closures and special hours. Marked dates differ from the weekly default; the schedule, closed days and tutor availability all follow these hours.
+          Holidays, closures and special hours. Marked dates differ from the weekly default; the schedule, closed days and coach availability all follow these hours.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -337,8 +337,8 @@ function HoursForm({
         <Alert>
           <LuTriangleAlert />
           <AlertDescription>
-            {trash.length} session{trash.length > 1 ? 's are' : ' is'} booked on {many ? 'these dates' : 'this date'}. Closing moves {trash.length > 1 ? 'them' : 'it'} to Trash; you can
-            restore sessions from Trash on the schedule.
+            {trash.length} class{trash.length > 1 ? 'es are' : ' is'} booked on {many ? 'these dates' : 'this date'}. Closing moves {trash.length > 1 ? 'them' : 'it'} to Trash; you can
+            restore classes from Trash on the schedule.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -346,7 +346,7 @@ function HoursForm({
         <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-testid="hours-outside">
           <LuTriangleAlert />
           <AlertDescription className="text-amber-800 dark:text-amber-300">
-            {outside} booked session{outside > 1 ? 's fall' : ' falls'} outside these hours. {outside > 1 ? 'They stay' : 'It stays'} booked and{' '}
+            {outside} booked class{outside > 1 ? 'es fall' : ' falls'} outside these hours. {outside > 1 ? 'They stay' : 'It stays'} booked and{' '}
             {outside > 1 ? 'show' : 'shows'} as {outside > 1 ? 'conflicts' : 'a conflict'} on the schedule until moved, reassigned or canceled.
           </AlertDescription>
         </Alert>
@@ -356,7 +356,7 @@ function HoursForm({
 }
 
 function saveLabel(v: FormValue, trash: string[] | null, verb: string) {
-  if (v.mode === 'closed' && trash?.length) return `Close and move ${trash.length} session${trash.length > 1 ? 's' : ''} to Trash`
+  if (v.mode === 'closed' && trash?.length) return `Close and move ${trash.length} class${trash.length > 1 ? 'es' : ''} to Trash`
   return verb
 }
 

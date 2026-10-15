@@ -23,7 +23,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { cn } from '@/lib/utils'
 import { SESSION_CARD_STYLE } from './cardStyle'
 
-export interface RailTutor {
+export interface RailCoach {
   id: string
   name: string
   color?: string
@@ -82,19 +82,19 @@ export function ViewSwitch({ view, onView, full }: { view: ScheduleView; onView:
   )
 }
 
-/** The schedule's tools: duplicate a week, Trash, tutor order, opening hours and zoom. */
+/** The schedule's tools: duplicate a week, Trash, coach order, opening hours and zoom. */
 export function ScheduleMenu({
   zoom,
   onZoom,
   onDuplicate,
   onTrash,
-  onTutorOrder,
+  onCoachOrder,
 }: {
   zoom: number
   onZoom: (z: number) => void
   onDuplicate: () => void
   onTrash: () => void
-  onTutorOrder: () => void
+  onCoachOrder: () => void
 }) {
   const navigate = useNavigate()
   return (
@@ -112,8 +112,8 @@ export function ScheduleMenu({
           <LuTrash2 /> Trash
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onTutorOrder}>
-          <LuListOrdered /> Tutor display order
+        <DropdownMenuItem onSelect={onCoachOrder}>
+          <LuListOrdered /> Coach display order
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate(`/admin/settings`)}>
           <LuClock /> Default opening hours
@@ -148,17 +148,17 @@ export interface ScheduleRailProps {
   onPrev: () => void
   onNext: () => void
   onToday: () => void
-  tutors: RailTutor[]
+  coaches: RailCoach[]
   /** Month view shows no session numbers. */
   showNumbers: boolean
-  tutorFilter: string | null
-  onTutorFilter: (id: string | null) => void
+  coachFilter: string | null
+  onCoachFilter: (id: string | null) => void
   numbers: RailNumbers | null
   zoom: number
   onZoom: (z: number) => void
   onDuplicate: () => void
   onTrash: () => void
-  onTutorOrder: () => void
+  onCoachOrder: () => void
   /** Month view: the month at the top of the scrolling calendar. */
   topMonth?: DateKey | null
   /** Desktop: folds the rail away. */
@@ -169,7 +169,7 @@ export interface ScheduleRailProps {
 
 /**
  * The schedule's side rail: the date and view, a scrolling month calendar, the
- * tutors (click one to see only them), the shown day's numbers, the legend and
+ * coaches (click one to see only them), the shown day's numbers, the legend and
  * the tools.
  */
 export function ScheduleRail(p: ScheduleRailProps) {
@@ -247,26 +247,26 @@ export function ScheduleRail(p: ScheduleRailProps) {
       </div>
       <div>
         <div className="mb-1 flex items-center justify-between px-2">
-          <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Tutors</span>
-          {p.tutorFilter ? (
-            <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => p.onTutorFilter(null)}>
+          <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Coaches</span>
+          {p.coachFilter ? (
+            <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => p.onCoachFilter(null)}>
               Show all
             </button>
           ) : p.showNumbers ? (
-            <span className="text-[11px] text-muted-foreground/70">Sessions · hours</span>
+            <span className="text-[11px] text-muted-foreground/70">Classes · hours</span>
           ) : null}
         </div>
-        <div className="space-y-0.5" data-testid="rail-tutors">
-          {p.tutors.map((t) => {
-            const on = p.tutorFilter === t.id
-            const dim = !!p.tutorFilter && !on
+        <div className="space-y-0.5" data-testid="rail-coaches">
+          {p.coaches.map((t) => {
+            const on = p.coachFilter === t.id
+            const dim = !!p.coachFilter && !on
             const color = t.color ?? '#71717a'
             return (
               <button
                 key={t.id}
                 type="button"
                 aria-pressed={on}
-                onClick={() => p.onTutorFilter(on ? null : t.id)}
+                onClick={() => p.onCoachFilter(on ? null : t.id)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition',
                   on ? 'bg-card font-medium shadow-sm ring-1 ring-border' : 'hover:bg-muted/70',
@@ -285,14 +285,14 @@ export function ScheduleRail(p: ScheduleRailProps) {
               </button>
             )
           })}
-          {p.tutors.length === 0 ? <p className="px-2 text-sm text-muted-foreground">No tutors yet.</p> : null}
+          {p.coaches.length === 0 ? <p className="px-2 text-sm text-muted-foreground">No coaches yet.</p> : null}
         </div>
       </div>
       {n ? (
         <div>
           <div className="mb-1.5 px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{n.label}</div>
           <div className="grid grid-cols-2 gap-1.5">
-            {num(n.sessions, n.sessions === 1 ? 'session' : 'sessions')}
+            {num(n.sessions, n.sessions === 1 ? 'class' : 'classes')}
             {num(n.conflicts, 'in conflict', 'text-red-600')}
             {num(n.pending, 'pending', 'text-amber-600')}
             {num(n.canceled, 'canceled')}
@@ -325,7 +325,7 @@ export function ScheduleRail(p: ScheduleRailProps) {
         <Button variant="outline" size="sm" className="rounded-lg" onClick={p.onTrash}>
           <LuTrash2 /> Trash
         </Button>
-        <Button variant="outline" size="sm" className="rounded-lg" onClick={p.onTutorOrder}>
+        <Button variant="outline" size="sm" className="rounded-lg" onClick={p.onCoachOrder}>
           <LuListOrdered /> Order
         </Button>
         <div className="flex h-8 items-center justify-between rounded-lg border bg-card px-1">
@@ -342,18 +342,18 @@ export function ScheduleRail(p: ScheduleRailProps) {
   )
 }
 
-/** The folded rail: show it again, step through dates, or pick a tutor by initials. */
+/** The folded rail: show it again, step through dates, or pick a coach by initials. */
 export function SlimRail({
-  tutors,
-  tutorFilter,
-  onTutorFilter,
+  coaches,
+  coachFilter,
+  onCoachFilter,
   onShow,
   onPrev,
   onNext,
 }: {
-  tutors: RailTutor[]
-  tutorFilter: string | null
-  onTutorFilter: (id: string | null) => void
+  coaches: RailCoach[]
+  coachFilter: string | null
+  onCoachFilter: (id: string | null) => void
   onShow: () => void
   onPrev: () => void
   onNext: () => void
@@ -370,19 +370,19 @@ export function SlimRail({
         <LuChevronRight />
       </Button>
       <span className="my-1 h-px w-6 bg-border" />
-      {tutors.map((t) => {
-        const on = tutorFilter === t.id
+      {coaches.map((t) => {
+        const on = coachFilter === t.id
         const color = t.color ?? '#71717a'
         return (
           <button
             key={t.id}
             type="button"
             title={t.name}
-            aria-label={on ? 'Show all tutors' : `Show only ${t.name}`}
-            onClick={() => onTutorFilter(on ? null : t.id)}
+            aria-label={on ? 'Show all coaches' : `Show only ${t.name}`}
+            onClick={() => onCoachFilter(on ? null : t.id)}
             className={cn(
               'flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
-              tutorFilter && !on && 'opacity-40',
+              coachFilter && !on && 'opacity-40',
               on && 'ring-2 ring-foreground ring-offset-2 ring-offset-muted',
             )}
             style={{ backgroundColor: `${color}1f`, color }}

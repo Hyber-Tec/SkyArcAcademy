@@ -1,6 +1,6 @@
 /**
- * Lane layout and capacity for one tutor's sessions on one day (True Education's
- * DaySection algorithm). A tutor teaches at most N students at once; overlapping
+ * Lane layout and capacity for one coach's sessions on one day (True Education's
+ * DaySection algorithm). A coach teaches at most N students at once; overlapping
  * sessions stack into lanes.
  */
 
@@ -64,7 +64,7 @@ export function seatsLeft(items: readonly LaneItem[], startMin: number, endMin: 
   return Math.max(0, maxLanes - peakConcurrency(items, startMin, endMin, excludeId))
 }
 
-/** True when the candidate fits without exceeding the per-tutor limit. */
+/** True when the candidate fits without exceeding the per-coach limit. */
 export function fitsCapacity(items: readonly LaneItem[], startMin: number, endMin: number, maxLanes: number, excludeId?: string): boolean {
   return peakConcurrency(items, startMin, endMin, excludeId) < maxLanes
 }

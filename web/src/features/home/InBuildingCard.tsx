@@ -8,7 +8,7 @@ import { dayLabel } from './NeedsYouCard'
 import { PersonDot } from './parts'
 
 /**
- * Who is clocked in now, and the tutors still expected today (first session
+ * Who is clocked in now, and the coaches still expected today (first session
  * later, or a session already started without clocking in).
  */
 export function InBuildingCard({
@@ -28,15 +28,15 @@ export function InBuildingCard({
   const model = useMemo(() => {
     const open = shifts.filter((s) => s.status === 'open').sort((a, b) => a.clockInAt.toMillis() - b.clockInAt.toMillis())
     const inIds = new Set(open.map((s) => s.staffId))
-    const tutors = new Map<string, { id: string; name: string; spans: [number, number][] }>()
+    const coaches = new Map<string, { id: string; name: string; spans: [number, number][] }>()
     for (const s of sessions) {
       if (s.isDeleted || s.status === 'canceled') continue
-      const t = tutors.get(s.tutorId) ?? { id: s.tutorId, name: s.tutorName, spans: [] }
+      const t = coaches.get(s.coachId) ?? { id: s.coachId, name: s.coachName, spans: [] }
       t.spans.push([s.startMin, s.endMin])
-      tutors.set(s.tutorId, t)
+      coaches.set(s.coachId, t)
     }
     // Not clocked in: a session running now (late), or the next one later today.
-    const expected = [...tutors.values()]
+    const expected = [...coaches.values()]
       .filter((t) => !inIds.has(t.id))
       .map((t) => {
         const spans = t.spans.sort((a, b) => a[0] - b[0])
@@ -46,8 +46,8 @@ export function InBuildingCard({
       })
       .filter((t) => t.at >= 0)
       .sort((a, b) => Number(b.late) - Number(a.late) || a.at - b.at || a.name.localeCompare(b.name))
-    const tutorsIn = [...tutors.keys()].filter((id) => inIds.has(id)).length
-    return { open, expected, tutorsIn, scheduled: tutors.size }
+    const coachesIn = [...coaches.keys()].filter((id) => inIds.has(id)).length
+    return { open, expected, coachesIn, scheduled: coaches.size }
   }, [shifts, sessions, nowMin])
 
   const employee = (id: string) => navigate(`/admin/employees/directory/${id}`)
@@ -57,7 +57,7 @@ export function InBuildingCard({
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">In the building</h2>
         <span className="text-xs text-muted-foreground">
-          {model.scheduled ? `${model.tutorsIn} of ${model.scheduled} tutor${model.scheduled === 1 ? '' : 's'}` : `${model.open.length} clocked in`}
+          {model.scheduled ? `${model.coachesIn} of ${model.scheduled} coach${model.scheduled === 1 ? '' : 'es'}` : `${model.open.length} clocked in`}
         </span>
       </div>
       {model.open.length ? (
@@ -97,14 +97,14 @@ export function InBuildingCard({
                       <span className="min-w-0 flex-1 leading-tight">
                         <span className="block truncate text-sm">{t.name}</span>
                         <span className="block text-xs font-medium text-amber-700 tabular-nums dark:text-amber-400">
-                          Not clocked in · session started {formatMinutes(t.at)}
+                          Not clocked in · class started {formatMinutes(t.at)}
                         </span>
                       </span>
                     ) : (
                       <>
                         <span className="flex-1 truncate text-sm">{t.name}</span>
                         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                          {t.earlier ? 'next' : 'first'} session {formatMinutes(t.at)}
+                          {t.earlier ? 'next' : 'first'} class {formatMinutes(t.at)}
                         </span>
                       </>
                     )}

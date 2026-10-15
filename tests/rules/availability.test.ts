@@ -21,7 +21,7 @@ function block(staffId: string, dateKey: string) {
     unavailable: false,
     hidden: false,
     dayStartAt: Timestamp.fromDate(dayStartInstant(dateKey, TZ)),
-    updatedVia: 'tutor',
+    updatedVia: 'coach',
   }
 }
 
@@ -39,10 +39,10 @@ beforeEach(async () => {
     const db = ctx.firestore()
     await setDoc(doc(db, `branches/${B}`), { name: B, status: 'active', timezone: TZ, settings: {} })
     const m = (email: string, role: string, staffId: string | null) => ({ email, role, status: 'active', staffId, restrictions: [] })
-    await setDoc(doc(db, `branches/${B}/members/tutor@a.test`), m('tutor@a.test', 'tutor', 's-tutor'))
+    await setDoc(doc(db, `branches/${B}/members/coach@a.test`), m('coach@a.test', 'coach', 's-coach'))
     await setDoc(doc(db, `branches/${B}/members/admin@a.test`), m('admin@a.test', 'admin', null))
     const near = addDays(todayKey(TZ), 2)
-    await setDoc(doc(db, `branches/${B}/availability/s-tutor_${near}`), block('s-tutor', near))
+    await setDoc(doc(db, `branches/${B}/availability/s-coach_${near}`), block('s-coach', near))
   })
 })
 
@@ -50,30 +50,30 @@ describe('availability lock', () => {
   const far = () => addDays(todayKey(TZ), 10)
   const near = () => addDays(todayKey(TZ), 2)
 
-  it('tutors set their own availability outside the lock window', async () => {
+  it('coaches set their own availability outside the lock window', async () => {
     const d = far()
-    await assertSucceeds(setDoc(doc(user('tutor@a.test'), `branches/${B}/availability/s-tutor_${d}`), block('s-tutor', d)))
+    await assertSucceeds(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-coach_${d}`), block('s-coach', d)))
   })
 
-  it('tutors cannot add, change or remove days inside the lock window', async () => {
+  it('coaches cannot add, change or remove days inside the lock window', async () => {
     const d = addDays(todayKey(TZ), 3)
-    const db = user('tutor@a.test')
-    await assertFails(setDoc(doc(db, `branches/${B}/availability/s-tutor_${d}`), block('s-tutor', d)))
-    await assertFails(updateDoc(doc(db, `branches/${B}/availability/s-tutor_${near()}`), { ranges: [] }))
-    await assertFails(deleteDoc(doc(db, `branches/${B}/availability/s-tutor_${near()}`)))
+    const db = user('coach@a.test')
+    await assertFails(setDoc(doc(db, `branches/${B}/availability/s-coach_${d}`), block('s-coach', d)))
+    await assertFails(updateDoc(doc(db, `branches/${B}/availability/s-coach_${near()}`), { ranges: [] }))
+    await assertFails(deleteDoc(doc(db, `branches/${B}/availability/s-coach_${near()}`)))
   })
 
-  it('tutors cannot fake the day start or write for someone else', async () => {
+  it('coaches cannot fake the day start or write for someone else', async () => {
     const d = near()
-    const fake = { ...block('s-tutor', d), dayStartAt: Timestamp.fromDate(dayStartInstant(far(), TZ)) }
-    await assertFails(setDoc(doc(user('tutor@a.test'), `branches/${B}/availability/s-tutor_${d}x`), fake))
-    await assertFails(setDoc(doc(user('tutor@a.test'), `branches/${B}/availability/s-tutor_${d}`), fake))
+    const fake = { ...block('s-coach', d), dayStartAt: Timestamp.fromDate(dayStartInstant(far(), TZ)) }
+    await assertFails(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-coach_${d}x`), fake))
+    await assertFails(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-coach_${d}`), fake))
     const f = far()
-    await assertFails(setDoc(doc(user('tutor@a.test'), `branches/${B}/availability/s-other_${f}`), block('s-other', f)))
+    await assertFails(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-other_${f}`), block('s-other', f)))
   })
 
   it('admins change any day', async () => {
-    await assertSucceeds(deleteDoc(doc(user('admin@a.test'), `branches/${B}/availability/s-tutor_${near()}`)))
+    await assertSucceeds(deleteDoc(doc(user('admin@a.test'), `branches/${B}/availability/s-coach_${near()}`)))
   })
 
   it('a blocking lead time extends the lock', async () => {
@@ -81,6 +81,6 @@ describe('availability lock', () => {
       await updateDoc(doc(ctx.firestore(), `branches/${B}`), { settings: { availability: { leadTimeEnforcement: 'block' } } })
     })
     const d = far() // 10 days < 14-day lead time
-    await assertFails(setDoc(doc(user('tutor@a.test'), `branches/${B}/availability/s-tutor_${d}`), block('s-tutor', d)))
+    await assertFails(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-coach_${d}`), block('s-coach', d)))
   })
 })

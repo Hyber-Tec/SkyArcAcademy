@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuBan, LuCalendarCog, LuClipboardPaste, LuPencil, LuPlus, LuTrash2, LuTriangleAlert, LuUserRound } from 'react-icons/lu'
-import type { TutorRow } from '@shared/schedule/dayModel'
+import type { CoachRow } from '@shared/schedule/dayModel'
 import { layoutEventLanes } from '@shared/schedule/events'
 import { slotAt } from '@shared/schedule/dayModel'
 import type { DayHours } from '@shared/settings/defaults'
@@ -33,7 +33,7 @@ import type { EventDoc } from './useScheduleData'
 
 export const EVENT_DRAG_TYPE = 'application/x-hyber-event'
 
-/** Unavailable time on a tutor's row: a faint hatch under the white availability bands. */
+/** Unavailable time on a coach's row: a faint hatch under the white availability bands. */
 const OFF_HATCH = 'bg-[repeating-linear-gradient(135deg,rgba(161,161,170,0.10)_0,rgba(161,161,170,0.10)_1px,transparent_1px,transparent_6px)]'
 const CLOSED_HATCH =
   'bg-[repeating-linear-gradient(135deg,rgba(113,113,122,0.18)_0,rgba(113,113,122,0.18)_2px,transparent_2px,transparent_8px)] dark:bg-[repeating-linear-gradient(135deg,rgba(161,161,170,0.18)_0,rgba(161,161,170,0.18)_2px,transparent_2px,transparent_8px)]'
@@ -41,7 +41,7 @@ const CLOSED_HATCH =
 interface Props {
   dateKey: DateKey
   hours: DayHours
-  rows: TutorRow<WithId<Session>>[]
+  rows: CoachRow<WithId<Session>>[]
   events: WithId<EventDoc>[]
   /** Week view: each day has its own heading; Day view titles the page instead. */
   showHeader?: boolean
@@ -146,8 +146,8 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
         <h2 className="text-base font-semibold tracking-tight">{formatDateKey(dateKey, 'weekdayLong').replace(/, \d{4}$/, '')}</h2>
         {isToday ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">TODAY</span> : null}
         {!hours.isOpen ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
-        {/* Tutors never edit the schedule, so they only need to know the day is over. */}
-        {locked ? <span className="text-xs text-muted-foreground">{ui.mode === 'tutor' ? 'Past' : 'Past · view only'}</span> : null}
+        {/* Coaches never edit the schedule, so they only need to know the day is over. */}
+        {locked ? <span className="text-xs text-muted-foreground">{ui.mode === 'coach' ? 'Past' : 'Past · view only'}</span> : null}
         {ui.mode === 'admin' ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -221,10 +221,10 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
           <EventsRow dateKey={dateKey} events={events} lanes={eventLanes} laneCount={eventLaneCount} openMin={openMin} closeMin={closeMin} width={width} locked={locked} />
         ) : null}
 
-        {/* Tutor rows */}
+        {/* Coach rows */}
         {rows.map((row) => (
-          <TutorRowView
-            key={row.tutor.id}
+          <CoachRowView
+            key={row.coach.id}
             row={row}
             dateKey={dateKey}
             hours={hours}
@@ -238,7 +238,7 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
         ))}
         {rows.length === 0 ? (
           <div className="px-4 py-8 text-sm text-muted-foreground">
-            {locked ? 'No sessions on this day.' : ui.mode === 'tutor' ? 'Nothing booked and no availability on this day.' : 'No tutors available.'}
+            {locked ? 'No classes on this day.' : ui.mode === 'coach' ? 'Nothing booked and no availability on this day.' : 'No coaches available.'}
           </div>
         ) : null}
 
@@ -384,7 +384,7 @@ function EventsRow({
   )
 }
 
-function TutorRowView({
+function CoachRowView({
   row,
   dateKey,
   hours,
@@ -395,7 +395,7 @@ function TutorRowView({
   locked,
   isToday,
 }: {
-  row: TutorRow<WithId<Session>>
+  row: CoachRow<WithId<Session>>
   dateKey: DateKey
   hours: DayHours
   openMin: number
@@ -428,7 +428,7 @@ function TutorRowView({
         [Math.max(hours.closeMin, openMin), closeMin],
       ].filter(([a, b]) => b > a)
     : [[openMin, closeMin]]
-  const selectedSlot = ui.selection?.kind === 'slot' && ui.selection.staffId === row.tutor.id && ui.selection.dateKey === dateKey ? ui.selection : null
+  const selectedSlot = ui.selection?.kind === 'slot' && ui.selection.staffId === row.coach.id && ui.selection.dateKey === dateKey ? ui.selection : null
 
   // Group canceled sessions by identical time range for the "N canceled" pills.
   const canceledGroups = new Map<string, WithId<Session>[]>()
@@ -439,9 +439,9 @@ function TutorRowView({
     return slotAt(row.segments, row.active, m, ui.defaultDuration, ui.maxLanes, ui.snap)
   }
 
-  const first = row.tutor.name.split(' ')[0]
-  const color = ui.tutorColor?.(row.tutor.id) ?? '#71717a'
-  const initials = row.tutor.name
+  const first = row.coach.name.split(' ')[0]
+  const color = ui.coachColor?.(row.coach.id) ?? '#71717a'
+  const initials = row.coach.name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -454,22 +454,22 @@ function TutorRowView({
       <ContextMenuFor
         disabled={ui.mode !== 'admin'}
         entries={menu(
-          { kind: 'label', label: row.tutor.name },
+          { kind: 'label', label: row.coach.name },
           {
             label: 'Open employee profile',
             icon: LuUserRound,
-            onSelect: () => ui.openEmployee(row.tutor.id),
+            onSelect: () => ui.openEmployee(row.coach.id),
           },
           {
             label: 'Open in new tab',
-            onSelect: () => ui.openEmployee(row.tutor.id, true),
+            onSelect: () => ui.openEmployee(row.coach.id, true),
           },
           {
             label: `Show only ${first}`,
-            onSelect: () => ui.showOnlyTutor(row.tutor.id),
+            onSelect: () => ui.showOnlyCoach(row.coach.id),
             separatorBefore: true,
           },
-          { label: 'Show all tutors', onSelect: () => ui.showOnlyTutor(null) },
+          { label: 'Show all coaches', onSelect: () => ui.showOnlyCoach(null) },
           !locked && {
             label: 'Edit availability and hours for this day…',
             icon: LuCalendarCog,
@@ -478,13 +478,13 @@ function TutorRowView({
           },
         )}
       >
-        <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1.5 border-r bg-card px-3 py-2" style={{ width: NAME_COL }} data-testid="tutor-head">
+        <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1.5 border-r bg-card px-3 py-2" style={{ width: NAME_COL }} data-testid="coach-head">
           <div className="flex min-w-0 items-center gap-2">
             <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: `${color}1f`, color }}>
               {initials}
               {openClock && isToday ? <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-card bg-emerald-500" aria-label="Clocked in" /> : null}
             </span>
-            <span className="min-w-0 truncate text-sm font-semibold">{row.tutor.name}</span>
+            <span className="min-w-0 truncate text-sm font-semibold">{row.coach.name}</span>
           </div>
           {row.clocks.slice(0, 2).map((c) => (
             <span
@@ -512,10 +512,10 @@ function TutorRowView({
           {inConflict > 0 ? (
             <span className="flex items-start gap-1 text-[11px] leading-tight font-medium text-red-600" data-testid="row-conflicts">
               <LuTriangleAlert className="mt-px size-3 shrink-0" />
-              {ui.mode === 'tutor'
-                ? `${inConflict} session${inConflict > 1 ? 's' : ''} waiting for the admin`
+              {ui.mode === 'coach'
+                ? `${inConflict} class${inConflict > 1 ? 'es' : ''} waiting for the admin`
                 : row.isGhost
-                  ? `Unavailable · ${inConflict} session${inConflict > 1 ? 's' : ''} to move`
+                  ? `Unavailable · ${inConflict} class${inConflict > 1 ? 'es' : ''} to move`
                   : `${inConflict} in conflict`}
             </span>
           ) : null}
@@ -525,9 +525,9 @@ function TutorRowView({
         disabled={!editable}
         entries={menu(
           menuSlot && {
-            label: `New session at ${formatMinutes(menuSlot.startMin)}`,
+            label: `New class at ${formatMinutes(menuSlot.startMin)}`,
             icon: LuPlus,
-            onSelect: () => ui.createAt(row.tutor.id, dateKey, menuSlot.startMin, menuSlot.endMin),
+            onSelect: () => ui.createAt(row.coach.id, dateKey, menuSlot.startMin, menuSlot.endMin),
           },
           !menuSlot && { kind: 'label', label: 'No free time here' },
           menuSlot &&
@@ -535,7 +535,7 @@ function TutorRowView({
               label: `Paste at ${formatMinutes(menuSlot.startMin)}`,
               icon: LuClipboardPaste,
               shortcut: '⌘V',
-              onSelect: () => ui.pasteAt(row.tutor.id, dateKey, menuSlot.startMin),
+              onSelect: () => ui.pasteAt(row.coach.id, dateKey, menuSlot.startMin),
             },
           {
             label: 'Edit availability and hours for this day…',
@@ -553,12 +553,12 @@ function TutorRowView({
             if (!editable || (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset.avail)) return
             const r = slotFromEvent(e)
             if (!r.ok) {
-              if (r.reason === 'full') toast.error(`This tutor already has ${ui.maxLanes} students at that time.`)
+              if (r.reason === 'full') toast.error(`This coach already has ${ui.maxLanes} students at that time.`)
               return
             }
             ui.select({
               kind: 'slot',
-              staffId: row.tutor.id,
+              staffId: row.coach.id,
               dateKey,
               startMin: r.startMin,
               endMin: r.endMin,
@@ -567,7 +567,7 @@ function TutorRowView({
           onDoubleClick={(e) => {
             if (!editable || (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset.avail)) return
             const r = slotFromEvent(e)
-            if (r.ok) ui.createAt(row.tutor.id, dateKey, r.startMin, r.endMin)
+            if (r.ok) ui.createAt(row.coach.id, dateKey, r.startMin, r.endMin)
           }}
           onContextMenu={(e) => {
             const r = slotFromEvent(e)
@@ -584,7 +584,7 @@ function TutorRowView({
               id: string
               grabOffsetMin: number
             }
-            ui.moveSession(data.id, row.tutor.id, dateKey, dragStartMinute(e.clientX, e.currentTarget.getBoundingClientRect(), openMin, closeMin, ui.snap, data.grabOffsetMin))
+            ui.moveSession(data.id, row.coach.id, dateKey, dragStartMinute(e.clientX, e.currentTarget.getBoundingClientRect(), openMin, closeMin, ui.snap, data.grabOffsetMin))
           }}
         >
           {/* Availability bands */}
@@ -614,7 +614,7 @@ function TutorRowView({
               title="Closed"
             />
           ))}
-          {/* Clocked time: green lines where the tutor clocked in and out (True Education's look) */}
+          {/* Clocked time: green lines where the coach clocked in and out (True Education's look) */}
           {row.clocks.map((c) => {
             const end = c.open && isToday ? Math.max(c.startMin + 1, ui.nowMin) : c.endMin
             return (
@@ -671,7 +671,7 @@ function TutorRowView({
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="max-h-[420px] w-80 space-y-2 overflow-y-auto p-3">
-                    <div className="text-sm font-semibold">Canceled sessions ({row.canceled.length})</div>
+                    <div className="text-sm font-semibold">Canceled classes ({row.canceled.length})</div>
                     {row.canceled.map((s) => (
                       <SessionCard
                         key={s.id}

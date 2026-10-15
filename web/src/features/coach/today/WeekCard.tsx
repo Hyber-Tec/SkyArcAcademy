@@ -1,10 +1,10 @@
 import { Link } from 'react-router'
 import { WEEKDAY_SHORT, formatDateKey, formatDuration, weekdayOf } from '@shared/time'
 import { cn } from '@/lib/utils'
-import type { TutorDay } from './useTutorDay'
+import type { CoachDay } from './useCoachDay'
 
 /** The week at a glance: booked time per day (each day opens the schedule there), then the week's numbers. */
-export function WeekCard({ t }: { t: TutorDay }) {
+export function WeekCard({ t }: { t: CoachDay }) {
   const { week, today } = t
   const most = Math.max(240, ...week.days.map((d) => d.minutes))
   const first = week.days[0].dateKey
@@ -12,7 +12,7 @@ export function WeekCard({ t }: { t: TutorDay }) {
   const range = first.slice(0, 7) === last.slice(0, 7) ? `${formatDateKey(first, 'monthDay')} – ${Number(last.slice(8))}` : `${formatDateKey(first, 'monthDay')} – ${formatDateKey(last, 'monthDay')}`
 
   return (
-    <section className="@container rounded-xl border bg-card p-4" data-testid="tutor-week">
+    <section className="@container rounded-xl border bg-card p-4" data-testid="coach-week">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">This week</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{range}</span>
@@ -27,8 +27,8 @@ export function WeekCard({ t }: { t: TutorDay }) {
             return (
               <li key={d.dateKey}>
                 <Link
-                  to={`/tutor/schedule?date=${d.dateKey}`}
-                  aria-label={`${formatDateKey(d.dateKey, 'weekdayLong')}: ${d.sessions ? `${d.sessions} sessions, ${formatDuration(d.minutes)}` : d.isOpen ? 'nothing booked' : 'closed'}`}
+                  to={`/coach/schedule?date=${d.dateKey}`}
+                  aria-label={`${formatDateKey(d.dateKey, 'weekdayLong')}: ${d.sessions ? `${d.sessions} classes, ${formatDuration(d.minutes)}` : d.isOpen ? 'nothing booked' : 'closed'}`}
                   className="group flex flex-col items-center gap-1 rounded-lg py-1 hover:bg-muted/60"
                 >
                   <span className={cn('text-[11px] font-medium', isToday ? 'text-foreground' : 'text-muted-foreground')}>{WEEKDAY_SHORT[weekdayOf(d.dateKey)].slice(0, 2)}</span>
@@ -57,7 +57,7 @@ export function WeekCard({ t }: { t: TutorDay }) {
           })}
         </ol>
         <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-center @xl:grid-cols-1 @xl:gap-3 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-6 @xl:text-left">
-          <Stat label="Sessions" value={String(week.sessions)} hint={week.sessions ? `${week.done} done` : null} />
+          <Stat label="Classes" value={String(week.sessions)} hint={week.sessions ? `${week.done} done` : null} />
           <Stat label="Booked" value={formatDuration(week.minutes)} />
         </dl>
       </div>

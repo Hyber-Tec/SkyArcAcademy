@@ -20,8 +20,8 @@ export interface AuditInput {
   dateKey?: string | null
   studentId?: string | null
   studentName?: string | null
-  tutorId?: string | null
-  tutorName?: string | null
+  coachId?: string | null
+  coachName?: string | null
   changes?: AuditChange[]
 }
 
@@ -41,8 +41,8 @@ export function auditData(actor: Actor, input: AuditInput) {
     dateKey: input.dateKey ?? null,
     studentId: input.studentId ?? null,
     studentName: input.studentName ?? null,
-    tutorId: input.tutorId ?? null,
-    tutorName: input.tutorName ?? null,
+    coachId: input.coachId ?? null,
+    coachName: input.coachName ?? null,
     changes: input.changes ?? [],
     via: 'web' as const,
   }

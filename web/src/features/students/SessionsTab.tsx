@@ -16,7 +16,7 @@ export function SessionsTab({
   activity,
   onOpenSession,
 }: {
-  mode: 'admin' | 'tutor'
+  mode: 'admin' | 'coach'
   activity: StudentActivity
   onOpenSession: (id: string) => void
 }) {
@@ -29,8 +29,8 @@ export function SessionsTab({
   return (
       <div className="overflow-hidden rounded-xl border bg-card" data-testid="student-schedule">
         <div className="flex items-center justify-between border-b px-5 py-3.5">
-          <h2 className="text-base font-semibold">Scheduled sessions</h2>
-          <div className="inline-flex rounded-lg bg-muted p-0.5 text-xs" role="group" aria-label="Which sessions">
+          <h2 className="text-base font-semibold">Scheduled classes</h2>
+          <div className="inline-flex rounded-lg bg-muted p-0.5 text-xs" role="group" aria-label="Which classes">
             {(
               [
                 ['up', 'Upcoming'],
@@ -73,14 +73,14 @@ export function SessionsTab({
                       </div>
                       <SessionStatusBadge status={s.status} />
                     </div>
-                    <div className="truncate text-xs text-muted-foreground">with {s.tutorName}</div>
+                    <div className="truncate text-xs text-muted-foreground">with {s.coachName}</div>
                   </button>
                 </li>
               )
             })}
           </ol>
         ) : (
-          <p className="px-5 py-10 text-center text-sm text-muted-foreground">{when === 'up' ? 'No upcoming sessions.' : 'No past sessions.'}</p>
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">{when === 'up' ? 'No upcoming classes.' : 'No past classes.'}</p>
         )}
         {schedule.length > schedShown ? (
           <div className="border-t p-2 text-center">

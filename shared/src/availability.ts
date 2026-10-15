@@ -82,29 +82,29 @@ export function dayStartInstant(dateKey: DateKey, timeZone: string): Date {
 }
 
 /**
- * Tutors can't add, change or remove availability for a day that starts within
+ * Coaches can't add, change or remove availability for a day that starts within
  * `lockDays` of now (owner decision Q10; enforced by the security rules too).
  */
-export function isLockedForTutor(dateKey: DateKey, timeZone: string, lockDays: number, now: Date = new Date()): boolean {
+export function isLockedForCoach(dateKey: DateKey, timeZone: string, lockDays: number, now: Date = new Date()): boolean {
   if (lockDays <= 0) return dayStartInstant(dateKey, timeZone).getTime() <= now.getTime()
   return dayStartInstant(dateKey, timeZone).getTime() <= now.getTime() + lockDays * 86_400_000
 }
 
-/** Effective tutor lock window, including a blocking lead time. */
+/** Effective coach lock window, including a blocking lead time. */
 export function effectiveLockDays(settings: Pick<BranchSettings, 'availability'>): number {
   const a = settings.availability
   return a.leadTimeEnforcement === 'block' ? Math.max(a.lockWindowDays, a.leadTimeDays) : a.lockWindowDays
 }
 
-/** Inside the lead window but not locked: the tutor should have set availability already. */
+/** Inside the lead window but not locked: the coach should have set availability already. */
 export function isInsideLeadTime(dateKey: DateKey, timeZone: string, leadDays: number, now: Date = new Date()): boolean {
   return dayStartInstant(dateKey, timeZone).getTime() < now.getTime() + leadDays * 86_400_000
 }
 
 /**
- * Open days a tutor should still give times for: inside the lead window, not
+ * Open days a coach should still give times for: inside the lead window, not
  * locked yet, and without availability inside that date's hours. They are the
- * amber days of the tutor's calendar and the "availability still to set" of
+ * amber days of the coach's calendar and the "availability still to set" of
  * Today (web and phone), so both always count the same days. A branch that
  * doesn't ask for notice (lead time "Do nothing") has none.
  */
@@ -129,7 +129,7 @@ export function availabilityGaps(input: {
     const d = addDays(today, i)
     if (!isInsideLeadTime(d, timeZone, lead, now)) break
     const hours = input.hoursOf ? input.hoursOf(d) : dayHours(d, settings, input.dayConfigs)
-    if (!hours.isOpen || isLockedForTutor(d, timeZone, lockDays, now)) continue
+    if (!hours.isOpen || isLockedForCoach(d, timeZone, lockDays, now)) continue
     if (effectiveRanges(input.rangesOn(d) ?? [], hours).length === 0) out.push(d)
   }
   return out

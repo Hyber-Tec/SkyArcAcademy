@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
-import { type Conflict, tutorConflictText } from '@shared/schedule/conflicts'
+import { type Conflict, coachConflictText } from '@shared/schedule/conflicts'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutes, weekdayOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { StatePill, plural } from '@/features/home/parts'
-import { sessionState, weekRange } from '@/features/tutor/sessionUi'
+import { sessionState, weekRange } from '@/features/coach/sessionUi'
 import { cn } from '@/lib/utils'
 import { SESSION_CARD_STYLE } from './cardStyle'
-import { TutorSessionSheet } from './TutorSessionSheet'
+import { CoachSessionSheet } from './CoachSessionSheet'
 
 /**
- * Phones: the tutor's week as a list (True Education's phone schedule, as in
+ * Phones: the coach's week as a list (True Education's phone schedule, as in
  * the phone app): week arrows and Today, a day strip, past days of this week
  * folded away, and a card per class with its status, note and conflict. A tap
  * opens the class as a sheet.
  */
-export function TutorWeekList({
+export function CoachWeekList({
   days,
   today,
   nowMin,
@@ -107,7 +107,7 @@ export function TutorWeekList({
                   type="button"
                   disabled={!byDay.has(d)}
                   onClick={() => scrollTo(d)}
-                  aria-label={`${formatDateKey(d, 'weekdayLong')}: ${list.length ? plural(list.length, 'session') : closed ? 'closed' : 'nothing booked'}`}
+                  aria-label={`${formatDateKey(d, 'weekdayLong')}: ${list.length ? plural(list.length, 'class') : closed ? 'closed' : 'nothing booked'}`}
                   className="flex w-full flex-col items-center gap-0.5 rounded-lg py-1 disabled:cursor-default enabled:active:bg-muted"
                 >
                   <span className={cn('text-[11px] font-medium', isToday ? 'text-foreground' : 'text-muted-foreground')}>{WEEKDAY_SHORT[weekdayOf(d)].slice(0, 2)}</span>
@@ -141,13 +141,13 @@ export function TutorWeekList({
           data-testid="show-earlier"
         >
           <LuChevronDown className="size-4" />
-          Show earlier this week · {plural(earlierCount, 'session')}
+          Show earlier this week · {plural(earlierCount, 'class')}
         </button>
       ) : null}
 
       {withSessions.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-4 py-12 text-center">
-          <p className="text-sm text-muted-foreground">No sessions this week.</p>
+          <p className="text-sm text-muted-foreground">No classes this week.</p>
           {!isThisWeek ? (
             <Button variant="outline" size="sm" onClick={() => onWeek(0)}>
               Go to this week
@@ -155,7 +155,7 @@ export function TutorWeekList({
           ) : null}
         </div>
       ) : shown.length === 0 ? (
-        <p className="rounded-xl border bg-card px-4 py-10 text-center text-sm text-muted-foreground">No more sessions this week.</p>
+        <p className="rounded-xl border bg-card px-4 py-10 text-center text-sm text-muted-foreground">No more classes this week.</p>
       ) : null}
 
       <div className="space-y-6">
@@ -169,7 +169,7 @@ export function TutorWeekList({
                 {isToday ? <span className="text-xs font-bold tracking-wide text-red-600">TODAY</span> : null}
                 <span className={cn('text-sm font-semibold', d < today && 'text-muted-foreground')}>{formatDateKey(d, 'weekdayLong').replace(/, \d{4}$/, '')}</span>
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                  {live.length ? `${plural(live.length, 'session')}` : 'Canceled'}
+                  {live.length ? `${plural(live.length, 'class')}` : 'Canceled'}
                 </span>
               </h2>
               <ul className="space-y-2">
@@ -184,7 +184,7 @@ export function TutorWeekList({
         })}
       </div>
 
-      <TutorSessionSheet
+      <CoachSessionSheet
         session={open ? (sessions.find((x) => x.id === open.id) ?? open) : null}
         onClose={() => setOpen(null)}
         today={today}
@@ -208,7 +208,7 @@ function SessionRow({
   conflicts: Conflict[]
   onOpen: () => void
 }) {
-  const why = tutorConflictText(conflicts)
+  const why = coachConflictText(conflicts)
   const st = sessionState(s, { today, nowMin, waiting: why })
   const ended = s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin)
   const bar = SESSION_CARD_STYLE[s.status]?.bar ?? '#a1a1aa'

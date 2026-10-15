@@ -7,7 +7,7 @@ export function openInNewTab(path: string) {
   window.open(path, '_blank', 'noopener')
 }
 
-/** How a session stands, for the pill on its row (the admin Home's words, from the tutor's side). */
+/** How a session stands, for the pill on its row (the admin Home's words, from the coach's side). */
 export function sessionState(
   s: WithId<Session>,
   ctx: { today: DateKey; nowMin: number; waiting: string | null },

@@ -10,7 +10,7 @@ import { StudentMonthCalendar } from '@/features/schedule/StudentMonthCalendar'
 /**
  * Student page → Calendar: the student's sessions month by month (scrolling).
  * Admins click a day to create a session and a session to open it (date, time,
- * tutor and status change there); tutors see their own sessions.
+ * coach and status change there); coaches see their own sessions.
  */
 export function StudentCalendarView({
   studentId,
@@ -35,13 +35,13 @@ export function StudentCalendarView({
           </div>
           {!readOnly && onCreate ? (
             <Button variant="outline" size="sm" className="ml-auto" onClick={() => onCreate()}>
-              <LuPlus /> New session
+              <LuPlus /> New class
             </Button>
           ) : null}
         </div>
         <StudentMonthCalendar
           studentId={studentId}
-          tutorId={readOnly ? staffId : undefined}
+          coachId={readOnly ? staffId : undefined}
           frameless
           className="h-[min(74svh,740px)]"
           onPickDay={readOnly ? undefined : (d) => onCreate?.(d)}
@@ -49,7 +49,7 @@ export function StudentCalendarView({
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {readOnly ? 'Your sessions with this student · Scroll for other months.' : 'Click a day to create a session · Click a session to open it · Scroll for other months.'}
+        {readOnly ? 'Your classes with this student · Scroll for other months.' : 'Click a day to create a class · Click a class to open it · Scroll for other months.'}
       </p>
     </div>
   )

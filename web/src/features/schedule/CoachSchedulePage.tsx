@@ -16,17 +16,17 @@ import { useDayConfigs, useStudentList } from '@/features/data/hooks'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { useShifts } from '@/features/timeclock/api'
-import { weekRange } from '@/features/tutor/sessionUi'
+import { weekRange } from '@/features/coach/sessionUi'
 import { computeConflicts } from './conflicts'
 import { type ScheduleUi, ScheduleUiContext } from './context'
 import { DaySection } from './DaySection'
-import { TutorWeekList } from './TutorWeekList'
+import { CoachWeekList } from './CoachWeekList'
 
 /**
- * The tutor's own schedule. Computers: read-only rows by day (week or day);
- * clicking a session opens its log in a new tab. Phones: the week as a list.
+ * The coach's own schedule. Computers: read-only rows by day (week or day);
+ * clicking a session opens the student's profile. Phones: the week as a list.
  */
-export function TutorSchedulePage() {
+export function CoachSchedulePage() {
   const { branchId, staffId, settings, rules, timezone } = useBranch()
   const isMobile = useIsMobile()
   const [view, setView] = useState<'day' | 'week'>('week')
@@ -58,15 +58,15 @@ export function TutorSchedulePage() {
   const meRef = useMemo(() => (staffId ? branchDocRef(branchId, COL.staff, staffId) : null), [branchId, staffId])
   const { data: me } = useDoc<Staff>(meRef)
   const sessQ = useMemo(
-    () => (staffId ? query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
+    () => (staffId ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
     [branchId, staffId, from, to],
   )
   const availQ = useMemo(
     () => (staffId ? query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
     [branchId, staffId, from, to],
   )
-  const { data: sessionsRaw } = useQuery<Session>(sessQ, `tutor-sched-${staffId}-${from}-${to}`)
-  const { data: avail } = useQuery<Availability>(availQ, `tutor-avail-${staffId}-${from}-${to}`)
+  const { data: sessionsRaw } = useQuery<Session>(sessQ, `coach-sched-${staffId}-${from}-${to}`)
+  const { data: avail } = useQuery<Availability>(availQ, `coach-avail-${staffId}-${from}-${to}`)
   const { map: dayConfigs } = useDayConfigs(from, to)
   const { data: students } = useStudentList()
   const { data: shifts } = useShifts(from, to, staffId, !!staffId)
@@ -83,21 +83,21 @@ export function TutorSchedulePage() {
         hoursOf,
         staffById: null,
         studentsById: studentMap,
-        maxPerTutor: rules.maxStudentsPerTutor,
+        maxPerCoach: rules.maxStudentsPerCoach,
         today,
         nowMin,
       }),
-    [sessions, avail, hoursOf, studentMap, rules.maxStudentsPerTutor, today, nowMin],
+    [sessions, avail, hoursOf, studentMap, rules.maxStudentsPerCoach, today, nowMin],
   )
   const conflictsOf = useCallback((s: WithId<Session>): Conflict[] => conflicts.get(s.id) ?? [], [conflicts])
   const waiting = conflicts.size
   const waitingNote =
     waiting > 0 ? (
-      <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" data-testid="tutor-conflicts">
+      <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" data-testid="coach-conflicts">
         <LuTriangleAlert className="mt-0.5 size-4 shrink-0 text-red-600" />
         <p>
           <span className="font-semibold">
-            {waiting === 1 ? 'One of your sessions is' : `${waiting} of your sessions are`} waiting for the admin.
+            {waiting === 1 ? 'One of your classes is' : `${waiting} of your classes are`} waiting for the admin.
           </span>{' '}
           {waiting > 1 ? 'They’re' : 'It’s'} marked in red because something changed since booking (for example your availability). The admin will move,
           reassign or cancel {waiting > 1 ? 'them' : 'it'}; until then, don’t count on {waiting > 1 ? 'them' : 'it'}.
@@ -109,7 +109,7 @@ export function TutorSchedulePage() {
   const scrolledTo = useRef<string | null>(null)
   useEffect(() => {
     if (isMobile || !dateParam || !isDateKey(dateParam) || scrolledTo.current === dateParam) return
-    const el = document.getElementById(`tutor-day-${dateParam}`)
+    const el = document.getElementById(`coach-day-${dateParam}`)
     if (!el) return
     scrolledTo.current = dateParam
     el.scrollIntoView({ block: 'start', behavior: 'smooth' })
@@ -118,17 +118,17 @@ export function TutorSchedulePage() {
   if (!staffId) return <p className="text-sm text-muted-foreground">Your employee record isn’t linked yet. Ask an admin.</p>
 
   const ui: ScheduleUi = {
-    tutorColor: () => me?.color,
-    mode: 'tutor',
+    coachColor: () => me?.color,
+    mode: 'coach',
     today,
     nowMin,
-    maxLanes: rules.maxStudentsPerTutor,
+    maxLanes: rules.maxStudentsPerCoach,
     snap: settings.schedule.snapMinutes,
     defaultDuration: settings.schedule.defaultSessionMinutes,
     selection: null,
     select: () => undefined,
     students: studentMap,
-    // Only past days are locked ("Past" on the day). Tutors never edit sessions: cards are read-only in tutor mode.
+    // Only past days are locked ("Past" on the day). Coaches never edit sessions: cards are read-only in coach mode.
     isLocked: (d) => d < today,
     bellFor: () => [],
     conflictsOf,
@@ -139,7 +139,7 @@ export function TutorSchedulePage() {
     resizeSession: () => undefined,
     reorderSession: () => undefined,
     openStudent: (s, newTab) => {
-      const path = `/tutor/students/${s.studentId}/info`
+      const path = `/coach/students/${s.studentId}/info`
       if (newTab) window.open(path, '_blank', 'noopener')
       else navigate(path)
     },
@@ -151,7 +151,7 @@ export function TutorSchedulePage() {
     duplicateSession: () => undefined,
     trashSession: () => undefined,
     openEmployee: () => undefined,
-    showOnlyTutor: () => undefined,
+    showOnlyCoach: () => undefined,
     pasteAt: () => undefined,
     hasClipboard: () => false,
     createEvent: () => undefined,
@@ -163,7 +163,7 @@ export function TutorSchedulePage() {
 
   if (isMobile) {
     return (
-      <TutorWeekList
+      <CoachWeekList
         days={week}
         today={today}
         nowMin={nowMin}
@@ -185,16 +185,16 @@ export function TutorSchedulePage() {
         dateKey: d,
         today,
         hours,
-        tutors: [{ id: staffId, name: me?.name ?? 'Me' }],
+        coaches: [{ id: staffId, name: me?.name ?? 'Me' }],
         availability: () => (a ? { ranges: effectiveRanges(a.ranges, hours), unavailable: a.unavailable, hidden: false } : null),
         sessions: sessions.filter((s) => s.dateKey === d),
         clocks: () =>
           shifts
             .filter((sh) => sh.dateKey === d)
             .map((sh) => ({ id: sh.id, startMin: sh.inMin, endMin: sh.status === 'open' ? (d === today ? nowMin : 1440) : sh.outDateKey && sh.outDateKey > sh.dateKey ? 1440 : (sh.outMin ?? sh.inMin), open: sh.status === 'open' })),
-        maxLanes: rules.maxStudentsPerTutor,
+        maxLanes: rules.maxStudentsPerCoach,
         addEmptyLane: false,
-      }).map((r) => ({ ...r, laneCount: rules.maxStudentsPerTutor }))
+      }).map((r) => ({ ...r, laneCount: rules.maxStudentsPerCoach }))
       return { d, hours, rows }
     })
     // Closed days still show when sessions are booked on them.
@@ -205,7 +205,7 @@ export function TutorSchedulePage() {
       <div>
         <PageHeader
           title="Schedule"
-          description="Click a session to open its log in a new tab."
+          description="Click a class to open the student’s profile."
           actions={
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" aria-label="Previous" onClick={() => setAnchor(addDays(anchor, view === 'week' ? -7 : -1))}>
@@ -232,10 +232,10 @@ export function TutorSchedulePage() {
         </div>
         <div className="flex flex-col gap-6 overflow-x-auto pb-2">
           {sections.map((s) => (
-            <DaySection key={s.d} dateKey={s.d} hours={s.hours} rows={s.rows} events={[]} showHeader sectionId={`tutor-day-${s.d}`} />
+            <DaySection key={s.d} dateKey={s.d} hours={s.hours} rows={s.rows} events={[]} showHeader sectionId={`coach-day-${s.d}`} />
           ))}
           {sections.length === 0 ? (
-            <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">No availability or sessions scheduled for this period.</div>
+            <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">No availability or classes scheduled for this period.</div>
           ) : null}
         </div>
       </div>

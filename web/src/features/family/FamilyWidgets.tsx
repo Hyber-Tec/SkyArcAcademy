@@ -33,7 +33,7 @@ export function dayTitle(d: DateKey, today: DateKey) {
 export function SessionList({
   sessions,
   showStudent,
-  empty = 'No sessions scheduled.',
+  empty = 'No classes scheduled.',
 }: {
   sessions: WithId<Session>[]
   showStudent?: boolean
@@ -76,7 +76,7 @@ export function SessionList({
                 <div className={cn('truncate text-sm font-medium', s.status === 'canceled' && 'line-through')}>
                   {showStudent ? s.studentName : 'Class'}
                 </div>
-                <div className="truncate text-xs text-muted-foreground">with {s.tutorName}</div>
+                <div className="truncate text-xs text-muted-foreground">with {s.coachName}</div>
               </div>
               <FamilyStatus status={s.status} />
             </button>
@@ -103,14 +103,14 @@ export function SessionDetails({ session: s, onClose }: { session: WithId<Sessio
             <dd>{formatDateKey(s.dateKey, 'weekdayLong')}</dd>
             <dt className="text-muted-foreground">Time</dt>
             <dd className="tabular-nums">{formatTimeRange(s.startMin, s.endMin)}</dd>
-            <dt className="text-muted-foreground">Tutor</dt>
-            <dd>{s.tutorName}</dd>
+            <dt className="text-muted-foreground">Coach</dt>
+            <dd>{s.coachName}</dd>
             <dt className="text-muted-foreground">Status</dt>
             <dd>
               <FamilyStatus status={s.status} />
             </dd>
           </dl>
-          <p className="text-xs text-muted-foreground">To change or cancel this session, please contact {branch.name}.</p>
+          <p className="text-xs text-muted-foreground">To change or cancel this class, please contact {branch.name}.</p>
         </DialogContent>
       ) : null}
     </Dialog>

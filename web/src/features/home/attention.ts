@@ -77,7 +77,7 @@ export function useAttention(enabled = true) {
       staffById: new Map(staff.data.map((s) => [s.id, s])),
       members: members.data,
       studentsById: new Map(studentList.data.map((s) => [s.id, s])),
-      maxPerTutor: rules.maxStudentsPerTutor,
+      maxPerCoach: rules.maxStudentsPerCoach,
       today,
       nowMin: nowMinutes(timezone, new Date(now)),
     })
@@ -85,7 +85,7 @@ export function useAttention(enabled = true) {
       .filter((s) => byId.has(s.id))
       .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin)
       .map((session) => ({ session, conflicts: byId.get(session.id) ?? [] }))
-  }, [enabled, ahead.data, avail.data, dayConfigs, settings, staff.data, members.data, studentList.data, rules.maxStudentsPerTutor, today, timezone, now])
+  }, [enabled, ahead.data, avail.data, dayConfigs, settings, staff.data, members.data, studentList.data, rules.maxStudentsPerCoach, today, timezone, now])
 
   // Active employees without the hourly rate their pay needs (their time would be paid $0).
   const { gaps: payGaps } = usePayGaps(enabled)

@@ -65,7 +65,7 @@ export function ParentHomePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
-        title="Upcoming sessions"
+        title="Upcoming classes"
         description={ids.length > 1 ? `For ${ids.map(name).join(', ')}` : students.get(ids[0])?.name}
         actions={
           <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && setView(v as 'list' | 'month')}>
@@ -98,7 +98,7 @@ export function ParentHomePage() {
           <Skeleton className="h-64 w-full rounded-xl" />
         ) : (
           <>
-            <SessionList sessions={sessions} showStudent={ids.length > 1 && child === 'all'} empty={`No sessions in the next ${weeks} weeks.`} />
+            <SessionList sessions={sessions} showStudent={ids.length > 1 && child === 'all'} empty={`No classes in the next ${weeks} weeks.`} />
             {weeks < 12 ? (
               <div className="flex justify-center">
                 <Button variant="ghost" size="sm" onClick={() => setWeeks((w) => w + 4)}>
@@ -149,25 +149,25 @@ export function StudentHomePage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className={cn('gap-2 p-5 sm:col-span-2', next && 'cursor-pointer hover:shadow-md')} onClick={() => next && setOpen(next)} data-testid="next-session">
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            <LuClock className="size-3.5" /> Next session
+            <LuClock className="size-3.5" /> Next class
           </div>
           {next ? (
             <>
               <div className="text-xl font-semibold">{dayTitle(next.dateKey, today)}</div>
               <div className="text-sm tabular-nums">{formatTimeRange(next.startMin, next.endMin)}</div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                with {next.tutorName}
+                with {next.coachName}
                 <FamilyStatus status={next.status} />
               </div>
             </>
           ) : (
-            <div className="text-sm text-muted-foreground">{loading ? 'Loading…' : 'No sessions scheduled yet.'}</div>
+            <div className="text-sm text-muted-foreground">{loading ? 'Loading…' : 'No classes scheduled yet.'}</div>
           )}
         </Card>
         <Card className="gap-1 p-5">
-          <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Last session</div>
+          <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Last class</div>
           <div className="text-xl font-semibold">{me?.lastSessionDate ? formatDateKey(me.lastSessionDate, 'monthDay') : '—'}</div>
-          <div className="text-xs text-muted-foreground">{me?.lastSessionDate ? '' : 'No sessions yet'}</div>
+          <div className="text-xs text-muted-foreground">{me?.lastSessionDate ? '' : 'No classes yet'}</div>
         </Card>
       </div>
       <h2 className="pt-2 text-sm font-semibold">Coming up</h2>
@@ -185,7 +185,7 @@ export function StudentPortalCalendarPage() {
   if (!ids.length) return <NotLinked who="student" />
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Calendar" description="Your tutoring sessions. Click a session for details." />
+      <PageHeader title="Calendar" description="Your classes. Click a class for details." />
       <Card className="p-4">
         <StudentMonthCalendar studentId={ids[0]} onPickSession={setOpen} />
       </Card>
@@ -207,7 +207,7 @@ export function StudentInfoPage() {
     ['School', me.school || '—'],
     ['Status', <Badge key="s" variant="secondary">{STUDENT_STATUS_LABELS[me.status] ?? me.status}</Badge>],
     ['Signed up', me.signUpDate ? formatDateKey(me.signUpDate, 'medium') : '—'],
-    ['First session', me.firstSessionDate ? formatDateKey(me.firstSessionDate, 'medium') : '—'],
+    ['First class', me.firstSessionDate ? formatDateKey(me.firstSessionDate, 'medium') : '—'],
   ]
   return (
     <div className="mx-auto max-w-3xl space-y-4">

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS, formatPhone } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
-import { tutorsNeedAdminRate } from '@shared/pay/rates'
+import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
 import type { Compensation, Staff, StaffRole, StaffStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -39,11 +39,11 @@ export function EmployeeDirectoryPage() {
   const { confirm, dialog: confirmDialog } = useConfirm()
   const pathOf = (id: string) => `/admin/employees/directory/${id}`
 
-  /** Asks first when a tutor with upcoming sessions stops teaching (they'd become conflicts). */
+  /** Asks first when a coach with upcoming sessions stops teaching (they'd become conflicts). */
   async function changeStatus(s: WithId<Staff>, next: StaffStatus) {
     if (next === s.status) return
     try {
-      if (next !== 'active' && s.role === 'tutor') {
+      if (next !== 'active' && s.role === 'coach') {
         const q = stopTeachingQuestion(s.name, await countUpcomingSessions(branchId, s.id, timezone), `set ${s.firstName || s.name} to ${STAFF_STATUS_LABELS[next]}`)
         if (q && !(await confirm(q))) return
       }
@@ -90,7 +90,7 @@ export function EmployeeDirectoryPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="tutor">Tutors</SelectItem>
+            <SelectItem value="coach">Coaches</SelectItem>
             <SelectItem value="admin">Admins</SelectItem>
             <SelectItem value="owner">Owners</SelectItem>
           </SelectContent>
@@ -127,7 +127,7 @@ export function EmployeeDirectoryPage() {
                   { kind: 'label', label: s.name },
                   { label: 'Open employee profile', icon: LuUserRound, onSelect: () => navigate(pathOf(s.id)) },
                   { label: 'Open in new tab', onSelect: () => window.open(pathOf(s.id), '_blank', 'noopener') },
-                  s.role === 'tutor' && { label: 'Availability calendar', icon: LuCalendarClock, onSelect: () => navigate(`/admin/employees/calendar?staff=${s.id}`) },
+                  s.role === 'coach' && { label: 'Availability calendar', icon: LuCalendarClock, onSelect: () => navigate(`/admin/employees/calendar?staff=${s.id}`) },
                   {
                     kind: 'sub',
                     label: 'Change status',
@@ -209,7 +209,7 @@ function NewEmployeeDialog({
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<StaffRole>('tutor')
+  const [role, setRole] = useState<StaffRole>('coach')
   const [rates, setRates] = useState<RateDraft>(EMPTY_RATES)
   const [busy, setBusy] = useState(false)
 
@@ -222,7 +222,7 @@ function NewEmployeeDialog({
             if (!firstName.trim()) return toast.error('Enter a first name.')
             // The hourly rate is asked up front, so payroll never prices their time at $0.
             const today = todayKey(timezone)
-            const read = can('payRates') ? readRates(role, rates, tutorsNeedAdminRate(rules, today)) : { rates: null }
+            const read = can('payRates') ? readRates(role, rates, coachesNeedAdminRate(rules, today)) : { rates: null }
             if ('error' in read) return toast.error(read.error)
             setBusy(true)
             try {
@@ -231,7 +231,7 @@ function NewEmployeeDialog({
               setFirstName('')
               setLastName('')
               setEmail('')
-              setRole('tutor')
+              setRole('coach')
               setRates(EMPTY_RATES)
             } catch (err) {
               toast.error('Could not add the employee', { description: (err as Error).message })
@@ -265,14 +265,14 @@ function NewEmployeeDialog({
             <Field>
               <FieldLabel>Role</FieldLabel>
               <RadioGroup value={role} onValueChange={(v) => setRole(v as StaffRole)} className="flex gap-6">
-                {(['tutor', 'admin'] as StaffRole[]).map((r) => (
+                {(['coach', 'admin'] as StaffRole[]).map((r) => (
                   <label key={r} className="flex items-center gap-2 text-sm">
                     <RadioGroupItem value={r} />
                     {ROLE_LABELS[r]}
                   </label>
                 ))}
               </RadioGroup>
-              <FieldDescription>Only tutors teach and appear on the schedule.</FieldDescription>
+              <FieldDescription>Only coaches teach and appear on the schedule.</FieldDescription>
             </Field>
             <PayRateFields role={role} value={rates} onChange={setRates} idPrefix="ne-rate" />
           </FieldGroup>

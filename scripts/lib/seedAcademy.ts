@@ -35,7 +35,7 @@ export async function seedAcademy(opts: SeedAcademyOptions) {
         at: now, actorUid: 'seed', actorEmail: owner, actorName: 'Seed script', actorRole: 'system',
         action: 'academy.create', category: 'settings', entityType: 'branch', entityId: opts.academyId,
         summary: `Set up ${opts.name}`, context: '', dateKey: null, studentId: null, studentName: null,
-        tutorId: null, tutorName: null, changes: [], via: 'function',
+        coachId: null, coachName: null, changes: [], via: 'function',
       },
     })
     log(`+ Academy ${opts.academyId} (${opts.name}, ${opts.timezone})`)

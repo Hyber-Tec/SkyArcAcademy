@@ -70,7 +70,7 @@ describe('pay segmentation (True Education worked examples)', () => {
   it('owners and admins are paid one rate whatever the branch model', () => {
     expect(payModelFor({ role: 'admin', branchModel: 'teaching_only' })).toBe('single_rate')
     expect(payModelFor({ role: 'owner', branchModel: 'teaching_admin' })).toBe('single_rate')
-    expect(payModelFor({ role: 'tutor', branchModel: 'teaching_only' })).toBe('teaching_only')
+    expect(payModelFor({ role: 'coach', branchModel: 'teaching_only' })).toBe('teaching_only')
   })
 
   it('handles empty shifts', () => {

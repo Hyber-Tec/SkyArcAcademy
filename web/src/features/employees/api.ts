@@ -12,22 +12,22 @@ import { compensationRef, writeCompensation } from './compensation'
 
 export { compensationRef, writeCompensation }
 
-/** How many pending or confirmed sessions the tutor still has ahead (they'd become conflicts if the tutor stops teaching). */
+/** How many pending or confirmed sessions the coach still has ahead (they'd become conflicts if the coach stops teaching). */
 export async function countUpcomingSessions(branchId: string, staffId: string, timezone: string): Promise<number> {
   const today = todayKey(timezone)
   const nowMin = nowMinutes(timezone)
-  const snap = await getDocs(query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', '>=', today)))
+  const snap = await getDocs(query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', today)))
   return snap.docs.filter((d) => {
     const s = d.data() as Parameters<typeof isCheckable>[0] & { dateKey: string; endMin: number }
     return isCheckable(s) && isAhead(s, today, nowMin)
   }).length
 }
 
-/** The question to ask before a tutor with upcoming sessions stops teaching; null when there is nothing to ask. */
+/** The question to ask before a coach with upcoming sessions stops teaching; null when there is nothing to ask. */
 export function stopTeachingQuestion(name: string, count: number, what: string) {
   if (count === 0) return null
   return {
-    title: `${name} has ${count} upcoming session${count > 1 ? 's' : ''}`,
+    title: `${name} has ${count} upcoming class${count > 1 ? 'es' : ''}`,
     description: `If you ${what}, ${count > 1 ? 'they stay' : 'it stays'} booked and ${count > 1 ? 'show' : 'shows'} as ${count > 1 ? 'conflicts' : 'a conflict'} on the schedule (and on Home) until ${count > 1 ? 'they’re' : 'it’s'} reassigned or canceled.`,
     confirmLabel: 'Continue',
   }
@@ -58,8 +58,8 @@ export async function createEmployee(
     entityType: 'staff',
     entityId: ref.id,
     summary: `Added the employee ${name}`,
-    tutorId: ref.id,
-    tutorName: name,
+    coachId: ref.id,
+    coachName: name,
   })
   if (pay) writeCompensation(batch, branchId, actor, { id: ref.id, name, role: input.role }, null, pay.rates, pay.effectiveFrom)
   await batch.commit()
@@ -75,8 +75,8 @@ export async function setEmployeeStatus(branchId: string, actor: Actor, staff: W
     entityType: 'staff',
     entityId: staff.id,
     summary: `Set ${staff.name} to ${STAFF_STATUS_LABELS[status]}`,
-    tutorId: staff.id,
-    tutorName: staff.name,
+    coachId: staff.id,
+    coachName: staff.name,
     changes: [{ field: 'status', label: 'Status', from: STAFF_STATUS_LABELS[staff.status], to: STAFF_STATUS_LABELS[status] }],
   })
   await batch.commit()
@@ -118,8 +118,8 @@ export async function saveEmployeeProfile(
     entityType: 'staff',
     entityId: before.id,
     summary: `Updated ${name}’s profile`,
-    tutorId: before.id,
-    tutorName: name,
+    coachId: before.id,
+    coachName: name,
     changes: diffChanges(before as unknown as Record<string, unknown>, next as unknown as Record<string, unknown>, PROFILE_LABELS),
   })
   await batch.commit()

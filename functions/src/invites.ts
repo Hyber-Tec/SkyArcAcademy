@@ -87,7 +87,7 @@ export const resendInvite = onCall({ secrets: [gmailAppPassword] }, async (req) 
   const { branchId, email } = (req.data ?? {}) as { branchId?: string; email?: string }
   const token = req.auth?.token
   if (!token || typeof token.email !== 'string' || token.email_verified !== true) throw new HttpsError('unauthenticated', 'Sign in first.')
-  if (!branchId || !email) throw new HttpsError('invalid-argument', 'Missing branch or email.')
+  if (!branchId || !email) throw new HttpsError('invalid-argument', 'Missing academy or email.')
   const caller = token.email.toLowerCase()
   const [callerMember, target] = await Promise.all([
     db.doc(`${ROOT.branches}/${branchId}/${COL.members}/${caller}`).get(),
@@ -118,8 +118,8 @@ export const resendInvite = onCall({ secrets: [gmailAppPassword] }, async (req) 
       dateKey: null,
       studentId: null,
       studentName: null,
-      tutorId: null,
-      tutorName: null,
+      coachId: null,
+      coachName: null,
       changes: [],
       via: 'function',
     })

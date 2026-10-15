@@ -8,7 +8,7 @@ import type { BellItem } from '../context'
 const PILL: Record<BellItem['kind'], string> = {
   first_session: 'border-[#86efac] bg-[#f0fdf4] text-[#166534]',
 }
-const LABEL: Record<BellItem['kind'], string> = { first_session: 'First session' }
+const LABEL: Record<BellItem['kind'], string> = { first_session: 'First class' }
 
 export function BellDialog({ state, onClose }: { state: { session: WithId<Session>; items: BellItem[] } | null; onClose: () => void }) {
   if (!state) return null

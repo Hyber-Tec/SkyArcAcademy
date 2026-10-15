@@ -32,9 +32,9 @@ export interface EmailContent {
 const ROLE_BLURB: Record<Role, string> = {
   owner: 'You can manage everything there: the schedule, students, employees, payroll and who has access.',
   admin: 'You can run the schedule and manage students, employees and payroll.',
-  tutor: 'You can see your schedule, set your availability and read announcements.',
-  parent: 'You can see your child’s sessions.',
-  student: 'You can see your sessions.',
+  coach: 'You can see your schedule, set your availability and read announcements.',
+  parent: 'You can see your child’s classes.',
+  student: 'You can see your classes.',
 }
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a')

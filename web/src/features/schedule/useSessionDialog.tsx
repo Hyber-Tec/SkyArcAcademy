@@ -11,13 +11,13 @@ import { SessionDialog, type SessionDialogState } from './dialogs/SessionDialog'
 /** Create/edit-session dialog usable outside the schedule page (student calendars, Home). */
 export function useSessionDialog({ source = 'student_calendar', enabled = true }: { source?: Session['source']; enabled?: boolean } = {}) {
   const { branchId, actor, timezone, settings, rules } = useBranch()
-  // Off for tutors, who can't read the staff list (the dialog is admin-only).
+  // Off for coaches, who can't read the staff list (the dialog is admin-only).
   const { data: staff } = useStaffList(enabled)
   const { data: students } = useStudentList(enabled)
   const [state, setState] = useState<SessionDialogState>(null)
   const ctx: ScheduleCtx = useMemo(
-    () => ({ branchId, actor, timezone, settings, maxStudentsPerTutor: rules.maxStudentsPerTutor }),
-    [branchId, actor, timezone, settings, rules.maxStudentsPerTutor],
+    () => ({ branchId, actor, timezone, settings, maxStudentsPerCoach: rules.maxStudentsPerCoach }),
+    [branchId, actor, timezone, settings, rules.maxStudentsPerCoach],
   )
   const isLocked = useCallback((d: DateKey) => d < todayKey(timezone), [timezone])
 
@@ -54,11 +54,11 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
       onSave={async (draft, existing) => {
         if (existing) await updateSession(ctx, existing, draft)
         else await createSession(ctx, draft, source)
-        toast.success(existing ? 'Session updated' : 'Session created')
+        toast.success(existing ? 'Class updated' : 'Class created')
       }}
       onDelete={async (s) => {
         await deleteSession(ctx, s)
-        toast.success('Session moved to Trash')
+        toast.success('Class moved to Trash')
       }}
     />
   )

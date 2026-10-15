@@ -11,7 +11,7 @@ import {
   LuTriangleAlert,
   LuUserRoundCheck,
 } from 'react-icons/lu'
-import { type Conflict, tutorConflictText } from '@shared/schedule/conflicts'
+import { type Conflict, coachConflictText } from '@shared/schedule/conflicts'
 import { fitsCapacity } from '@shared/schedule/lanes'
 import { SESSION_STATUSES, SESSION_STATUS_LABELS, SESSION_STATUS_STYLE } from '@shared/schedule/status'
 import { formatMinutes, formatTimeRange } from '@shared/time'
@@ -111,7 +111,7 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
         const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
         // Minutes from the card's start to where it was grabbed (unrounded; the drop snaps once).
         const grabOffsetMin = ratio * (session.endMin - session.startMin)
-        e.dataTransfer.setData(SESSION_DRAG_TYPE, JSON.stringify({ id: session.id, grabOffsetMin, tutorId: session.tutorId, dateKey: session.dateKey }))
+        e.dataTransfer.setData(SESSION_DRAG_TYPE, JSON.stringify({ id: session.id, grabOffsetMin, coachId: session.coachId, dateKey: session.dateKey }))
         e.dataTransfer.effectAllowed = 'move'
         sessionDrag.current = { id: session.id, grabOffsetMin, durationMin: session.endMin - session.startMin }
         ui.select({ kind: 'session', id: session.id })
@@ -125,9 +125,9 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
       onDrop={(e) => {
         const raw = e.dataTransfer.getData(SESSION_DRAG_TYPE)
         if (!raw || !canEdit) return
-        const data = JSON.parse(raw) as { id: string; tutorId: string; dateKey: string }
+        const data = JSON.parse(raw) as { id: string; coachId: string; dateKey: string }
         if (data.id === session.id) return
-        if (data.tutorId === session.tutorId && data.dateKey === session.dateKey) {
+        if (data.coachId === session.coachId && data.dateKey === session.dateKey) {
           e.preventDefault()
           e.stopPropagation()
           ui.reorderSession(data.id, session.id)
@@ -135,7 +135,7 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
       }}
       onClick={(e) => {
         e.stopPropagation()
-        if (ui.mode === 'tutor') ui.openStudent(session)
+        if (ui.mode === 'coach') ui.openStudent(session)
         else ui.select({ kind: 'session', id: session.id })
       }}
       onDoubleClick={(e) => {
@@ -208,7 +208,7 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
     </div>
   )
 
-  const conflictText = !inConflict ? null : ui.mode === 'tutor' ? tutorConflictText(conflicts) : conflicts.map((c) => c.message).join(' ')
+  const conflictText = !inConflict ? null : ui.mode === 'coach' ? coachConflictText(conflicts) : conflicts.map((c) => c.message).join(' ')
   // The tooltip wraps the right-click menu, which wraps the card.
   const withMenu = (
     <ContextMenuFor entries={sessionMenu(session, { ui, canEdit, conflicts })} className="w-64">
@@ -221,9 +221,9 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
       <TooltipContent side="bottom" className="max-w-72 space-y-1">
         {conflictText ? (
           <p>
-            <span className="font-semibold">{ui.mode === 'tutor' ? 'Not confirmed: ' : 'Conflict: '}</span>
+            <span className="font-semibold">{ui.mode === 'coach' ? 'Not confirmed: ' : 'Conflict: '}</span>
             {conflictText}
-            {ui.mode === 'admin' ? ' Move it, give it to another tutor or cancel it.' : ''}
+            {ui.mode === 'admin' ? ' Move it, give it to another coach or cancel it.' : ''}
           </p>
         ) : null}
         {session.note ? (
@@ -240,7 +240,7 @@ export function SessionCard({ session, left, width, top, readOnly, bounds, segme
 
 /**
  * Right-click menu of a class card. Admins (editable days): resolve a conflict, status, edit, reassign, copy, duplicate,
- * student, Trash. Past days and tutors: the student.
+ * student, Trash. Past days and coaches: the student.
  */
 function sessionMenu(
   s: WithId<Session>,
@@ -252,7 +252,7 @@ function sessionMenu(
 ): MenuEntry[] {
   const admin = ui.mode === 'admin'
   const time = formatTimeRange(s.startMin, s.endMin)
-  const firstName = s.tutorName.split(' ')[0] || 'the tutor'
+  const firstName = s.coachName.split(' ')[0] || 'the coach'
   const options = canEdit ? ui.reassignOptions(s) : null
   const reassignMenu = (label: string, separatorBefore = false): MenuEntry | false =>
     canEdit &&
@@ -265,20 +265,20 @@ function sessionMenu(
           separatorBefore,
           entries: options.length
             ? options.map((o) => ({ label: `${o.name} · ${o.seats} seat${o.seats === 1 ? '' : 's'} left`, onSelect: () => ui.reassign(s, o.id) }))
-            : [{ label: 'No other tutor is free then', onSelect: () => undefined, disabled: true }],
+            : [{ label: 'No other coach is free then', onSelect: () => undefined, disabled: true }],
         })
   const inConflict = conflicts.length > 0
   const kinds = new Set(conflicts.map((c) => c.kind))
-  const canMakeAvailable = kinds.has('tutor_unavailable') && !kinds.has('center_closed') && !kinds.has('outside_hours') && !kinds.has('tutor_inactive')
+  const canMakeAvailable = kinds.has('coach_unavailable') && !kinds.has('center_closed') && !kinds.has('outside_hours') && !kinds.has('coach_inactive')
 
   return menu(
     { kind: 'label', label: `${s.studentName} · ${formatMinutes(s.startMin)}` },
     // Resolve first: a conflict decides whether the session happens at all.
     inConflict && { kind: 'label', label: conflicts[0].message, tone: 'danger', separatorBefore: true },
-    inConflict && reassignMenu('Give to another tutor'),
+    inConflict && reassignMenu('Give to another coach'),
     inConflict && canEdit && canMakeAvailable && { label: `Make ${firstName} available ${time}`, icon: LuUserRoundCheck, onSelect: () => ui.makeAvailable(s) },
     inConflict && canEdit && { label: 'Move to another time…', icon: LuCalendarPlus, onSelect: () => ui.editSession(s) },
-    inConflict && canEdit && { label: 'Cancel session', onSelect: () => ui.setStatus(s, 'canceled') },
+    inConflict && canEdit && { label: 'Cancel class', onSelect: () => ui.setStatus(s, 'canceled') },
     canEdit && {
       kind: 'radio',
       value: s.status,
@@ -286,7 +286,7 @@ function sessionMenu(
       options: SESSION_STATUSES.map((st) => ({ value: st, label: SESSION_STATUS_LABELS[st], swatch: SESSION_STATUS_STYLE[st] })),
       onChange: (v) => ui.setStatus(s, v as Session['status']),
     },
-    admin && { label: canEdit ? 'Edit session…' : 'View session', icon: LuPencil, onSelect: () => ui.editSession(s), separatorBefore: true },
+    admin && { label: canEdit ? 'Edit class…' : 'View class', icon: LuPencil, onSelect: () => ui.editSession(s), separatorBefore: true },
     !inConflict && reassignMenu('Reassign to'),
     canEdit && { label: 'Copy', icon: LuCopy, shortcut: '⌘C', onSelect: () => ui.copySession(s), separatorBefore: true },
     canEdit && { label: 'Duplicate to next week…', onSelect: () => ui.duplicateSession(s) },

@@ -8,15 +8,15 @@ import { actorLabel } from '@/lib/audit'
 import { branchCol } from '@/lib/firestore'
 
 const TITLES: Record<string, string> = {
-  'session.create': 'Session created',
-  'session.move': 'Session moved',
+  'session.create': 'Class created',
+  'session.move': 'Class moved',
   'session.status': 'Status updated',
-  'session.tutor': 'Tutor changed',
+  'session.coach': 'Coach changed',
   'session.subject': 'Subject changed',
   'session.note': 'Note updated',
-  'session.update': 'Session updated',
-  'session.delete': 'Session deleted',
-  'session.restore': 'Session restored',
+  'session.update': 'Class updated',
+  'session.delete': 'Class deleted',
+  'session.restore': 'Class restored',
   'schedule.duplicate_week': 'Week duplicated',
   'event.create': 'Event created',
   'event.move': 'Event moved',

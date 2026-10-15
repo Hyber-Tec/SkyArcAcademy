@@ -1,6 +1,6 @@
 /**
  * Teaching vs admin pay segmentation (True Education's kiosk algorithm).
- * A shift is split by the tutor's teaching windows: time inside sessions is
+ * A shift is split by the coach's teaching windows: time inside sessions is
  * teaching, the rest is admin. Simultaneous students count once (windows merge),
  * back-to-back sessions merge, and sessions outside the shift are clipped away.
  * Hours are rounded to 0.01 h and pay is computed from the rounded hours.
@@ -80,7 +80,7 @@ export interface Rates {
 }
 
 /**
- * How a shift is paid. Tutors follow the academy's pay model on the shift's date (`hourly`: the whole shift at their
+ * How a shift is paid. Coaches follow the academy's pay model on the shift's date (`hourly`: the whole shift at their
  * rate; `teaching_admin`: the split by classes; `teaching_only`: only time in classes is paid); owners and admins
  * never teach and are paid one rate (`single_rate`).
  */
@@ -88,7 +88,7 @@ export type EffectivePayModel = 'hourly' | 'teaching_admin' | 'teaching_only' | 
 
 /**
  * Prices a shift. `single_rate` pays the whole shift at the person's hourly rate (`rates.admin`); `hourly` pays the
- * whole shift as teaching time at the tutor's rate (`rates.teaching`); a forced type pays the whole shift as that type.
+ * whole shift as teaching time at the coach's rate (`rates.teaching`); a forced type pays the whole shift as that type.
  * Under Teaching only, admin time is kept (so the shift still adds up) but unpaid.
  */
 export function priceShift(
@@ -135,7 +135,7 @@ export function totals(segments: readonly PricedSegment[]): PayTotals {
   return { teaching, admin, total: { hours: round2(teaching.hours + admin.hours), pay: round2(teaching.pay + admin.pay) } }
 }
 
-/** Which pay model applies to an employee's shift: the academy's model for tutors, one rate for owners and admins. */
-export function payModelFor(opts: { role: 'owner' | 'admin' | 'tutor' | undefined; branchModel: 'hourly' | 'teaching_admin' | 'teaching_only' }): EffectivePayModel {
+/** Which pay model applies to an employee's shift: the academy's model for coaches, one rate for owners and admins. */
+export function payModelFor(opts: { role: 'owner' | 'admin' | 'coach' | undefined; branchModel: 'hourly' | 'teaching_admin' | 'teaching_only' }): EffectivePayModel {
   return opts.role === 'owner' || opts.role === 'admin' ? 'single_rate' : opts.branchModel
 }

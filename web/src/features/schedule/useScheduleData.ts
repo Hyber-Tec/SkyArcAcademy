@@ -15,7 +15,7 @@ export type EventDoc = ScheduleEvent & { isRecurring: boolean; createdBy?: strin
  * `eventsOnly` (Month view) skips sessions and availability; `keepPrevious` keeps
  * the last results on screen while a moved range loads.
  */
-export function useScheduleData(from: DateKey, to: DateKey, tutorFilter: string | null, opts?: { eventsOnly?: boolean; keepPrevious?: boolean }) {
+export function useScheduleData(from: DateKey, to: DateKey, coachFilter: string | null, opts?: { eventsOnly?: boolean; keepPrevious?: boolean }) {
   const { branchId } = useBranch()
   const eventsOnly = !!opts?.eventsOnly
   const keep = { keepPrevious: !!opts?.keepPrevious }
@@ -23,11 +23,11 @@ export function useScheduleData(from: DateKey, to: DateKey, tutorFilter: string 
   const sessionsQ = useMemo(() => {
     if (eventsOnly) return null
     const base = branchCol(branchId, COL.sessions)
-    return tutorFilter
-      ? query(base, where('tutorId', '==', tutorFilter), where('dateKey', '>=', from), where('dateKey', '<=', to))
+    return coachFilter
+      ? query(base, where('coachId', '==', coachFilter), where('dateKey', '>=', from), where('dateKey', '<=', to))
       : query(base, where('dateKey', '>=', from), where('dateKey', '<=', to))
-  }, [branchId, from, to, tutorFilter, eventsOnly])
-  const sessions = useQuery<Session>(sessionsQ, `sched-sessions-${branchId}-${from}-${to}-${tutorFilter}`)
+  }, [branchId, from, to, coachFilter, eventsOnly])
+  const sessions = useQuery<Session>(sessionsQ, `sched-sessions-${branchId}-${from}-${to}-${coachFilter}`)
 
   const availQ = useMemo(
     () => (eventsOnly ? null : query(branchCol(branchId, COL.availability), where('dateKey', '>=', from), where('dateKey', '<=', to))),

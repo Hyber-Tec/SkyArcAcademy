@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { dayHours, effectiveRanges, rangesContain } from '@shared/availability'
 import { isInactiveStudent } from '@shared/people'
 import type { Conflict } from '@shared/schedule/conflicts'
-import { buildDayRows, orderTutors } from '@shared/schedule/dayModel'
+import { buildDayRows, orderCoaches } from '@shared/schedule/dayModel'
 import { fitsCapacity, seatsLeft, unionMinutes } from '@shared/schedule/lanes'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import type { ScheduleView, SessionStatus } from '@shared/settings/defaults'
@@ -39,14 +39,14 @@ import { DuplicateDialog } from './dialogs/DuplicateDialog'
 import { EventDialog, type EventDialogState } from './dialogs/EventDialog'
 import { SessionDialog, type SessionDialogState } from './dialogs/SessionDialog'
 import { TrashDialog } from './dialogs/TrashDialog'
-import { TutorOrderDialog } from './dialogs/TutorOrderDialog'
+import { CoachOrderDialog } from './dialogs/CoachOrderDialog'
 import { deleteEvent, moveEventTime } from './eventsApi'
 import { MonthView } from './MonthView'
 import { useScheduleData } from './useScheduleData'
 import { useShifts } from '@/features/timeclock/api'
 import type { ClockInterval } from '@shared/schedule/dayModel'
 import { useScheduleRoute } from './useScheduleRoute'
-import { type RailNumbers, type RailTutor, ScheduleMenu, ScheduleRail, SlimRail, ViewSwitch } from './ScheduleRail'
+import { type RailNumbers, type RailCoach, ScheduleMenu, ScheduleRail, SlimRail, ViewSwitch } from './ScheduleRail'
 import { WeekEventHeader } from './WeekEventHeader'
 
 const CLIP_KEY = 'hyber:schedule-clipboard'
@@ -98,7 +98,7 @@ export function SchedulePage() {
     return () => clearInterval(t)
   }, [timezone])
 
-  const [tutorFilter, setTutorFilter] = useState<string | null>(null)
+  const [coachFilter, setCoachFilter] = useState<string | null>(null)
   const [selection, setSelection] = useState<Selection>(null)
   // The floating panel (TE's week bar): opened and closed by hand or with Escape; remembered in this browser.
   const [panelOpen, setPanelOpenState] = useState(() => readPanelOpen())
@@ -155,7 +155,7 @@ export function SchedulePage() {
     return { from: monthWindow.from, to: monthWindow.to }
   }, [view, date, weekStartsOn, monthWindow.from, monthWindow.to])
 
-  // Every tutor's sessions load (the rail counts them all); the tutor filter only changes the rows shown.
+  // Every coach's sessions load (the rail counts them all); the coach filter only changes the rows shown.
   const data = useScheduleData(range.from, range.to, null, { eventsOnly: view === 'month', keepPrevious: view === 'month' })
   const { data: shifts } = useShifts(range.from, range.to, null, view !== 'month')
   const clocksByKey = useMemo(() => {
@@ -171,15 +171,15 @@ export function SchedulePage() {
   const isClosed = useCallback((d: DateKey) => !hoursOf(d).isOpen, [hoursOf])
   const isLocked = useCallback((d: DateKey) => d < today, [today])
 
-  const tutors = useMemo(
+  const coaches = useMemo(
     () =>
-      orderTutors(
-        staff.filter((s) => s.role === 'tutor' && s.status !== 'finished'),
-        settings.schedule.tutorOrder,
+      orderCoaches(
+        staff.filter((s) => s.role === 'coach' && s.status !== 'finished'),
+        settings.schedule.coachOrder,
       ).map((s) => ({ id: s.id, name: s.name })),
-    [staff, settings.schedule.tutorOrder],
+    [staff, settings.schedule.coachOrder],
   )
-  const visibleTutors = tutorFilter ? tutors.filter((t) => t.id === tutorFilter) : tutors
+  const visibleCoaches = coachFilter ? coaches.filter((t) => t.id === coachFilter) : coaches
 
   const days = useMemo(() => {
     if (view === 'day') return [date]
@@ -188,7 +188,7 @@ export function SchedulePage() {
     return []
   }, [view, date, weekStartsOn, isClosed, data.sessionsByDate])
 
-  const maxLanes = branch.rules.maxStudentsPerTutor
+  const maxLanes = branch.rules.maxStudentsPerCoach
   const conflicts = useMemo(
     () =>
       computeConflicts({
@@ -198,7 +198,7 @@ export function SchedulePage() {
         staffById: staffMap,
         members,
         studentsById: studentMap,
-        maxPerTutor: maxLanes,
+        maxPerCoach: maxLanes,
         today,
         nowMin,
       }),
@@ -213,25 +213,25 @@ export function SchedulePage() {
           dateKey: d,
           today,
           hours,
-          tutors: visibleTutors,
+          coaches: visibleCoaches,
           // Only the part of saved availability inside that date's opening hours counts.
           availability: (id) => {
             const a = data.availabilityByKey.get(`${id}|${d}`)
             return a ? { ranges: effectiveRanges(a.ranges, hours), unavailable: a.unavailable, hidden: a.hidden } : null
           },
-          // Showing one tutor: only their sessions (others would get rows of their own).
-          sessions: (data.sessionsByDate.get(d) ?? []).filter((s) => !tutorFilter || s.tutorId === tutorFilter),
+          // Showing one coach: only their sessions (others would get rows of their own).
+          sessions: (data.sessionsByDate.get(d) ?? []).filter((s) => !coachFilter || s.coachId === coachFilter),
           clocks: (id) => (clocksByKey.get(`${id}|${d}`) ?? []).map((c) => (c.open ? { ...c, endMin: d === today ? nowMin : 1440 } : c)),
           maxLanes,
           addEmptyLane: true,
-          nameFor: (id) => staffMap.get(id)?.name ?? 'Former tutor',
+          nameFor: (id) => staffMap.get(id)?.name ?? 'Former coach',
         })
         return { dateKey: d, hours, rows, events: data.eventsByDate.get(d) ?? [] }
       }),
-    [days, hoursOf, today, nowMin, visibleTutors, tutorFilter, data.availabilityByKey, data.sessionsByDate, data.eventsByDate, maxLanes, staffMap, clocksByKey],
+    [days, hoursOf, today, nowMin, visibleCoaches, coachFilter, data.availabilityByKey, data.sessionsByDate, data.eventsByDate, maxLanes, staffMap, clocksByKey],
   )
 
-  const ctx: ScheduleCtx = useMemo(() => ({ branchId, actor, timezone, settings, maxStudentsPerTutor: maxLanes }), [branchId, actor, timezone, settings, maxLanes])
+  const ctx: ScheduleCtx = useMemo(() => ({ branchId, actor, timezone, settings, maxStudentsPerCoach: maxLanes }), [branchId, actor, timezone, settings, maxLanes])
   const run = useCallback(async (fn: () => Promise<unknown>, ok?: string) => {
     try {
       await fn()
@@ -263,7 +263,7 @@ export function SchedulePage() {
         const noHistory = !st.lastSessionDate
         const isFirst = st.firstSessionDate ? st.firstSessionDate === s.dateKey : firstSessionIds.has(s.id)
         if (noHistory && isFirst && !isInactiveStudent(st.status)) {
-          items.push({ kind: 'first_session', title: 'First session', subtitle: 'This student is attending a first session.' })
+          items.push({ kind: 'first_session', title: 'First class', subtitle: 'This student is attending a first class.' })
         }
       }
       return items
@@ -276,21 +276,21 @@ export function SchedulePage() {
 
   const reassignOptions = useCallback(
     (s: WithId<Session>) => {
-      // With one tutor shown, other tutors' sessions aren't loaded: the edit dialog checks instead.
-      if (tutorFilter) return null
+      // With one coach shown, other coaches' sessions aren't loaded: the edit dialog checks instead.
+      if (coachFilter) return null
       const hours = hoursOf(s.dateKey)
       if (!hours.isOpen) return []
-      return tutors.flatMap((t) => {
-        if (t.id === s.tutorId || staffMap.get(t.id)?.status !== 'active') return []
+      return coaches.flatMap((t) => {
+        if (t.id === s.coachId || staffMap.get(t.id)?.status !== 'active') return []
         const a = data.availabilityByKey.get(`${t.id}|${s.dateKey}`)
         const ranges = a && !a.unavailable ? effectiveRanges(a.ranges, hours) : []
         if (!rangesContain(ranges, s.startMin, s.endMin)) return []
-        const theirs = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.tutorId === t.id && x.status !== 'canceled')
+        const theirs = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.coachId === t.id && x.status !== 'canceled')
         const seats = seatsLeft(theirs, s.startMin, s.endMin, maxLanes)
         return seats > 0 ? [{ id: t.id, name: t.name, seats }] : []
       })
     },
-    [tutorFilter, hoursOf, tutors, staffMap, data.availabilityByKey, data.sessionsByDate, maxLanes],
+    [coachFilter, hoursOf, coaches, staffMap, data.availabilityByKey, data.sessionsByDate, maxLanes],
   )
 
   const moveSession = useCallback(
@@ -303,16 +303,16 @@ export function SchedulePage() {
       const avail = data.availabilityByKey.get(`${staffId}|${dateKey}`)
       const ranges = avail && !avail.unavailable ? effectiveRanges(avail.ranges, hoursOf(dateKey)) : []
       if (!rangesContain(ranges, startMin, endMin)) {
-        return toast.error('This start time does not fit the full session duration within the tutor’s availability.')
+        return toast.error('This start time does not fit the full class duration within the coach’s availability.')
       }
-      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.tutorId === staffId && x.status !== 'canceled')
+      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.coachId === staffId && x.status !== 'canceled')
       if (s.status !== 'canceled' && !fitsCapacity(others, startMin, endMin, maxLanes, s.id)) {
-        return toast.error(`This tutor already has ${maxLanes} students at that time.`)
+        return toast.error(`This coach already has ${maxLanes} students at that time.`)
       }
-      if (staffId === s.tutorId && dateKey === s.dateKey && startMin === s.startMin) return
-      const tutor = staffMap.get(staffId)
+      if (staffId === s.coachId && dateKey === s.dateKey && startMin === s.startMin) return
+      const coach = staffMap.get(staffId)
       void run(() =>
-        updateSession(ctx, s, { tutorId: staffId, tutorName: tutor?.name ?? s.tutorName, dateKey, startMin, endMin }),
+        updateSession(ctx, s, { coachId: staffId, coachName: coach?.name ?? s.coachName, dateKey, startMin, endMin }),
       )
       setSelection({ kind: 'session', id })
     },
@@ -324,7 +324,7 @@ export function SchedulePage() {
       if (status === s.status) return
       if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
       if (s.status === 'canceled') {
-        const others = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.tutorId === s.tutorId && x.status !== 'canceled')
+        const others = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.coachId === s.coachId && x.status !== 'canceled')
         if (!fitsCapacity(others, s.startMin, s.endMin, maxLanes, s.id)) return toast.error('It is already full.')
       }
       void run(() => updateSession(ctx, s, { status }), `Status changed to ${SESSION_STATUS_LABELS[status]}`)
@@ -337,11 +337,11 @@ export function SchedulePage() {
           staffById: staffMap,
           members,
           studentsById: studentMap,
-          maxPerTutor: maxLanes,
+          maxPerCoach: maxLanes,
           today,
           nowMin,
         }).get(s.id)
-        if (back?.length) toast.warning('The session is back, but it’s in conflict', { description: back[0].message })
+        if (back?.length) toast.warning('The class is back, but it’s in conflict', { description: back[0].message })
       }
     },
     [isLocked, data.sessionsByDate, data.sessions, data.availabilityByKey, hoursOf, staffMap, members, studentMap, maxLanes, run, ctx, today, nowMin],
@@ -351,12 +351,12 @@ export function SchedulePage() {
     (draggedId: string, targetId: string) => {
       const a = sessionById.get(draggedId)
       const b = sessionById.get(targetId)
-      if (!a || !b || a.tutorId !== b.tutorId || a.dateKey !== b.dateKey || isLocked(a.dateKey)) return
+      if (!a || !b || a.coachId !== b.coachId || a.dateKey !== b.dateKey || isLocked(a.dateKey)) return
       if (a.status === 'canceled' || b.status === 'canceled' || a.endMin <= b.startMin || b.endMin <= a.startMin) return
       const lo = Math.max(a.startMin, b.startMin)
       const hi = Math.min(a.endMin, b.endMin)
       const group = (data.sessionsByDate.get(a.dateKey) ?? [])
-        .filter((x) => x.tutorId === a.tutorId && x.status !== 'canceled' && x.startMin < hi && x.endMin > lo)
+        .filter((x) => x.coachId === a.coachId && x.status !== 'canceled' && x.startMin < hi && x.endMin > lo)
         .sort((x, y) => (x.visualOrder ?? 0) - (y.visualOrder ?? 0) || x.startMin - y.startMin || x.endMin - y.endMin)
       const without = group.filter((x) => x.id !== a.id)
       const idx = without.findIndex((x) => x.id === b.id)
@@ -370,8 +370,8 @@ export function SchedulePage() {
   const reassign = useCallback(
     (s: WithId<Session>, staffId: string) => {
       if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      const tutor = staffMap.get(staffId)
-      void run(() => updateSession(ctx, s, { tutorId: staffId, tutorName: tutor?.name ?? s.tutorName }), `Session given to ${tutor?.name ?? 'the tutor'}`)
+      const coach = staffMap.get(staffId)
+      void run(() => updateSession(ctx, s, { coachId: staffId, coachName: coach?.name ?? s.coachName }), `Class given to ${coach?.name ?? 'the coach'}`)
     },
     [isLocked, staffMap, run, ctx],
   )
@@ -379,7 +379,7 @@ export function SchedulePage() {
   const makeAvailable = useCallback(
     (s: WithId<Session>) => {
       if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      const a = data.availabilityByKey.get(`${s.tutorId}|${s.dateKey}`)
+      const a = data.availabilityByKey.get(`${s.coachId}|${s.dateKey}`)
       const saved = a && !a.unavailable ? a.ranges : []
       const time = formatTimeRange(s.startMin, s.endMin)
       void run(
@@ -388,13 +388,13 @@ export function SchedulePage() {
             branchId,
             actor,
             timezone,
-            staffId: s.tutorId,
-            staffName: s.tutorName,
+            staffId: s.coachId,
+            staffName: s.coachName,
             via: 'admin',
             days: [{ dateKey: s.dateKey, ranges: [...saved, { startMin: s.startMin, endMin: s.endMin }] }],
-            summary: `Made ${s.tutorName} available ${time} on ${formatDateKey(s.dateKey, 'medium')} for ${s.studentName}’s session`,
+            summary: `Made ${s.coachName} available ${time} on ${formatDateKey(s.dateKey, 'medium')} for ${s.studentName}’s class`,
           }),
-        `${s.tutorName} is now available ${time}`,
+        `${s.coachName} is now available ${time}`,
       )
     },
     [isLocked, data.availabilityByKey, run, branchId, actor, timezone],
@@ -404,8 +404,8 @@ export function SchedulePage() {
     setSessionDialog({
       mode: 'create',
       draft: {
-        tutorId: s.tutorId,
-        tutorName: s.tutorName,
+        coachId: s.coachId,
+        coachName: s.coachName,
         studentId: s.studentId,
         studentName: s.studentName,
         studentGrade: s.studentGrade,
@@ -421,8 +421,8 @@ export function SchedulePage() {
   const trashSession = useCallback(
     (s: WithId<Session>) => {
       if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      if (!window.confirm('Delete this session?')) return
-      void run(() => deleteSession(ctx, s), 'Session moved to Trash')
+      if (!window.confirm('Delete this class?')) return
+      void run(() => deleteSession(ctx, s), 'Class moved to Trash')
       setSelection(null)
     },
     [isLocked, run, ctx],
@@ -439,7 +439,7 @@ export function SchedulePage() {
         durationMin: Math.max(5, s.endMin - s.startMin),
       }
       localStorage.setItem(CLIP_KEY, JSON.stringify(clip))
-      toast.success('Session copied — select a time and paste')
+      toast.success('Class copied — select a time and paste')
     },
     [studentMap],
   )
@@ -454,19 +454,19 @@ export function SchedulePage() {
   const pasteAt = useCallback(
     (staffId: string, dateKey: DateKey, startMin: number) => {
       const clip = readClip()
-      if (!clip) return toast.info('Copy a session first.')
+      if (!clip) return toast.info('Copy a class first.')
       if (isLocked(dateKey)) return toast.error('Past days can’t be changed.')
       const endMin = startMin + clip.durationMin
       const avail = data.availabilityByKey.get(`${staffId}|${dateKey}`)
       const ranges = avail && !avail.unavailable ? effectiveRanges(avail.ranges, hoursOf(dateKey)) : []
-      if (!rangesContain(ranges, startMin, endMin)) return toast.error('This start time does not fit the full session duration within the tutor’s availability.')
-      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.tutorId === staffId && x.status !== 'canceled')
-      if (!fitsCapacity(others, startMin, endMin, maxLanes)) return toast.error(`This tutor already has ${maxLanes} students at that time.`)
-      const tutor = staffMap.get(staffId)
+      if (!rangesContain(ranges, startMin, endMin)) return toast.error('This start time does not fit the full class duration within the coach’s availability.')
+      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.coachId === staffId && x.status !== 'canceled')
+      if (!fitsCapacity(others, startMin, endMin, maxLanes)) return toast.error(`This coach already has ${maxLanes} students at that time.`)
+      const coach = staffMap.get(staffId)
       void run(() =>
         createSession(
           ctx,
-          { ...clip, tutorId: staffId, tutorName: tutor?.name ?? '', status: settings.schedule.pasteStatus, dateKey, startMin, endMin },
+          { ...clip, coachId: staffId, coachName: coach?.name ?? '', status: settings.schedule.pasteStatus, dateKey, startMin, endMin },
           'paste',
         ),
       )
@@ -484,8 +484,8 @@ export function SchedulePage() {
     const s = sessionById.get(selection.id)
     if (!s) return
     if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-    if (!window.confirm('Delete this session?')) return
-    void run(() => deleteSession(ctx, s), 'Session moved to Trash')
+    if (!window.confirm('Delete this class?')) return
+    void run(() => deleteSession(ctx, s), 'Class moved to Trash')
     setSelection(null)
   }, [selection, sessionById, isLocked, run, ctx])
 
@@ -565,7 +565,7 @@ export function SchedulePage() {
     conflictsOf,
     createAt: (staffId, dateKey, startMin, endMin) => {
       const t = staffMap.get(staffId)
-      setSessionDialog({ mode: 'create', draft: { tutorId: staffId, tutorName: t?.name ?? '', dateKey, startMin, endMin, status: 'pending' } })
+      setSessionDialog({ mode: 'create', draft: { coachId: staffId, coachName: t?.name ?? '', dateKey, startMin, endMin, status: 'pending' } })
     },
     editSession: (s) => setSessionDialog({ mode: 'edit', session: s }),
     setStatus,
@@ -589,7 +589,7 @@ export function SchedulePage() {
       if (newTab) window.open(path, '_blank', 'noopener')
       else navigate(path)
     },
-    showOnlyTutor: (staffId) => setTutorFilter(staffId),
+    showOnlyCoach: (staffId) => setCoachFilter(staffId),
     pasteAt,
     hasClipboard: () => readClip() !== null,
     createEvent: (dateKey, startMin) =>
@@ -601,15 +601,15 @@ export function SchedulePage() {
       void run(() => deleteEvent(ctx, e), 'Event deleted')
     },
     editDay: (d) => setDayEdit(d),
-    tutorColor: (id) => staffMap.get(id)?.color,
+    coachColor: (id) => staffMap.get(id)?.color,
   }
 
   // ------------------------------------------------------------- rail
   const shownDays = view === 'day' ? [date] : view === 'week' ? weekDays(date, weekStartsOn) : []
-  const railTutors: RailTutor[] = useMemo(() => {
+  const railCoaches: RailCoach[] = useMemo(() => {
     const inRange = (d: DateKey) => shownDays.includes(d)
-    return tutors.map((t) => {
-      const own = data.sessions.filter((s) => s.tutorId === t.id && inRange(s.dateKey) && s.status !== 'canceled')
+    return coaches.map((t) => {
+      const own = data.sessions.filter((s) => s.coachId === t.id && inRange(s.dateKey) && s.status !== 'canceled')
       const minutes = shownDays.reduce((n, d) => n + unionMinutes(own.filter((s) => s.dateKey === d)), 0)
       return {
         id: t.id,
@@ -627,7 +627,7 @@ export function SchedulePage() {
     })
     // shownDays is derived from view, date and weekStartsOn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tutors, data.sessions, data.availabilityByKey, view, date, weekStartsOn, staffMap, conflicts, clocksByKey, today, hoursOf])
+  }, [coaches, data.sessions, data.availabilityByKey, view, date, weekStartsOn, staffMap, conflicts, clocksByKey, today, hoursOf])
   const railNumbers: RailNumbers | null = useMemo(() => {
     if (view === 'month') return null
     const shown = data.sessions.filter((s) => shownDays.includes(s.dateKey))
@@ -666,7 +666,7 @@ export function SchedulePage() {
     } else route.go({ view: v })
   }
   const [sheetOpen, setSheetOpen] = useState(false)
-  const tools = { zoom, onZoom: setZoom, onDuplicate: () => setDupOpen(true), onTrash: () => setTrashOpen(true), onTutorOrder: () => setOrderOpen(true) }
+  const tools = { zoom, onZoom: setZoom, onDuplicate: () => setDupOpen(true), onTrash: () => setTrashOpen(true), onCoachOrder: () => setOrderOpen(true) }
   const rail = (inSheet: boolean) => (
     <ScheduleRail
       view={view}
@@ -687,11 +687,11 @@ export function SchedulePage() {
       onPrev={nav.prev}
       onNext={nav.next}
       onToday={nav.today}
-      tutors={railTutors}
+      coaches={railCoaches}
       showNumbers={view !== 'month'}
-      tutorFilter={tutorFilter}
-      onTutorFilter={(id) => {
-        setTutorFilter(id)
+      coachFilter={coachFilter}
+      onCoachFilter={(id) => {
+        setCoachFilter(id)
         setSheetOpen(false)
       }}
       numbers={railNumbers}
@@ -701,7 +701,7 @@ export function SchedulePage() {
       {...tools}
     />
   )
-  const filtered = tutorFilter ? staffMap.get(tutorFilter) : null
+  const filtered = coachFilter ? staffMap.get(coachFilter) : null
   const dayLocked = view === 'day' && isLocked(date)
 
   return (
@@ -712,14 +712,14 @@ export function SchedulePage() {
             {panelOpen ? (
               rail(false)
             ) : (
-              <SlimRail tutors={railTutors} tutorFilter={tutorFilter} onTutorFilter={setTutorFilter} onShow={() => setPanelOpen(true)} onPrev={nav.prev} onNext={nav.next} />
+              <SlimRail coaches={railCoaches} coachFilter={coachFilter} onCoachFilter={setCoachFilter} onShow={() => setPanelOpen(true)} onPrev={nav.prev} onNext={nav.next} />
             )}
           </div>
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center gap-2 border-b bg-background px-3 py-2.5 sm:px-4">
             {isMobile ? (
-              <Button variant="ghost" size="icon" aria-label="Calendar and tutors" onClick={() => setSheetOpen(true)}>
+              <Button variant="ghost" size="icon" aria-label="Calendar and coaches" onClick={() => setSheetOpen(true)}>
                 <LuCalendarDays className="size-5" />
               </Button>
             ) : null}
@@ -742,7 +742,7 @@ export function SchedulePage() {
               {filtered && view !== 'month' ? (
                 <div className="text-xs text-muted-foreground">
                   Showing only {filtered.name} ·{' '}
-                  <button type="button" className="font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setTutorFilter(null)}>
+                  <button type="button" className="font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setCoachFilter(null)}>
                     Show all
                   </button>
                 </div>
@@ -823,7 +823,7 @@ export function SchedulePage() {
                     ))}
                     {sections.length === 0 ? (
                       <div className="m-4 rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
-                        {view === 'day' ? `Closed on ${formatDateKey(date, 'weekdayLong')}.` : 'The center is closed all week.'}
+                        {view === 'day' ? `Closed on ${formatDateKey(date, 'weekdayLong')}.` : 'The academy is closed all week.'}
                       </div>
                     ) : null}
                   </div>
@@ -855,19 +855,19 @@ export function SchedulePage() {
         onSave={async (draft, existing) => {
           if (existing) await updateSession(ctx, existing, draft)
           else await createSession(ctx, draft)
-          toast.success(existing ? 'Session updated' : 'Session created')
+          toast.success(existing ? 'Class updated' : 'Class created')
           if (!existing && draft.dateKey !== date && view === 'day') route.go({ date: draft.dateKey })
         }}
         onDelete={async (s) => {
           await deleteSession(ctx, s)
-          toast.success('Session moved to Trash')
+          toast.success('Class moved to Trash')
         }}
       />
       <EventDialog state={eventDialog} onClose={() => setEventDialog(null)} ctx={ctx} />
-      <DayEditDialog dateKey={dayEdit} onClose={() => setDayEdit(null)} ctx={ctx} tutors={tutors} sessions={dayEdit ? data.sessionsByDate.get(dayEdit) ?? [] : []} availabilityByKey={data.availabilityByKey} dayConfigs={data.dayConfigs} />
-      <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} tutorFilter={tutorFilter} />
+      <DayEditDialog dateKey={dayEdit} onClose={() => setDayEdit(null)} ctx={ctx} coaches={coaches} sessions={dayEdit ? data.sessionsByDate.get(dayEdit) ?? [] : []} availabilityByKey={data.availabilityByKey} dayConfigs={data.dayConfigs} />
+      <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} coachFilter={coachFilter} />
       <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={today} />
-      <TutorOrderDialog open={orderOpen} onOpenChange={setOrderOpen} ctx={ctx} tutors={tutors} />
+      <CoachOrderDialog open={orderOpen} onOpenChange={setOrderOpen} ctx={ctx} coaches={coaches} />
       <BellDialog state={bell} onClose={() => setBell(null)} />
       {data.error ? <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-lg bg-destructive px-3 py-2 text-sm text-white">{data.error.message}</div> : null}
     </ScheduleUiContext>

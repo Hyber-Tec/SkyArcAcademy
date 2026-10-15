@@ -40,14 +40,14 @@ const SECTIONS: Section[] = [
 ]
 
 /**
- * Profile: the tutor's own pages. Computers get the sections in a side list;
+ * Profile: the coach's own pages. Computers get the sections in a side list;
  * phones get the list on its own (as in the phone app) and open each section.
  */
 export function ProfilePage() {
   const isMobile = useIsMobile()
   const { pathname } = useLocation()
   const { data: staff, loading } = useMyStaff()
-  const base = `/tutor/profile`
+  const base = `/coach/profile`
   const atIndex = pathname.replace(/\/$/, '') === base
   const current = SECTIONS.find((s) => pathname.startsWith(`${base}/${s.to}`))
 
@@ -102,7 +102,7 @@ export function ProfilePage() {
   )
 }
 
-/** `/tutor/profile`: the account details on computers (phones show the list instead). */
+/** `/coach/profile`: the account details on computers (phones show the list instead). */
 export function ProfileIndex() {
   const isMobile = useIsMobile()
   return isMobile ? null : <AccountSection />
@@ -133,10 +133,10 @@ function ProfileHeader({ staff, loading }: { staff: WithId<Staff> | null; loadin
           <StaffStatusBadge status={staff.status} />
         </div>
         <p className="mt-1 truncate text-sm text-muted-foreground">
-          Tutor at {branch.name}
+          Coach at {branch.name}
           {since}
         </p>
-        {/* The sign-in email (an owner or admin previewing with View as sees the tutor's own). */}
+        {/* The sign-in email (an owner or admin previewing with View as sees the coach's own). */}
         <p className="truncate text-sm text-muted-foreground">{viewAs ? staff.email : (email ?? staff.email)}</p>
       </div>
     </header>
@@ -168,7 +168,7 @@ function ProfileList({ base, staff }: { base: string; staff: WithId<Staff> | nul
         <h2 className="mb-1.5 px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Your account</h2>
         <ul className="divide-y overflow-hidden rounded-xl border bg-card">
           {row(`${base}/${account.to}`, account.label, account.icon)}
-          {row(`/tutor/payroll`, 'Payroll', LuWallet)}
+          {row(`/coach/payroll`, 'Payroll', LuWallet)}
         </ul>
       </section>
       <section>

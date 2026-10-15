@@ -18,7 +18,7 @@ export interface BellItem {
 }
 
 export interface ScheduleUi {
-  mode: 'admin' | 'tutor'
+  mode: 'admin' | 'coach'
   today: DateKey
   nowMin: number
   maxLanes: number
@@ -40,18 +40,18 @@ export interface ScheduleUi {
   reorderSession: (draggedId: string, targetId: string) => void
   openStudent: (s: WithId<Session>, newTab?: boolean) => void
   showBell: (s: WithId<Session>, items: BellItem[]) => void
-  /** Tutors free at the session's time with a seat left; null when the schedule can't tell (one tutor shown). */
+  /** Coaches free at the session's time with a seat left; null when the schedule can't tell (one coach shown). */
   reassignOptions: (s: WithId<Session>) => { id: string; name: string; seats: number }[] | null
   reassign: (s: WithId<Session>, staffId: string) => void
-  /** Adds the session's time to its tutor's availability that day. */
+  /** Adds the session's time to its coach's availability that day. */
   makeAvailable: (s: WithId<Session>) => void
   copySession: (s: WithId<Session>) => void
-  /** Opens "Create session" with the same student, tutor and time a week later. */
+  /** Opens "Create session" with the same student, coach and time a week later. */
   duplicateSession: (s: WithId<Session>) => void
   trashSession: (s: WithId<Session>) => void
-  // tutor rows and empty time
+  // coach rows and empty time
   openEmployee: (staffId: string, newTab?: boolean) => void
-  showOnlyTutor: (staffId: string | null) => void
+  showOnlyCoach: (staffId: string | null) => void
   pasteAt: (staffId: string, dateKey: DateKey, startMin: number) => void
   hasClipboard: () => boolean
   // events
@@ -61,8 +61,8 @@ export interface ScheduleUi {
   deleteEvent: (e: WithId<EventDoc>) => void
   // day
   editDay: (dateKey: DateKey) => void
-  /** A tutor's color, for their avatar on the row (when known). */
-  tutorColor?: (staffId: string) => string | undefined
+  /** A coach's color, for their avatar on the row (when known). */
+  coachColor?: (staffId: string) => string | undefined
 }
 
 export const ScheduleUiContext = createContext<ScheduleUi | null>(null)

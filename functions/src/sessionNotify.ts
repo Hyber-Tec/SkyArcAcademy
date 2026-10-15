@@ -11,7 +11,7 @@ import type { Branch, NotificationPrefs } from '@shared/types'
 
 export function snapshotOf(d: FirebaseFirestore.DocumentData): SessionSnapshot {
   return {
-    tutorId: (d.tutorId as string | null) ?? null,
+    coachId: (d.coachId as string | null) ?? null,
     studentName: String(d.studentName ?? ''),
     status: String(d.status ?? ''),
     dateKey: String(d.dateKey ?? ''),
@@ -28,7 +28,7 @@ export async function branchContext(branchId: string): Promise<{ settings: Branc
   return { settings: resolveSettings(b?.settings), timezone: b?.timezone ?? 'America/New_York', active: b?.status === 'active' }
 }
 
-/** Resolves each notice's tutor to their member email, honors their switches and writes the inbox items. */
+/** Resolves each notice's coach to their member email, honors their switches and writes the inbox items. */
 export async function deliverSessionNotices(branchId: string, sessionId: string, notices: SessionNotice[], dedupeKey: string) {
   if (!notices.length) return
   const items = []
@@ -46,14 +46,14 @@ export async function deliverSessionNotices(branchId: string, sessionId: string,
       type: n.type,
       title: n.title,
       body: n.body,
-      link: `tutor/schedule?date=${n.dateKey}`,
+      link: `coach/schedule?date=${n.dateKey}`,
       refs: { sessionId, dateKey: n.dateKey },
     })
   }
   await sendNotifications(branchId, items, dedupeKey)
 }
 
-/** Session changes inside the notification window reach the tutor's inbox (TE's decision table). */
+/** Session changes inside the notification window reach the coach's inbox (TE's decision table). */
 export const onSessionUpdated = onDocumentUpdated({ document: 'branches/{branchId}/sessions/{sessionId}', ...LIGHT }, async (event) => {
   const before = event.data?.before.data()
   const after = event.data?.after.data()

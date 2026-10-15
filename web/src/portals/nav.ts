@@ -43,7 +43,7 @@ export function isGroup(item: NavItem): item is NavGroup {
 export interface PortalNav {
   main: NavItem[]
   secondary: NavLeaf[]
-  /** Bottom tabs on phones (tutor PWA). */
+  /** Bottom tabs on phones (coach PWA). */
   mobileTabs?: NavLeaf[]
 }
 
@@ -74,10 +74,10 @@ export const ADMIN_NAV: PortalNav = {
 }
 
 /**
- * The tutor portal: the same five places as the phone app (Today, Schedule, Availability, News, Profile), plus
+ * The coach portal: the same five places as the phone app (Today, Schedule, Availability, News, Profile), plus
  * students and pay. Profile holds the person's own pages (account, notifications, sign-in, appearance).
  */
-export const TUTOR_NAV: PortalNav = {
+export const COACH_NAV: PortalNav = {
   main: [
     { key: 'today', label: 'Today', to: 'today', icon: LuSun },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
@@ -97,7 +97,7 @@ export const TUTOR_NAV: PortalNav = {
 }
 
 export const PARENT_NAV: PortalNav = {
-  main: [{ key: 'home', label: 'Upcoming Sessions', to: 'home', icon: LuCalendarDays }],
+  main: [{ key: 'home', label: 'Upcoming Classes', to: 'home', icon: LuCalendarDays }],
   secondary: [],
 }
 
@@ -117,7 +117,7 @@ export const STUDENT_NAV: PortalNav = {
 
 export const PORTAL_NAV: Record<Portal, PortalNav> = {
   admin: ADMIN_NAV,
-  tutor: TUTOR_NAV,
+  coach: COACH_NAV,
   parent: PARENT_NAV,
   student: STUDENT_NAV,
 }

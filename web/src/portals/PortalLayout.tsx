@@ -43,17 +43,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLeaves } from './nav'
 
-/** Live counts shown next to nav entries, by nav key (Home: needs attention; tutor Announcements: unread). */
+/** Live counts shown next to nav entries, by nav key (Home: needs attention; coach Announcements: unread). */
 const NavBadges = createContext<Record<string, number>>({})
 
 function NavBadgesProvider({ portal, children }: { portal: Portal; children: React.ReactNode }) {
   const attention = useAttention(portal === 'admin')
-  const unread = useUnreadAnnouncementCount(portal === 'tutor')
+  const unread = useUnreadAnnouncementCount(portal === 'coach')
   const total = portal === 'admin' ? attention.total : 0
   const value = useMemo(() => ({ home: total, announcements: unread }), [total, unread])
-  // Installed app icon: unread announcements in the tutor portal (TE's News count).
+  // Installed app icon: unread announcements in the coach portal (TE's News count).
   useEffect(() => {
-    if (portal !== 'tutor') return
+    if (portal !== 'coach') return
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
     if (unread > 0) void nav.setAppBadge?.(unread).catch(() => undefined)
     else void nav.clearAppBadge?.().catch(() => undefined)
@@ -144,7 +144,7 @@ function PortalSidebar({ portal }: { portal: Portal }) {
             <div className="min-w-0 flex-1">
               <UserMenu variant="sidebar" />
             </div>
-            {portal === 'tutor' && !isMobile ? <NotificationBell /> : null}
+            {portal === 'coach' && !isMobile ? <NotificationBell /> : null}
             <ViewAsControl />
           </SidebarMenuItem>
         </SidebarMenu>
@@ -222,7 +222,7 @@ function MobileTopBar({ portal }: { portal: Portal }) {
       </Button>
       <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} className="size-6" />
       <span className="min-w-0 flex-1 truncate text-sm font-semibold">{branch.branding?.sidebarTitle || branch.name}</span>
-      {portal === 'tutor' ? <NotificationBell /> : null}
+      {portal === 'coach' ? <NotificationBell /> : null}
       <UserMenu />
     </header>
   )

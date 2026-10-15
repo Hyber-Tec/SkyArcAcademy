@@ -1,19 +1,19 @@
 import { LuGraduationCap, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { type Conflict, tutorConflictText } from '@shared/schedule/conflicts'
+import { type Conflict, coachConflictText } from '@shared/schedule/conflicts'
 import { formatDateKey, formatDuration, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { StatePill } from '@/features/home/parts'
-import { sessionState } from '@/features/tutor/sessionUi'
+import { sessionState } from '@/features/coach/sessionUi'
 import { SESSION_CARD_STYLE } from './cardStyle'
 
 /**
  * Phones: a tapped class opens as a sheet (as in the phone app) with its note, why it's waiting for the admin, and the
  * student button.
  */
-export function TutorSessionSheet({
+export function CoachSessionSheet({
   session,
   onClose,
   today,
@@ -27,7 +27,7 @@ export function TutorSessionSheet({
   conflicts: Conflict[]
 }) {
   const s = session
-  const waiting = tutorConflictText(conflicts)
+  const waiting = coachConflictText(conflicts)
   const st = s ? sessionState(s, { today, nowMin, waiting }) : null
   return (
     <Sheet open={!!s} onOpenChange={(o) => !o && onClose()}>
@@ -68,7 +68,7 @@ export function TutorSessionSheet({
             </div>
             <div className="grid gap-2 border-t px-5 py-4">
               <Button size="lg" variant="ghost" asChild>
-                <Link to={`/tutor/students/${s.studentId}`} onClick={onClose}>
+                <Link to={`/coach/students/${s.studentId}`} onClick={onClose}>
                   <LuGraduationCap /> Student profile
                 </Link>
               </Button>

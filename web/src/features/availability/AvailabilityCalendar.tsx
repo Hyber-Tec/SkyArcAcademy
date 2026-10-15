@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { LuClipboardPaste, LuCopy, LuCopyPlus, LuLock, LuPencil, LuRepeat, LuTrash2, LuX } from 'react-icons/lu'
 import { toast } from 'sonner'
-import { dayHours, effectiveLockDays, effectiveRanges, fitRangesToDay, isInsideLeadTime, isLockedForTutor, normalizeRanges, weeklyRepeats } from '@shared/availability'
+import { dayHours, effectiveLockDays, effectiveRanges, fitRangesToDay, isInsideLeadTime, isLockedForCoach, normalizeRanges, weeklyRepeats } from '@shared/availability'
 import { type DateKey, addDays, dateRange, diffDays, formatDateKey, formatMinutesShort, nowMinutes, startOfWeek, todayKey } from '@shared/time'
 import type { AvailabilityRange } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -57,7 +57,7 @@ export function AvailabilityCalendar({
 }: {
   staffId: string
   staffName: string
-  mode: 'tutor' | 'admin'
+  mode: 'coach' | 'admin'
   ref?: React.Ref<AvailabilityCalendarHandle>
 }) {
   const { branchId, actor, settings, timezone } = useBranch()
@@ -65,7 +65,7 @@ export function AvailabilityCalendar({
   const isMobile = useIsMobile()
   const now = useNow()
   const today = todayKey(timezone, now)
-  const lockDays = mode === 'tutor' ? effectiveLockDays(settings) : -1
+  const lockDays = mode === 'coach' ? effectiveLockDays(settings) : -1
   const leadDays = a.leadTimeDays
 
   const scroller = useRef<MonthScrollerHandle>(null)
@@ -82,7 +82,7 @@ export function AvailabilityCalendar({
   const container = useRef<HTMLDivElement>(null)
   const suppressClick = useRef(false)
 
-  const locked = useCallback((d: DateKey) => lockDays >= 0 && isLockedForTutor(d, timezone, lockDays, new Date(now)), [lockDays, timezone, now])
+  const locked = useCallback((d: DateKey) => lockDays >= 0 && isLockedForCoach(d, timezone, lockDays, new Date(now)), [lockDays, timezone, now])
   const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, dayConfigs), [settings, dayConfigs])
   // What counts is the part inside that date's opening hours (none on closed days).
   const rangesOf = useCallback((d: DateKey) => effectiveRanges(normalizeRanges(availability.get(d)?.ranges ?? []), hoursOf(d)), [availability, hoursOf])
@@ -113,9 +113,9 @@ export function AvailabilityCalendar({
       if (uncovered.length) {
         const n = uncovered.length
         const ok = await confirm({
-          title: `${n} booked session${n > 1 ? 's are' : ' is'} in this time`,
+          title: `${n} booked class${n > 1 ? 'es are' : ' is'} in this time`,
           description:
-            mode === 'tutor'
+            mode === 'coach'
               ? `${describeSessions(uncovered)} ${n > 1 ? 'are' : 'is'} booked in the time you’re removing. If you save, ${n > 1 ? 'they stay' : 'it stays'} booked and ${n > 1 ? 'show' : 'shows'} as a conflict until the admin moves, reassigns or cancels ${n > 1 ? 'them' : 'it'}. If it’s urgent, tell the admin too.`
               : `${describeSessions(uncovered)} ${n > 1 ? 'are' : 'is'} booked in this time. If you save, ${n > 1 ? 'they' : 'it'} will show as ${n > 1 ? 'conflicts' : 'a conflict'} on the schedule until ${n > 1 ? 'they’re' : 'it’s'} moved, reassigned or canceled.`,
           confirmLabel: 'Save anyway',
@@ -168,7 +168,7 @@ export function AvailabilityCalendar({
     (d: DateKey) => {
       const hours = hoursOf(d)
       if (!hours.isOpen && rangesOf(d).length === 0) {
-        toast.info('The center is closed on this day.')
+        toast.info('The academy is closed on this day.')
         return
       }
       setEditor({
@@ -176,7 +176,7 @@ export function AvailabilityCalendar({
         ranges: rangesOf(d),
         exists: rangesOf(d).length > 0,
         locked: locked(d),
-        leadWarning: mode === 'tutor' && a.leadTimeEnforcement === 'warn' && isInsideLeadTime(d, timezone, leadDays) && !locked(d),
+        leadWarning: mode === 'coach' && a.leadTimeEnforcement === 'warn' && isInsideLeadTime(d, timezone, leadDays) && !locked(d),
         hours,
       })
     },
@@ -264,7 +264,7 @@ export function AvailabilityCalendar({
       if (!fit.ok) {
         return toast.error(
           fit.reason === 'closed'
-            ? `The center is closed on ${formatDateKey(target, 'weekdayMedium')}.`
+            ? `The academy is closed on ${formatDateKey(target, 'weekdayMedium')}.`
             : fit.reason === 'too_many'
               ? `${formatDateKey(target, 'weekdayMedium')} already has ${a.maxRangesPerDay} time ranges.`
               : `That time is outside ${formatDateKey(target, 'weekdayMedium')}’s opening hours.`,
@@ -501,7 +501,7 @@ export function AvailabilityCalendar({
             const hours = hoursOf(d)
             const isLocked = locked(d)
             const inSelection = selectedSet.has(d)
-            const needs = mode === 'tutor' && hours.isOpen && !isLocked && ranges.length === 0 && d >= today && isInsideLeadTime(d, timezone, leadDays)
+            const needs = mode === 'coach' && hours.isOpen && !isLocked && ranges.length === 0 && d >= today && isInsideLeadTime(d, timezone, leadDays)
             const extra = ranges.length - CHIPS_SHOWN
             return (
               <div
@@ -575,7 +575,7 @@ export function AvailabilityCalendar({
       <p className="text-xs text-muted-foreground">
         {isMobile ? 'Tap a day to set availability. ' : 'Hold Alt/Option while dragging to copy instead of move. '}
         Times follow each day’s opening hours; closed days take no availability.
-        {mode === 'tutor'
+        {mode === 'coach'
           ? ` Days within ${a.lockWindowDays} days are locked; amber days are inside the ${leadDays}-day notice window and still need availability.`
           : ''}
       </p>

@@ -5,10 +5,10 @@ import { accountEmail } from './email/account'
 describe('passwords', () => {
   it('asks for 8 characters, no padding, not the email', () => {
     expect(passwordProblem('short')).toMatch(/at least 8/)
-    expect(passwordProblem(' Tutoring-123')).toMatch(/spaces/)
+    expect(passwordProblem(' Coaching-123')).toMatch(/spaces/)
     expect(passwordProblem('aaaaaaaaa')).toMatch(/repeated/)
     expect(passwordProblem('mayathompson', 'mayathompson@school.org')).toMatch(/email name/)
-    expect(passwordProblem('Tutoring-123', 'maya@school.org')).toBeNull()
+    expect(passwordProblem('Coaching-123', 'maya@school.org')).toBeNull()
   })
 
   it('rates strength from length and variety', () => {

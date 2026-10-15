@@ -1,6 +1,6 @@
 import { LuCalendarClock, LuCalendarDays, LuGraduationCap, LuSparkles, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { tutorConflictText } from '@shared/schedule/conflicts'
+import { coachConflictText } from '@shared/schedule/conflicts'
 import { isFirstSession } from '@shared/schedule/firstSession'
 import { addDays, formatDateKey, formatDuration, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
@@ -11,7 +11,7 @@ import { StatePill } from '@/features/home/parts'
 import { SESSION_CARD_STYLE } from '@/features/schedule/cardStyle'
 import { cn } from '@/lib/utils'
 import { leftText, untilText } from '../sessionUi'
-import type { TutorDay } from './useTutorDay'
+import type { CoachDay } from './useCoachDay'
 
 /** Sessions shown in the card before "and N more". */
 const SHOWN = 3
@@ -21,10 +21,10 @@ const SHOWN = 3
  * what comes after), else the next start today with a countdown, else the
  * next day with sessions.
  */
-export function NextUpCard({ t }: { t: TutorDay }) {
+export function NextUpCard({ t }: { t: CoachDay }) {
   const { settings } = useBranch()
   const next = t.day.next
-  const tutor = `/tutor`
+  const coach = `/coach`
 
   if (t.loading) {
     return (
@@ -45,13 +45,13 @@ export function NextUpCard({ t }: { t: TutorDay }) {
             <LuCalendarClock className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold">No sessions booked in the next four weeks</h2>
+            <h2 className="text-base font-semibold">No classes booked in the next four weeks</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Sessions are booked inside your availability. Keep it set at least {settings.availability.leadTimeDays} days ahead.
+              Classes are booked inside your availability. Keep it set at least {settings.availability.leadTimeDays} days ahead.
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link to={`${tutor}/availability`}>Set availability</Link>
+            <Link to={`${coach}/availability`}>Set availability</Link>
           </Button>
         </div>
       </section>
@@ -71,7 +71,7 @@ export function NextUpCard({ t }: { t: TutorDay }) {
           </span>
           Now
           <span className="font-normal text-muted-foreground">
-            {next.sessions.length > 1 ? `· ${next.sessions.length} sessions` : `· ends at ${formatMinutes(first.endMin)}`}
+            {next.sessions.length > 1 ? `· ${next.sessions.length} classes` : `· ends at ${formatMinutes(first.endMin)}`}
           </span>
         </Eyebrow>
         <span className="text-sm font-medium text-muted-foreground tabular-nums">{leftText(Math.min(...next.sessions.map((s) => s.endMin)) - t.nowMin)}</span>
@@ -119,12 +119,12 @@ export function NextUpCard({ t }: { t: TutorDay }) {
       {next.kind === 'day' ? (
         <Footer
           action={
-            <Link to={`${tutor}/schedule?date=${next.dateKey}`} className="inline-flex items-center gap-1 font-medium text-foreground hover:underline">
+            <Link to={`${coach}/schedule?date=${next.dateKey}`} className="inline-flex items-center gap-1 font-medium text-foreground hover:underline">
               <LuCalendarDays className="size-3.5" /> Open in schedule
             </Link>
           }
         >
-          {next.sessions.length} {next.sessions.length === 1 ? 'session' : 'sessions'} that day, {formatMinutes(first.startMin)} –{' '}
+          {next.sessions.length} {next.sessions.length === 1 ? 'class' : 'classes'} that day, {formatMinutes(first.startMin)} –{' '}
           {formatMinutes(Math.max(...next.sessions.map((s) => s.endMin)))}
         </Footer>
       ) : more > 0 ? (
@@ -136,10 +136,10 @@ export function NextUpCard({ t }: { t: TutorDay }) {
   )
 }
 
-function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
+function NextSession({ s, t }: { s: WithId<Session>; t: CoachDay }) {
   const { settings } = useBranch()
   const student = t.student(s.studentId)
-  const waiting = tutorConflictText(t.conflictsOf(s.id))
+  const waiting = coachConflictText(t.conflictsOf(s.id))
   // The schedule bell's "First session" notice, from the same rule.
   const first = settings.schedule.alerts.firstSession && !!student && isFirstSession(s, student, t.sessions)
   const bar = SESSION_CARD_STYLE[s.status]?.bar ?? '#a1a1aa'
@@ -153,7 +153,7 @@ function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
             {s.studentGrade ? <span className="text-sm text-muted-foreground">Grade {s.studentGrade}</span> : null}
             {first ? (
               <StatePill tone="info">
-                <LuSparkles className="size-3" /> First session
+                <LuSparkles className="size-3" /> First class
               </StatePill>
             ) : null}
             {s.status === 'pending' && !waiting ? (
@@ -186,7 +186,7 @@ function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button variant="ghost" size="sm" asChild>
-            <Link to={`/tutor/students/${s.studentId}`}>
+            <Link to={`/coach/students/${s.studentId}`}>
               <LuGraduationCap /> Student
             </Link>
           </Button>

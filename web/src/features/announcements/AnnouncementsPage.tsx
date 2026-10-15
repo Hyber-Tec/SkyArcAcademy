@@ -61,14 +61,14 @@ import {
 } from './api'
 import { HtmlContent } from './html'
 
-type Mode = 'admin' | 'tutor'
+type Mode = 'admin' | 'coach'
 
 function useListPath(mode: Mode) {
   return `/${mode}/announcements`
 }
 
 function audienceLabel(a: Announcement) {
-  if (a.audienceType === 'all') return 'All tutors'
+  if (a.audienceType === 'all') return 'All coaches'
   const n = a.audienceKeys?.length ?? 0
   return `${n} ${n === 1 ? 'person' : 'people'}`
 }
@@ -145,8 +145,8 @@ export function AnnouncementsPage() {
   return <Dashboard mode="admin" />
 }
 
-export function TutorAnnouncementsPage() {
-  return <Dashboard mode="tutor" />
+export function CoachAnnouncementsPage() {
+  return <Dashboard mode="coach" />
 }
 
 function Dashboard({ mode }: { mode: Mode }) {
@@ -155,9 +155,9 @@ function Dashboard({ mode }: { mode: Mode }) {
   const list = useListPath(mode)
   const admin = mode === 'admin'
   const adminFeed = useAllAnnouncements(admin)
-  const tutorFeed = useMyAnnouncements(!admin)
+  const coachFeed = useMyAnnouncements(!admin)
   const reads = useMyReadIds(!admin)
-  const feed = admin ? adminFeed : tutorFeed
+  const feed = admin ? adminFeed : coachFeed
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [receipts, setReceipts] = useState<WithId<Announcement> | null>(null)
@@ -382,8 +382,8 @@ export function AnnouncementPostPage() {
   return <PostView mode="admin" />
 }
 
-export function TutorAnnouncementPostPage() {
-  return <PostView mode="tutor" />
+export function CoachAnnouncementPostPage() {
+  return <PostView mode="coach" />
 }
 
 function PostView({ mode }: { mode: Mode }) {
@@ -397,7 +397,7 @@ function PostView({ mode }: { mode: Mode }) {
   const [receipts, setReceipts] = useState(false)
   const actions = useAdminActions(() => navigate(list))
 
-  // Tutors leave a read receipt the first time they open a post (not an owner or admin previewing a tutor with View as).
+  // Coaches leave a read receipt the first time they open a post (not an owner or admin previewing a coach with View as).
   const readRef = useMemo(
     () => (admin || viewAs ? null : doc(db, branchColPath(branchId, COL.announcements), announcementId, 'reads', actor.email)),
     [admin, viewAs, branchId, announcementId, actor.email],

@@ -43,7 +43,7 @@ export function AdminHomePage() {
   const sessionsQ = useMemo(() => query(branchCol(branchId, COL.sessions), where('dateKey', '==', today)), [branchId, today])
   const { data: sessions, loading } = useQuery<Session>(sessionsQ, `home-today-${branchId}-${today}`)
   const active = sessions.filter((s) => !s.isDeleted && s.status !== 'canceled')
-  const tutorCount = new Set(active.map((s) => s.tutorId)).size
+  const coachCount = new Set(active.map((s) => s.coachId)).size
 
   const date = formatInstant(toInstant(today, 720, timezone), timezone, { weekday: 'long', month: 'long', day: 'numeric' })
   const firstName = actor.name.trim().split(/\s+/)[0]
@@ -61,7 +61,7 @@ export function AdminHomePage() {
             {firstName ? `, ${firstName}` : ''}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground" data-testid="home-summary">
-            {loading ? 'Loading today…' : active.length ? `${plural(active.length, 'session')} with ${plural(tutorCount, 'tutor')} today.` : 'No sessions today.'}{' '}
+            {loading ? 'Loading today…' : active.length ? `${plural(active.length, 'class')} with ${plural(coachCount, 'coach')} today.` : 'No classes today.'}{' '}
             {needs ? (
               <span className="font-medium text-foreground">
                 {plural(needs, 'thing')} need{needs === 1 ? 's' : ''} you.
@@ -78,7 +78,7 @@ export function AdminHomePage() {
             </Link>
           </Button>
           <Button onClick={() => sessionDialog.openCreate(null, today, nextSlot)}>
-            <LuPlus /> New session
+            <LuPlus /> New class
           </Button>
         </div>
       </div>

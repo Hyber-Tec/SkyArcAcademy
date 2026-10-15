@@ -57,7 +57,7 @@ export function NotificationsSection() {
           ))}
         </ul>
       </section>
-      <p className="mt-2 px-1 text-xs text-muted-foreground">Session alerts are about sessions that start within the next {hours} hours.</p>
+      <p className="mt-2 px-1 text-xs text-muted-foreground">Class alerts are about classes that start within the next {hours} hours.</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="flex gap-3 rounded-xl border bg-muted/30 p-4 text-sm">
           <LuBell className="mt-0.5 size-4 shrink-0 text-muted-foreground" />

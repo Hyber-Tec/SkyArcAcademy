@@ -21,8 +21,8 @@ export const PAY_MODEL_LABELS: Record<PayModel, string> = {
 }
 
 export const PAY_MODEL_HELP: Record<PayModel, string> = {
-  hourly: 'Tutors are paid their teaching rate for every clocked hour.',
-  teaching_only: 'Tutors are paid only for time spent teaching. Gaps and idle clocked-in time are unpaid.',
+  hourly: 'Coaches are paid their teaching rate for every clocked hour.',
+  teaching_only: 'Coaches are paid only for time spent teaching. Gaps and idle clocked-in time are unpaid.',
   teaching_admin: 'Teaching rate for time in classes, admin rate for the rest of the clocked shift.',
 }
 
@@ -39,19 +39,19 @@ export interface BusinessRules {
    * that date keeps the model it was earned under.
    */
   payModels: PayModelPeriod[]
-  /** Students a tutor can teach at the same time (1 = strictly one-to-one). */
-  maxStudentsPerTutor: number
+  /** Students a coach can teach at the same time (1 = strictly one-to-one). */
+  maxStudentsPerCoach: number
 }
 
 /** From the beginning: the first pay model covers every earlier date. */
 export const PAY_MODEL_SINCE_START: DateKey = '2000-01-01'
 
-export const MAX_STUDENTS_PER_TUTOR_LIMIT = 6
+export const MAX_STUDENTS_PER_COACH_LIMIT = 6
 
 /** Until the owner sets them: hourly pay, and up to 6 students at once (a class block has 6 seats). */
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
   payModels: [{ model: 'hourly', from: PAY_MODEL_SINCE_START }],
-  maxStudentsPerTutor: 6,
+  maxStudentsPerCoach: 6,
 }
 
 /** Stored rules with every gap filled from the defaults. */
@@ -59,10 +59,10 @@ export function resolveBusinessRules(stored: Partial<BusinessRules> | null | und
   const payModels = (stored?.payModels ?? [])
     .filter((p) => p && (PAY_MODELS as readonly string[]).includes(p.model) && typeof p.from === 'string')
     .sort((a, b) => a.from.localeCompare(b.from))
-  const max = Number(stored?.maxStudentsPerTutor)
+  const max = Number(stored?.maxStudentsPerCoach)
   return {
     payModels: payModels.length ? payModels : DEFAULT_BUSINESS_RULES.payModels,
-    maxStudentsPerTutor: Number.isInteger(max) && max >= 1 ? Math.min(max, MAX_STUDENTS_PER_TUTOR_LIMIT) : DEFAULT_BUSINESS_RULES.maxStudentsPerTutor,
+    maxStudentsPerCoach: Number.isInteger(max) && max >= 1 ? Math.min(max, MAX_STUDENTS_PER_COACH_LIMIT) : DEFAULT_BUSINESS_RULES.maxStudentsPerCoach,
   }
 }
 

@@ -10,14 +10,14 @@ export interface ShiftPay<S> {
   open: boolean
 }
 
-/** An employee's rates, and their role: owners and admins are paid one rate, tutors follow the branch pay model. */
+/** An employee's rates, and their role: owners and admins are paid one rate, coaches follow the branch pay model. */
 export interface StaffPay {
   rates: Rates
   role: StaffRole | undefined
 }
 
 type PricedShiftInput = Pick<ClockShift, 'staffId' | 'dateKey' | 'inMin' | 'clockInAt' | 'clockOutAt' | 'forcedType'>
-type TeachingSession = Pick<Session, 'tutorId' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
+type TeachingSession = Pick<Session, 'coachId' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
 
 /**
  * Prices shifts with the shared engine, oldest first (the website's payroll pages): teaching is time inside the
@@ -39,7 +39,7 @@ export function priceShifts<S extends PricedShiftInput>(opts: {
     .map((shift) => {
       if (!shift.clockOutAt) return { shift, segments: [], open: true }
       const windows = opts.sessions
-        .filter((s) => s.tutorId === shift.staffId && !s.isDeleted && counted.has(s.status))
+        .filter((s) => s.coachId === shift.staffId && !s.isDeleted && counted.has(s.status))
         .map((s) => ({ startMs: s.startAt.toMillis(), endMs: s.endAt.toMillis() }))
       const { rates, role } = opts.ratesFor(shift.staffId)
       const model = payModelFor({ role, branchModel: payModelOn(opts.rules, shift.dateKey) })

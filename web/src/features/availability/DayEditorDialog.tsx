@@ -62,7 +62,7 @@ export function DayEditorDialog({
     if (!fit.ok) {
       return setError(
         fit.reason === 'closed'
-          ? 'The center is closed on this day.'
+          ? 'The academy is closed on this day.'
           : fit.reason === 'too_many'
             ? `Use at most ${a.maxRangesPerDay} time ranges per day.`
             : `Choose a time within opening hours (${formatTimeRange(state!.hours.openMin, state!.hours.closeMin)}).`,

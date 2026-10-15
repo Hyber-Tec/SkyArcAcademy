@@ -1,12 +1,12 @@
 import { LuClock } from 'react-icons/lu'
 import { formatDuration, formatMinutes } from '@shared/time'
 import { cn } from '@/lib/utils'
-import type { TutorDay } from './useTutorDay'
+import type { CoachDay } from './useCoachDay'
 
 type Tone = 'live' | 'warn' | 'muted'
 
-/** Where the tutor stands with the time clock today (shifts come from the kiosk; nothing is clocked here). */
-function clockState(t: TutorDay): { tone: Tone; title: string; detail: string } {
+/** Where the coach stands with the time clock today (shifts come from the kiosk; nothing is clocked here). */
+function clockState(t: CoachDay): { tone: Tone; title: string; detail: string } {
   const { clock, day, today } = t
   if (clock.open) {
     const since = clock.open.dateKey === today ? formatMinutes(clock.open.inMin) : `yesterday ${formatMinutes(clock.open.inMin)}`
@@ -22,9 +22,9 @@ function clockState(t: TutorDay): { tone: Tone; title: string; detail: string } 
     }
   }
   if (day.current.length) {
-    return { tone: 'warn', title: 'Not clocked in', detail: `Your ${formatMinutes(day.current[0].startMin)} session has started. Clock in at the kiosk with your PIN.` }
+    return { tone: 'warn', title: 'Not clocked in', detail: `Your ${formatMinutes(day.current[0].startMin)} class has started. Clock in at the kiosk with your PIN.` }
   }
-  if (later) return { tone: 'muted', title: 'Not clocked in yet', detail: `Your first session is at ${formatMinutes(later.startMin)}. Clock in at the kiosk when you arrive.` }
+  if (later) return { tone: 'muted', title: 'Not clocked in yet', detail: `Your first class is at ${formatMinutes(later.startMin)}. Clock in at the kiosk when you arrive.` }
   return { tone: 'muted', title: 'Not clocked in today', detail: 'Nothing on your schedule today.' }
 }
 
@@ -41,10 +41,10 @@ const ICON: Record<Tone, string> = {
 }
 
 /** Computers: the time clock card in the side column. */
-export function ClockCard({ t }: { t: TutorDay }) {
+export function ClockCard({ t }: { t: CoachDay }) {
   const s = clockState(t)
   return (
-    <section className="rounded-xl border bg-card p-4" data-testid="tutor-clock">
+    <section className="rounded-xl border bg-card p-4" data-testid="coach-clock">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Time clock</h2>
         <span className="text-xs text-muted-foreground tabular-nums">{formatDuration(t.clock.weekMinutes)} this week</span>
@@ -64,7 +64,7 @@ export function ClockCard({ t }: { t: TutorDay }) {
 }
 
 /** Phones: the same, as one line under the greeting. */
-export function ClockStrip({ t }: { t: TutorDay }) {
+export function ClockStrip({ t }: { t: CoachDay }) {
   const s = clockState(t)
   return (
     <div
@@ -72,7 +72,7 @@ export function ClockStrip({ t }: { t: TutorDay }) {
         'flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm',
         s.tone === 'warn' ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40' : 'bg-card',
       )}
-      data-testid="tutor-clock"
+      data-testid="coach-clock"
     >
       <span className={cn('size-2 shrink-0 rounded-full', DOT[s.tone], s.tone === 'live' && 'animate-pulse')} />
       <span className="min-w-0 flex-1 leading-tight">

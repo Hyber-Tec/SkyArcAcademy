@@ -11,17 +11,17 @@ import { fitsCapacity } from './lanes'
  *
  * - `center_closed`: the date is closed (weekly hours or that date's hours).
  * - `outside_hours`: it runs outside that date's opening hours.
- * - `tutor_inactive`: the tutor is on hold, has left, or their access is paused or removed.
- * - `tutor_unavailable`: the tutor's availability doesn't cover it (none that day, or only part).
- * - `over_capacity`: the tutor has more students at once than the branch allows.
+ * - `coach_inactive`: the coach is on hold, has left, or their access is paused or removed.
+ * - `coach_unavailable`: the coach's availability doesn't cover it (none that day, or only part).
+ * - `over_capacity`: the coach has more students at once than the branch allows.
  * - `student_double_booked`: the student has another session at the same time.
  * - `student_inactive`: the student is paused or no longer coming.
  */
 export type ConflictKind =
   | 'center_closed'
   | 'outside_hours'
-  | 'tutor_inactive'
-  | 'tutor_unavailable'
+  | 'coach_inactive'
+  | 'coach_unavailable'
   | 'over_capacity'
   | 'student_double_booked'
   | 'student_inactive'
@@ -34,8 +34,8 @@ export interface Conflict {
 
 export interface ConflictSession {
   id: string
-  tutorId: string
-  tutorName: string
+  coachId: string
+  coachName: string
   studentId: string
   studentName: string
   dateKey: DateKey
@@ -45,23 +45,23 @@ export interface ConflictSession {
   isDeleted?: boolean | null
 }
 
-/** What the tutor's records say about them. `removed`: no staff record any more. */
-export type TutorState = 'active' | 'on_hold' | 'left' | 'paused' | 'removed'
+/** What the coach's records say about them. `removed`: no staff record any more. */
+export type CoachState = 'active' | 'on_hold' | 'left' | 'paused' | 'removed'
 
 export interface ConflictContext {
   /** That date's opening hours. */
   hours: DayHours
-  /** The tutor's saved availability that day; null when nothing is saved. */
+  /** The coach's saved availability that day; null when nothing is saved. */
   availability: { ranges: readonly AvailabilityRange[]; unavailable: boolean } | null
-  tutorState: TutorState
+  coachState: CoachState
   /** The student's status; null when unknown. */
   studentStatus: StudentStatus | null
-  /** The tutor's live sessions that day (may include this one). */
-  tutorSessions: readonly ConflictSession[]
+  /** The coach's live sessions that day (may include this one). */
+  coachSessions: readonly ConflictSession[]
   /** The student's live sessions that day (may include this one). */
   studentSessions: readonly ConflictSession[]
-  /** Students per tutor at once (branch rule). */
-  maxPerTutor: number
+  /** Students per coach at once (branch rule). */
+  maxPerCoach: number
 }
 
 const CHECKED: ReadonlySet<SessionStatus> = new Set<SessionStatus>(['pending', 'confirmed'])
@@ -82,7 +82,7 @@ function rangesText(ranges: readonly AvailabilityRange[]): string {
   return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`
 }
 
-export function staffTutorState(staffStatus: StaffStatus | null | undefined, memberActive: boolean | null): TutorState {
+export function staffCoachState(staffStatus: StaffStatus | null | undefined, memberActive: boolean | null): CoachState {
   if (staffStatus === undefined || staffStatus === null) return 'removed'
   if (staffStatus === 'finished') return 'left'
   if (staffStatus === 'on_hold') return 'on_hold'
@@ -95,34 +95,34 @@ export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conf
   if (!isCheckable(s)) return []
   const out: Conflict[] = []
   const { hours } = ctx
-  const tutor = s.tutorName || 'The tutor'
+  const coach = s.coachName || 'The coach'
 
-  if (!hours.isOpen) out.push({ kind: 'center_closed', message: 'The center is closed that day.' })
+  if (!hours.isOpen) out.push({ kind: 'center_closed', message: 'The academy is closed that day.' })
   else if (s.startMin < hours.openMin || s.endMin > hours.closeMin) {
     out.push({ kind: 'outside_hours', message: `It runs outside opening hours (${formatMinutes(hours.openMin)} to ${formatMinutes(hours.closeMin)}).` })
   }
 
-  if (ctx.tutorState !== 'active') {
-    const why: Record<Exclude<TutorState, 'active'>, string> = {
-      on_hold: `${tutor} is on hold.`,
-      left: `${tutor} no longer works here.`,
-      paused: `${tutor}’s access is paused.`,
-      removed: 'The tutor was removed.',
+  if (ctx.coachState !== 'active') {
+    const why: Record<Exclude<CoachState, 'active'>, string> = {
+      on_hold: `${coach} is on hold.`,
+      left: `${coach} no longer works here.`,
+      paused: `${coach}’s access is paused.`,
+      removed: 'The coach was removed.',
     }
-    out.push({ kind: 'tutor_inactive', message: why[ctx.tutorState] })
+    out.push({ kind: 'coach_inactive', message: why[ctx.coachState] })
   } else if (hours.isOpen) {
     const a = ctx.availability
     const ranges = a && !a.unavailable ? effectiveRanges(a.ranges, hours) : []
-    if (ranges.length === 0) out.push({ kind: 'tutor_unavailable', message: `${tutor} isn’t available that day.` })
+    if (ranges.length === 0) out.push({ kind: 'coach_unavailable', message: `${coach} isn’t available that day.` })
     else if (!rangesContain(ranges, s.startMin, s.endMin)) {
-      out.push({ kind: 'tutor_unavailable', message: `${tutor} is only available ${rangesText(ranges)}.` })
+      out.push({ kind: 'coach_unavailable', message: `${coach} is only available ${rangesText(ranges)}.` })
     }
   }
 
-  const tutorLive = ctx.tutorSessions.filter((o) => o.id !== s.id && isCheckable(o) && o.tutorId === s.tutorId && o.dateKey === s.dateKey)
-  if (!fitsCapacity(tutorLive, s.startMin, s.endMin, Math.max(1, ctx.maxPerTutor))) {
-    const max = Math.max(1, ctx.maxPerTutor)
-    out.push({ kind: 'over_capacity', message: `${tutor} has more than ${max} student${max === 1 ? '' : 's'} at once.` })
+  const coachLive = ctx.coachSessions.filter((o) => o.id !== s.id && isCheckable(o) && o.coachId === s.coachId && o.dateKey === s.dateKey)
+  if (!fitsCapacity(coachLive, s.startMin, s.endMin, Math.max(1, ctx.maxPerCoach))) {
+    const max = Math.max(1, ctx.maxPerCoach)
+    out.push({ kind: 'over_capacity', message: `${coach} has more than ${max} student${max === 1 ? '' : 's'} at once.` })
   }
 
   const clash = ctx.studentSessions.find(
@@ -131,7 +131,7 @@ export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conf
   if (clash) {
     out.push({
       kind: 'student_double_booked',
-      message: `${s.studentName || 'The student'} also has a session with ${clash.tutorName || 'another tutor'} at ${formatMinutes(clash.startMin)}.`,
+      message: `${s.studentName || 'The student'} also has a class with ${clash.coachName || 'another coach'} at ${formatMinutes(clash.startMin)}.`,
     })
   }
 
@@ -141,20 +141,20 @@ export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conf
   return out
 }
 
-/** What the tutor reads on a session in conflict: it isn't certain, and the admin decides. */
-export function tutorConflictText(conflicts: readonly Conflict[]): string | null {
+/** What the coach reads on a session in conflict: it isn't certain, and the admin decides. */
+export function coachConflictText(conflicts: readonly Conflict[]): string | null {
   if (conflicts.length === 0) return null
   const kinds = new Set(conflicts.map((c) => c.kind))
   const why = kinds.has('center_closed')
-    ? 'The center is closed that day.'
+    ? 'The academy is closed that day.'
     : kinds.has('outside_hours')
-      ? 'It’s outside the center’s opening hours.'
-      : kinds.has('tutor_unavailable')
+      ? 'It’s outside the academy’s opening hours.'
+      : kinds.has('coach_unavailable')
         ? 'You’re not available at this time.'
         : kinds.has('over_capacity')
           ? 'You have more students at once than allowed.'
           : kinds.has('student_double_booked')
-            ? 'The student has another session at this time.'
+            ? 'The student has another class at this time.'
             : kinds.has('student_inactive')
               ? 'The student isn’t attending right now.'
               : 'Something changed since it was booked.'
@@ -163,10 +163,10 @@ export function tutorConflictText(conflicts: readonly Conflict[]): string | null
 
 /** Short label for a conflict on cards and lists. */
 export const CONFLICT_LABELS: Record<ConflictKind, string> = {
-  center_closed: 'Center closed',
+  center_closed: 'Academy closed',
   outside_hours: 'Outside hours',
-  tutor_inactive: 'Tutor inactive',
-  tutor_unavailable: 'Tutor unavailable',
+  coach_inactive: 'Coach inactive',
+  coach_unavailable: 'Coach unavailable',
   over_capacity: 'Too many students',
   student_double_booked: 'Student double-booked',
   student_inactive: 'Student inactive',

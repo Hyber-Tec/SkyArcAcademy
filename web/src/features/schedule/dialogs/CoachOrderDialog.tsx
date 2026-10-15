@@ -4,15 +4,15 @@ import { toast } from 'sonner'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { type ScheduleCtx, saveTutorOrder } from '../api'
+import { type ScheduleCtx, saveCoachOrder } from '../api'
 
-export function TutorOrderDialog({ open, onOpenChange, ctx, tutors }: { open: boolean; onOpenChange: (o: boolean) => void; ctx: ScheduleCtx; tutors: { id: string; name: string }[] }) {
+export function CoachOrderDialog({ open, onOpenChange, ctx, coaches }: { open: boolean; onOpenChange: (o: boolean) => void; ctx: ScheduleCtx; coaches: { id: string; name: string }[] }) {
   const { branch } = useBranch()
-  const [list, setList] = useState(tutors)
+  const [list, setList] = useState(coaches)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   useEffect(() => {
-    if (open) setList(tutors)
-  }, [open, tutors])
+    if (open) setList(coaches)
+  }, [open, coaches])
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= list.length) return
@@ -26,8 +26,8 @@ export function TutorOrderDialog({ open, onOpenChange, ctx, tutors }: { open: bo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Tutor display order</DialogTitle>
-          <DialogDescription>Drag to reorder how tutors appear on the schedule.</DialogDescription>
+          <DialogTitle>Coach display order</DialogTitle>
+          <DialogDescription>Drag to reorder how coaches appear on the schedule.</DialogDescription>
         </DialogHeader>
         <div className="max-h-[55svh] divide-y overflow-y-auto rounded-lg border">
           {list.map((t, i) => (
@@ -59,7 +59,7 @@ export function TutorOrderDialog({ open, onOpenChange, ctx, tutors }: { open: bo
           </Button>
           <Button
             onClick={async () => {
-              await saveTutorOrder(ctx, list.map((t) => t.id), (branch.settings ?? {}) as Record<string, unknown>)
+              await saveCoachOrder(ctx, list.map((t) => t.id), (branch.settings ?? {}) as Record<string, unknown>)
               toast.success('Order saved')
               onOpenChange(false)
             }}

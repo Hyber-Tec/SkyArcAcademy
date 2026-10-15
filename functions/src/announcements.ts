@@ -3,7 +3,7 @@ import { getStorage } from 'firebase-admin/storage'
 import { logger } from 'firebase-functions'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { db, LIGHT } from './app'
-import { sendNotifications, tutorRecipients } from './notify'
+import { sendNotifications, coachRecipients } from './notify'
 import type { Announcement } from '@shared/comms'
 import { COL, ROOT } from '@shared/paths'
 
@@ -14,7 +14,7 @@ const postPath = (branchId: string, id: string) => `${ROOT.branches}/${branchId}
 
 /**
  * Publishing with "Notify" (or saving with "Notify again") puts the post in the
- * audience's inbox, honoring each tutor's Announcements preference. Deleting a
+ * audience's inbox, honoring each coach's Announcements preference. Deleting a
  * post removes its read receipts, comments and uploaded files.
  */
 export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGHT }, async (event) => {
@@ -37,7 +37,7 @@ export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGH
   const previous = before?.notifyRequestedAt as Timestamp | null | undefined
   if (!requested || (previous && previous.isEqual(requested)) || after.archived) return
 
-  const recipients = await tutorRecipients(branchId, after.audienceType === 'members' ? after.audienceKeys : undefined)
+  const recipients = await coachRecipients(branchId, after.audienceType === 'members' ? after.audienceKeys : undefined)
   const updated = !!before
   const items = recipients
     .filter((r) => r.key !== after.authorKey && r.prefs.announcements !== false)
@@ -46,7 +46,7 @@ export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGH
       type: updated ? ('announcement_updated' as const) : ('announcement' as const),
       title: updated ? 'Announcement updated' : 'New announcement',
       body: after.title || 'Check the announcements for new updates.',
-      link: `tutor/announcements/${announcementId}`,
+      link: `coach/announcements/${announcementId}`,
       refs: { announcementId },
     }))
   await sendNotifications(branchId, items, `ann-${announcementId}-${requested.toMillis()}`)

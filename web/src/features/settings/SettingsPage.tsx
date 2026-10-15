@@ -133,7 +133,7 @@ function BusinessRulesCard() {
       value: PAY_MODEL_LABELS[now],
       help: next ? `Changes to ${PAY_MODEL_LABELS[next.model]} on ${formatDateKey(next.from, 'medium')}. ${PAY_MODEL_HELP[now]}` : PAY_MODEL_HELP[now],
     },
-    { label: 'Students per tutor at once', value: String(rules.maxStudentsPerTutor), help: rules.maxStudentsPerTutor === 1 ? 'One-to-one classes.' : undefined },
+    { label: 'Students per coach at once', value: String(rules.maxStudentsPerCoach), help: rules.maxStudentsPerCoach === 1 ? 'One-to-one classes.' : undefined },
   ]
   return (
     <Card>
@@ -175,7 +175,7 @@ function BranchProfileCard() {
   }, [branch])
 
   async function save() {
-    if (!name.trim()) return toast.error('The branch needs a name.')
+    if (!name.trim()) return toast.error('The academy needs a name.')
     setBusy(true)
     try {
       await write(
@@ -185,14 +185,14 @@ function BranchProfileCard() {
           category: 'settings',
           entityType: 'branch',
           entityId: branchId,
-          summary: 'Updated the branch profile',
+          summary: 'Updated the academy profile',
           changes: [
             ...(branch.name !== name.trim() ? [{ field: 'name', label: 'Name', from: branch.name, to: name.trim() }] : []),
             ...(branch.timezone !== timezone ? [{ field: 'timezone', label: 'Time zone', from: branch.timezone, to: timezone }] : []),
           ],
         },
       )
-      toast.success('Branch profile saved')
+      toast.success('Academy profile saved')
     } catch (e) {
       toast.error('Could not save', { description: (e as Error).message })
     } finally {
@@ -203,10 +203,8 @@ function BranchProfileCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Branch</CardTitle>
-        <CardDescription>
-          Branch ID <span className="font-mono">{branchId}</span> (can’t be changed)
-        </CardDescription>
+        <CardTitle>Academy</CardTitle>
+        <CardDescription>The academy’s name, time zone and contact details, as people see them in the app.</CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>

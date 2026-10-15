@@ -25,8 +25,8 @@ export interface DeviceDoc {
 
 /** Android notification channels (the app creates them; a push names one). */
 export const PUSH_CHANNELS = {
-  sessions: { id: 'sessions', name: 'Sessions', description: 'New sessions and changes to your schedule' },
-  announcements: { id: 'announcements', name: 'Announcements', description: 'News from your center' },
+  sessions: { id: 'sessions', name: 'Classes', description: 'New classes and changes to your schedule' },
+  announcements: { id: 'announcements', name: 'Announcements', description: 'News from your academy' },
 } as const
 
 export type PushChannel = keyof typeof PUSH_CHANNELS
@@ -37,7 +37,7 @@ export function channelFor(type: NotificationType | string): PushChannel {
 
 /**
  * The data every push carries (all strings, as FCM requires). `link` is the inbox item's in-app path below the
- * branch (`tutor/schedule?date=…`, `tutor/announcements/{id}`); the app opens the matching screen, the website
+ * branch (`coach/schedule?date=…`, `coach/announcements/{id}`); the app opens the matching screen, the website
  * the matching page (`url`).
  */
 export interface PushData {

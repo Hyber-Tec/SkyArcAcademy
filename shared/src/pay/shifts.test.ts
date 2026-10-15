@@ -18,8 +18,8 @@ const shift = (inAt: string, outAt: string | null, extra: Partial<{ staffId: str
   forcedType: null,
   ...extra,
 })
-const session = (start: string, end: string, status: SessionStatus = 'present', extra: Partial<{ tutorId: string; isDeleted: boolean }> = {}) => ({
-  tutorId: 'maya',
+const session = (start: string, end: string, status: SessionStatus = 'present', extra: Partial<{ coachId: string; isDeleted: boolean }> = {}) => ({
+  coachId: 'maya',
   isDeleted: false,
   status,
   startAt: at(start),
@@ -27,13 +27,13 @@ const session = (start: string, end: string, status: SessionStatus = 'present', 
   ...extra,
 })
 const settings = { payroll: { teachingSessionStatuses: ['present'] as SessionStatus[], hoursDecimals: 2, payPeriod: { type: 'biweekly' as const, anchorDate: '2026-01-04' } } }
-const ratesFor = () => ({ rates: { teaching: 30, admin: 15 }, role: 'tutor' as const })
+const ratesFor = () => ({ rates: { teaching: 30, admin: 15 }, role: 'coach' as const })
 
 describe('priceShifts', () => {
   it('splits a closed shift by the sessions that count as teaching', () => {
     const [p] = priceShifts({
       shifts: [shift('15:00', '18:00')],
-      sessions: [session('16:00', '17:00'), session('17:00', '17:30', 'confirmed'), session('15:00', '16:00', 'present', { isDeleted: true }), session('15:00', '16:00', 'present', { tutorId: 'other' })],
+      sessions: [session('16:00', '17:00'), session('17:00', '17:30', 'confirmed'), session('15:00', '16:00', 'present', { isDeleted: true }), session('15:00', '16:00', 'present', { coachId: 'other' })],
       settings,
       rules: { payModels: [{ model: 'teaching_admin', from: '2000-01-01' }] },
       ratesFor,

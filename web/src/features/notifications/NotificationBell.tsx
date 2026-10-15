@@ -91,7 +91,7 @@ export function NotificationBell() {
               </Button>
             ) : null}
           </div>
-          <SheetDescription className="sr-only">Session changes and announcements for you.</SheetDescription>
+          <SheetDescription className="sr-only">Class changes and announcements for you.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
           {groups.map((g) => (
@@ -133,7 +133,7 @@ export function NotificationBell() {
             <div className="px-6 py-16 text-center">
               <LuBell className="mx-auto size-8 text-muted-foreground/40" />
               <p className="mt-3 text-sm font-medium">No notifications yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">Session and announcement alerts will appear here once they arrive.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Class and announcement alerts will appear here once they arrive.</p>
             </div>
           ) : null}
         </div>

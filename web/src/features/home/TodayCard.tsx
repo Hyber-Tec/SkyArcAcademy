@@ -72,8 +72,8 @@ export function TodayCard({
     const events = [...oneOff.data, ...recurring.data]
       .filter((e) => occursOn(e, today))
       .map((event): Row => ({ kind: 'event', key: `event-${event.id}`, startMin: event.startMin, endMin: event.endMin, event }))
-    const tutors = new Set(active.map((s) => s.tutorId))
-    return { active, canceled, earlier, current, later, events, tutors: tutors.size }
+    const coaches = new Set(active.map((s) => s.coachId))
+    return { active, canceled, earlier, current, later, events, coaches: coaches.size }
   }, [sessions, oneOff.data, recurring.data, today, now])
 
   const toRow = (s: WithId<Session>): Row => ({ kind: 'session', key: s.id, startMin: s.startMin, endMin: s.endMin, session: s })
@@ -108,7 +108,7 @@ export function TodayCard({
         key={s.id}
         entries={menu(
           { kind: 'label', label: `${s.studentName} · ${formatMinutes(s.startMin)}` },
-          { label: 'Edit session…', icon: LuPencil, onSelect: () => onEdit(s) },
+          { label: 'Edit class…', icon: LuPencil, onSelect: () => onEdit(s) },
           { label: 'Open in schedule', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`/admin/schedule/day/${today}`) },
           { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`/admin/students/${s.studentId}`) },
         )}
@@ -130,8 +130,8 @@ export function TodayCard({
                 {s.studentGrade ? <span className="font-normal text-muted-foreground"> · Grade {s.studentGrade}</span> : null}
               </div>
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <PersonDot name={s.tutorName} color={colorOf(s.tutorId)} size="xs" />
-                <span className="truncate">{s.tutorName}</span>
+                <PersonDot name={s.coachName} color={colorOf(s.coachId)} size="xs" />
+                <span className="truncate">{s.coachName}</span>
               </div>
             </div>
             <StatePill tone={st.tone} pulse={st.pulse} title={st.title}>
@@ -174,7 +174,7 @@ export function TodayCard({
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="home-today">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <h2 className="text-sm font-semibold">
-          Today’s sessions <span className="ml-1 font-normal text-muted-foreground">{loading ? '' : day.active.length}</span>
+          Today’s classes <span className="ml-1 font-normal text-muted-foreground">{loading ? '' : day.active.length}</span>
         </h2>
         <div role="tablist" aria-label="Show" className="flex rounded-lg bg-muted p-0.5 text-xs font-medium">
           {segments.map(([key, label]) => (
@@ -209,7 +209,7 @@ export function TodayCard({
       ) : day.active.length === 0 && day.canceled.length === 0 ? (
         <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
           <LuCalendarDays className="size-6 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{hours.isOpen ? 'No sessions today.' : 'The center is closed today.'}</p>
+          <p className="text-sm text-muted-foreground">{hours.isOpen ? 'No classes today.' : 'The academy is closed today.'}</p>
           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/schedule/day/${today}`)}>
             Open schedule
           </Button>
@@ -225,7 +225,7 @@ export function TodayCard({
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-muted-foreground hover:bg-muted/50"
               >
                 <LuChevronDown className={cn('size-4 transition-transform', !showEarlier && '-rotate-90')} />
-                {plural(day.earlier.length, 'earlier session')}
+                {plural(day.earlier.length, 'earlier class')}
               </button>
             </li>
           ) : null}
@@ -246,7 +246,7 @@ export function TodayCard({
         <div className="flex flex-wrap items-center gap-1 border-t p-2">
           {hidden > 0 ? (
             <Button variant="ghost" className="flex-1 text-muted-foreground" onClick={() => setShowAll(true)}>
-              Show {plural(hidden, 'more session')}
+              Show {plural(hidden, 'more class')}
             </Button>
           ) : null}
           {day.canceled.length > 0 && filter === 'all' ? (

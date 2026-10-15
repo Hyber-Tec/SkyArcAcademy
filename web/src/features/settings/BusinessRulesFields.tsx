@@ -1,4 +1,4 @@
-import { MAX_STUDENTS_PER_TUTOR_LIMIT, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
+import { MAX_STUDENTS_PER_COACH_LIMIT, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -25,11 +25,11 @@ export function PayModelChoice({ value, onChange, idPrefix }: { value: PayModel;
   )
 }
 
-/** Students per tutor at once: the schedule's capacity rule. */
+/** Students per coach at once: the schedule's capacity rule. */
 export function CapacityField({ value, onChange }: { value: number; onChange: (next: number) => void }) {
   return (
     <Field>
-      <FieldLabel>Students per tutor at once</FieldLabel>
+      <FieldLabel>Students per coach at once</FieldLabel>
       <ToggleGroup
         type="single"
         variant="outline"
@@ -37,7 +37,7 @@ export function CapacityField({ value, onChange }: { value: number; onChange: (n
         onValueChange={(v) => v && onChange(Number(v))}
         className="justify-start"
       >
-        {Array.from({ length: MAX_STUDENTS_PER_TUTOR_LIMIT }, (_, i) => i + 1).map((n) => (
+        {Array.from({ length: MAX_STUDENTS_PER_COACH_LIMIT }, (_, i) => i + 1).map((n) => (
           <ToggleGroupItem
             key={n}
             value={String(n)}
@@ -50,8 +50,8 @@ export function CapacityField({ value, onChange }: { value: number; onChange: (n
       </ToggleGroup>
       <FieldDescription>
         {value === 1
-          ? 'Strictly one-to-one: the schedule never gives a tutor two students at the same time.'
-          : `The schedule never gives a tutor more than ${value} students at the same time.`}{' '}
+          ? 'Strictly one-to-one: the schedule never gives a coach two students at the same time.'
+          : `The schedule never gives a coach more than ${value} students at the same time.`}{' '}
         Lowering it leaves classes already booked above the new limit as conflicts on the schedule until they’re moved.
       </FieldDescription>
     </Field>

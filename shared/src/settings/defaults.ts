@@ -39,7 +39,7 @@ export interface BranchSettings {
     defaultSessionMinutes: number
     defaultView: ScheduleView
     /** Ordered staff IDs; staff not listed follow alphabetically. */
-    tutorOrder: string[]
+    coachOrder: string[]
     pasteStatus: SessionStatus
     autoConfirm: { enabled: boolean; hoursBefore: number }
     duplicate: { overwriteTargetDays: boolean }
@@ -50,10 +50,10 @@ export interface BranchSettings {
   }
   trash: { retentionDays: number }
   availability: {
-    /** Tutors are reminded to enter availability at least this many days ahead. */
+    /** Coaches are reminded to enter availability at least this many days ahead. */
     leadTimeDays: number
     leadTimeEnforcement: LeadTimeEnforcement
-    /** Tutors can't create, change or delete availability that starts within this many days. 0 = no lock. */
+    /** Coaches can't create, change or delete availability that starts within this many days. 0 = no lock. */
     lockWindowDays: number
     stepMinutes: number
     minBlockMinutes: number
@@ -84,7 +84,7 @@ export interface BranchSettings {
   announcements: { defaultCategories: string[] }
   notifications: {
     retentionDays: number
-    /** Window in which new classes and changes notify the tutor (future phone app). */
+    /** Window in which new classes and changes notify the coach (future phone app). */
     sessionChangeWindowHours: number
   }
   signup: {
@@ -116,7 +116,7 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     snapMinutes: 5,
     defaultSessionMinutes: 60,
     defaultView: 'day',
-    tutorOrder: [],
+    coachOrder: [],
     pasteStatus: 'pending',
     autoConfirm: { enabled: true, hoursBefore: 24 },
     duplicate: { overwriteTargetDays: true },
@@ -159,7 +159,7 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   // Students sign in with the phone app later (Phase 2); on the web, coaches and parents ask for access.
   signup: {
     enabled: true,
-    roles: ['tutor', 'parent'],
+    roles: ['coach', 'parent'],
     welcomeMessage: '',
   },
 }

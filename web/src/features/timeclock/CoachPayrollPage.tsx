@@ -16,8 +16,8 @@ import { PeriodPicker, type RangeValue, useDefaultRange } from './PeriodPicker'
 
 const money = formatMoney
 
-/** A tutor's own worked time and pay for a pay period or range (read-only). */
-export function TutorPayrollPage() {
+/** A coach's own worked time and pay for a pay period or range (read-only). */
+export function CoachPayrollPage() {
   const { branchId, staffId, settings, rules, timezone } = useBranch()
   const [range, setRange] = useState<RangeValue>(useDefaultRange())
   const meRef = useMemo(() => (staffId ? branchDocRef(branchId, COL.staff, staffId) : null), [branchId, staffId])
@@ -36,7 +36,7 @@ export function TutorPayrollPage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title="Payroll" description="Your recorded hours and pay. Teaching time is time inside sessions with a submitted log." />
+      <PageHeader title="Payroll" description="Your recorded hours and pay, worked out with the academy’s pay model." />
       <div className="mb-4">
         <PeriodPicker value={range} onChange={setRange} />
       </div>

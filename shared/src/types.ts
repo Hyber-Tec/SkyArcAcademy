@@ -137,8 +137,8 @@ export interface SignupRequest {
   decisionNote?: string | null
 }
 
-/** Employees: owners and admins run the branch, only tutors teach. */
-export type StaffRole = Extract<Role, 'owner' | 'admin' | 'tutor'>
+/** Employees: owners and admins run the branch, only coaches teach. */
+export type StaffRole = Extract<Role, 'owner' | 'admin' | 'coach'>
 export type StaffStatus = 'active' | 'on_hold' | 'finished'
 
 export interface NotificationPrefs {
@@ -178,7 +178,7 @@ export interface StaffNotes {
 /** `staff/{id}/private/compensation`. */
 export interface Compensation {
   /**
-   * Hourly rates. Tutors: `teaching` (and `admin` for non-teaching time under
+   * Hourly rates. Coaches: `teaching` (and `admin` for non-teaching time under
    * Teaching + Admin). Owners and admins: `admin` is their one hourly rate.
    */
   rates: { teaching: number; admin: number }
@@ -231,8 +231,8 @@ export interface StudentPrivateProfile {
 
 /** `branches/{b}/sessions/{id}`: one student in one class (called a Class everywhere people see it). */
 export interface Session extends AuditStamp {
-  tutorId: string
-  tutorName: string
+  coachId: string
+  coachName: string
   studentId: string
   studentName: string
   studentGrade: string
@@ -270,9 +270,9 @@ export interface Availability extends AuditStamp {
   unavailable: boolean
   /** Hide the row on the schedule when there is nothing on it. */
   hidden: boolean
-  /** First instant of the day; rules use it for the tutor lock window. */
+  /** First instant of the day; rules use it for the coach lock window. */
   dayStartAt: TimestampLike
-  updatedVia: 'tutor' | 'admin'
+  updatedVia: 'coach' | 'admin'
 }
 
 export interface DayConfig extends AuditStamp {
@@ -330,8 +330,8 @@ export interface AuditEntry {
   dateKey: DateKey | null
   studentId: string | null
   studentName: string | null
-  tutorId: string | null
-  tutorName: string | null
+  coachId: string | null
+  coachName: string | null
   changes: AuditChange[]
   /** Where the change was made: the website, the phone app, a Cloud Function or the kiosk. */
   via: 'web' | 'app' | 'function' | 'kiosk'

@@ -113,18 +113,18 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
 
   const { data: members } = useMembers()
   const { data: staff } = useStaffList()
-  const tutors = useMemo(() => {
+  const coaches = useMemo(() => {
     const names = new Map(staff.map((s) => [s.id, s.name]))
     return members
-      .filter((m) => m.status === 'active' && m.role === 'tutor')
+      .filter((m) => m.status === 'active' && m.role === 'coach')
       .map((m) => ({ key: m.email, name: (m.staffId && names.get(m.staffId)) || m.displayName || m.email, email: m.email }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [members, staff])
-  const shownTutors = tutors.filter((t) => {
+  const shownCoaches = coaches.filter((t) => {
     const q = search.trim().toLowerCase()
     return !q || t.name.toLowerCase().includes(q) || t.email.includes(q)
   })
-  const audienceSize = draft.audienceType === 'all' ? tutors.length : draft.audienceKeys.length
+  const audienceSize = draft.audienceType === 'all' ? coaches.length : draft.audienceKeys.length
 
   function next() {
     if (!draft.title.trim()) return setError('Please enter a title before continuing.')
@@ -281,7 +281,7 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
           <Card className="gap-4 p-5 sm:p-6">
             <div>
               <h2 className="text-sm font-semibold">Audience</h2>
-              <p className="text-sm text-muted-foreground">Who sees this in the tutor portal. Admins always see every announcement.</p>
+              <p className="text-sm text-muted-foreground">Who sees this in the coach portal. Admins always see every announcement.</p>
             </div>
             <ToggleGroup
               type="single"
@@ -291,14 +291,14 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
               className="w-full sm:w-auto"
             >
               <ToggleGroupItem value="all" className="flex-1 px-4">
-                All tutors ({tutors.length})
+                All coaches ({coaches.length})
               </ToggleGroupItem>
               <ToggleGroupItem value="members" className="flex-1 px-4">
                 Select people
               </ToggleGroupItem>
             </ToggleGroup>
             {draft.audienceType === 'all' ? (
-              <p className="text-sm text-muted-foreground">This announcement will be visible to all {tutors.length} active tutors, including tutors added later.</p>
+              <p className="text-sm text-muted-foreground">This announcement will be visible to all {coaches.length} active coaches, including coaches added later.</p>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -306,14 +306,14 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
                     <InputGroupAddon>
                       <LuSearch />
                     </InputGroupAddon>
-                    <InputGroupInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tutors…" />
+                    <InputGroupInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search coaches…" />
                   </InputGroup>
                   <span className="text-sm text-muted-foreground">
                     Selected: <span className="font-semibold text-foreground">{draft.audienceKeys.length}</span>
                   </span>
                 </div>
                 <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">
-                  {shownTutors.map((t) => {
+                  {shownCoaches.map((t) => {
                     const checked = draft.audienceKeys.includes(t.key)
                     return (
                       <label key={t.key} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50">
@@ -330,7 +330,7 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
                       </label>
                     )
                   })}
-                  {shownTutors.length === 0 ? <div className="px-3 py-6 text-center text-sm text-muted-foreground">No tutors match.</div> : null}
+                  {shownCoaches.length === 0 ? <div className="px-3 py-6 text-center text-sm text-muted-foreground">No coaches match.</div> : null}
                 </div>
               </div>
             )}
@@ -340,13 +340,13 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
             <OptionRow
               id="ann-comments"
               label="Allow comments"
-              description="Let tutors leave comments on this announcement."
+              description="Let coaches leave comments on this announcement."
               checked={draft.commentsEnabled}
               onChange={(commentsEnabled) => set({ commentsEnabled })}
             />
             <OptionRow
               id="ann-notify"
-              label={editing ? 'Notify again' : 'Notify tutors'}
+              label={editing ? 'Notify again' : 'Notify coaches'}
               description={
                 editing
                   ? 'Off by default. Turn on only to re-notify the audience about this update.'
@@ -372,7 +372,7 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
           <>
             {editing
               ? `Your edits to “${draft.title.trim()}” will be saved immediately.`
-              : `This will immediately send “${draft.title.trim()}” to ${draft.audienceType === 'all' ? `all ${audienceSize} tutors` : `${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`}.`}
+              : `This will immediately send “${draft.title.trim()}” to ${draft.audienceType === 'all' ? `all ${audienceSize} coaches` : `${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`}.`}
             {draft.notify ? (
               <span className={cn('mt-2 block', editing && 'text-red-600 dark:text-red-400')}>
                 {editing ? 'The audience will be notified again.' : 'They’ll also get a notification.'}

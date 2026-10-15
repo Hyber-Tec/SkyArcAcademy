@@ -48,6 +48,6 @@ export function nameList(names: string[], max = 2): string {
   return shown[0] ?? ''
 }
 
-export function plural(n: number, one: string, many = `${one}s`) {
+export function plural(n: number, one: string, many = /(s|x|z|ch|sh)$/.test(one) ? `${one}es` : `${one}s`) {
   return `${n} ${n === 1 ? one : many}`
 }

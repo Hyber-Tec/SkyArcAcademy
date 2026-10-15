@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { isReservedEmail } from '@shared/brand'
 import { emailKey } from '@shared/paths'
 import { ROLES, ROLE_LABELS, type Role, isAdminRole, isStaffRole } from '@shared/roles'
-import { tutorsNeedAdminRate } from '@shared/pay/rates'
+import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
 import type { Member, SignupRequest, Staff, StaffRole, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -29,10 +29,10 @@ import { Switch } from '@/components/ui/switch'
 import { saveMember } from './api'
 
 const ROLE_HELP: Record<Role, string> = {
-  owner: 'Runs the branch: everything an admin can, plus admins and Access Control',
+  owner: 'Runs the academy: everything an admin can, plus admins and Access Control',
   admin: 'Full access to the admin portal',
-  tutor: 'Teaches: appears on the schedule; tutor portal',
-  parent: 'Sees their children’s sessions and shared reports',
+  coach: 'Teaches: appears on the schedule; coach portal',
+  parent: 'Sees their children’s classes',
   student: 'Sees their own schedule and info',
 }
 
@@ -129,16 +129,16 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     if (!role) return setError('Choose a role.')
     if (role === 'parent' && studentIds.length === 0) return setError('Choose the parent’s child or children.')
     const today = todayKey(timezone)
-    const read = newStaff && can('payRates') ? readRates(role as StaffRole, rates, tutorsNeedAdminRate(rules, today)) : { rates: null }
+    const read = newStaff && can('payRates') ? readRates(role as StaffRole, rates, coachesNeedAdminRate(rules, today)) : { rates: null }
     if ('error' in read) return setError(read.error)
     setError(null)
     setBusy(true)
     try {
-      // Pausing a tutor's access, or making them something else, leaves their upcoming sessions as conflicts: ask first.
-      const tutorStaffId = member?.role === 'tutor' && member.status === 'active' ? member.staffId : null
-      if (tutorStaffId && (!active || role !== 'tutor')) {
+      // Pausing a coach's access, or making them something else, leaves their upcoming sessions as conflicts: ask first.
+      const coachStaffId = member?.role === 'coach' && member.status === 'active' ? member.staffId : null
+      if (coachStaffId && (!active || role !== 'coach')) {
         const name = member?.displayName || `${firstName} ${lastName}`.trim() || key
-        const q = stopTeachingQuestion(name, await countUpcomingSessions(branchId, tutorStaffId, timezone), !active ? 'pause their access' : 'change their role')
+        const q = stopTeachingQuestion(name, await countUpcomingSessions(branchId, coachStaffId, timezone), !active ? 'pause their access' : 'change their role')
         if (q && !(await confirm(q))) return
       }
       await saveMember({
@@ -246,7 +246,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
                   <FieldLabel>Employee record</FieldLabel>
                   <OptionPicker value={staffId} onChange={setStaffId} options={staffOptions} searchPlaceholder="Search employees…" />
                   <FieldDescription>
-                    {role === 'tutor' ? 'Schedule, availability, clock and pay belong to the employee record.' : 'Clock-ins and pay belong to the employee record.'}
+                    {role === 'coach' ? 'Schedule, availability, clock and pay belong to the employee record.' : 'Clock-ins and pay belong to the employee record.'}
                   </FieldDescription>
                 </Field>
               ) : null}

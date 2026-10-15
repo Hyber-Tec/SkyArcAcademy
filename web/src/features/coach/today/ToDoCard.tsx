@@ -2,13 +2,13 @@ import { useState } from 'react'
 import type { IconType } from 'react-icons'
 import { LuArrowUpRight, LuCalendarClock, LuCalendarX2, LuCircleCheck, LuMegaphone } from 'react-icons/lu'
 import { Link, useNavigate } from 'react-router'
-import { tutorConflictText } from '@shared/schedule/conflicts'
+import { coachConflictText } from '@shared/schedule/conflicts'
 import { addDays, dateKeyOf, formatDateKey, formatMinutes } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { plural } from '@/features/home/parts'
 import { cn } from '@/lib/utils'
-import type { TutorDay } from './useTutorDay'
+import type { CoachDay } from './useCoachDay'
 
 /** Items shown per kind before "Show N more". */
 const SHOWN = 3
@@ -29,18 +29,18 @@ interface Item {
 }
 
 /**
- * What the tutor still has to do: classes waiting for the admin, open days that still need availability, and posts not
+ * What the coach still has to do: classes waiting for the admin, open days that still need availability, and posts not
  * read yet. Each line opens the place to do it.
  */
-export function ToDoCard({ t }: { t: TutorDay }) {
+export function ToDoCard({ t }: { t: CoachDay }) {
   const { settings, timezone } = useBranch()
   const navigate = useNavigate()
-  const tutor = `/tutor`
+  const coach = `/coach`
   const { waiting, gaps, unread, total } = t.todo
   const day = (d: string) => (d === t.today ? 'Today' : d === addDays(t.today, -1) ? 'Yesterday' : d === addDays(t.today, 1) ? 'Tomorrow' : formatDateKey(d, 'weekdayMedium'))
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-card" data-testid="tutor-todo">
+    <section className="overflow-hidden rounded-xl border bg-card" data-testid="coach-todo">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <h2 className="text-sm font-semibold">To do</h2>
         {total ? <span className="rounded-full bg-foreground px-2 text-xs leading-5 font-semibold text-background tabular-nums">{total}</span> : null}
@@ -61,13 +61,13 @@ export function ToDoCard({ t }: { t: TutorDay }) {
             <Group
               icon={LuCalendarX2}
               tone="red"
-              title={`${plural(waiting.length, 'session')} waiting for the admin`}
+              title={`${plural(waiting.length, 'class')} waiting for the admin`}
               subtitle="Something changed since booking. Don’t count on them until the admin moves, reassigns or cancels them."
               items={waiting.map((s) => ({
                 key: s.id,
                 title: s.studentName,
-                detail: `${day(s.dateKey)}, ${formatMinutes(s.startMin)} · ${(tutorConflictText(t.conflictsOf(s.id)) ?? '').replace(/ Waiting for the admin.*$/, '')}`,
-                onOpen: () => navigate(`${tutor}/schedule?date=${s.dateKey}`),
+                detail: `${day(s.dateKey)}, ${formatMinutes(s.startMin)} · ${(coachConflictText(t.conflictsOf(s.id)) ?? '').replace(/ Waiting for the admin.*$/, '')}`,
+                onOpen: () => navigate(`${coach}/schedule?date=${s.dateKey}`),
               }))}
             />
           ) : null}
@@ -77,15 +77,15 @@ export function ToDoCard({ t }: { t: TutorDay }) {
               tone="violet"
               title={`Set availability for ${plural(gaps.length, 'day')}`}
               subtitle={`Open days inside your ${settings.availability.leadTimeDays}-day notice. Each locks ${settings.availability.lockWindowDays} days ahead.`}
-              seeAll={{ label: 'Open Availability', to: `${tutor}/availability` }}
+              seeAll={{ label: 'Open Availability', to: `${coach}/availability` }}
               items={gaps.map((d) => {
                 const h = t.hoursOf(d)
                 return {
                   key: d,
                   title: formatDateKey(d, 'weekdayLong').replace(/, \d{4}$/, ''),
                   detail: h.isOpen ? `Open ${formatMinutes(h.openMin)} – ${formatMinutes(h.closeMin)}` : 'Open',
-                  onOpen: () => navigate(`${tutor}/availability?date=${d}`),
-                  action: { label: 'Set', onClick: () => navigate(`${tutor}/availability?date=${d}`) },
+                  onOpen: () => navigate(`${coach}/availability?date=${d}`),
+                  action: { label: 'Set', onClick: () => navigate(`${coach}/availability?date=${d}`) },
                 }
               })}
             />
@@ -99,8 +99,8 @@ export function ToDoCard({ t }: { t: TutorDay }) {
                 key: a.id,
                 title: a.title,
                 detail: `${a.authorName}${a.createdAt ? ` · ${day(dateKeyOf(a.createdAt.toDate(), timezone))}` : ''}${a.pinned ? ' · Pinned' : ''}`,
-                onOpen: () => navigate(`${tutor}/announcements/${a.id}`),
-                action: { label: 'Read', onClick: () => navigate(`${tutor}/announcements/${a.id}`) },
+                onOpen: () => navigate(`${coach}/announcements/${a.id}`),
+                action: { label: 'Read', onClick: () => navigate(`${coach}/announcements/${a.id}`) },
               }))}
             />
           ) : null}

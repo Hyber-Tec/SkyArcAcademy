@@ -4,7 +4,7 @@ import type { AvailabilityRange } from '../types'
 import { type LaneItem, fitsCapacity, layoutLanes, visibleLaneCount } from './lanes'
 
 export interface ModelSession extends LaneItem {
-  tutorId: string
+  coachId: string
   status: SessionStatus
 }
 
@@ -15,7 +15,7 @@ export interface ClockInterval {
   open: boolean
 }
 
-export interface TutorRef {
+export interface CoachRef {
   id: string
   name: string
 }
@@ -26,8 +26,8 @@ export interface DayAvailability {
   hidden: boolean
 }
 
-export interface TutorRow<S extends ModelSession = ModelSession> {
-  tutor: TutorRef
+export interface CoachRow<S extends ModelSession = ModelSession> {
+  coach: CoachRef
   /** Availability ranges (empty = not available). */
   segments: AvailabilityRange[]
   /** Has live (not canceled) sessions but no availability on the timeline: shown as unavailable, sessions to move. */
@@ -43,14 +43,14 @@ export interface DayModelInput<S extends ModelSession> {
   dateKey: DateKey
   today: DateKey
   hours: DayHours
-  tutors: readonly TutorRef[]
+  coaches: readonly CoachRef[]
   availability: (staffId: string) => DayAvailability | null
   sessions: readonly S[]
   clocks?: (staffId: string) => ClockInterval[]
   maxLanes: number
-  /** Admin views add an empty lane for creating; the tutor view doesn't. */
+  /** Admin views add an empty lane for creating; the coach view doesn't. */
   addEmptyLane: boolean
-  /** Unknown tutors (e.g. a finished employee) still get a row when they have sessions. */
+  /** Unknown coaches (e.g. a finished employee) still get a row when they have sessions. */
   nameFor?: (staffId: string) => string
 }
 
@@ -59,30 +59,30 @@ function overlaps(r: AvailabilityRange, open: number, close: number) {
 }
 
 /**
- * Which tutors get a row on a day, and what each row holds (True Education's
- * rules): today and future days show tutors with availability on the timeline,
+ * Which coaches get a row on a day, and what each row holds (True Education's
+ * rules): today and future days show coaches with availability on the timeline,
  * sessions or clock activity (unless hidden with nothing on it); past days show
- * tutors with real sessions or clock activity.
+ * coaches with real sessions or clock activity.
  */
-export function buildDayRows<S extends ModelSession>(input: DayModelInput<S>): TutorRow<S>[] {
+export function buildDayRows<S extends ModelSession>(input: DayModelInput<S>): CoachRow<S>[] {
   const { hours, maxLanes } = input
   const isPast = input.dateKey < input.today
-  const byTutor = new Map<string, S[]>()
-  for (const s of input.sessions) byTutor.set(s.tutorId, [...(byTutor.get(s.tutorId) ?? []), s])
+  const byCoach = new Map<string, S[]>()
+  for (const s of input.sessions) byCoach.set(s.coachId, [...(byCoach.get(s.coachId) ?? []), s])
 
-  const tutors: TutorRef[] = [...input.tutors]
-  for (const id of byTutor.keys()) {
-    if (!tutors.some((t) => t.id === id)) tutors.push({ id, name: input.nameFor?.(id) ?? 'Former tutor' })
+  const coaches: CoachRef[] = [...input.coaches]
+  for (const id of byCoach.keys()) {
+    if (!coaches.some((t) => t.id === id)) coaches.push({ id, name: input.nameFor?.(id) ?? 'Former coach' })
   }
 
-  const rows: TutorRow<S>[] = []
-  for (const tutor of tutors) {
-    const avail = input.availability(tutor.id)
+  const rows: CoachRow<S>[] = []
+  for (const coach of coaches) {
+    const avail = input.availability(coach.id)
     const segments = avail && !avail.unavailable ? avail.ranges : []
-    const sessions = byTutor.get(tutor.id) ?? []
+    const sessions = byCoach.get(coach.id) ?? []
     const active = sessions.filter((s) => s.status !== 'canceled')
     const canceled = sessions.filter((s) => s.status === 'canceled')
-    const clocks = input.clocks?.(tutor.id) ?? []
+    const clocks = input.clocks?.(coach.id) ?? []
     const hasTimelineAvailability = segments.some((r) => overlaps(r, hours.openMin, hours.closeMin))
     const hasSessions = sessions.length > 0
     const hasClock = clocks.length > 0
@@ -95,7 +95,7 @@ export function buildDayRows<S extends ModelSession>(input: DayModelInput<S>): T
 
     const lanes = layoutLanes(active, maxLanes)
     rows.push({
-      tutor,
+      coach,
       segments,
       isGhost: active.length > 0 && !hasTimelineAvailability,
       active,
@@ -111,7 +111,7 @@ export function buildDayRows<S extends ModelSession>(input: DayModelInput<S>): T
 export type SlotResult = { ok: true; startMin: number; endMin: number } | { ok: false; reason: 'unavailable' | 'full' }
 
 /**
- * A new session at `minute` in a tutor row: starts at the clicked minute inside the
+ * A new session at `minute` in a coach row: starts at the clicked minute inside the
  * availability segment, lasts `durationMin` (capped at the segment end), shrinking
  * by `snap` minutes until a seat is free.
  */
@@ -135,10 +135,10 @@ export function slotAt(
   return { ok: true, startMin, endMin }
 }
 
-/** Tutors in the branch's display order, then alphabetically. */
-export function orderTutors<T extends { id: string; name: string }>(tutors: readonly T[], order: readonly string[]): T[] {
+/** Coaches in the branch's display order, then alphabetically. */
+export function orderCoaches<T extends { id: string; name: string }>(coaches: readonly T[], order: readonly string[]): T[] {
   const rank = new Map(order.map((id, i) => [id, i]))
-  return [...tutors].sort((a, b) => {
+  return [...coaches].sort((a, b) => {
     const ra = rank.get(a.id) ?? Number.POSITIVE_INFINITY
     const rb = rank.get(b.id) ?? Number.POSITIVE_INFINITY
     return ra - rb || a.name.localeCompare(b.name)

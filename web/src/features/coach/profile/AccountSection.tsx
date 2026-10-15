@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { LuCheck } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { formatMoney } from '@shared/pay/segment'
-import { tutorsNeedAdminRate } from '@shared/pay/rates'
+import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { formatPhone } from '@shared/people'
 import { formatDateKey, todayKey } from '@shared/time'
 import type { Compensation } from '@shared/types'
@@ -19,7 +19,7 @@ import { type MyDetails, saveMyDetails } from '../api'
 import { NOT_LINKED, useMyStaff } from '../hooks'
 import { SectionTitle } from './parts'
 
-/** Profile → Account details: the contact details the tutor keeps up to date, and what the center has on file. */
+/** Profile → Account details: the contact details the coach keeps up to date, and what the center has on file. */
 export function AccountSection() {
   const { branchId, staffId, actor, branch, rules, timezone } = useBranch()
   const { data: staff, loading } = useMyStaff()
@@ -56,7 +56,7 @@ export function AccountSection() {
     }
   }
 
-  const showAdminRate = tutorsNeedAdminRate(rules, todayKey(timezone))
+  const showAdminRate = coachesNeedAdminRate(rules, todayKey(timezone))
   const facts: [string, React.ReactNode][] = [
     ['Name', staff.name],
     ['Email', staff.email || '—'],
@@ -68,7 +68,7 @@ export function AccountSection() {
 
   return (
     <div>
-      <SectionTitle title="Account details" description="How the center can reach you, and what it has on file for you." />
+      <SectionTitle title="Account details" description="How the academy can reach you, and what it has on file for you." />
       <div className="space-y-6">
         <section className="overflow-hidden rounded-xl border bg-card" aria-labelledby="contact-title">
           <div className="border-b px-5 py-4">
@@ -138,7 +138,7 @@ export function AccountSection() {
             <h3 id="file-title" className="text-sm font-semibold">
               At {branch.name}
             </h3>
-            <p className="mt-0.5 text-sm text-muted-foreground">Kept by the center. Ask an admin to change any of these.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Kept by the academy. Ask an admin to change any of these.</p>
           </div>
           <dl className="divide-y">
             {facts.map(([label, value]) => (

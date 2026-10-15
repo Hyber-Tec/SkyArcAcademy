@@ -28,7 +28,7 @@ const CATEGORIES: { value: AuditCategory | 'all'; label: string }[] = [
 const ROLE_LABEL: Record<string, string> = {
   owner: 'Owner',
   admin: 'Admin',
-  tutor: 'Tutor',
+  coach: 'Coach',
   parent: 'Parent',
   student: 'Student',
   system: 'System',
@@ -52,7 +52,7 @@ export function AuditLogSection() {
     const s = search.trim().toLowerCase()
     if (!s) return data
     return data.filter((e) =>
-      [e.summary, e.actorName, e.actorEmail, e.studentName, e.tutorName, e.context].some((v) => v?.toLowerCase().includes(s)),
+      [e.summary, e.actorName, e.actorEmail, e.studentName, e.coachName, e.context].some((v) => v?.toLowerCase().includes(s)),
     )
   }, [data, search])
 
@@ -60,7 +60,7 @@ export function AuditLogSection() {
     <div>
       <div className="mb-4">
         <h2 className="font-semibold">Audit Log</h2>
-        <p className="text-sm text-muted-foreground">Every change made in this branch, newest first. Entries can’t be edited or deleted.</p>
+        <p className="text-sm text-muted-foreground">Every change made in this academy, newest first. Entries can’t be edited or deleted.</p>
       </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <Select value={category} onValueChange={(v) => setCategory(v as AuditCategory | 'all')}>

@@ -58,7 +58,7 @@ export function useAllAnnouncements(enabled = true) {
 }
 
 /**
- * Tutor feed: posts for everyone plus posts addressed to me (two queries the
+ * Coach feed: posts for everyone plus posts addressed to me (two queries the
  * rules can verify), archived posts dropped.
  */
 export function useMyAnnouncements(enabled = true) {
@@ -90,7 +90,7 @@ export function useMyReadIds(enabled = true) {
   return { ids, loading }
 }
 
-/** Unread posts in the tutor portal (sidebar and News badges). */
+/** Unread posts in the coach portal (sidebar and News badges). */
 export function useUnreadAnnouncementCount(enabled = true) {
   const feed = useMyAnnouncements(enabled)
   const reads = useMyReadIds(enabled)
@@ -227,7 +227,7 @@ export async function deleteAnnouncement(branchId: string, actor: Actor, a: With
   await batch.commit()
 }
 
-/** First open of a post (tutor portal). Receipts are write-once. */
+/** First open of a post (coach portal). Receipts are write-once. */
 export async function markRead(branchId: string, actor: Actor, id: string) {
   await setDoc(doc(subCol(branchId, id, 'reads'), actor.email), {
     email: actor.email,

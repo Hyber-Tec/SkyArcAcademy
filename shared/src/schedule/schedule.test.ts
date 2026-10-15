@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildDayRows, orderTutors, slotAt } from './dayModel'
+import { buildDayRows, orderCoaches, slotAt } from './dayModel'
 import { occursOn, layoutEventLanes, type ScheduleEvent } from './events'
 import { layoutLanes, peakConcurrency, visibleLaneCount } from './lanes'
 
-const s = (id: string, startMin: number, endMin: number, extra: Partial<{ tutorId: string; status: 'pending' | 'canceled' }> = {}) => ({
+const s = (id: string, startMin: number, endMin: number, extra: Partial<{ coachId: string; status: 'pending' | 'canceled' }> = {}) => ({
   id,
   startMin,
   endMin,
-  tutorId: extra.tutorId ?? 't1',
+  coachId: extra.coachId ?? 't1',
   status: extra.status ?? ('pending' as const),
 })
 
@@ -51,39 +51,39 @@ describe('day rows', () => {
     maxLanes: 3,
     addEmptyLane: true,
   }
-  const tutors = [
+  const coaches = [
     { id: 't1', name: 'A' },
     { id: 't2', name: 'B' },
     { id: 't3', name: 'C' },
   ]
-  it('shows tutors with availability or sessions; flags ghosts', () => {
+  it('shows coaches with availability or sessions; flags ghosts', () => {
     const rows = buildDayRows({
       ...base,
-      tutors,
+      coaches,
       availability: (id) => (id === 't1' ? { ranges: [{ startMin: 840, endMin: 1260 }], unavailable: false, hidden: false } : null),
-      sessions: [s('x', 960, 1070, { tutorId: 't2' })],
+      sessions: [s('x', 960, 1070, { coachId: 't2' })],
     })
-    expect(rows.map((r) => [r.tutor.id, r.isGhost])).toEqual([
+    expect(rows.map((r) => [r.coach.id, r.isGhost])).toEqual([
       ['t1', false],
       ['t2', true],
     ])
   })
-  it('on past days shows only tutors with real sessions', () => {
+  it('on past days shows only coaches with real sessions', () => {
     const rows = buildDayRows({
       ...base,
       dateKey: '2026-09-28',
-      tutors,
+      coaches,
       availability: () => ({ ranges: [{ startMin: 840, endMin: 1260 }], unavailable: false, hidden: false }),
-      sessions: [s('x', 960, 1070, { tutorId: 't2' }), s('y', 960, 1070, { tutorId: 't3', status: 'canceled' })],
+      sessions: [s('x', 960, 1070, { coachId: 't2' }), s('y', 960, 1070, { coachId: 't3', status: 'canceled' })],
     })
-    expect(rows.map((r) => r.tutor.id)).toEqual(['t2'])
+    expect(rows.map((r) => r.coach.id)).toEqual(['t2'])
   })
-  it('keeps sessions of unknown tutors visible', () => {
-    const rows = buildDayRows({ ...base, tutors: [], availability: () => null, sessions: [s('x', 960, 1070, { tutorId: 'gone' })] })
-    expect(rows[0].tutor.name).toBe('Former tutor')
+  it('keeps sessions of unknown coaches visible', () => {
+    const rows = buildDayRows({ ...base, coaches: [], availability: () => null, sessions: [s('x', 960, 1070, { coachId: 'gone' })] })
+    expect(rows[0].coach.name).toBe('Former coach')
   })
-  it('orders tutors by display order then name', () => {
-    expect(orderTutors(tutors, ['t3']).map((t) => t.id)).toEqual(['t3', 't1', 't2'])
+  it('orders coaches by display order then name', () => {
+    expect(orderCoaches(coaches, ['t3']).map((t) => t.id)).toEqual(['t3', 't1', 't2'])
   })
 })
 

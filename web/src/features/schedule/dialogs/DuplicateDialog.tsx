@@ -55,7 +55,7 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
   async function run() {
     const targetDays = weekDays(to, weekStartsOn)
     const label = `${formatDateKey(startOfWeek(from, weekStartsOn), 'monthDay')} → ${formatDateKey(targetDays[0], 'monthDay')}`
-    if (!window.confirm(`Duplicate ${selected.length} day${selected.length > 1 ? 's' : ''} (${label})? Sessions already on those days in the target week move to Trash.`)) return
+    if (!window.confirm(`Duplicate ${selected.length} day${selected.length > 1 ? 's' : ''} (${label})? Classes already on those days in the target week move to Trash.`)) return
     setBusy(true)
     try {
       const srcDays = weekDays(from, weekStartsOn)
@@ -80,8 +80,8 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
         liveGrade: (id) => grades.get(id),
         label,
       })
-      const full = skipped ? ` ${skipped} skipped: the tutor already had ${ctx.maxStudentsPerTutor} ${ctx.maxStudentsPerTutor === 1 ? 'student' : 'students'} at that time.` : ''
-      if (n) toast.success(`Duplicated ${n} sessions.${full}`)
+      const full = skipped ? ` ${skipped} skipped: the coach already had ${ctx.maxStudentsPerCoach} ${ctx.maxStudentsPerCoach === 1 ? 'student' : 'students'} at that time.` : ''
+      if (n) toast.success(`Duplicated ${n} classes.${full}`)
       else toast.info(skipped ? `Nothing copied.${full}` : 'Nothing to copy on those days (closed and past days are skipped).')
       if (n) onOpenChange(false)
     } catch (e) {
@@ -96,7 +96,7 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Duplicate schedule</DialogTitle>
-          <DialogDescription>Copy sessions into another week as {settings.schedule.pasteStatus === 'pending' ? 'Pending' : 'Confirmed'} sessions.</DialogDescription>
+          <DialogDescription>Copy classes into another week as {settings.schedule.pasteStatus === 'pending' ? 'Pending' : 'Confirmed'} classes.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="text-xs font-semibold text-muted-foreground uppercase">From</div>

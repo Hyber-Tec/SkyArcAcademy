@@ -98,7 +98,7 @@ export function SignUp() {
             {busy ? <Spinner /> : null}
             Create account
           </Button>
-          <p className="text-xs text-muted-foreground">We’ll email you a link to confirm the address before you can sign in to a center.</p>
+          <p className="text-xs text-muted-foreground">We’ll email you a link to confirm the address before you can sign in to an academy.</p>
         </FieldGroup>
       </form>
     </AuthShell>

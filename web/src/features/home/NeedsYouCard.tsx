@@ -71,11 +71,11 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       id: 'conflicts',
       icon: LuCalendarX2,
       tone: 'red',
-      title: plural(attention.conflicts.length, 'session') + ' in conflict',
+      title: plural(attention.conflicts.length, 'class') + ' in conflict',
       subtitle: `${first.conflicts[0]?.message ?? ''}${attention.conflicts.length > 1 ? ` · +${attention.conflicts.length - 1} more` : ''}`,
       items: attention.conflicts.map(({ session: s, conflicts }) => ({
         key: s.id,
-        title: `${s.studentName} · ${s.tutorName}`,
+        title: `${s.studentName} · ${s.coachName}`,
         detail: `${dayLabel(s.dateKey, today)} · ${formatTimeRange(s.startMin, s.endMin)} · ${conflicts[0]?.message ?? ''}`,
         onOpen: () => navigate(`${admin}/schedule/day/${s.dateKey}`),
         actions: menu(

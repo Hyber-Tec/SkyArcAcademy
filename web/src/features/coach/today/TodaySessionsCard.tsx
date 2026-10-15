@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { LuCalendarDays, LuGraduationCap, LuStickyNote } from 'react-icons/lu'
 import { Link, useNavigate } from 'react-router'
-import { tutorConflictText } from '@shared/schedule/conflicts'
+import { coachConflictText } from '@shared/schedule/conflicts'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
@@ -10,13 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatePill, plural } from '@/features/home/parts'
 import { cn } from '@/lib/utils'
 import { sessionState } from '../sessionUi'
-import type { TutorDay } from './useTutorDay'
+import type { CoachDay } from './useCoachDay'
 
 /** Today's classes in time order with a "now" line; a row opens the student's profile. */
-export function TodaySessionsCard({ t }: { t: TutorDay }) {
+export function TodaySessionsCard({ t }: { t: CoachDay }) {
   const navigate = useNavigate()
   const [showCanceled, setShowCanceled] = useState(false)
-  const tutor = `/tutor`
+  const coach = `/coach`
   const rows = t.day.active
   const canceled = t.day.canceled
   // The red line sits before the first session that hasn't started.
@@ -24,16 +24,16 @@ export function TodaySessionsCard({ t }: { t: TutorDay }) {
   const lineAt = rows.length === 0 ? -1 : firstLater === -1 ? rows.length : firstLater
 
   const row = (s: WithId<Session>, muted = false) => {
-    const waiting = tutorConflictText(t.conflictsOf(s.id))
+    const waiting = coachConflictText(t.conflictsOf(s.id))
     const st = sessionState(s, { today: t.today, nowMin: t.nowMin, waiting })
-    const openStudent = () => navigate(`${tutor}/students/${s.studentId}`)
+    const openStudent = () => navigate(`${coach}/students/${s.studentId}`)
     return (
       <ContextMenuFor
         key={s.id}
         entries={menu(
           { kind: 'label', label: `${s.studentName} · ${formatMinutes(s.startMin)}` },
           { label: 'Open student profile', icon: LuGraduationCap, onSelect: openStudent },
-          { label: 'Open in schedule', icon: LuCalendarDays, onSelect: () => navigate(`${tutor}/schedule?date=${s.dateKey}`) },
+          { label: 'Open in schedule', icon: LuCalendarDays, onSelect: () => navigate(`${coach}/schedule?date=${s.dateKey}`) },
         )}
       >
         <li className={cn('group relative', muted && 'opacity-60')}>
@@ -89,9 +89,9 @@ export function TodaySessionsCard({ t }: { t: TutorDay }) {
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="today-sessions">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <h2 className="text-sm font-semibold">
-          Today’s sessions <span className="ml-1 font-normal text-muted-foreground">{t.loading ? '' : rows.length}</span>
+          Today’s classes <span className="ml-1 font-normal text-muted-foreground">{t.loading ? '' : rows.length}</span>
         </h2>
-        <Link to={`${tutor}/schedule`} className="text-xs font-medium text-muted-foreground hover:text-foreground">
+        <Link to={`${coach}/schedule`} className="text-xs font-medium text-muted-foreground hover:text-foreground">
           Week view →
         </Link>
       </div>
@@ -108,10 +108,10 @@ export function TodaySessionsCard({ t }: { t: TutorDay }) {
       ) : rows.length === 0 && !showCanceled ? (
         <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
           <LuCalendarDays className="mb-1 size-6 text-muted-foreground/70" />
-          <p className="text-sm font-medium">{canceled.length ? 'Today’s sessions were canceled.' : 'No sessions today.'}</p>
+          <p className="text-sm font-medium">{canceled.length ? 'Today’s classes were canceled.' : 'No classes today.'}</p>
           {next.kind === 'day' ? (
             <p className="text-sm text-muted-foreground">
-              Your next {next.sessions.length === 1 ? 'session is' : 'sessions are'} on {formatDateKey(next.dateKey, 'weekdayMedium')}.
+              Your next {next.sessions.length === 1 ? 'class is' : 'classes are'} on {formatDateKey(next.dateKey, 'weekdayMedium')}.
             </p>
           ) : null}
         </div>
@@ -125,7 +125,7 @@ export function TodaySessionsCard({ t }: { t: TutorDay }) {
       {!t.loading && canceled.length > 0 ? (
         <div className="border-t p-1.5">
           <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowCanceled(!showCanceled)}>
-            {showCanceled ? 'Hide canceled' : `${plural(canceled.length, 'canceled session')}`}
+            {showCanceled ? 'Hide canceled' : `${plural(canceled.length, 'canceled class')}`}
           </Button>
         </div>
       ) : null}

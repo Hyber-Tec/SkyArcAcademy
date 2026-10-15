@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availabilityGaps, clipToHours, dayHours, effectiveLockDays, effectiveRanges, isLockedForTutor, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
+import { availabilityGaps, clipToHours, dayHours, effectiveLockDays, effectiveRanges, isLockedForCoach, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
 import { DEFAULT_SETTINGS as ACADEMY_DEFAULTS } from './settings/defaults'
 
 // A fixed week for these tests (Sunday closed, Mon–Fri 2–9 PM, Saturday 9–5), independent of the academy's defaults.
@@ -55,10 +55,10 @@ describe('availability', () => {
 
   it('locks days within the window from now', () => {
     const now = new Date('2026-09-30T20:00:00Z') // Wed 4 PM in New York
-    expect(isLockedForTutor('2026-10-07', NY, 7, now)).toBe(true) // midnight Oct 7 < Oct 7 4 PM
-    expect(isLockedForTutor('2026-10-08', NY, 7, now)).toBe(false)
-    expect(isLockedForTutor('2026-09-29', NY, 0, now)).toBe(true) // past days always locked
-    expect(isLockedForTutor('2026-10-01', NY, 0, now)).toBe(false)
+    expect(isLockedForCoach('2026-10-07', NY, 7, now)).toBe(true) // midnight Oct 7 < Oct 7 4 PM
+    expect(isLockedForCoach('2026-10-08', NY, 7, now)).toBe(false)
+    expect(isLockedForCoach('2026-09-29', NY, 0, now)).toBe(true) // past days always locked
+    expect(isLockedForCoach('2026-10-01', NY, 0, now)).toBe(false)
   })
 
   it('extends the lock when the lead time blocks', () => {

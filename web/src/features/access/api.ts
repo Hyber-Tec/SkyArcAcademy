@@ -101,7 +101,7 @@ export async function saveMember(opts: {
   const batch = writeBatch(db)
   const displayName = `${input.firstName} ${input.lastName}`.trim()
 
-  // Staff record for owners, admins and tutors (clock and pay; only tutors teach).
+  // Staff record for owners, admins and coaches (clock and pay; only coaches teach).
   let staffId: string | null = null
   if (isStaffRole(role)) {
     const staffRole = role as StaffRole
@@ -119,8 +119,8 @@ export async function saveMember(opts: {
         entityType: 'staff',
         entityId: ref.id,
         summary: `Added the employee ${displayName}`,
-        tutorId: ref.id,
-        tutorName: displayName,
+        coachId: ref.id,
+        coachName: displayName,
       })
       if (input.pay) writeCompensation(batch, branchId, actor, { id: ref.id, name: displayName, role: staffRole }, null, input.pay.rates, input.pay.effectiveFrom)
     } else {

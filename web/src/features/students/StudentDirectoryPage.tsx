@@ -51,23 +51,23 @@ import { advanceGrades, createStudent, setStudentStatus } from './api'
 
 type SortKey = 'name' | 'grade' | 'signUp'
 
-/** Student IDs a tutor teaches: sessions in the last 90 days or upcoming. */
+/** Student IDs a coach teaches: sessions in the last 90 days or upcoming. */
 function useTaughtStudentIds(enabled: boolean): Set<string> | null {
   const { branchId, staffId, timezone } = useBranch()
   const from = addDays(todayKey(timezone), -90)
   const q = useMemo(
-    () => (enabled && staffId ? query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', '>=', from)) : null),
+    () => (enabled && staffId ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', from)) : null),
     [enabled, staffId, branchId, from],
   )
   const { data, loading } = useQuery<Session>(q, `taught-${staffId}-${from}`)
   return useMemo(() => (enabled ? (loading ? null : new Set(data.filter((s) => !s.isDeleted).map((s) => s.studentId))) : null), [enabled, data, loading])
 }
 
-export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tutor' }) {
+export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const { branchId, actor, timezone } = useBranch()
   const navigate = useNavigate()
   const { data: students, loading } = useStudentList()
-  const taught = useTaughtStudentIds(mode === 'tutor')
+  const taught = useTaughtStudentIds(mode === 'coach')
   const today = todayKey(timezone)
   const isAdmin = mode === 'admin'
   const base = `/${mode}/students`
@@ -84,7 +84,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
       { kind: 'label', label: s.name },
       { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`${base}/${s.id}`) },
       { label: 'Open in new tab', icon: LuExternalLink, onSelect: () => window.open(`${base}/${s.id}`, '_blank') },
-      { label: 'Sessions', icon: LuNotebookPen, onSelect: () => navigate(`${base}/${s.id}/sessions`) },
+      { label: 'Classes', icon: LuNotebookPen, onSelect: () => navigate(`${base}/${s.id}/sessions`) },
       { label: 'Calendar', icon: LuCalendarDays, onSelect: () => navigate(`${base}/${s.id}/calendar`) },
       isAdmin && {
         kind: 'sub',
@@ -141,7 +141,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
     <div>
       <PageHeader
         title="Students"
-        description={mode === 'tutor' ? 'Students you teach (last 90 days and upcoming).' : `${rows.length} of ${students.length} students`}
+        description={mode === 'coach' ? 'Students you teach (last 90 days and upcoming).' : `${rows.length} of ${students.length} students`}
         actions={
           isAdmin ? (
             <>
@@ -195,8 +195,8 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
               {header('grade', 'Grade', 'w-20')}
               <TableHead className="w-40">Status</TableHead>
               {header('signUp', 'Sign up', 'hidden lg:table-cell')}
-              <TableHead className="hidden md:table-cell">Last session</TableHead>
-              <TableHead className="hidden md:table-cell">Next session</TableHead>
+              <TableHead className="hidden md:table-cell">Last class</TableHead>
+              <TableHead className="hidden md:table-cell">Next class</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -306,7 +306,7 @@ function NewStudentDialog({ open, onOpenChange, onCreated }: { open: boolean; on
         >
           <DialogHeader>
             <DialogTitle>Add student</DialogTitle>
-            <DialogDescription>New students start as Signed Up and become Enrolled after their first session.</DialogDescription>
+            <DialogDescription>New students start as Signed Up and become Enrolled after their first class.</DialogDescription>
           </DialogHeader>
           <FieldGroup className="py-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -431,6 +431,6 @@ function GradeAdvanceDialog({ open, onOpenChange, students }: { open: boolean; o
   )
 }
 
-export function TutorStudentDirectoryPage() {
-  return <StudentDirectoryPage mode="tutor" />
+export function CoachStudentDirectoryPage() {
+  return <StudentDirectoryPage mode="coach" />
 }

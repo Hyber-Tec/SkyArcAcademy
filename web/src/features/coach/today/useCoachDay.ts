@@ -46,12 +46,12 @@ const ms = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.
 const byTime = (a: WithId<Session>, b: WithId<Session>) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)
 
 /**
- * Everything the tutor's Today page shows, from their own sessions,
+ * Everything the coach's Today page shows, from their own sessions,
  * availability, clock shifts and the posts addressed to them: what's on now
  * and next, today's list, what's left to do and how the week looks. All
  * dates and times are the branch's.
  */
-export function useTutorDay() {
+export function useCoachDay() {
   const { branchId, staffId, settings, rules, timezone } = useBranch()
   const now = useNow(20_000)
   const today = todayKey(timezone, now)
@@ -63,15 +63,15 @@ export function useTutorDay() {
 
   const me = useMyStaff()
   const sessionsQ = useMemo(
-    () => (staffId ? query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
+    () => (staffId ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
     [branchId, staffId, from, to],
   )
-  const sessionsState = useQuery<Session>(sessionsQ, `tutor-today-sessions-${staffId}-${from}-${to}`)
+  const sessionsState = useQuery<Session>(sessionsQ, `coach-today-sessions-${staffId}-${from}-${to}`)
   const availQ = useMemo(
     () => (staffId ? query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), where('dateKey', '>=', today), where('dateKey', '<=', to)) : null),
     [branchId, staffId, today, to],
   )
-  const avail = useQuery<Availability>(availQ, `tutor-today-avail-${staffId}-${today}-${to}`)
+  const avail = useQuery<Availability>(availQ, `coach-today-avail-${staffId}-${today}-${to}`)
   const { map: dayConfigs } = useDayConfigs(from, to)
   const students = useStudentList(!!staffId)
   // From the day before the week (or yesterday): a shift still open from last night counts.
@@ -92,11 +92,11 @@ export function useTutorDay() {
         hoursOf,
         staffById: null,
         studentsById,
-        maxPerTutor: rules.maxStudentsPerTutor,
+        maxPerCoach: rules.maxStudentsPerCoach,
         today,
         nowMin,
       }),
-    [sessions, avail.data, hoursOf, studentsById, rules.maxStudentsPerTutor, today, nowMin],
+    [sessions, avail.data, hoursOf, studentsById, rules.maxStudentsPerCoach, today, nowMin],
   )
 
   const day = useMemo(() => {
@@ -137,7 +137,7 @@ export function useTutorDay() {
         dateKey: d,
         sessions: list.length,
         done: ended.length,
-        // Booked time is the tutor's: sessions side by side count once.
+        // Booked time is the coach's: sessions side by side count once.
         minutes: unionMinutes(list),
         isOpen: hoursOf(d).isOpen,
       }
@@ -182,4 +182,4 @@ export function useTutorDay() {
   }
 }
 
-export type TutorDay = ReturnType<typeof useTutorDay>
+export type CoachDay = ReturnType<typeof useCoachDay>

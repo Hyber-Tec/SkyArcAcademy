@@ -17,7 +17,7 @@ export interface DayWrite {
 
 /**
  * Booked sessions (pending or confirmed, still ahead) that a change would leave
- * outside the tutor's availability, though they were inside it before.
+ * outside the coach's availability, though they were inside it before.
  */
 export async function sessionsLeftUncovered(opts: {
   branchId: string
@@ -36,7 +36,7 @@ export async function sessionsLeftUncovered(opts: {
   const out: WithId<Session>[] = []
   for (let i = 0; i < shrinking.length; i += 30) {
     const chunk = shrinking.slice(i, i + 30)
-    const snap = await getDocs(query(branchCol(branchId, COL.sessions), where('tutorId', '==', staffId), where('dateKey', 'in', chunk)))
+    const snap = await getDocs(query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', 'in', chunk)))
     for (const d of snap.docs) {
       const s = { id: d.id, ...(d.data() as Session) }
       if (!isCheckable(s) || !isAhead(s, today, nowMin)) continue
@@ -61,7 +61,7 @@ export function describeRanges(ranges: readonly AvailabilityRange[]): string {
 
 /**
  * Writes availability for one employee on several days in one batch (with one
- * audit entry). Tutors' writes are checked against the lock window by the rules.
+ * audit entry). Coaches' writes are checked against the lock window by the rules.
  */
 export async function writeAvailability(opts: {
   branchId: string
@@ -69,7 +69,7 @@ export async function writeAvailability(opts: {
   timezone: string
   staffId: string
   staffName: string
-  via: 'tutor' | 'admin'
+  via: 'coach' | 'admin'
   days: DayWrite[]
   summary?: string
 }) {
@@ -109,8 +109,8 @@ export async function writeAvailability(opts: {
           (days.length === 1
             ? `Set ${staffName}’s availability on ${formatDateKey(first.dateKey, 'weekdayMedium')}: ${describeRanges(normalizeRanges(first.ranges))}`
             : `Updated ${staffName}’s availability on ${days.length} days`),
-        tutorId: staffId,
-        tutorName: staffName,
+        coachId: staffId,
+        coachName: staffName,
         dateKey: first.dateKey,
       })
     }

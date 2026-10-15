@@ -25,7 +25,7 @@ export function StudentMonthCalendar({
   onPickSession,
   highlightSessionId,
   compact = false,
-  tutorId,
+  coachId,
   className,
   frameless = false,
 }: {
@@ -35,8 +35,8 @@ export function StudentMonthCalendar({
   onPickSession?: (s: WithId<Session>) => void
   highlightSessionId?: string | null
   compact?: boolean
-  /** Tutors may only read their own sessions. */
-  tutorId?: string | null
+  /** Coaches may only read their own sessions. */
+  coachId?: string | null
   /** Sets the scroll area's height (default: most of the screen). */
   className?: string
   /** No border of its own (inside a card that has one). */
@@ -51,13 +51,13 @@ export function StudentMonthCalendar({
   const q = useMemo(
     () =>
       studentId
-        ? tutorId
-          ? query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('tutorId', '==', tutorId), where('dateKey', '>=', from), where('dateKey', '<=', to))
+        ? coachId
+          ? query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('coachId', '==', coachId), where('dateKey', '>=', from), where('dateKey', '<=', to))
           : query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('dateKey', '>=', from), where('dateKey', '<=', to))
         : null,
-    [branchId, studentId, from, to, tutorId],
+    [branchId, studentId, from, to, coachId],
   )
-  const { data } = useQuery<Session>(q, `student-cal-${studentId}-${tutorId ?? 'all'}-${from}-${to}`, { keepPrevious: true })
+  const { data } = useQuery<Session>(q, `student-cal-${studentId}-${coachId ?? 'all'}-${from}-${to}`, { keepPrevious: true })
   const { map: dayConfigs } = useDayConfigs(from, to, { keepPrevious: true })
   const byDate = useMemo(() => {
     const m = new Map<DateKey, WithId<Session>[]>()
@@ -128,18 +128,18 @@ export function StudentMonthCalendar({
                       highlightSessionId === s.id && 'outline-1 outline-foreground outline-dashed',
                     )}
                     style={{ backgroundColor: st.bg, borderColor: st.border, color: st.text, borderLeft: s.note ? '3px solid #335586' : undefined }}
-                    title={`${s.tutorName}${s.note ? `\nNote: ${s.note}` : ''}`}
+                    title={`${s.coachName}${s.note ? `\nNote: ${s.note}` : ''}`}
                   >
                     {compact ? (
                       <>
-                        <span className="w-full truncate font-bold">{s.tutorName.split(' ')[0]}</span>
+                        <span className="w-full truncate font-bold">{s.coachName.split(' ')[0]}</span>
                         <span className="w-full truncate tabular-nums">{formatMinutesShort(s.startMin)}</span>
                       </>
                     ) : (
                       <>
                         <span className="text-[10.5px] font-semibold tabular-nums sm:hidden">{formatMinutesShort(s.startMin)}</span>
                         <span className="hidden text-xs font-semibold text-balance tabular-nums sm:block xl:text-[13px]">{timeRange(s.startMin, s.endMin)}</span>
-                        <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{s.tutorName.split(' ')[0]}</span>
+                        <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{s.coachName.split(' ')[0]}</span>
                       </>
                     )}
                   </button>

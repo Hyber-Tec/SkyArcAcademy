@@ -3,7 +3,7 @@ import type { AuditStamp, TimestampLike } from './types'
 
 // ------------------------------------------------------------ announcements
 
-/** "all" = everyone in the tutor portal; "members" = the listed people. */
+/** "all" = everyone in the coach portal; "members" = the listed people. */
 export type AnnouncementAudience = 'all' | 'members'
 
 export interface AnnouncementAttachment {
@@ -96,7 +96,7 @@ export function announcementCategories(defaults: readonly string[], used: readon
   return out
 }
 
-/** Who may see a post in the tutor portal. */
+/** Who may see a post in the coach portal. */
 export function isInAudience(a: Pick<Announcement, 'audienceType' | 'audienceKeys'>, memberKey: string): boolean {
   return a.audienceType === 'all' || (a.audienceKeys ?? []).includes(memberKey)
 }
@@ -122,7 +122,7 @@ export interface AppNotification {
   type: NotificationType
   title: string
   body: string
-  /** In-app path below the branch, e.g. "tutor/announcements/abc". */
+  /** In-app path below the branch, e.g. "coach/announcements/abc". */
   link: string
   refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null }
   createdAt: TimestampLike
@@ -132,14 +132,14 @@ export interface AppNotification {
 export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color: string }> = {
   announcement: { label: 'Announcement', color: '#6B7280' },
   announcement_updated: { label: 'Announcement Updated', color: '#6B7280' },
-  session_created: { label: 'New Session', color: '#16A34A' },
-  session_canceled: { label: 'Session Canceled', color: '#DC2626' },
-  session_restored: { label: 'Session Restored', color: '#D97706' },
-  session_deleted: { label: 'Session Removed', color: '#DC2626' },
+  session_created: { label: 'New Class', color: '#16A34A' },
+  session_canceled: { label: 'Class Canceled', color: '#DC2626' },
+  session_restored: { label: 'Class Restored', color: '#D97706' },
+  session_deleted: { label: 'Class Removed', color: '#DC2626' },
   session_time_changed: { label: 'Time Changed', color: '#2563EB' },
   session_date_changed: { label: 'Date Changed', color: '#7C3AED' },
   session_reassigned_in: { label: 'You Were Assigned', color: '#16A34A' },
-  session_reassigned_out: { label: 'Session Reassigned', color: '#D97706' },
+  session_reassigned_out: { label: 'Class Reassigned', color: '#D97706' },
   session_no_show: { label: 'No Show', color: '#DC2626' },
 }
 

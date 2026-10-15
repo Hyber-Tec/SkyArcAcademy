@@ -19,9 +19,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useMembers, useStaffList, useStudentList } from '@/features/data/hooks'
 import { cn } from '@/lib/utils'
 
-type PickRole = 'tutor' | 'parent' | 'student'
+type PickRole = 'coach' | 'parent' | 'student'
 
-const PICK_TITLE: Record<PickRole, string> = { tutor: 'Preview as a tutor', parent: 'Preview as a parent', student: 'Preview as a student' }
+const PICK_TITLE: Record<PickRole, string> = { coach: 'Preview as a coach', parent: 'Preview as a parent', student: 'Preview as a student' }
 
 /** Owners and admins: preview the app as another role. It changes what is shown, never their access. */
 export function ViewAsControl({ className }: { className?: string }) {
@@ -63,7 +63,7 @@ export function ViewAsControl({ className }: { className?: string }) {
           <DropdownMenuItem onSelect={() => go({ role: 'admin' })}>
             An admin {mark(viewAs?.role === 'admin')}
           </DropdownMenuItem>
-          {(['tutor', 'parent', 'student'] as const).map((r) => (
+          {(['coach', 'parent', 'student'] as const).map((r) => (
             <DropdownMenuItem key={r} onSelect={() => setPicking(r)}>
               A {r}… {who(r)}
               {mark(viewAs?.role === r)}
@@ -96,10 +96,10 @@ function PersonPicker({ role, onClose, onPick }: { role: PickRole; onClose: () =
   const studentName = useMemo(() => new Map(students.map((s) => [s.id, s.name])), [students])
 
   const options = useMemo((): { key: string; label: string; hint?: string; value: ViewAs }[] => {
-    if (role === 'tutor') {
+    if (role === 'coach') {
       return staff
-        .filter((s) => s.role === 'tutor' && s.status !== 'finished')
-        .map((s) => ({ key: s.id, label: s.name, value: { role: 'tutor', staffId: s.id, name: s.name } }))
+        .filter((s) => s.role === 'coach' && s.status !== 'finished')
+        .map((s) => ({ key: s.id, label: s.name, value: { role: 'coach', staffId: s.id, name: s.name } }))
     }
     if (role === 'student') {
       return students

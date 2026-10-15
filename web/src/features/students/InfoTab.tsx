@@ -32,7 +32,7 @@ const gradeLabel = (g: string) => (/^\d+$/.test(g) ? `Grade ${g}` : g)
 
 /**
  * Student page → Info. Reads like a profile; Edit turns it into the form (admins).
- * The Student section is what tutors see; contact details and family are for admins only.
+ * The Student section is what coaches see; contact details and family are for admins only.
  */
 export function InfoTab({ student, readOnly, priv, privLoading }: { student: WithId<Student>; readOnly: boolean; priv: StudentPrivateProfile | null; privLoading: boolean }) {
   const { branchId, actor, settings, timezone } = useBranch()
@@ -92,7 +92,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">{readOnly ? 'What admins have on file for this student.' : 'Tutors see the Student section. Contact details and family are for admins only.'}</p>
+          <p className="text-sm text-muted-foreground">{readOnly ? 'What admins have on file for this student.' : 'Coaches see the Student section. Contact details and family are for admins only.'}</p>
           {!readOnly ? (
             <Button variant="outline" className="shrink-0" onClick={startEdit} disabled={privLoading} data-testid="info-edit">
               <LuPencil /> Edit
@@ -103,7 +103,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
         <section className="rounded-xl border bg-card p-5" data-testid="info-student">
           <div className="mb-4 flex items-center gap-2">
             <h2 className="text-base font-semibold">Student</h2>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Tutors can see</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Coaches can see</span>
           </div>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
             <Item label="First name">{student.firstName || '—'}</Item>
@@ -115,8 +115,8 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
             </Item>
             <Item label="School">{student.school || '—'}</Item>
             <Item label="Sign-up date">{student.signUpDate ? formatDateKey(student.signUpDate, 'medium') : '—'}</Item>
-            <Item label="First session">{student.firstSessionDate ? formatDateKey(student.firstSessionDate, 'medium') : '—'}</Item>
-            <Item label="Last session">{student.lastSessionDate ? formatDateKey(student.lastSessionDate, 'medium') : '—'}</Item>
+            <Item label="First class">{student.firstSessionDate ? formatDateKey(student.firstSessionDate, 'medium') : '—'}</Item>
+            <Item label="Last class">{student.lastSessionDate ? formatDateKey(student.lastSessionDate, 'medium') : '—'}</Item>
             {!readOnly ? (
               <>
                 <Item label="Email" admin>
@@ -290,7 +290,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
               <Input id="sp-phone" type="tel" value={pform.phone} onChange={(e) => setP('phone', e.target.value)} />
             </Field>
           </div>
-          <p className="-mt-2 text-xs text-muted-foreground">The student’s email and phone are for admins only; tutors see the rest of this section.</p>
+          <p className="-mt-2 text-xs text-muted-foreground">The student’s email and phone are for admins only; coaches see the rest of this section.</p>
         </FieldGroup>
       </section>
 

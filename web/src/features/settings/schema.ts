@@ -43,14 +43,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: 'signup',
     title: 'Sign-up page',
-    description: 'The public page where new tutors, parents and students request access with Google.',
+    description: 'The public page where new coaches, parents and students request access with Google.',
     fields: [
       { kind: 'boolean', path: 'signup.enabled', label: 'Accept sign-up requests' },
       {
         kind: 'multiselect',
         path: 'signup.roles',
         label: 'Who can request access',
-        options: (['tutor', 'parent', 'student'] as const).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+        options: (['coach', 'parent', 'student'] as const).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
       },
       { kind: 'text', path: 'signup.welcomeMessage', label: 'Welcome message', multiline: true, help: 'Shown at the top of the sign-up page.' },
     ],
@@ -58,7 +58,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: 'schedule',
     title: 'Schedule',
-    description: 'Opening hours, session defaults and automatic confirmation.',
+    description: 'Opening hours, class defaults and automatic confirmation.',
     fields: [
       {
         kind: 'select',
@@ -67,8 +67,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         options: WEEKDAYS.map((d) => ({ value: d, label: WEEKDAY_LABELS[d] })),
         help: 'The first column of the schedule’s week and of every calendar.',
       },
-      { kind: 'weekHours', path: 'schedule.defaultWeek', label: 'Default opening hours', help: 'Each weekday’s usual hours. Dates set in “Opening hours by date” below (or edited on the schedule) override them. Sessions already booked outside new hours stay booked and show as conflicts on the schedule until moved.' },
-      { kind: 'number', path: 'schedule.defaultSessionMinutes', label: 'Default session length', min: 15, max: 480, step: 5, suffix: 'min' },
+      { kind: 'weekHours', path: 'schedule.defaultWeek', label: 'Default opening hours', help: 'Each weekday’s usual hours. Dates set in “Opening hours by date” below (or edited on the schedule) override them. Classes already booked outside new hours stay booked and show as conflicts on the schedule until moved.' },
+      { kind: 'number', path: 'schedule.defaultSessionMinutes', label: 'Default class length', min: 15, max: 480, step: 5, suffix: 'min' },
       { kind: 'number', path: 'schedule.snapMinutes', label: 'Time snap', min: 1, max: 60, step: 1, suffix: 'min', help: 'Clicks, drags and resizes snap to this step.' },
       {
         kind: 'select',
@@ -80,24 +80,24 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
           { value: 'month', label: 'Month' },
         ],
       },
-      { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending sessions automatically' },
+      { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending classes automatically' },
       { kind: 'number', path: 'schedule.autoConfirm.hoursBefore', label: 'Confirm this long before the start', min: 1, max: 168, suffix: 'hours' },
-      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated sessions', options: SESSION_STATUS_OPTIONS.slice(0, 2) },
+      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated classes', options: SESSION_STATUS_OPTIONS.slice(0, 2) },
       { kind: 'list', path: 'schedule.events.titlePresets', label: 'Event title presets', help: 'One per line. Offered when adding an event.' },
-      { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Bell: student’s first session' },
-      { kind: 'number', path: 'trash.retentionDays', label: 'Keep deleted sessions in Trash for', min: 1, max: 365, suffix: 'days' },
+      { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Bell: student’s first class' },
+      { kind: 'number', path: 'trash.retentionDays', label: 'Keep deleted classes in Trash for', min: 1, max: 365, suffix: 'days' },
     ],
   },
   {
     key: 'availability',
     title: 'Availability',
-    description: 'How far ahead tutors must enter availability, and when it locks.',
+    description: 'How far ahead coaches must enter availability, and when it locks.',
     fields: [
-      { kind: 'number', path: 'availability.leadTimeDays', label: 'Ask tutors to set availability at least', min: 0, max: 90, suffix: 'days ahead' },
+      { kind: 'number', path: 'availability.leadTimeDays', label: 'Ask coaches to set availability at least', min: 0, max: 90, suffix: 'days ahead' },
       {
         kind: 'select',
         path: 'availability.leadTimeEnforcement',
-        label: 'When a tutor is later than that',
+        label: 'When a coach is later than that',
         options: [
           { value: 'off', label: 'Do nothing' },
           { value: 'warn', label: 'Show a warning' },
@@ -111,7 +111,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         min: 0,
         max: 60,
         suffix: 'days',
-        help: 'Tutors can’t add, change or remove availability inside this window. Admins always can. 0 turns the lock off.',
+        help: 'Coaches can’t add, change or remove availability inside this window. Admins always can. 0 turns the lock off.',
       },
       { kind: 'number', path: 'availability.maxRangesPerDay', label: 'Time ranges per day', min: 1, max: 6 },
       { kind: 'number', path: 'availability.stepMinutes', label: 'Picker step', min: 5, max: 60, step: 5, suffix: 'min' },
@@ -123,8 +123,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     title: 'Students',
     description: 'Automatic status changes and grades.',
     fields: [
-      { kind: 'boolean', path: 'students.autoStatus.enabled', label: 'Update student statuses automatically', help: 'Signed Up → Enrolled after the first session; Enrolled ↔ Paused by activity.' },
-      { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', label: 'Pause after no sessions for', min: 1, max: 180, suffix: 'days' },
+      { kind: 'boolean', path: 'students.autoStatus.enabled', label: 'Update student statuses automatically', help: 'Signed Up → Enrolled after the first class; Enrolled ↔ Paused by activity.' },
+      { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', label: 'Pause after no classes for', min: 1, max: 180, suffix: 'days' },
       { kind: 'boolean', path: 'students.autoStatus.respectManual', label: 'Keep a status set by hand', help: 'A manual status stops the automatic changes until someone changes it again.' },
       { kind: 'list', path: 'students.gradeOptions', label: 'Grades', help: 'One per line.' },
     ],
@@ -137,7 +137,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       {
         kind: 'multiselect',
         path: 'payroll.teachingSessionStatuses',
-        label: 'Sessions that count as teaching time',
+        label: 'Classes that count as teaching time',
         options: SESSION_STATUS_OPTIONS.slice(0, 4),
         help: 'Only for the Teaching + Admin and Teaching only pay models.',
         visible: (r) => r.payModels.some((p) => p.model !== 'hourly'),
@@ -174,7 +174,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     title: 'Notifications',
     description: 'Push notifications arrive with the phone app; the app already records them.',
     fields: [
-      { kind: 'number', path: 'notifications.sessionChangeWindowHours', label: 'Notify tutors of changes within', min: 1, max: 168, suffix: 'hours' },
+      { kind: 'number', path: 'notifications.sessionChangeWindowHours', label: 'Notify coaches of changes within', min: 1, max: 168, suffix: 'hours' },
       { kind: 'number', path: 'notifications.retentionDays', label: 'Keep notifications for', min: 1, max: 365, suffix: 'days' },
     ],
   },

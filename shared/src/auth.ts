@@ -70,7 +70,7 @@ export function authErrorMessage(code: string | undefined | null, action: AuthAc
     case 'too-many-requests':
       return 'Too many tries. Wait a few minutes, then try again.'
     case 'user-disabled':
-      return 'This account has been turned off. Contact your center.'
+      return 'This account has been turned off. Contact your academy.'
     case 'network-request-failed':
       return 'No connection. Check your internet and try again.'
     case 'requires-recent-login':

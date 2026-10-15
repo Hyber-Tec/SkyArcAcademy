@@ -15,7 +15,7 @@ export type ProfileTab = 'sessions' | 'info' | 'calendar'
 const actionClass = 'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/50 hover:text-foreground [&_svg]:size-[18px] [&_svg]:text-foreground'
 
 /**
- * The student page's left column: who the student is, quick actions, attendance, the next session, family and tutors.
+ * The student page's left column: who the student is, quick actions, attendance, the next session, family and coaches.
  * It stays in view while the tabs change.
  */
 export function IdentityColumn({
@@ -59,7 +59,7 @@ export function IdentityColumn({
     isAdmin ? (
       <button key="session" type="button" className={actionClass} onClick={onNewSession}>
         <LuCalendarPlus />
-        Session
+        Class
       </button>
     ) : null,
     emails.length ? (
@@ -95,8 +95,8 @@ export function IdentityColumn({
         </dl>
         <dl className="hidden space-y-2 border-t px-5 py-4 text-sm sm:block">
           <DateRow label="Signed up" value={student.signUpDate} />
-          <DateRow label="First session" value={student.firstSessionDate} />
-          <DateRow label="Last session" value={student.lastSessionDate} />
+          <DateRow label="First class" value={student.firstSessionDate} />
+          <DateRow label="Last class" value={student.lastSessionDate} />
         </dl>
       </div>
 
@@ -104,7 +104,7 @@ export function IdentityColumn({
         {next ? (
           <>
             <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-              <span className="font-medium tracking-wide uppercase">Next session</span>
+              <span className="font-medium tracking-wide uppercase">Next class</span>
               <SessionStatusBadge status={next.status} />
             </div>
             <div className="mt-3 text-lg font-semibold">{formatDateKey(next.dateKey, 'weekdayLong').replace(/, \d{4}$/, '')}</div>
@@ -112,8 +112,8 @@ export function IdentityColumn({
               {timeSpan(next.startMin, next.endMin)}
             </div>
             <div className="mt-3 flex items-center gap-2 text-sm">
-              <span className="flex size-6 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold">{initialsOf(next.tutorName)}</span>
-              <span className="truncate">{next.tutorName}</span>
+              <span className="flex size-6 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold">{initialsOf(next.coachName)}</span>
+              <span className="truncate">{next.coachName}</span>
               {isAdmin ? (
                 <button type="button" className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-zinc-300 hover:text-white" onClick={() => onOpenSession(next.id)}>
                   Open <LuArrowRight className="size-3.5" />
@@ -123,11 +123,11 @@ export function IdentityColumn({
           </>
         ) : (
           <>
-            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Next session</div>
+            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Next class</div>
             <div className="mt-2 text-sm text-zinc-300">Nothing booked yet.</div>
             {isAdmin ? (
               <Button size="sm" variant="secondary" className="mt-3" onClick={onNewSession}>
-                <LuCalendarPlus /> Book a session
+                <LuCalendarPlus /> Book a class
               </Button>
             ) : null}
           </>
@@ -165,17 +165,17 @@ export function IdentityColumn({
         </div>
       ) : null}
 
-      {activity.tutors.length ? (
+      {activity.coaches.length ? (
         <div className="hidden rounded-xl border bg-card p-4 lg:block">
-          <h2 className="mb-3 text-sm font-semibold">Tutors</h2>
+          <h2 className="mb-3 text-sm font-semibold">Coaches</h2>
           <ul className="space-y-3">
-            {activity.tutors.slice(0, 6).map((t) => (
+            {activity.coaches.slice(0, 6).map((t) => (
               <li key={t.id} className="flex items-center gap-3">
                 <Avatar name={t.name} color={staffById.get(t.id)?.color} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{t.name}</div>
                 </div>
-                <span className="text-xs text-muted-foreground tabular-nums">{`${t.sessions} session${t.sessions === 1 ? '' : 's'}`}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{`${t.sessions} class${t.sessions === 1 ? '' : 'es'}`}</span>
               </li>
             ))}
           </ul>
