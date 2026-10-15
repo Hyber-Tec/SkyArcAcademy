@@ -2,7 +2,7 @@
 # can still break together). Once main passes, it deploys main to production (https://skyarcacademy.web.app).
 # The checks need no secrets. The deploy signs in to Google Cloud as github-deploy@skyarcacademy.iam.gserviceaccount.com
 # through Workload Identity Federation (no key file), which Google allows only for main of this repository.
-# See CLAUDE.md, "Git and commits", and docs/DEPLOY.md.
+# See CLAUDE.md and docs/DEPLOY.md. The ruleset on main requires the two check jobs by name.
 name: CI
 
 on:
@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   check:
-    name: Repository check and website build
+    name: Typecheck, tests and builds
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,20 +34,66 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+            functions/package-lock.json
 
       - name: Install
-        run: npm ci --prefix web
+        run: npm ci && npm ci --prefix web && npm ci --prefix functions
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build the website
         run: npm --prefix web run build
 
+      - name: Build the functions
+        run: npm --prefix functions run build
+
+  rules:
+    name: Security rules tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # The Firestore emulator needs Java 21 or later.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache the emulator
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-15.32.1
+
+      - name: Install
+        run: npm ci
+
+      - name: Firestore rules tests
+        run: bash scripts/test-rules.sh
+
   deploy:
     name: Deploy main to production
-    needs: [check]
+    needs: [check, rules]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -61,10 +107,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            functions/package-lock.json
 
       - name: Install
-        run: npm ci --prefix web
+        run: npm ci --prefix web && npm ci --prefix functions
 
       # The Firebase web settings live in GitHub secrets, never in the repository (CLAUDE.md, "Secrets").
       - name: Build the website for production
@@ -83,5 +131,7 @@ jobs:
           workload_identity_provider: projects/1025403274020/locations/global/workloadIdentityPools/github/providers/github-actions
           service_account: github-deploy@skyarcacademy.iam.gserviceaccount.com
 
-      - name: Deploy Hosting and the security rules
-        run: npx --yes firebase-tools@15.32.1 deploy --only hosting,firestore,database,storage --project skyarcacademy --non-interactive --force
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Deploy Hosting, the security rules and the functions
+        run: bash scripts/deploy.sh
