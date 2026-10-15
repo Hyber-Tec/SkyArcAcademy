@@ -66,7 +66,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - **Configurable, not hard-coded:** operating hours, cancellation/makeup/trial rules, capacity, pay rates, pay period.
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
-- **Language:** parent-facing screens support Korean + English.
+- **Language:** English only while the features are built. Korean and other languages come in one pass once
+  everything works (`docs/DECISIONS.md` §6, Q14).
 
 ## Owner and production
 
@@ -81,7 +82,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 | Path | What |
 |---|---|
-| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.*` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code, `components/ui/` shadcn components, `pages/public/` sign-in and the trial page. `public/` holds the brand files and icons. |
+| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code, `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
 | `shared/` | Pure TypeScript used by the website and the functions: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates. Unit tests sit next to the code. |
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, nightly jobs. |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
@@ -113,7 +114,8 @@ Carried over from HyberCRM, adapted to one academy:
 - **Audit:** every schedule, availability, people, pay and settings change writes an append-only `auditLog` entry in the same batch.
 - **Schedule UI:** keep HyberCRM's structure (coaches as rows, time across, Day / Week / Month, the side rail).
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
-- **Language:** Korean + English on every parent-facing screen. The chosen language is stored under `skyarc.lang` (the homepage already uses it).
+- **Language:** English for now. Keep text in the code, never in images, so the translation pass (several languages, not
+  only Korean) can come later.
 - **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logo is `SkyArcLogo` (full) or `SkyArcMark` (the reticle); `scripts/brand-icons.ts` rebuilds the icons from the favicon.
 - **Cloud Functions** run as `functions@skyarcacademy.iam.gserviceaccount.com` with only the roles they use (`docs/DEPLOY.md`). A function that needs another Google service needs that role added there first.
 - **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy. The email app password is the Secret Manager secret `GMAIL_APP_PASSWORD`.
