@@ -1,16 +1,17 @@
 import { limit, orderBy, query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
-import { LuArrowDown, LuArrowUp, LuCalendarCheck, LuCalendarClock, LuDownload, LuLock, LuPencil, LuTrash2, LuUserRound } from 'react-icons/lu'
+import { LuArrowDown, LuArrowUp, LuCalendarCheck, LuCalendarClock, LuCalendarDays, LuDownload, LuLock, LuPencil, LuTrash2, LuUserRound } from 'react-icons/lu'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
+import { priceClassBlocks } from '@shared/pay/classes'
 import { missingRates, rateName } from '@shared/pay/rates'
 import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import { type BusinessRules, type PayModel } from '@shared/settings/businessRules'
 import { type DateKey, addDays, formatDateKey, formatInstantTime, todayKey } from '@shared/time'
-import type { Staff, StaffStatus, WithId } from '@shared/types'
+import type { Session, Staff, StaffStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ConfirmDialog } from '@/components/app/ConfirmDialog'
 import { DatePicker } from '@/components/app/DatePicker'
@@ -45,12 +46,21 @@ type RoleFilter = 'all' | 'coach' | 'admin'
 
 interface PayRow {
   id: string
-  shift: WithId<ClockShift>
+  staffId: string
+  dateKey: DateKey
   seg: PricedSegment
   name: string
+  /** The time entry the row is part of; null for classes taught (Classes taught), which come from the schedule. */
+  shift: WithId<ClockShift> | null
   /** Paid rows the same time entry makes (editing or deleting one touches them all). */
   parts: number
+  /** Classes taught: the students in the block. */
+  students: number
 }
+
+type ShiftRow = PayRow & { shift: WithId<ClockShift> }
+
+const isShiftRow = (r: PayRow): r is ShiftRow => r.shift !== null
 
 const money = formatMoney
 
@@ -67,7 +77,9 @@ function modelsBetween(rules: BusinessRules, from: DateKey, to: DateKey): PayMod
  * the most recent payroll records 25 at a time, and a generated report for one
  * employee and date range with pay totals. Rows are pieces of time entries
  * (shifts), priced by the academy's pay model; Edit and Delete act on the
- * time entry they come from. The applied filters live in the URL.
+ * time entry they come from. Under Classes taught, a coach's rows are the
+ * class blocks they taught instead, from the schedule. The applied filters
+ * live in the URL.
  */
 export function PayrollPage() {
   const { branchId, actor, settings, rules, timezone } = useBranch()
@@ -120,29 +132,50 @@ export function PayrollPage() {
     [branchId, browseFrom, isReport],
   )
   const { data: older, loading: loadingOlder } = useQuery<ClockShift>(olderQuery, `pay-older-${branchId}-${browseFrom}-${isReport}`, { keepPrevious: true })
-  const loading = loadingShifts || loadingSessions || loadingOlder
+  // Classes taught are paid from the schedule, so older classes also mean older records.
+  const paysClasses = rules.payModels.some((p) => p.model === 'classes')
+  const olderClassQuery = useMemo(
+    () =>
+      isReport || !paysClasses ? null : query(branchCol(branchId, COL.sessions), where('dateKey', '<', browseFrom), orderBy('dateKey', 'desc'), limit(1)),
+    [branchId, browseFrom, isReport, paysClasses],
+  )
+  const { data: olderClass, loading: loadingOlderClass } = useQuery<Session>(olderClassQuery, `pay-older-classes-${branchId}-${browseFrom}-${isReport}`, { keepPrevious: true })
+  const loading = loadingShifts || loadingSessions || loadingOlder || loadingOlderClass
   const comps = useCompensationMap(staff.map((s) => s.id))
 
   const rows = useMemo(() => {
-    const priced = priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor: (id) => effectiveRates(staffById.get(id), comps.get(id)) })
+    const ratesFor = (id: string) => effectiveRates(staffById.get(id), comps.get(id))
+    const shown = (staffId: string, fallbackName: string) => {
+      const person = staffById.get(staffId)
+      return isReport || matches(person) || (!person && role === 'all' && status === 'all') ? (person?.name ?? fallbackName) : null
+    }
     const out: PayRow[] = []
-    for (const p of priced) {
-      const person = staffById.get(p.shift.staffId)
-      if (!isReport && !(matches(person) || (!person && role === 'all' && status === 'all'))) continue
-      // Unpaid time (Teaching only) isn't a payroll record.
+    for (const p of priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor })) {
+      const name = shown(p.shift.staffId, p.shift.staffName)
+      if (name === null) continue
+      // Unpaid time (Teaching only's gaps, and every clock-in under Classes taught) isn't a payroll record.
       const paid = p.segments.filter((s) => !s.unpaid)
-      paid.forEach((seg, i) => out.push({ id: `${p.shift.id}-${i}`, shift: p.shift, seg, name: person?.name ?? p.shift.staffName, parts: paid.length }))
+      paid.forEach((seg, i) =>
+        out.push({ id: `${p.shift.id}-${i}`, staffId: p.shift.staffId, dateKey: p.shift.dateKey, shift: p.shift, seg, name, parts: paid.length, students: 0 }),
+      )
+    }
+    const names = new Map(sessions.map((s) => [s.coachId, s.coachName]))
+    for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) {
+      if (b.dateKey < qFrom || b.dateKey > qTo) continue
+      const name = shown(b.staffId, names.get(b.staffId) ?? 'Coach')
+      if (name === null) continue
+      out.push({ id: `class-${b.staffId}-${b.segment.startMs}`, staffId: b.staffId, dateKey: b.dateKey, shift: null, seg: b.segment, name, parts: 1, students: b.students })
     }
     const dir = sortAsc ? 1 : -1
-    return out.sort((a, b) => a.shift.dateKey.localeCompare(b.shift.dateKey) * dir || a.name.localeCompare(b.name) || a.seg.startMs - b.seg.startMs)
+    return out.sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.name.localeCompare(b.name) || a.seg.startMs - b.seg.startMs)
     // `matches` reads role and status.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shifts, sessions, settings, rules, timezone, staffById, comps, isReport, role, status, sortAsc])
+  }, [shifts, sessions, settings, rules, timezone, staffById, comps, isReport, role, status, sortAsc, qFrom, qTo])
 
   const size = report ? REPORT_PAGE : BROWSE_PAGE
   const pageCount = Math.max(1, Math.ceil(rows.length / size))
   const pageRows = rows.slice((page - 1) * size, page * size)
-  const olderDate = older[0]?.dateKey ?? null
+  const olderDate = [older[0]?.dateKey, olderClass[0]?.dateKey].filter((d): d is DateKey => !!d).sort().pop() ?? null
 
   // The recent list reaches further back until the page is full or nothing older exists.
   useEffect(() => {
@@ -179,18 +212,19 @@ export function PayrollPage() {
   const reportMissing = report && person && rates ? missingRates(person.role, rates, models.includes('teaching_admin')) : []
   const { gaps } = usePayGaps(!report)
 
-  const [editing, setEditing] = useState<PayRow | null>(null)
-  const [deleting, setDeleting] = useState<PayRow | null>(null)
+  const [editing, setEditing] = useState<ShiftRow | null>(null)
+  const [deleting, setDeleting] = useState<ShiftRow | null>(null)
   const [periodsOpen, setPeriodsOpen] = useState(false)
   const isLocked = (d: DateKey) => !!lockedThrough && d <= lockedThrough
   const timeOf = (ms: number) => formatInstantTime(ms, timezone)
-  const entryLabel = (r: PayRow) =>
+  const entryLabel = (r: ShiftRow) =>
     `${r.name}’s time entry on ${formatDateKey(r.shift.dateKey, 'weekdayMedium')}, ${timeOf(r.shift.clockInAt.toMillis())} – ${r.shift.clockOutAt ? timeOf(r.shift.clockOutAt.toMillis()) : 'open'}`
+  const typeLabel = (r: PayRow) => (!isShiftRow(r) ? 'Classes' : r.seg.type === 'teaching' ? 'Teaching' : 'Admin')
 
   function exportCsv() {
     const lines = [['Date', 'Name', 'Type', 'Start time', 'End time', 'Hours', 'Rate', 'Total']]
     for (const r of rows) {
-      lines.push([r.shift.dateKey, r.name, r.seg.type === 'teaching' ? 'Teaching' : 'Admin', timeOf(r.seg.startMs), timeOf(r.seg.endMs), r.seg.hours.toFixed(2), r.seg.rate.toFixed(2), r.seg.pay.toFixed(2)])
+      lines.push([r.dateKey, r.name, typeLabel(r), timeOf(r.seg.startMs), timeOf(r.seg.endMs), r.seg.hours.toFixed(2), r.seg.rate.toFixed(2), r.seg.pay.toFixed(2)])
     }
     const blob = new Blob([lines.map((l) => l.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv' })
     const a = document.createElement('a')
@@ -200,13 +234,13 @@ export function PayrollPage() {
   }
 
   // Rows are shaded by date, not one by one (TE).
-  const shaded = pageRows.reduce<boolean[]>((acc, r, i) => [...acc, i > 0 && (r.shift.dateKey !== pageRows[i - 1].shift.dateKey ? !acc[i - 1] : acc[i - 1])], [])
+  const shaded = pageRows.reduce<boolean[]>((acc, r, i) => [...acc, i > 0 && (r.dateKey !== pageRows[i - 1].dateKey ? !acc[i - 1] : acc[i - 1])], [])
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Payroll"
-        description="Worked time priced with each employee’s rates under the academy’s pay model."
+        description="Each employee’s pay, priced with their rates under the academy’s pay model."
         actions={
           <>
             <Button variant="outline" onClick={exportCsv} disabled={!rows.length}>
@@ -336,6 +370,12 @@ export function PayrollPage() {
               {paysAdmin ? 'Part of this range uses Teaching only: ' : 'This academy pays Teaching only: '}clocked time outside classes isn’t paid, so it isn’t listed.
             </p>
           ) : null}
+          {!singleRate && models.includes('classes') ? (
+            <p className="text-xs text-muted-foreground">
+              {models.length > 1 ? 'Part of this range uses Classes taught: ' : 'This academy pays Classes taught: '}
+              coaches are paid for the classes they teach, from the schedule. Their clock-ins are kept as a log in Time Entries and aren’t listed.
+            </p>
+          ) : null}
         </Card>
       ) : null}
 
@@ -389,32 +429,39 @@ export function PayrollPage() {
               </TableRow>
             ) : (
               pageRows.map((r, i) => {
-                const locked = isLocked(r.shift.dateKey)
-                const employeePath = `/admin/employees/directory/${r.shift.staffId}`
+                const locked = isLocked(r.dateKey)
+                const employeePath = `/admin/employees/directory/${r.staffId}`
+                const dayPath = `/admin/schedule/day/${r.dateKey}`
                 return (
                   <ContextMenuFor
                     key={r.id}
                     entries={menu(
-                      { kind: 'label', label: `${r.name} · ${formatDateKey(r.shift.dateKey, 'weekdayMedium')}` },
+                      { kind: 'label', label: `${r.name} · ${formatDateKey(r.dateKey, 'weekdayMedium')}` },
                       locked && { kind: 'label', label: 'In a locked pay period' },
-                      { label: 'Edit shift…', icon: LuPencil, disabled: locked, onSelect: () => setEditing(r) },
-                      { label: 'Delete shift', icon: LuTrash2, destructive: true, disabled: locked, onSelect: () => setDeleting(r) },
+                      isShiftRow(r) && { label: 'Edit shift…', icon: LuPencil, disabled: locked, onSelect: () => setEditing(r) },
+                      isShiftRow(r) && { label: 'Delete shift', icon: LuTrash2, destructive: true, disabled: locked, onSelect: () => setDeleting(r) },
+                      !isShiftRow(r) && { label: 'Open in schedule', icon: LuCalendarDays, onSelect: () => navigate(dayPath) },
                       { label: 'Open employee profile', icon: LuUserRound, separatorBefore: true, onSelect: () => navigate(employeePath) },
                       { label: 'Open in new tab', onSelect: () => window.open(employeePath, '_blank', 'noopener') },
                       {
                         label: 'Clock in/out calendar',
                         icon: LuCalendarClock,
-                        onSelect: () => navigate(`/admin/employees/calendar?staff=${r.shift.staffId}&mode=clock`),
+                        onSelect: () => navigate(`/admin/employees/calendar?staff=${r.staffId}&mode=clock`),
                       },
                     )}
                   >
                     <TableRow className={cn(shaded[i] && 'bg-muted/80 hover:bg-muted')} data-testid="payroll-row">
-                      <TableCell className="whitespace-nowrap">{formatDateKey(r.shift.dateKey, r.shift.dateKey.slice(0, 4) === today.slice(0, 4) ? 'weekdayMedium' : 'medium')}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatDateKey(r.dateKey, r.dateKey.slice(0, 4) === today.slice(0, 4) ? 'weekdayMedium' : 'medium')}</TableCell>
                       <TableCell className="font-medium whitespace-nowrap">{r.name}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={r.seg.type === 'teaching' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300'}>
-                          {r.seg.type === 'teaching' ? 'Teaching' : 'Admin'}
+                          {typeLabel(r)}
                         </Badge>
+                        {!isShiftRow(r) ? (
+                          <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
+                            {r.students} student{r.students === 1 ? '' : 's'}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">{timeOf(r.seg.startMs)}</TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">{timeOf(r.seg.endMs)}</TableCell>
@@ -431,7 +478,7 @@ export function PayrollPage() {
                             </TooltipTrigger>
                             <TooltipContent>In a locked pay period</TooltipContent>
                           </Tooltip>
-                        ) : (
+                        ) : isShiftRow(r) ? (
                           <div className="flex gap-1">
                             <Button variant="ghost" size="xs" onClick={() => setEditing(r)}>
                               Edit
@@ -440,6 +487,10 @@ export function PayrollPage() {
                               Delete
                             </Button>
                           </div>
+                        ) : (
+                          <Button variant="ghost" size="xs" asChild>
+                            <Link to={dayPath}>Schedule</Link>
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -464,9 +515,12 @@ export function PayrollPage() {
         </div>
       </Card>
       <p className="mt-2 text-xs text-muted-foreground">
-        Under Hourly, all of a coach’s clocked time is teaching time; otherwise it’s clocked time inside classes marked{' '}
-        {settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(', ')}. Hours are rounded to 0.01 h; pay is computed from the rounded hours. Each row is part of a
-        time entry: Edit and Delete change that whole entry.
+        {paysClasses
+          ? 'Under Classes taught, a coach’s rows are the class blocks they taught, each paid once however many students were in it. '
+          : null}
+        Under Hourly, all of a coach’s clocked time is teaching time; under the other models it’s clocked time inside classes. Classes count when they’re marked{' '}
+        {settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(', ')}. Hours are rounded to 0.01 h; pay is computed from the rounded hours. A row from a time
+        entry is part of that entry: Edit and Delete change the whole entry.
       </p>
 
       <ShiftDialog

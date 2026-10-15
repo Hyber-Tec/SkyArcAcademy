@@ -321,11 +321,13 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
       ]
   const description = single
     ? 'Paid this hourly rate for all clocked time.'
-    : modelNow === 'hourly'
-      ? 'Paid the teaching rate for every clocked hour.'
-      : modelNow === 'teaching_only'
-        ? 'Paid for teaching time only: time inside attended classes. Other clocked time is unpaid.'
-        : 'Time inside attended classes is paid at the teaching rate; the rest of the shift at the admin rate.'
+    : modelNow === 'classes'
+      ? 'Paid the teaching rate, per hour, for the classes they teach. Clocking in and out is only a log.'
+      : modelNow === 'hourly'
+        ? 'Paid the teaching rate for every clocked hour.'
+        : modelNow === 'teaching_only'
+          ? 'Paid for teaching time only: time inside attended classes. Other clocked time is unpaid.'
+          : 'Time inside attended classes is paid at the teaching rate; the rest of the shift at the admin rate.'
 
   return (
     <Card ref={card} id="pay" className="scroll-mt-4">

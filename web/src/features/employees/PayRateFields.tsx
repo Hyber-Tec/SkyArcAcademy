@@ -15,7 +15,7 @@ import { type RateDraft, askedRates } from './rateDraft'
 export function PayRateFields({ role, value, onChange, idPrefix }: { role: StaffRole; value: RateDraft; onChange: (v: RateDraft) => void; idPrefix: string }) {
   const { rules, timezone, can } = useBranch()
   const needAdmin = coachesNeedAdminRate(rules, todayKey(timezone))
-  const hourly = payModelOn(rules, todayKey(timezone)) === 'hourly'
+  const model = payModelOn(rules, todayKey(timezone))
   if (!can('payRates')) {
     return (
       <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -33,9 +33,11 @@ export function PayRateFields({ role, value, onChange, idPrefix }: { role: Staff
         ? 'Paid for all clocked time.'
         : needAdmin
           ? 'Teaching rate for time in attended classes; admin rate for the rest of the shift.'
-          : hourly
-            ? 'Paid this rate for every clocked hour.'
-            : 'Paid for teaching time only: time in attended classes.'
+          : model === 'classes'
+            ? 'Paid this rate, per hour, for the classes they teach.'
+            : model === 'hourly'
+              ? 'Paid this rate for every clocked hour.'
+              : 'Paid for teaching time only: time in attended classes.'
   return (
     <FieldSet>
       <FieldLegend variant="label">Pay</FieldLegend>

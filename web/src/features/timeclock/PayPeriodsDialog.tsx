@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react'
 import { LuLock, LuLockOpen, LuTriangleAlert } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { COL, DOC } from '@shared/paths'
+import { priceClassBlocks } from '@shared/pay/classes'
 import { periodId } from '@shared/pay/periods'
-import { formatMoney, totals } from '@shared/pay/segment'
-import { addDays, formatDateKey, todayKey } from '@shared/time'
+import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
+import { type DateKey, addDays, formatDateKey, todayKey } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -47,19 +48,28 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
   const { data: sessions, loading: l2 } = useSessionsRange(addDays(period.start, -1), addDays(period.end, 1), null, open)
   const loading = l1 || l2
 
+  // Each person's priced time in the period: their time entries, and the classes they taught under Classes taught.
   const people = useMemo(() => {
-    const priced = priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor: (id) => effectiveRates(staffById.get(id), comps.get(id)) })
-    const by = new Map<string, typeof priced>()
-    for (const p of priced) by.set(p.shift.staffId, [...(by.get(p.shift.staffId) ?? []), p])
-    return [...by.entries()].map(([id, list]) => ({
-      id,
-      name: staffById.get(id)?.name ?? list[0].shift.staffName,
-      list,
-      t: totals(list.flatMap((x) => x.segments)),
-      open: list.filter((x) => x.open).length,
-    }))
-  }, [shifts, sessions, settings, rules, timezone, staffById, comps])
-  const grand = totals(people.flatMap((p) => p.list.flatMap((x) => x.segments)))
+    const ratesFor = (id: string) => effectiveRates(staffById.get(id), comps.get(id))
+    const by = new Map<string, { name: string; segments: (PricedSegment & { dateKey: DateKey })[]; open: number }>()
+    const entry = (id: string, name: string) => {
+      const e = by.get(id) ?? { name: staffById.get(id)?.name ?? name, segments: [], open: 0 }
+      by.set(id, e)
+      return e
+    }
+    for (const p of priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor })) {
+      const e = entry(p.shift.staffId, p.shift.staffName)
+      if (p.open) e.open++
+      e.segments.push(...p.segments.map((s) => ({ ...s, dateKey: p.shift.dateKey })))
+    }
+    const coachNames = new Map(sessions.map((s) => [s.coachId, s.coachName]))
+    for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) {
+      if (b.dateKey < period.start || b.dateKey > period.end) continue
+      entry(b.staffId, coachNames.get(b.staffId) ?? 'Coach').segments.push({ ...b.segment, dateKey: b.dateKey })
+    }
+    return [...by.entries()].map(([id, e]) => ({ id, name: e.name, segments: e.segments, t: totals(e.segments), open: e.open }))
+  }, [shifts, sessions, settings, rules, timezone, staffById, comps, period.start, period.end])
+  const grand = totals(people.flatMap((p) => p.segments))
   const openShifts = people.reduce((n, p) => n + p.open, 0)
 
   const locked = isLocked(period.end)
@@ -85,7 +95,7 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
         staffId: p.id,
         name: p.name,
         ...p.t,
-        segments: p.list.flatMap((x) => x.segments.map((s) => ({ ...s, dateKey: x.shift.dateKey }))),
+        segments: p.segments,
       })
     }
     batch.set(branchDocRef(branchId, COL.payroll, DOC.payrollState), { lockedThrough: period.end, updatedAt: serverTimestamp(), updatedBy: actor.email })

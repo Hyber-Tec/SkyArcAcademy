@@ -141,7 +141,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         path: 'payroll.teachingSessionStatuses',
         label: 'Classes that count as teaching time',
         options: SESSION_STATUS_OPTIONS.slice(0, 4),
-        help: 'Only for the Teaching + Admin and Teaching only pay models.',
+        help: 'Which classes are paid under Classes taught, and count as teaching time under Teaching + Admin and Teaching only. Not used by Hourly.',
         visible: (r) => r.payModels.some((p) => p.model !== 'hourly'),
       },
       {
