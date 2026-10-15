@@ -2,6 +2,7 @@ import { query, where } from 'firebase/firestore'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { COL } from '@shared/paths'
+import { priceClassBlocks } from '@shared/pay/classes'
 import { unionMinutes } from '@shared/schedule/lanes'
 import type { Session } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -156,34 +157,26 @@ function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teac
   const comps = useCompensationMap([staffId])
   const cells = useMemo(() => {
     const m = new Map<string, DayCell>()
-    const priced = priceShifts({
-      shifts: shifts.filter((s) => s.status === 'closed'),
-      sessions,
-      settings,
-      rules,
-      timezone,
-      ratesFor: () => effectiveRates(staff.find((s) => s.id === staffId), comps.get(staffId)),
-    })
-    for (const p of priced) {
-      const d = p.shift.dateKey
+    const ratesFor = () => effectiveRates(staff.find((s) => s.id === staffId), comps.get(staffId))
+    const add = (d: string, startMs: number, endMs: number, tone: 'clock' | 'teaching' | 'admin') => {
       const cell = m.get(d) ?? { minutes: 0, lines: [] }
-      if (mode === 'clock') {
-        const mins = (p.shift.clockOutAt!.toMillis() - p.shift.clockInAt.toMillis()) / 60000
-        cell.minutes += mins
-        cell.lines!.push({ label: boxRange(formatInstantTime(p.shift.clockInAt.toDate(), timezone), formatInstantTime(p.shift.clockOutAt!.toDate(), timezone)), tone: 'clock' })
-      } else {
-        for (const seg of p.segments.filter((x) => x.type === mode)) {
-          cell.minutes += (seg.endMs - seg.startMs) / 60000
-          cell.lines!.push({ label: boxRange(formatInstantTime(seg.startMs, timezone), formatInstantTime(seg.endMs, timezone)), tone: mode })
-        }
-      }
+      cell.minutes += (endMs - startMs) / 60000
+      cell.lines!.push({ label: boxRange(formatInstantTime(startMs, timezone), formatInstantTime(endMs, timezone)), tone })
       if (cell.minutes > 0) m.set(d, cell)
     }
+    for (const p of priceShifts({ shifts: shifts.filter((s) => s.status === 'closed'), sessions, settings, rules, timezone, ratesFor })) {
+      if (mode === 'clock') add(p.shift.dateKey, p.shift.clockInAt.toMillis(), p.shift.clockOutAt!.toMillis(), 'clock')
+      // Unpaid time (Teaching only's gaps, and every clock-in under Classes taught) isn't paid time.
+      else for (const seg of p.segments.filter((x) => x.type === mode && !x.unpaid)) add(p.shift.dateKey, seg.startMs, seg.endMs, mode)
+    }
+    if (mode === 'teaching') {
+      for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) if (b.dateKey >= from && b.dateKey <= to) add(b.dateKey, b.segment.startMs, b.segment.endMs, 'teaching')
+    }
     return m
-  }, [shifts, sessions, settings, rules, timezone, staff, comps, staffId, mode])
+  }, [shifts, sessions, settings, rules, timezone, staff, comps, staffId, mode, from, to])
   const notes = {
     clock: 'Worked time from clock-ins and time entries.',
-    teaching: 'Clocked time paid as teaching time under the academy’s pay model.',
+    teaching: 'Time paid as teaching under the academy’s pay model: classes taught under Classes taught, otherwise clocked time.',
     admin: 'Clocked time paid as admin time.',
   }
   return <HoursCalendar cells={cells} tone={mode} onRange={onRange} footnote={notes[mode]} />

@@ -172,7 +172,7 @@ left alone. (Done on 2026-10-15.)
 
 ## Sample data
 
-Until the academy's real data arrives (A12 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
+Until the academy's real data arrives (A1–A4 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
 tried with real-looking weeks. `npm run seed:sample` adds:
 
 - a manager and four coaches with pay rates, availability and four weeks of time entries;
@@ -203,7 +203,10 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
    academy's domain (e.g. a Google Workspace mailbox) so mail stops landing in spam; publish SPF, DKIM and DMARC for
    it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
    `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
-5. **Sample data:** removed (see above), and the privacy policy online (Q15 in `docs/QUESTIONS.md`).
+5. **Sample data:** removed (see above).
+6. **Privacy policy:** approved by the academy (A17 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
+   `web/src/pages/public/PrivacyPage.tsx` to the date it takes effect, and check the academy's contact details in
+   Settings → Academy (the policy shows them). Families are invited and trial booking opens only after this.
 
 ## Manual deploy (only when GitHub Actions is down)
 

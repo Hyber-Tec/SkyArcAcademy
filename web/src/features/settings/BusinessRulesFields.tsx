@@ -1,9 +1,9 @@
-import { MAX_STUDENTS_PER_COACH_LIMIT, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
+import { DEFAULT_BUSINESS_RULES, MAX_STUDENTS_PER_COACH_LIMIT, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-/** Pay model cards: Hourly (the default), Teaching + Admin, or Teaching only. */
+/** Pay model cards: Classes taught (the default), Hourly, Teaching + Admin, or Teaching only. */
 export function PayModelChoice({ value, onChange, idPrefix }: { value: PayModel; onChange: (m: PayModel) => void; idPrefix: string }) {
   return (
     <RadioGroup value={value} onValueChange={(v) => onChange(v as PayModel)} className="grid gap-2">
@@ -13,7 +13,7 @@ export function PayModelChoice({ value, onChange, idPrefix }: { value: PayModel;
             <FieldContent>
               <FieldTitle>
                 {PAY_MODEL_LABELS[m]}
-                {m === 'hourly' ? <span className="text-xs font-normal text-muted-foreground">(default)</span> : null}
+                {m === DEFAULT_BUSINESS_RULES.payModels[0].model ? <span className="text-xs font-normal text-muted-foreground">(default)</span> : null}
               </FieldTitle>
               <FieldDescription>{PAY_MODEL_HELP[m]}</FieldDescription>
             </FieldContent>

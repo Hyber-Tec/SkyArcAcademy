@@ -7,7 +7,7 @@ describe('business rules', () => {
     expect(resolveBusinessRules({ maxStudentsPerCoach: 0 }).maxStudentsPerCoach).toBe(6)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 99 }).maxStudentsPerCoach).toBe(6)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 2 }).maxStudentsPerCoach).toBe(2)
-    expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('hourly')
+    expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('classes')
   })
 
   it('finds the pay model in force on a date', () => {

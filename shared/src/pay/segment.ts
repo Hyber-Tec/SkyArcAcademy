@@ -5,6 +5,7 @@
  * back-to-back sessions merge, and sessions outside the shift are clipped away.
  * Hours are rounded to 0.01 h and pay is computed from the rounded hours.
  */
+import type { PayModel } from '../settings/businessRules'
 
 export type PayType = 'teaching' | 'admin'
 
@@ -21,7 +22,7 @@ export interface PricedSegment extends Segment {
   hours: number
   rate: number
   pay: number
-  /** Teaching only: clocked time outside sessions, which isn't paid. */
+  /** Clocked time that isn't paid: outside classes under Teaching only, and all of it under Classes taught (a log). */
   unpaid?: true
 }
 
@@ -81,15 +82,17 @@ export interface Rates {
 
 /**
  * How a shift is paid. Coaches follow the academy's pay model on the shift's date (`hourly`: the whole shift at their
- * rate; `teaching_admin`: the split by classes; `teaching_only`: only time in classes is paid); owners and admins
- * never teach and are paid one rate (`single_rate`).
+ * rate; `teaching_admin`: the split by classes; `teaching_only`: only time in classes is paid; `classes`: none of it,
+ * since classes taught are paid from the schedule, see `priceClassBlocks`); owners and admins are paid one rate for all
+ * clocked time (`single_rate`).
  */
-export type EffectivePayModel = 'hourly' | 'teaching_admin' | 'teaching_only' | 'single_rate'
+export type EffectivePayModel = 'classes' | 'hourly' | 'teaching_admin' | 'teaching_only' | 'single_rate'
 
 /**
  * Prices a shift. `single_rate` pays the whole shift at the person's hourly rate (`rates.admin`); `hourly` pays the
  * whole shift as teaching time at the coach's rate (`rates.teaching`); a forced type pays the whole shift as that type.
- * Under Teaching only, admin time is kept (so the shift still adds up) but unpaid.
+ * Under Teaching only, admin time is kept (so the shift still adds up) but unpaid; under Classes taught the whole shift
+ * is an unpaid log.
  */
 export function priceShift(
   shift: Interval,
@@ -99,6 +102,7 @@ export function priceShift(
   forcedType: PayType | null = null,
 ): PricedSegment[] {
   if (shift.endMs <= shift.startMs) return []
+  if (model === 'classes') return [{ type: 'admin', ...shift, hours: hoursOf(shift.endMs - shift.startMs), rate: 0, pay: 0, unpaid: true }]
   const segs: Segment[] =
     model === 'single_rate'
       ? [{ type: 'admin', ...shift }]
@@ -121,7 +125,7 @@ export interface PayTotals {
   total: { hours: number; pay: number }
 }
 
-/** Paid hours and pay by type (unpaid Teaching-only time is left out). */
+/** Paid hours and pay by type (unpaid time is left out). */
 export function totals(segments: readonly PricedSegment[]): PayTotals {
   const t = { teaching: { hours: 0, pay: 0 }, admin: { hours: 0, pay: 0 } }
   for (const s of segments) {
@@ -136,6 +140,6 @@ export function totals(segments: readonly PricedSegment[]): PayTotals {
 }
 
 /** Which pay model applies to an employee's shift: the academy's model for coaches, one rate for owners and admins. */
-export function payModelFor(opts: { role: 'owner' | 'admin' | 'coach' | undefined; branchModel: 'hourly' | 'teaching_admin' | 'teaching_only' }): EffectivePayModel {
+export function payModelFor(opts: { role: 'owner' | 'admin' | 'coach' | undefined; branchModel: PayModel }): EffectivePayModel {
   return opts.role === 'owner' || opts.role === 'admin' ? 'single_rate' : opts.branchModel
 }

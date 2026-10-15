@@ -1,6 +1,7 @@
-/* The placeholder homepage: logo, one line, Book a trial and Log in, in Korean or English. The landing page comes
-   later (the owner); keep this minimal. Brand colors come from the logo: black, white and red #FB0202. White text on
-   #FB0202 is 4.1:1, so solid buttons use the deeper #E00000 (5:1) and the brand red stays for accents. */
+/* The placeholder homepage: logo, one line, Book a trial and Log in, in English (other languages come once every
+   feature is built: docs/DECISIONS.md §6). The landing page comes later (the owner); keep this minimal. Brand colors
+   come from the logo: black, white and red #FB0202. White text on #FB0202 is 4.1:1, so solid buttons use the deeper
+   #E00000 (5:1) and the brand red stays for accents. */
 :root {
   --brand-red: #fb0202;
   --button-red: #e00000;
@@ -8,9 +9,7 @@
   --black: #000;
   --white: #fff;
   color-scheme: dark;
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic',
-    sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 *,
@@ -27,39 +26,10 @@ body {
 body {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   background: var(--black);
   color: var(--white);
   -webkit-font-smoothing: antialiased;
-}
-
-/* Only the chosen language shows. */
-html[lang='ko'] [data-show='en'],
-html:not([lang='ko']) [data-show='ko'] {
-  display: none !important;
-}
-
-.top {
-  display: flex;
-  justify-content: flex-end;
-  padding: 16px;
-}
-
-.lang {
-  appearance: none;
-  padding: 6px 14px;
-  border: 1px solid rgb(255 255 255 / 0.3);
-  border-radius: 999px;
-  background: transparent;
-  color: rgb(255 255 255 / 0.85);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.lang:hover {
-  border-color: rgb(255 255 255 / 0.7);
-  color: var(--white);
 }
 
 .hero {
@@ -68,7 +38,7 @@ html:not([lang='ko']) [data-show='ko'] {
   align-items: center;
   justify-content: center;
   gap: 28px;
-  padding: 16px 16px 56px;
+  padding: 56px 16px;
   text-align: center;
 }
 
@@ -134,7 +104,7 @@ html:not([lang='ko']) [data-show='ko'] {
 }
 
 .btn:focus-visible,
-.lang:focus-visible {
+.foot a:focus-visible {
   outline: 2px solid var(--white);
   outline-offset: 3px;
 }
@@ -144,4 +114,13 @@ html:not([lang='ko']) [data-show='ko'] {
   color: rgb(255 255 255 / 0.5);
   font-size: 13px;
   text-align: center;
+}
+
+.foot a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+.foot a:hover {
+  color: var(--white);
 }

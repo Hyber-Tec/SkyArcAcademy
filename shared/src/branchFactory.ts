@@ -26,8 +26,9 @@ export function newBranchData(input: {
   }
 }
 
-export function publicProfileFor(branch: Pick<Branch, 'name' | 'shortName' | 'status' | 'timezone' | 'branding' | 'settings'>): BranchPublicProfile {
+export function publicProfileFor(branch: Pick<Branch, 'name' | 'shortName' | 'status' | 'timezone' | 'branding' | 'settings' | 'contact'>): BranchPublicProfile {
   const signup = { ...DEFAULT_SETTINGS.signup, ...(branch.settings?.signup ?? {}) }
+  const c = branch.contact
   return {
     name: branch.name,
     shortName: branch.shortName,
@@ -38,6 +39,7 @@ export function publicProfileFor(branch: Pick<Branch, 'name' | 'shortName' | 'st
     signupEnabled: signup.enabled !== false,
     signupRoles: (signup.roles ?? DEFAULT_SETTINGS.signup.roles).filter(Boolean) as BranchPublicProfile['signupRoles'],
     signupMessage: signup.welcomeMessage ?? '',
+    contact: { email: c?.email?.trim() ?? '', phone: c?.phone?.trim() ?? '', address: c?.address?.trim() ?? '', website: c?.website?.trim() ?? '' },
   }
 }
 

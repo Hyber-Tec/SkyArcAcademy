@@ -4,8 +4,8 @@ import type { Weekday } from '../time'
 /**
  * Settings the academy's admins may change (the core rules the owner sets live in `businessRules.ts`). The academy
  * stores only its overrides (`branches/{b}.settings`); everything reads `resolveSettings(branch.settings)`. Defaults
- * follow Sky Arc's current practice (its weekly sheets and website, Oct 2026) until Matt confirms the real values
- * (docs/DECISIONS.md); they are never hard-coded anywhere else.
+ * follow Sky Arc's current practice (its weekly sheets and website, Oct 2026) until the academy confirms the real
+ * values (docs/QUESTIONS.md); they are never hard-coded anywhere else.
  */
 
 export interface DayHours {

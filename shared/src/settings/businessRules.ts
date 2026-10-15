@@ -7,23 +7,27 @@ import { type DateKey, addDays } from '../time'
  */
 
 /**
- * Hourly (Sky Arc's default): every clocked hour at the coach's rate. Teaching only: only time in classes is paid.
- * Teaching + Admin: the class rate in classes and the admin rate for the rest of the shift (e.g. setting up).
+ * Classes taught (Sky Arc's default, the owner's decision of Oct 15, 2026): coaches are paid for the classes they
+ * teach, from the schedule, and clocking in and out is only a log. The others price clocked time: Hourly pays every
+ * clocked hour at the coach's rate; Teaching only pays only clocked time in classes; Teaching + Admin pays the class
+ * rate in classes and the admin rate for the rest of the shift (e.g. setting up).
  */
-export type PayModel = 'hourly' | 'teaching_only' | 'teaching_admin'
+export type PayModel = 'classes' | 'hourly' | 'teaching_only' | 'teaching_admin'
 
-export const PAY_MODELS: readonly PayModel[] = ['hourly', 'teaching_admin', 'teaching_only']
+export const PAY_MODELS: readonly PayModel[] = ['classes', 'hourly', 'teaching_admin', 'teaching_only']
 
 export const PAY_MODEL_LABELS: Record<PayModel, string> = {
+  classes: 'Classes taught',
   hourly: 'Hourly',
   teaching_only: 'Teaching only',
   teaching_admin: 'Teaching + Admin',
 }
 
 export const PAY_MODEL_HELP: Record<PayModel, string> = {
+  classes: 'Coaches are paid their teaching rate for the classes they teach, by the schedule. Clocking in and out is kept as a log and doesn’t change pay.',
   hourly: 'Coaches are paid their teaching rate for every clocked hour.',
-  teaching_only: 'Coaches are paid only for time spent teaching. Gaps and idle clocked-in time are unpaid.',
-  teaching_admin: 'Teaching rate for time in classes, admin rate for the rest of the clocked shift.',
+  teaching_only: 'Coaches are paid only for clocked time spent teaching. Gaps and idle clocked-in time are unpaid.',
+  teaching_admin: 'Teaching rate for clocked time in classes, admin rate for the rest of the clocked shift.',
 }
 
 export interface PayModelPeriod {
@@ -48,9 +52,9 @@ export const PAY_MODEL_SINCE_START: DateKey = '2000-01-01'
 
 export const MAX_STUDENTS_PER_COACH_LIMIT = 6
 
-/** Until the owner sets them: hourly pay, and up to 6 students at once (a class block has 6 seats). */
+/** Until the owner sets them: pay for classes taught, and up to 6 students at once (a class block has 6 seats). */
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
-  payModels: [{ model: 'hourly', from: PAY_MODEL_SINCE_START }],
+  payModels: [{ model: 'classes', from: PAY_MODEL_SINCE_START }],
   maxStudentsPerCoach: 6,
 }
 

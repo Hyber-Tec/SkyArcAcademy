@@ -13,7 +13,8 @@ end of the matching section, with the date.
   integration. Only official evaluations are uploaded (about 1–3 per student per month), starting fresh.
 - **Coaches clock in and out at a kiosk** with a PIN (stored hashed, never logged).
 - **Terminology:** Coach, Class, Academy, Makeup (MU), Position (Standing / Kneeling / Prone).
-- **Korean and English** on every parent-facing screen (parent portal, trial booking, homepage).
+- **Korean and English** on every parent-facing screen (parent portal, trial booking, homepage). *Changed: English
+  first, other languages once every feature is built (§6, Q14).*
 - Values the academy hasn't sent yet (hours, rules, capacity, pay) are **settings with sensible defaults**, never hard-coded.
 - **Time zone: America/New_York.** The academy is at 730 Peachtree Industrial Blvd, Suwanee, GA (skyarcacademy.com,
   checked 2026-10-15). It is the academy's time-zone setting, used for every class time, the kiosk and payroll.
@@ -61,8 +62,8 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
 - **Plain URLs** (`/admin/…`, `/coach/…`), without the review's `portalPath()` helper: a second academy would bring
   the academy segment back with one.
 - **Pay starts Hourly** (every clocked hour at the coach's rate). The owner can switch to Teaching only or Teaching +
-  Admin in Settings → Academy rules. **Up to 6 students per coach** at once, as a class block on the sheets has six
-  seats.
+  Admin in Settings → Academy rules. *Changed: Classes taught (§6, Q10).* **Up to 6 students per coach** at once, as a
+  class block on the sheets has six seats.
 - **Opening hours** start from the schedule sheets (Sunday and Monday to Thursday; Friday and Saturday closed), as
   settings the academy can change.
 - **Brand:** HyberCRM's black-and-white theme with Sky Arc red as the brand color; the academy's logo on sign-in
@@ -73,8 +74,9 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
   turning off Cloud Run's invoker check, because HyberTec's organization doesn't allow `allUsers` in IAM policies
   (`docs/DEPLOY.md`).
 - **`/trial`** says that online booking opens soon and points to skyarcacademy.com (Korean or English) until trial
-  booking is built.
-- **Privacy policy:** HyberCRM's was removed. Sky Arc needs its own before families sign up or book trials (open).
+  booking is built. *Changed: English only (§6, Q14).*
+- **Privacy policy:** HyberCRM's was removed. Sky Arc needs its own before families sign up or book trials. *Drafted
+  (§6, Q15).*
 
 ## 5. Goo's answers, second round (2026-10-15)
 
@@ -89,7 +91,35 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
   Precision) and the website's four programs (Launchpad, Foundations, Development, Performance).
 - **Q13. Shift patterns apply to any staff member, and the manager can also coach.** Built with the schedule work
   (step 4): staff of any role can teach and get a row on the schedule.
-- **Test data.** The academy's real data (A12 in `docs/QUESTIONS.md`) isn't in yet, so the app runs on sample data:
+- **Test data.** The academy's real data (A1–A4 in `docs/QUESTIONS.md`) isn't in yet, so the app runs on sample data:
   fictional coaches, a manager, families and ten weeks of classes, added with `npm run seed:sample` and removed with
   `npm run seed:sample -- --remove` before the real data is imported (`docs/DEPLOY.md`, "Sample data").
 
+
+## 6. Goo's answers, third round (2026-10-15)
+
+- **Q9. The kiosk is a device registered with a setup PIN.** The owner sets a kiosk setup PIN in Settings; it's stored
+  hashed like the coaches' PINs and never written in the code or the docs. Entering it on a tablet or computer makes
+  that device the kiosk, and from then on coaches clock in and out there with their own PINs, with nobody signed in.
+  Wrong tries lock the setup PIN for a while. Built with the kiosk (step 6); until then the kiosk opens for a signed-in
+  admin, as now. Goo has chosen the PIN and gives it when this is built.
+- **Q10. Pay: Classes taught, until the academy says how it pays.** Coaches are paid their teaching rate for the
+  class blocks they teach, from the schedule, not from the clock: each block pays once however many students are in it,
+  and only classes marked as attended count (Settings → Payroll). Clocking in and out stays as a log and doesn't change
+  pay. It's the new default pay model, set on production from the start; the owner can switch to Hourly, Teaching only
+  or Teaching + Admin in Settings → Academy rules. Owners and admins are still paid their one rate for clocked time.
+  How the academy really pays, and whether hours are approved, is now a question for the academy (A3).
+- **Q11. Reports.** (a) Parents see a report only after an admin or a coach publishes it, not as soon as it's
+  uploaded. (b) Coaches see every student's reports, read-only: they can publish a report but not change or delete it.
+- **Q12. Comparing reports: designed fresh, and kept simple.** Not modeled on True Education's view. The reports get a
+  professional redesign later, so the first version shouldn't take much effort.
+- **Q14. Languages come last.** English only while the features are built. Korean, and other languages, come in one
+  pass once everything works, on the web and in the phone app. The homepage's and trial page's Korean switch is gone,
+  so the whole site is English for now. Keep text in the code (not in images) so it can be translated later.
+- **Q15. Privacy policy: HyberTec drafts it from a template, and the academy reviews it.** The draft is at `/privacy`,
+  linked from the homepage and the sign-in pages, with the academy's name and contact details from Settings → Academy.
+  It says "draft" until the academy approves it (A17), and families aren't invited and trial booking stays closed
+  until then. It isn't legal advice: the academy may want a lawyer to read it.
+- **Questions for the academy:** the open questions and the data still missing are one numbered list in
+  `docs/QUESTIONS.md`, in the order of the email Goo sends the academy, so answers can be matched by number. Whatever
+  rules the academy gives become settings it can change later.
