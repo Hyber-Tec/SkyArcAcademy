@@ -48,3 +48,30 @@ end of the matching section, with the date.
   Account page and remove at handover.
 - **First account:** Goo (goochoi913@gmail.com) as owner while the app is built; the academy's owner and manager
   are invited from the Account page.
+
+## 4. Built in the fork (2026-10-15)
+
+Calls made while forking, within the confirmed plan. Goo can overrule any of them.
+
+- **Field names say `coach` too** (`coachId`, `coachName`, `maxStudentsPerCoach`), not only the role, the URLs and
+  the order setting as the review planned (§4, rule 3). With the tutoring features gone it was about 1,300 mechanical
+  changes, checked by the typecheck, the unit, rules and browser tests, and the database is still empty. Classes stay
+  `session` in code and data (`class` is reserved in JavaScript).
+- **Plain URLs** (`/admin/…`, `/coach/…`), without the review's `portalPath()` helper: a second academy would bring
+  the academy segment back with one.
+- **Pay starts Hourly** (every clocked hour at the coach's rate). The owner can switch to Teaching only or Teaching +
+  Admin in Settings → Academy rules. **Up to 6 students per coach** at once, as a class block on the sheets has six
+  seats.
+- **Opening hours** start from the schedule sheets (Sunday and Monday to Thursday; Friday and Saturday closed), as
+  settings the academy can change.
+- **Brand:** HyberCRM's black-and-white theme with Sky Arc red as the brand color; the academy's logo on sign-in
+  pages, the reticle mark in the app and the icons. No "Powered by" line.
+- **Email:** from HyberTec's Gmail under the academy's name, until Q5 is answered. The app password isn't set, so no
+  email goes out yet: invites show a sign-in link to copy, and account emails fall back to Firebase's own.
+- **Cloud Functions** run as their own service account with only the roles they use. Callable functions are opened by
+  turning off Cloud Run's invoker check, because HyberTec's organization doesn't allow `allUsers` in IAM policies
+  (`docs/DEPLOY.md`).
+- **`/trial`** says that online booking opens soon and points to skyarcacademy.com (Korean or English) until trial
+  booking is built.
+- **Privacy policy:** HyberCRM's was removed. Sky Arc needs its own before families sign up or book trials (open).
+

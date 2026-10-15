@@ -223,9 +223,8 @@ carried over. **New** = built for Sky Arc.
 
 The brief wants no branch UI, and a visible `/skyarc/` segment is branch UI. Since every `/tutor/…` link is edited
 anyway for `/coach/…`, the URLs drop the academy segment in the same pass: `/admin/…`, `/coach/…`, `/parent/…`,
-`/kiosk`, `/trial`, `/login`. A `portalPath()` helper builds every link, so a second academy could bring the segment
-back in one place. Links in emails and push messages (`shared/src/brand.ts`, `functions/src/push.ts`) change with
-it.
+`/kiosk`, `/trial`, `/login`. Links in emails and push messages (`shared/src/brand.ts`, `functions/src/push.ts`)
+change with it. (Built as plain paths, without a `portalPath()` helper: `DECISIONS.md` §4.)
 
 ### What changes concretely
 
@@ -266,7 +265,8 @@ it.
 3. **Field and collection names are not renamed in bulk.** About 3,700 identifiers would change for little gain,
    and most kept collections are already neutral (`staff`, `students`, `members`, `clockShifts`, `availability`,
    `announcements`, `notifications`, `auditLog`). New fields and collections use Sky Arc words (`coachId`,
-   `classSlots`, `enrollments`, `position`).
+   `classSlots`, `enrollments`, `position`). (Changed in the fork: once the tutoring features were gone, the `tutor`
+   names were renamed too, `DECISIONS.md` §4; `session` stays.)
 4. "Session" also means a sign-in session in a few places; those aren't replaced.
 
 ---
@@ -690,7 +690,7 @@ type and scope.
 |---|---|---|
 | 1 | #1 `chore: set up the Sky Arc repository, CI and deploys`, #2 `fix(deploy): make the deploy from main succeed` | Rules and brief, placeholder homepage, CI, deploys from `main`, Firebase config, deny-all rules |
 | 2 | `docs: review HyberCRM and plan the Sky Arc fork` | This document |
-| 3 | `refactor!: fork HyberCRM as the Sky Arc academy app` | Commit 1: exact import of HyberCRM `d659d34` (`web` minus landing and demo, `shared` minus demo, `functions` minus platform/demo/inquiries, rules, indexes, tests, the useful scripts; no `mobile`, docs or env files). Commit 2: the Sky Arc changes: one fixed academy and flattened URLs, removals (§2), `tutor` → `coach`, rebrand and theme, Google and email/password sign-in on Sky Arc's domain, new Storage rules, academy seed script, full CI and Functions deploy |
+| 3 | `refactor!: fork HyberCRM as the Sky Arc academy app` | Commits: the verbatim import of HyberCRM `d659d34` (`web` minus landing and demo, `shared` minus demo, `functions` minus platform/demo/inquiries, rules, indexes, tests, the useful scripts; no `mobile`, docs or env files); one academy without the tutoring features (flattened URLs, removals from §2, academy seed script); `tutor` → `coach` and the Class and Academy wording; Sky Arc branding; full CI and the Functions deploy; these docs |
 | 4 | `feat(schedule): …` | Opening hours, class slots and enrollments with the generator, capacity, coach patterns and the Sunday rotation, derived shifts, attendance |
 | 5 | `feat(schedule): parent cancellations, makeups and trial booking` | Callables, rules, notifications, `/trial` (Korean + English) |
 | 6 | `feat(kiosk): …` / `feat(payroll): …` | Kiosk identity, PIN hashing and limits, hourly pay, rate history |

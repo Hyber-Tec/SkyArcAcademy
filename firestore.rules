@@ -1,11 +1,418 @@
 rules_version = '2';
 
-// Nothing in Firestore is readable or writable yet: the app's rules arrive with the HyberCRM fork
-// (docs/HYBERCRM_REVIEW.md). Every collection then gets explicit rules; never add a catch-all allow.
+// Sky Arc security rules (forked from HyberCRM).
+// - The academy's data lives under branches/{ACADEMY_ID} ('skyarc'; shared/src/academy.ts); access needs an active
+//   membership in it. There is no Super Admin.
+// - There is no catch-all rule: a collection without a rule is closed.
+// - Members are keyed by lower-cased email (branches/{b}/members/{email}); one role per person.
+// - Records concern minors: parents read only their own children's records.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // ------------------------------------------------------------ identity
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function emailKey() {
+      return request.auth.token.email.lower();
+    }
+
+    function branchDoc(b) {
+      return get(/databases/$(database)/documents/branches/$(b));
+    }
+
+    function memberPath(b) {
+      return /databases/$(database)/documents/branches/$(b)/members/$(emailKey());
+    }
+
+    function member(b) {
+      return get(memberPath(b)).data;
+    }
+
+    function isMember(b) {
+      return signedIn()
+        && exists(memberPath(b))
+        && member(b).status == 'active'
+        && branchDoc(b).data.status == 'active';
+    }
+
+    // One role per person: owner, admin, coach, parent or student.
+    function hasRole(b, role) {
+      return isMember(b) && member(b).get('role', '') == role;
+    }
+
+    function isAdmin(b) {
+      return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
+    }
+
+    function isCoach(b) {
+      return hasRole(b, 'coach');
+    }
+
+    function isStaff(b) {
+      return isAdmin(b) || isCoach(b);
+    }
+
+    function isOwner(b) {
+      return hasRole(b, 'owner');
+    }
+
+    function notRestricted(b, page) {
+      return !(page in member(b).get('restrictions', []));
+    }
+
+    function myStaffId(b) {
+      return member(b).get('staffId', null);
+    }
+
+    function myStudentId(b) {
+      return member(b).get('studentId', null);
+    }
+
+    function myStudentIds(b) {
+      return member(b).get('studentIds', []);
+    }
+
+    // -------------------------------------------------------------- helpers
+
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function stampedNow() {
+      return request.resource.data.updatedAt == request.time;
+    }
+
+    // ---------------------------------------------------------------- users
+
+    match /users/{uid} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create, update: if signedIn() && uid == request.auth.uid
+        && request.resource.data.email.lower() == emailKey();
+      // Deleting an account runs on the server (deleteMyAccount).
+
+      // The phone app's installs and their push tokens (shared/src/push.ts). The server
+      // finds a recipient's phones by email; each install removes its own at sign-out.
+      match /devices/{deviceId} {
+        allow read, delete: if signedIn() && uid == request.auth.uid;
+        allow create, update: if signedIn() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['token', 'email', 'platform', 'appVersion', 'label', 'createdAt', 'updatedAt'])
+          && request.resource.data.email == emailKey()
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() < 4096
+          && request.resource.data.platform in ['ios', 'android'];
+      }
+
+      // users/{uid}/private/* (e.g. how many account emails were sent) is server-only:
+      // no rule, so no client access.
+    }
+
+    // "Which announcements have I read?" — my own read receipts across posts.
+    match /{path=**}/reads/{readerKey} {
+      allow read: if signedIn() && resource.data.email == emailKey();
+    }
+
+    // -------------------------------------------------------------- academy
+
+    // The academy's document is created by the seed script (scripts/seed.ts), never by the app.
+    match /branches/{b} {
+      allow read: if isMember(b);
+      allow create, delete: if false;
+      // Admins edit the profile, branding and settings; only owners change the academy rules (pay model, capacity).
+      allow update: if isAdmin(b) && stampedNow()
+        && (changed().hasOnly(['name', 'shortName', 'timezone', 'locale', 'currency',
+                               'branding', 'contact', 'settings', 'updatedAt', 'updatedBy'])
+            || (isOwner(b) && changed().hasOnly(['businessRules', 'updatedAt', 'updatedBy'])));
+
+      // Public brand profile for the homepage, sign-in and sign-up pages.
+      match /public/{docId} {
+        allow read: if true;
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ access
+
+      match /members/{memberId} {
+        function grantsAdmin(data) {
+          return data.role in ['owner', 'admin'] || data.get('restrictions', []).size() > 0;
+        }
+
+        function validMember(data) {
+          return data.email == memberId
+            && data.role in ['owner', 'admin', 'coach', 'parent', 'student']
+            && data.status in ['active', 'disabled'];
+        }
+
+        allow read: if isAdmin(b) || (signedIn() && memberId == emailKey());
+
+        // Any admin manages coaches, parents and students; only owners manage admins.
+        allow create: if isAdmin(b) && validMember(request.resource.data)
+          && (isOwner(b) || !grantsAdmin(request.resource.data));
+
+        allow update: if (isAdmin(b) && validMember(request.resource.data)
+            && (isOwner(b) || (!grantsAdmin(resource.data) && !grantsAdmin(request.resource.data))))
+          // The person links their own Google account on sign-in.
+          || (signedIn() && memberId == emailKey()
+            && changed().hasOnly(['uid', 'displayName', 'photoURL', 'firstLoginAt', 'lastLoginAt'])
+            && request.resource.data.uid == request.auth.uid);
+
+        // Only owners remove owners and admins, and nobody removes themselves, so an owner always remains.
+        allow delete: if isAdmin(b)
+          && (isOwner(b) || !grantsAdmin(resource.data))
+          && memberId != emailKey();
+      }
+
+      match /signupRequests/{email} {
+        function signupOpen(role) {
+          let profile = get(/databases/$(database)/documents/branches/$(b)/public/profile).data;
+          return profile.signupEnabled == true && role in profile.signupRoles;
+        }
+
+        allow read: if isAdmin(b) || (signedIn() && email == emailKey());
+        allow create: if signedIn() && email == emailKey()
+          && request.resource.data.email == email
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && signupOpen(request.resource.data.requestedRole);
+        allow update: if isAdmin(b)
+          || (signedIn() && email == emailKey()
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'pending'
+              && request.resource.data.uid == request.auth.uid
+              && changed().hasOnly(['firstName', 'lastName', 'phone', 'message', 'studentNames',
+                                    'requestedRole', 'photoURL', 'updatedAt'])
+              && signupOpen(request.resource.data.requestedRole));
+        allow delete: if isAdmin(b) || (signedIn() && email == emailKey());
+      }
+
+      // ------------------------------------------------------ people
+
+      match /staff/{staffId} {
+        allow read: if isAdmin(b) || (isCoach(b) && staffId == myStaffId(b));
+        allow create, delete: if isAdmin(b);
+        allow update: if isAdmin(b)
+          || (isCoach(b) && staffId == myStaffId(b)
+              && changed().hasOnly(['phone', 'dob', 'address', 'notificationPrefs', 'updatedAt', 'updatedBy']));
+
+        match /private/{docId} {
+          allow read: if (docId == 'compensation'
+                          && ((isAdmin(b) && notRestricted(b, 'payRates'))
+                              || (isCoach(b) && staffId == myStaffId(b))))
+                      || (docId == 'notes' && isAdmin(b));
+          allow write: if (docId == 'compensation' && isAdmin(b) && notRestricted(b, 'payRates'))
+                       || (docId == 'notes' && isAdmin(b));
+        }
+      }
+
+      match /students/{studentId} {
+        allow read: if isStaff(b)
+          || (hasRole(b, 'student') && studentId == myStudentId(b))
+          || (hasRole(b, 'parent') && studentId in myStudentIds(b));
+        allow create, update, delete: if isAdmin(b);
+
+        // Contacts, parents, address, internal notes: admins only.
+        match /private/{docId} {
+          allow read, write: if isAdmin(b);
+        }
+      }
+
+      // ------------------------------------------------------ availability
+
+      // Coaches can't touch days that start inside the lock window (or the lead time,
+      // when the branch blocks late availability). Admins can change any day.
+      function lockDays() {
+        let a = branchDoc(b).data.get('settings', {}).get('availability', {});
+        let lock = a.get('lockWindowDays', 7);
+        let lead = a.get('leadTimeDays', 14);
+        return a.get('leadTimeEnforcement', 'warn') == 'block' && lead > lock ? lead : lock;
+      }
+
+      function coachMayEdit(data) {
+        return data.dayStartAt is timestamp
+          && data.dayStartAt > request.time + duration.value(lockDays(), 'd');
+      }
+
+      function validAvailability(docId, data) {
+        let utcMidnight = timestamp.date(int(data.dateKey[0:4]), int(data.dateKey[5:7]), int(data.dateKey[8:10]));
+        return docId == data.staffId + '_' + data.dateKey
+          && data.ranges is list
+          && data.dayStartAt is timestamp
+          && data.dayStartAt > utcMidnight - duration.value(15, 'h')
+          && data.dayStartAt < utcMidnight + duration.value(15, 'h');
+      }
+
+      match /availability/{docId} {
+        allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
+        allow create: if validAvailability(docId, request.resource.data)
+          && (isAdmin(b)
+              || (isCoach(b) && request.resource.data.staffId == myStaffId(b) && coachMayEdit(request.resource.data)));
+        allow update: if validAvailability(docId, request.resource.data)
+          && (isAdmin(b)
+              || (isCoach(b) && resource.data.staffId == myStaffId(b) && request.resource.data.staffId == myStaffId(b)
+                  && coachMayEdit(resource.data) && coachMayEdit(request.resource.data)));
+        allow delete: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b) && coachMayEdit(resource.data));
+      }
+
+      match /dayConfigs/{dateKey} {
+        allow read: if isMember(b);
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ schedule
+
+      // Nobody edits a session once its day is over (dayEndAt = next local midnight).
+      match /sessions/{sessionId} {
+        function dayOpen(data) {
+          return data.dayEndAt is timestamp && data.dayEndAt > request.time
+            && data.dayEndAt <= data.startAt + duration.value(25, 'h')
+            && data.dayEndAt > data.startAt;
+        }
+
+        allow read: if isAdmin(b)
+          || (isCoach(b) && resource.data.coachId == myStaffId(b))
+          || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
+          || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
+        allow create: if isAdmin(b) && dayOpen(request.resource.data);
+        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data);
+        // Trashed sessions can be purged even after their day.
+        allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
+      }
+
+      match /events/{eventId} {
+        allow read: if isStaff(b);
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ time & pay
+
+      function lockedThrough() {
+        let path = /databases/$(database)/documents/branches/$(b)/payroll/state;
+        return exists(path) ? get(path).data.get('lockedThrough', '') : '';
+      }
+
+      // Shifts inside a locked pay period can't change.
+      function shiftEditable(data) {
+        return data.dateKey is string && data.dateKey > lockedThrough();
+      }
+
+      match /clockShifts/{shiftId} {
+        allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
+        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data);
+        allow update: if isAdmin(b) && notRestricted(b, 'timeEntries')
+          && shiftEditable(resource.data) && shiftEditable(request.resource.data);
+        allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(resource.data);
+      }
+
+      // Pointer to an employee's open shift (written by the kiosk functions).
+      match /openShifts/{staffId} {
+        allow read: if isAdmin(b) || (isCoach(b) && staffId == myStaffId(b));
+        allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries');
+      }
+
+      match /payroll/{docId} {
+        allow read: if isStaff(b);
+        allow write: if isAdmin(b) && notRestricted(b, 'payroll');
+      }
+
+      match /payPeriods/{periodId} {
+        allow read, write: if isAdmin(b) && notRestricted(b, 'payroll');
+
+        match /lines/{staffId} {
+          allow read: if (isAdmin(b) && notRestricted(b, 'payroll')) || (isCoach(b) && staffId == myStaffId(b));
+          allow write: if isAdmin(b) && notRestricted(b, 'payroll');
+        }
+      }
+
+      match /kioskPinOwners/{id} {
+        allow read, write: if false;
+      }
+
+      // ------------------------------------------------------ communication
+
+      // Coaches see posts for everyone plus posts addressed to them; admins see all.
+      function seesAnnouncement(data) {
+        return isAdmin(b)
+          || (isCoach(b) && (data.audienceType == 'all' || emailKey() in data.audienceKeys));
+      }
+
+      match /announcements/{announcementId} {
+        function post() {
+          return get(/databases/$(database)/documents/branches/$(b)/announcements/$(announcementId)).data;
+        }
+
+        function validPost(data) {
+          return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+            && data.audienceType in ['all', 'members']
+            && data.audienceKeys is list
+            && (data.audienceType == 'all' || data.audienceKeys.size() > 0);
+        }
+
+        allow read: if seesAnnouncement(resource.data);
+        // Read and comment counters are kept by Cloud Functions.
+        allow create: if isAdmin(b) && validPost(request.resource.data)
+          && request.resource.data.authorKey == emailKey()
+          && request.resource.data.readCount == 0
+          && request.resource.data.commentCount == 0;
+        allow update: if isAdmin(b) && validPost(request.resource.data)
+          && !changed().hasAny(['readCount', 'commentCount', 'authorKey']);
+        allow delete: if isAdmin(b);
+
+        // Read receipts: written once by the reader, never changed.
+        match /reads/{readerKey} {
+          allow read: if isAdmin(b) || (signedIn() && readerKey == emailKey());
+          allow create: if signedIn() && readerKey == emailKey()
+            && request.resource.data.email == emailKey()
+            && request.resource.data.branchId == b
+            && request.resource.data.announcementId == announcementId
+            && request.resource.data.readAt == request.time
+            && seesAnnouncement(post());
+          allow update, delete: if false;
+        }
+
+        match /comments/{commentId} {
+          allow read: if seesAnnouncement(post());
+          allow create: if seesAnnouncement(post())
+            && (isAdmin(b) || post().commentsEnabled == true)
+            && request.resource.data.authorKey == emailKey()
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000;
+          allow update: if false;
+          allow delete: if isAdmin(b) || (signedIn() && resource.data.authorKey == emailKey());
+        }
+      }
+
+      // In-app inbox. Items are written by Cloud Functions; people read,
+      // mark read and delete their own.
+      match /notifications/{notificationId} {
+        allow read: if isMember(b) && resource.data.recipientKey == emailKey();
+        allow update: if isMember(b) && resource.data.recipientKey == emailKey()
+          && changed().hasOnly(['readAt']);
+        allow delete: if isMember(b) && resource.data.recipientKey == emailKey();
+        allow create: if false;
+      }
+
+      // ------------------------------------------------------ audit log
+
+      match /auditLog/{entryId} {
+        allow read: if isAdmin(b);
+        allow create: if isStaff(b)
+          && request.resource.data.actorEmail == emailKey()
+          && request.resource.data.at == request.time;
+        allow update, delete: if false;
+      }
+
+      // Server-only collections.
+      match /kioskPins/{id} {
+        allow read, write: if false;
+      }
     }
   }
 }

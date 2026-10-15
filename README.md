@@ -4,20 +4,30 @@ The platform for **Sky Arc Sports Academy**, a youth air rifle academy (standing
 makeups, cancellations and trial booking; coaches' availability, kiosk clock-in, time entries and payroll; and progress
 reports (SIUS target PDFs and paper-target photos) that parents can follow over time, in Korean and English.
 
-It's forked from HyberTec's **HyberCRM** and runs on Firebase (Auth, Firestore, Hosting; Storage and Cloud Functions
-arrive with the fork).
+It's forked from HyberTec's **HyberCRM** and runs on Firebase: Auth, Firestore, Storage, Cloud Functions and Hosting.
+Today it has HyberCRM's schedule, availability, employees, kiosk, payroll, announcements and access for one academy;
+the Sky Arc features (class slots, makeups, trials, reports, Korean) come next, in the order of
+[`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) §13.
 
-- **Start here:** [`CLAUDE.md`](CLAUDE.md) (the rules) → [`SKYARC_PROJECT_BRIEF.md`](SKYARC_PROJECT_BRIEF.md) (what
-  we're building) → [`docs/DECISIONS.md`](docs/DECISIONS.md) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md).
+- **Start here:** [`CLAUDE.md`](CLAUDE.md) (the rules, layout and commands) →
+  [`SKYARC_PROJECT_BRIEF.md`](SKYARC_PROJECT_BRIEF.md) (what we're building) →
+  [`docs/DECISIONS.md`](docs/DECISIONS.md) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md).
 - **Production:** https://skyarcacademy.web.app, deployed by GitHub from `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)).
 
 ## Development
 
+Node 22 or later, and Java 21 for the Firebase emulators.
+
 ```bash
-npm --prefix web install
-cp web/.env.example web/.env.local   # then fill it from the Firebase console (Project settings → Your apps → Sky Arc)
-npm --prefix web run dev             # http://localhost:5173
+npm ci && npm ci --prefix web && npm ci --prefix functions
+npm run emulators                                    # Auth, Firestore, Functions, Storage as the demo-skyarc project
+SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed   # the academy and its first owner
+npm run dev:emulators                                # http://127.0.0.1:5174
 ```
+
+Sign in from the browser console with `__skyarcSignIn('you@example.test')` (emulators only). The checks CI runs:
+`npm run typecheck`, `npm test`, `npm run lint`, `npm run build`, `npm --prefix functions run build`,
+`npm run test:rules`.
 
 ## Shipping a change
 

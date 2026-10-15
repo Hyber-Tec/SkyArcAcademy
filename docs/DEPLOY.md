@@ -6,10 +6,13 @@ GitHub deploys `main` after every merge, once CI passes on `main`. Nobody deploy
 
 ## How a merge reaches production
 
-1. A pull request passes CI (`.github/workflows/ci.yml`, job `check`) and is merged.
-2. CI runs again on `main`. When `check` passes, the `deploy` job builds the website with the Firebase web settings
-   from GitHub secrets and runs `firebase deploy --only hosting,firestore,database,storage --force`.
-3. The new version is live. To roll back Hosting: Firebase console → Hosting → Release history → Roll back.
+1. A pull request passes CI (`.github/workflows/ci.yml`: jobs "Typecheck, tests and builds" and "Security rules
+   tests") and is merged.
+2. CI runs again on `main`. When both pass, the `deploy` job builds the website with the Firebase web settings from
+   GitHub secrets and runs `scripts/deploy.sh`: `firebase deploy --only hosting,firestore,database,storage --force`,
+   then `--only functions`, then `scripts/open-callables.sh` (see "Cloud Functions").
+3. The new version is live. To roll back Hosting: Firebase console → Hosting → Release history → Roll back. Functions
+   roll back by reverting the change on `main`.
 
 To redeploy `main` without a change: GitHub → Actions → CI → Run workflow on `main`, or
 `gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy`.
@@ -21,8 +24,8 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 | Hosting | `web/dist` (built in CI) | |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
-| Storage rules | `storage.rules` | Deny-all until the report files arrive with the HyberCRM fork. See "Storage" below. |
-| Cloud Functions | — | Not yet. They arrive with the HyberCRM fork; see "Adding Cloud Functions" below. |
+| Storage rules | `storage.rules` | The academy's logo and announcement files. Report files get their own rules with the reports. See "Storage" below. |
+| Cloud Functions | `functions/` (built by the predeploy step) | Gen 2, `us-central1`, running as `functions@`. See "Cloud Functions" below. |
 
 ## How GitHub signs in to Google Cloud (no keys)
 
@@ -41,7 +44,9 @@ service account `github-deploy@skyarcacademy.iam.gserviceaccount.com`. No servic
   `repo:Hyber-Tec/SkyArcAcademy:ref:refs/heads/main` never matches, and firebase-tools then reports only
   "Failed to authenticate, have you run firebase login?".
 - The service account's project roles: Firebase Hosting Admin, Firebase Rules Admin, Cloud Datastore Index Admin,
-  Firebase Realtime Database Admin, Service Usage Consumer, Firebase Viewer.
+  Firebase Realtime Database Admin, Service Usage Consumer, Firebase Viewer; for the functions also Cloud Functions
+  Developer, Cloud Run Admin, Cloud Scheduler Admin, Artifact Registry Administrator and Secret Manager Viewer, and
+  Service Account User on `functions@` and on the Compute Engine default account (see "Cloud Functions").
 
 How it was created (2026-10-15), to recreate or audit it:
 
@@ -85,6 +90,9 @@ The web config (API key, app ID, …) is never committed (CLAUDE.md, "Secrets").
   location can't change.
 - Progress reports (SIUS PDFs, target photos) live here. Files concern minors: the app reads them through the
   Storage rules (`getBlob`), never through `getDownloadURL` links, which bypass the rules.
+- `getBlob` in the browser needs CORS on the bucket: `storage.cors.json` allows GET from the app's addresses and the
+  local dev servers. Applied on 2026-10-15; apply it again after changing the file:
+  `gcloud storage buckets update gs://skyarcacademy.firebasestorage.app --cors-file=storage.cors.json`.
 - Storage rules that call `firestore.get()` need the Storage service agent
   (`service-1025403274020@gcp-sa-firebasestorage.iam.gserviceaccount.com`) to hold
   `roles/firebaserules.firestoreServiceAgent`. A non-interactive deploy never grants it, so it was granted by hand on
@@ -95,11 +103,71 @@ The web config (API key, app ID, …) is never committed (CLAUDE.md, "Secrets").
     --member serviceAccount:service-1025403274020@gcp-sa-firebasestorage.iam.gserviceaccount.com
   ```
 
-## Adding Cloud Functions
+## Cloud Functions
 
-When `functions/` lands, the pull request that adds it also adds `functions` to the deploy's `--only` list, grants
-the deploy account the roles a Functions deploy needs (it creates Cloud Run services, Eventarc triggers, scheduler
-jobs and secret bindings, and acts as the runtime service account), and records them here.
+Set up on 2026-10-15. HyberTec's organization shapes three things here:
+
+- **No permissions for default service accounts** (`iam.automaticIamGrantsForDefaultServiceAccounts`). The functions
+  run as their own account, **`functions@skyarcacademy.iam.gserviceaccount.com`** (`setGlobalOptions` in
+  `functions/src/app.ts`), with only what they use: Cloud Datastore User, Firebase Authentication Admin, Firebase Cloud
+  Messaging Admin, Eventarc Event Receiver, Cloud Run Invoker, Logs Writer, Storage Object Admin on the default
+  bucket, and Secret Accessor on `GMAIL_APP_PASSWORD`.
+- **Builds run as the Compute Engine default account** (`cloudbuild.useComputeServiceAccount`), which therefore holds
+  Cloud Build Service Account. It also holds Cloud Run Invoker and Eventarc Event Receiver, which the Firebase CLI
+  checks for before it creates event-triggered functions; nothing runs as it.
+- **Only the organization's own members may appear in IAM policies** (`iam.managed.allowedPolicyMembers`), so
+  `allUsers` can't be a Cloud Run invoker. Callable functions must be reachable by anyone (each checks the caller's
+  sign-in itself), so `scripts/open-callables.sh` turns off the Cloud Run **invoker IAM check** on every service
+  labeled `deployment-callable` instead, which the organization allows (`run.managed.requireInvokerIam` is off).
+  The Firebase CLI tries to add `allUsers` only when it creates a callable, so the deploy that adds a new callable
+  reports "set invoker" for it; `scripts/deploy.sh` then opens the callables and deploys once more, and that run
+  succeeds.
+
+The email app password is the Secret Manager secret **`GMAIL_APP_PASSWORD`**. It holds the placeholder `unset`, so
+the functions send nothing and the app says email isn't set up (an invite then shows its sign-in link to copy). Once
+the sender is decided (docs/DECISIONS.md), set the sender's Google app password and deploy again:
+
+```bash
+firebase functions:secrets:set GMAIL_APP_PASSWORD --project skyarcacademy   # paste the 16-letter app password
+gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy
+```
+
+How it was set up, to recreate or audit it:
+
+```bash
+P=skyarcacademy; N=1025403274020
+DEPLOY=github-deploy@$P.iam.gserviceaccount.com; RUNTIME=functions@$P.iam.gserviceaccount.com
+COMPUTE=$N-compute@developer.gserviceaccount.com
+gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com \
+  eventarc.googleapis.com secretmanager.googleapis.com compute.googleapis.com orgpolicy.googleapis.com --project $P
+gcloud iam service-accounts create functions --project $P --display-name "Cloud Functions runtime"
+for role in roles/datastore.user roles/firebaseauth.admin roles/firebasecloudmessaging.admin \
+  roles/eventarc.eventReceiver roles/run.invoker roles/logging.logWriter; do
+  gcloud projects add-iam-policy-binding $P --member serviceAccount:$RUNTIME --role $role --condition=None
+done
+gcloud storage buckets add-iam-policy-binding gs://$P.firebasestorage.app --member serviceAccount:$RUNTIME \
+  --role roles/storage.objectAdmin
+for role in roles/cloudbuild.builds.builder roles/run.invoker roles/eventarc.eventReceiver; do
+  gcloud projects add-iam-policy-binding $P --member serviceAccount:$COMPUTE --role $role --condition=None
+done
+for role in roles/cloudfunctions.developer roles/run.admin roles/cloudscheduler.admin \
+  roles/artifactregistry.admin roles/secretmanager.viewer; do
+  gcloud projects add-iam-policy-binding $P --member serviceAccount:$DEPLOY --role $role --condition=None
+done
+for sa in $RUNTIME $COMPUTE; do
+  gcloud iam service-accounts add-iam-policy-binding $sa --project $P --member serviceAccount:$DEPLOY \
+    --role roles/iam.serviceAccountUser
+done
+printf unset | gcloud secrets create GMAIL_APP_PASSWORD --project $P --replication-policy automatic --data-file=-
+gcloud secrets add-iam-policy-binding GMAIL_APP_PASSWORD --project $P --member serviceAccount:$RUNTIME \
+  --role roles/secretmanager.secretAccessor
+```
+
+## The academy's first data
+
+`isMember` in the rules requires the academy's document, so production needs it before anyone can sign in. After the
+first deploy, `npm run seed` (from `main`, with Goo's gcloud login) creates `branches/skyarc`, its public profile and
+the first owner (Goo). It's safe to run again: anything that exists is left alone.
 
 ## Manual deploy (only when GitHub Actions is down)
 
@@ -107,6 +175,7 @@ From an up-to-date `main`, never from a branch:
 
 ```bash
 git switch main && git pull
-npm ci --prefix web && npm --prefix web run build    # reads web/.env.local
-firebase deploy --only hosting,firestore,database,storage --project skyarcacademy
+npm ci --prefix web && npm ci --prefix functions
+npm --prefix web run build                           # reads web/.env.local
+bash scripts/deploy.sh                               # with your own login: firebase login, gcloud auth login
 ```

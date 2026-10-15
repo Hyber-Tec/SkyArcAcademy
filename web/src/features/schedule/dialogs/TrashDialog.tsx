@@ -1,0 +1,110 @@
+import { query, where } from 'firebase/firestore'
+import { useMemo, useState } from 'react'
+import { LuRotateCcw, LuTrash2 } from 'react-icons/lu'
+import { toast } from 'sonner'
+import { COL } from '@shared/paths'
+import { formatDateKey, formatInstant, formatTimeRange } from '@shared/time'
+import type { Session, WithId } from '@shared/types'
+import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { branchCol, useQuery } from '@/lib/firestore'
+import { type ScheduleCtx, purgeSessions, restoreSession } from '../api'
+
+export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: boolean; onOpenChange: (o: boolean) => void; ctx: ScheduleCtx; coachFilter: string | null }) {
+  const q = useMemo(() => (open ? query(branchCol(ctx.branchId, COL.sessions), where('isDeleted', '==', true)) : null), [open, ctx.branchId])
+  const { data, loading } = useQuery<Session>(q, `trash-${ctx.branchId}`)
+  const [busy, setBusy] = useState(false)
+  const rows = data
+    .filter((s) => !coachFilter || s.coachId === coachFilter)
+    .sort((a, b) => (b.deletedAt?.toMillis?.() ?? 0) - (a.deletedAt?.toMillis?.() ?? 0))
+
+  async function act(fn: () => Promise<void>, ok: string) {
+    setBusy(true)
+    try {
+      await fn()
+      toast.success(ok)
+    } catch (e) {
+      toast.error((e as Error).message.includes('permission') ? 'Past classes can’t be restored.' : (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85svh] overflow-hidden sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Deleted classes <Badge variant="secondary">{rows.length}</Badge>
+          </DialogTitle>
+          <DialogDescription>Items older than {ctx.settings.trash.retentionDays} days are removed automatically.</DialogDescription>
+        </DialogHeader>
+        {rows.length > 0 ? (
+          <div className="flex justify-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={busy}
+              onClick={() => window.confirm(`Permanently delete all ${rows.length} classes in Trash? This can’t be undone.`) && void act(() => purgeSessions(ctx, rows), 'Trash emptied')}
+            >
+              Empty Trash
+            </Button>
+          </div>
+        ) : null}
+        <div className="-mx-2 max-h-[60svh] divide-y overflow-y-auto">
+          {rows.map((s: WithId<Session>) => (
+            <ContextMenuFor
+              key={s.id}
+              disabled={busy}
+              entries={menu(
+                { kind: 'label', label: `${s.studentName} · ${formatDateKey(s.dateKey, 'weekdayMedium')}` },
+                { label: 'Restore', icon: LuRotateCcw, onSelect: () => void act(() => restoreSession(ctx, s), 'Class restored') },
+                {
+                  label: 'Delete permanently',
+                  icon: LuTrash2,
+                  destructive: true,
+                  separatorBefore: true,
+                  onSelect: () => window.confirm('Permanently delete this class? This can’t be undone.') && void act(() => purgeSessions(ctx, [s]), 'Deleted permanently'),
+                },
+              )}
+            >
+              <div className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-center">
+                <div className="min-w-0 flex-1 text-sm">
+                  <div className="truncate">
+                    <span className="font-semibold">{s.studentName}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {s.coachName} · {formatDateKey(s.dateKey, 'weekdayMedium')} · {formatTimeRange(s.startMin, s.endMin)}
+                  </div>
+                  {s.deletedAt ? (
+                    <div className="text-xs text-muted-foreground">
+                      Deleted {formatInstant(s.deletedAt.toDate(), ctx.timezone)}
+                      {s.deletedBy ? ` by ${s.deletedBy}` : ''}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive"
+                    disabled={busy}
+                    onClick={() => window.confirm('Permanently delete this class? This can’t be undone.') && void act(() => purgeSessions(ctx, [s]), 'Deleted permanently')}
+                  >
+                    Delete
+                  </Button>
+                  <Button size="sm" disabled={busy} onClick={() => void act(() => restoreSession(ctx, s), 'Class restored')}>
+                    Restore
+                  </Button>
+                </div>
+              </div>
+            </ContextMenuFor>
+          ))}
+          {!loading && rows.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">No deleted classes.</p> : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

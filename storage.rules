@@ -1,12 +1,49 @@
 rules_version = '2';
 
-// Nothing in Storage is readable or writable yet: report files and their rules arrive with the HyberCRM fork
-// (docs/HYBERCRM_REVIEW.md). Report files concern minors, so every read goes through these rules, never through a
-// public download URL.
+// Sky Arc Storage rules (forked from HyberCRM). Files are scoped by the academy like its Firestore data, and access
+// follows the academy's member documents in Firestore (one role per person). There is no Super Admin and no
+// catch-all rule. Report files concern minors: they get their own rules with the progress reports.
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function emailKey() {
+      return request.auth.token.email.lower();
+    }
+
+    function member(b) {
+      return firestore.get(/databases/(default)/documents/branches/$(b)/members/$(emailKey())).data;
+    }
+
+    function isMember(b) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/branches/$(b)/members/$(emailKey()))
+        && member(b).status == 'active';
+    }
+
+    function isAdmin(b) {
+      return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
+    }
+
+    function isImage(maxBytes) {
+      return request.resource.size < maxBytes
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // The academy's logo is public: the homepage, sign-in and sign-up pages show it.
+    match /branches/{b}/branding/{file} {
+      allow read: if true;
+      allow write: if isAdmin(b) && (request.resource == null || isImage(2 * 1024 * 1024));
+    }
+
+    match /branches/{b}/announcements/{rest=**} {
+      allow read: if isMember(b);
+      allow write: if isAdmin(b) && (request.resource == null || request.resource.size < 20 * 1024 * 1024);
     }
   }
 }
