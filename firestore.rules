@@ -1,11 +1,542 @@
 rules_version = '2';
 
-// Nothing in Firestore is readable or writable yet: the app's rules arrive with the HyberCRM fork
-// (docs/HYBERCRM_REVIEW.md). Every collection then gets explicit rules; never add a catch-all allow.
+// Hyber CRM security rules.
+// - Every branch's data lives under branches/{branchId}; access needs an active
+//   membership in that branch (or platform super admin).
+// - There is no catch-all rule: a collection without a rule is closed.
+// - Members are keyed by lower-cased Google email (branches/{b}/members/{email}).
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // ------------------------------------------------------------ identity
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function emailKey() {
+      return request.auth.token.email.lower();
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/platformAdmins/$(emailKey()));
+    }
+
+    function branchDoc(b) {
+      return get(/databases/$(database)/documents/branches/$(b));
+    }
+
+    function memberPath(b) {
+      return /databases/$(database)/documents/branches/$(b)/members/$(emailKey());
+    }
+
+    function member(b) {
+      return get(memberPath(b)).data;
+    }
+
+    function isMember(b) {
+      return signedIn()
+        && exists(memberPath(b))
+        && member(b).status == 'active'
+        && branchDoc(b).data.status == 'active';
+    }
+
+    // One role per person: owner, admin, tutor, parent or student.
+    function hasRole(b, role) {
+      return isMember(b) && member(b).get('role', '') == role;
+    }
+
+    function isAdmin(b) {
+      return isSuperAdmin() || (isMember(b) && member(b).get('role', '') in ['owner', 'admin']);
+    }
+
+    function isTutor(b) {
+      return hasRole(b, 'tutor');
+    }
+
+    function isStaff(b) {
+      return isAdmin(b) || isTutor(b);
+    }
+
+    function isOwner(b) {
+      return isSuperAdmin() || hasRole(b, 'owner');
+    }
+
+    function notRestricted(b, page) {
+      return isSuperAdmin() || !(page in member(b).get('restrictions', []));
+    }
+
+    function myStaffId(b) {
+      return member(b).get('staffId', null);
+    }
+
+    function myStudentId(b) {
+      return member(b).get('studentId', null);
+    }
+
+    function myStudentIds(b) {
+      return member(b).get('studentIds', []);
+    }
+
+    // -------------------------------------------------------------- helpers
+
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function stampedNow() {
+      return request.resource.data.updatedAt == request.time;
+    }
+
+    // ------------------------------------------------------------ platform
+
+    match /platformAdmins/{email} {
+      allow read: if signedIn() && (email == emailKey() || isSuperAdmin());
+      allow write: if isSuperAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (uid == request.auth.uid || isSuperAdmin());
+      allow create, update: if signedIn() && uid == request.auth.uid
+        && request.resource.data.email.lower() == emailKey();
+      allow delete: if isSuperAdmin();
+
+      // The phone app's installs and their push tokens (shared/src/push.ts). The server
+      // finds a recipient's phones by email; each install removes its own at sign-out.
+      match /devices/{deviceId} {
+        allow read, delete: if signedIn() && uid == request.auth.uid;
+        allow create, update: if signedIn() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['token', 'email', 'platform', 'appVersion', 'label', 'createdAt', 'updatedAt'])
+          && request.resource.data.email == emailKey()
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() < 4096
+          && request.resource.data.platform in ['ios', 'android'];
+      }
+
+      // users/{uid}/private/* (e.g. how many account emails were sent) is server-only:
+      // no rule, so no client access.
+    }
+
+    // "Talk to us" requests from the landing page: written only by the
+    // submitInquiry function; the Super Admin reads them and marks them handled.
+    match /inquiries/{id} {
+      allow read, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'handledAt', 'handledBy']);
+    }
+
+    // "Which branches am I in?" — collection-group query on my own email.
+    match /{path=**}/members/{memberId} {
+      allow read: if signedIn() && resource.data.email == emailKey();
+    }
+
+    // "Which sign-up requests did I send?" — same pattern.
+    match /{path=**}/signupRequests/{requestId} {
+      allow read: if signedIn() && resource.data.email == emailKey();
+    }
+
+    // "Which announcements have I read?" — my own read receipts across posts.
+    match /{path=**}/reads/{readerKey} {
+      allow read: if signedIn() && resource.data.email == emailKey();
+    }
+
+    // ------------------------------------------------------------- branches
+
+    match /branches/{b} {
+      allow read: if isSuperAdmin() || isMember(b);
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin()
+        || (isAdmin(b)
+            && changed().hasOnly(['name', 'shortName', 'timezone', 'locale', 'currency',
+                                  'branding', 'contact', 'settings', 'updatedAt', 'updatedBy'])
+            && stampedNow());
+
+      // Public brand profile for the sign-up page and pickers.
+      match /public/{docId} {
+        allow read: if true;
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ access
+
+      match /members/{memberId} {
+        function grantsAdmin(data) {
+          return data.role in ['owner', 'admin'] || data.get('restrictions', []).size() > 0;
+        }
+
+        function validMember(data) {
+          return data.email == memberId
+            && data.role in ['owner', 'admin', 'tutor', 'parent', 'student']
+            && data.status in ['active', 'disabled'];
+        }
+
+        allow read: if isAdmin(b) || (signedIn() && memberId == emailKey());
+
+        // Any admin manages tutors, parents and students; only owners manage admins.
+        allow create: if isAdmin(b) && validMember(request.resource.data)
+          && (isOwner(b) || !grantsAdmin(request.resource.data));
+
+        allow update: if (isAdmin(b) && validMember(request.resource.data)
+            && (isOwner(b) || (!grantsAdmin(resource.data) && !grantsAdmin(request.resource.data))))
+          // The person links their own Google account on sign-in.
+          || (signedIn() && memberId == emailKey()
+            && changed().hasOnly(['uid', 'displayName', 'photoURL', 'firstLoginAt', 'lastLoginAt'])
+            && request.resource.data.uid == request.auth.uid);
+
+        allow delete: if isAdmin(b)
+          && (isOwner(b) || !grantsAdmin(resource.data))
+          && (isSuperAdmin() || resource.data.role != 'owner');
+      }
+
+      match /signupRequests/{email} {
+        function signupOpen(role) {
+          let profile = get(/databases/$(database)/documents/branches/$(b)/public/profile).data;
+          return profile.signupEnabled == true && role in profile.signupRoles;
+        }
+
+        allow read: if isAdmin(b) || (signedIn() && email == emailKey());
+        allow create: if signedIn() && email == emailKey()
+          && request.resource.data.email == email
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && signupOpen(request.resource.data.requestedRole);
+        allow update: if isAdmin(b)
+          || (signedIn() && email == emailKey()
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'pending'
+              && request.resource.data.uid == request.auth.uid
+              && changed().hasOnly(['firstName', 'lastName', 'phone', 'message', 'studentNames',
+                                    'requestedRole', 'photoURL', 'updatedAt'])
+              && signupOpen(request.resource.data.requestedRole));
+        allow delete: if isAdmin(b) || (signedIn() && email == emailKey());
+      }
+
+      // ------------------------------------------------------ people
+
+      match /staff/{staffId} {
+        allow read: if isAdmin(b) || (isTutor(b) && staffId == myStaffId(b));
+        allow create, delete: if isAdmin(b);
+        allow update: if isAdmin(b)
+          || (isTutor(b) && staffId == myStaffId(b)
+              && changed().hasOnly(['phone', 'dob', 'address', 'notificationPrefs', 'subjectIds', 'updatedAt', 'updatedBy']));
+
+        match /private/{docId} {
+          allow read: if (docId == 'compensation'
+                          && ((isAdmin(b) && notRestricted(b, 'payRates'))
+                              || (isTutor(b) && staffId == myStaffId(b))))
+                      || (docId == 'notes' && isAdmin(b));
+          allow write: if (docId == 'compensation' && isAdmin(b) && notRestricted(b, 'payRates'))
+                       || (docId == 'notes' && isAdmin(b));
+        }
+      }
+
+      match /students/{studentId} {
+        allow read: if isStaff(b)
+          || (hasRole(b, 'student') && studentId == myStudentId(b))
+          || (hasRole(b, 'parent') && studentId in myStudentIds(b));
+        allow create, delete: if isAdmin(b);
+        // Tutors keep the School tab up to date.
+        allow update: if isAdmin(b)
+          || (isTutor(b) && changed().hasOnly(['schoolRecord', 'updatedAt', 'updatedBy']));
+
+        // Contacts, parents, address, school login: admins only.
+        match /private/{docId} {
+          allow read, write: if isAdmin(b);
+        }
+
+        match /conferenceNotes/{noteId} {
+          allow read, write: if isAdmin(b);
+        }
+      }
+
+      // ------------------------------------------------------ catalogs
+
+      match /subjectCategories/{id} {
+        allow read: if isMember(b) || isSuperAdmin();
+        allow write: if isAdmin(b);
+      }
+
+      match /subjects/{id} {
+        allow read: if isMember(b) || isSuperAdmin();
+        allow write: if isAdmin(b);
+      }
+
+      match /conferenceCategories/{id} {
+        allow read: if isStaff(b);
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ availability
+
+      // Tutors can't touch days that start inside the lock window (or the lead time,
+      // when the branch blocks late availability). Admins can change any day.
+      function lockDays() {
+        let a = branchDoc(b).data.get('settings', {}).get('availability', {});
+        let lock = a.get('lockWindowDays', 7);
+        let lead = a.get('leadTimeDays', 14);
+        return a.get('leadTimeEnforcement', 'warn') == 'block' && lead > lock ? lead : lock;
+      }
+
+      function tutorMayEdit(data) {
+        return data.dayStartAt is timestamp
+          && data.dayStartAt > request.time + duration.value(lockDays(), 'd');
+      }
+
+      function validAvailability(docId, data) {
+        let utcMidnight = timestamp.date(int(data.dateKey[0:4]), int(data.dateKey[5:7]), int(data.dateKey[8:10]));
+        return docId == data.staffId + '_' + data.dateKey
+          && data.ranges is list
+          && data.dayStartAt is timestamp
+          && data.dayStartAt > utcMidnight - duration.value(15, 'h')
+          && data.dayStartAt < utcMidnight + duration.value(15, 'h');
+      }
+
+      match /availability/{docId} {
+        allow read: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b));
+        allow create: if validAvailability(docId, request.resource.data)
+          && (isAdmin(b)
+              || (isTutor(b) && request.resource.data.staffId == myStaffId(b) && tutorMayEdit(request.resource.data)));
+        allow update: if validAvailability(docId, request.resource.data)
+          && (isAdmin(b)
+              || (isTutor(b) && resource.data.staffId == myStaffId(b) && request.resource.data.staffId == myStaffId(b)
+                  && tutorMayEdit(resource.data) && tutorMayEdit(request.resource.data)));
+        allow delete: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b) && tutorMayEdit(resource.data));
+      }
+
+      match /dayConfigs/{dateKey} {
+        allow read: if isMember(b) || isSuperAdmin();
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ schedule
+
+      // Nobody edits a session once its day is over (dayEndAt = next local midnight).
+      match /sessions/{sessionId} {
+        function dayOpen(data) {
+          return data.dayEndAt is timestamp && data.dayEndAt > request.time
+            && data.dayEndAt <= data.startAt + duration.value(25, 'h')
+            && data.dayEndAt > data.startAt;
+        }
+
+        allow read: if isAdmin(b)
+          || (isTutor(b) && resource.data.tutorId == myStaffId(b))
+          || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
+          || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
+        // A session with a submitted log stays Present: its log marked attendance and billed the hours.
+        function keepsLoggedPresent() {
+          return resource.data.get('logStatus', 'none') != 'submitted'
+            || request.resource.data.status == resource.data.status
+            || request.resource.data.status == 'present';
+        }
+
+        allow create: if isAdmin(b) && dayOpen(request.resource.data);
+        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data) && keepsLoggedPresent();
+        // Trashed sessions can be purged even after their day.
+        allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
+      }
+
+      match /events/{eventId} {
+        allow read: if isStaff(b);
+        allow write: if isAdmin(b);
+      }
+
+      // ------------------------------------------------------ time & pay
+
+      function lockedThrough() {
+        let path = /databases/$(database)/documents/branches/$(b)/payroll/state;
+        return exists(path) ? get(path).data.get('lockedThrough', '') : '';
+      }
+
+      // Shifts inside a locked pay period can't change.
+      function shiftEditable(data) {
+        return data.dateKey is string && data.dateKey > lockedThrough();
+      }
+
+      match /clockShifts/{shiftId} {
+        allow read: if isAdmin(b) || (isTutor(b) && resource.data.staffId == myStaffId(b));
+        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data);
+        allow update: if isAdmin(b) && notRestricted(b, 'timeEntries')
+          && shiftEditable(resource.data) && shiftEditable(request.resource.data);
+        allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(resource.data);
+      }
+
+      // Pointer to an employee's open shift (written by the kiosk functions).
+      match /openShifts/{staffId} {
+        allow read: if isAdmin(b) || (isTutor(b) && staffId == myStaffId(b));
+        allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries');
+      }
+
+      match /payroll/{docId} {
+        allow read: if isStaff(b);
+        allow write: if isAdmin(b) && notRestricted(b, 'payroll');
+      }
+
+      match /payPeriods/{periodId} {
+        allow read, write: if isAdmin(b) && notRestricted(b, 'payroll');
+
+        match /lines/{staffId} {
+          allow read: if (isAdmin(b) && notRestricted(b, 'payroll')) || (isTutor(b) && staffId == myStaffId(b));
+          allow write: if isAdmin(b) && notRestricted(b, 'payroll');
+        }
+      }
+
+      match /kioskPinOwners/{id} {
+        allow read, write: if false;
+      }
+
+      // ------------------------------------------------------ sessions
+
+      function tutorsSeeAllLogs() {
+        return branchDoc(b).data.get('settings', {}).get('sessionLogs', {}).get('tutorsSeeAllLogs', true) == true;
+      }
+
+      function sessionOf(sessionId) {
+        return get(/databases/$(database)/documents/branches/$(b)/sessions/$(sessionId)).data;
+      }
+
+      // One log per session (doc ID = session ID). Drafts are written by the
+      // tutor or an admin; submitting goes through the submitSessionLog function.
+      match /sessionLogs/{sessionId} {
+        // A missing log reads as missing (the form opens before the first draft exists).
+        allow read: if isAdmin(b)
+          || (isTutor(b) && (tutorsSeeAllLogs() || resource == null || resource.data.tutorId == myStaffId(b)));
+        // Drafts only: submitting runs on the server. Drafts hold the log's own fields and nothing else.
+        allow create, update: if request.resource.data.status == 'draft'
+          && (resource == null || resource.data.status == 'draft')
+          && request.resource.data.sessionId == sessionId
+          && request.resource.data.keys().hasOnly([
+            'sessionId', 'status', 'sessionType', 'topics', 'topicCovered', 'homeworkStatus', 'homeworkComments',
+            'materials', 'questionsAttempted', 'questionsWrong', 'lessonActivity', 'learningInsight', 'nextFocus',
+            'homeworkGiven', 'ratings', 'studentFlag', 'tutorId', 'tutorName', 'studentId', 'studentName', 'subject',
+            'subjectId', 'dateKey', 'startMin', 'endMin', 'updatedAt', 'updatedBy'])
+          && (isAdmin(b) || (isTutor(b) && sessionOf(sessionId).tutorId == myStaffId(b)));
+        allow delete: if isAdmin(b);
+      }
+
+      // Reports are made and shared by functions (generateProgressReport, shareProgressReport).
+      // Staff edit a draft's written sections, switches and name; families read shared reports.
+      match /progressReports/{reportId} {
+        function shared() {
+          return resource.data.sharedWithParents == true;
+        }
+        function ownDraft() {
+          return isTutor(b) && resource.data.get('generatedBy', {}).get('staffId', '') == myStaffId(b);
+        }
+        allow read: if isAdmin(b)
+          || (isTutor(b) && (shared() || ownDraft()))
+          || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b) && shared())
+          || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b) && shared());
+        allow create: if false;
+        allow update: if (
+            resource.data.get('status', 'shared') == 'draft'
+            && (isAdmin(b) || ownDraft())
+            && changed().hasOnly(['narrative', 'narrativeMeta', 'options', 'customName', 'updatedAt', 'updatedBy'])
+            && request.resource.data.updatedAt == request.time
+          ) || (
+            isAdmin(b) && changed().hasOnly(['customName', 'updatedAt', 'updatedBy'])
+          );
+        allow delete: if isAdmin(b);
+
+        // A family member's first opening of a shared report (write-once).
+        match /views/{viewerKey} {
+          function report() {
+            return get(/databases/$(database)/documents/branches/$(b)/progressReports/$(reportId)).data;
+          }
+          allow read: if isStaff(b);
+          allow create: if viewerKey == emailKey()
+            && request.resource.data.viewedAt == request.time
+            && report().sharedWithParents == true
+            && ((hasRole(b, 'parent') && report().studentId in myStudentIds(b))
+              || (hasRole(b, 'student') && report().studentId == myStudentId(b)));
+          allow update, delete: if false;
+        }
+      }
+
+      // ------------------------------------------------------ communication
+
+      // Tutors see posts for everyone plus posts addressed to them; admins see all.
+      function seesAnnouncement(data) {
+        return isAdmin(b)
+          || (isTutor(b) && (data.audienceType == 'all' || emailKey() in data.audienceKeys));
+      }
+
+      match /announcements/{announcementId} {
+        function post() {
+          return get(/databases/$(database)/documents/branches/$(b)/announcements/$(announcementId)).data;
+        }
+
+        function validPost(data) {
+          return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+            && data.audienceType in ['all', 'members']
+            && data.audienceKeys is list
+            && (data.audienceType == 'all' || data.audienceKeys.size() > 0);
+        }
+
+        allow read: if seesAnnouncement(resource.data);
+        // Read and comment counters are kept by Cloud Functions.
+        allow create: if isAdmin(b) && validPost(request.resource.data)
+          && request.resource.data.authorKey == emailKey()
+          && request.resource.data.readCount == 0
+          && request.resource.data.commentCount == 0;
+        allow update: if isAdmin(b) && validPost(request.resource.data)
+          && !changed().hasAny(['readCount', 'commentCount', 'authorKey']);
+        allow delete: if isAdmin(b);
+
+        // Read receipts: written once by the reader, never changed.
+        match /reads/{readerKey} {
+          allow read: if isAdmin(b) || (signedIn() && readerKey == emailKey());
+          allow create: if signedIn() && readerKey == emailKey()
+            && request.resource.data.email == emailKey()
+            && request.resource.data.branchId == b
+            && request.resource.data.announcementId == announcementId
+            && request.resource.data.readAt == request.time
+            && seesAnnouncement(post());
+          allow update, delete: if false;
+        }
+
+        match /comments/{commentId} {
+          allow read: if seesAnnouncement(post());
+          allow create: if seesAnnouncement(post())
+            && (isAdmin(b) || post().commentsEnabled == true)
+            && request.resource.data.authorKey == emailKey()
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000;
+          allow update: if false;
+          allow delete: if isAdmin(b) || (signedIn() && resource.data.authorKey == emailKey());
+        }
+      }
+
+      // In-app inbox. Items are written by Cloud Functions; people read,
+      // mark read and delete their own.
+      match /notifications/{notificationId} {
+        allow read: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey();
+        allow update: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey()
+          && changed().hasOnly(['readAt']);
+        allow delete: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey();
+        allow create: if false;
+      }
+
+      // ------------------------------------------------------ audit log
+
+      match /auditLog/{entryId} {
+        allow read: if isAdmin(b);
+        allow create: if isStaff(b)
+          && request.resource.data.actorEmail == emailKey()
+          && request.resource.data.at == request.time;
+        allow update, delete: if false;
+      }
+
+      // Server-only collections.
+      match /kioskPins/{id} {
+        allow read, write: if false;
+      }
     }
   }
 }

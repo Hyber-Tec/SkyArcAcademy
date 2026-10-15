@@ -1,0 +1,281 @@
+import { ROLE_LABELS } from '@shared/roles'
+import type { BusinessRules } from '@shared/settings/businessRules'
+import { WEEKDAYS, WEEKDAY_LABELS } from '@shared/time'
+
+/** Declarative description of the per-branch business settings (docs/hyber/BRANCH_SETTINGS.md). */
+
+interface Base {
+  path: string
+  label: string
+  help?: string
+  /** Shown only when the branch's business rules need it (e.g. conferences on). */
+  visible?: (rules: BusinessRules) => boolean
+}
+
+export type FieldDef =
+  | (Base & { kind: 'number'; min?: number; max?: number; step?: number; suffix?: string })
+  | (Base & { kind: 'boolean' })
+  | (Base & { kind: 'select'; options: { value: string; label: string }[] })
+  | (Base & { kind: 'multiselect'; options: { value: string; label: string }[] })
+  | (Base & { kind: 'text'; multiline?: boolean })
+  | (Base & { kind: 'list' })
+  | (Base & { kind: 'hhmm' })
+  | (Base & { kind: 'date' })
+  | (Base & { kind: 'weekHours' })
+  | (Base & { kind: 'range'; step?: number })
+
+export interface SettingsSection {
+  key: string
+  title: string
+  description: string
+  fields: FieldDef[]
+}
+
+const SESSION_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'present', label: 'Present (log submitted)' },
+  { value: 'no_show', label: 'No Show' },
+  { value: 'canceled', label: 'Canceled' },
+]
+
+export const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    key: 'signup',
+    title: 'Sign-up page',
+    description: 'The public page where new tutors, parents and students request access with Google.',
+    fields: [
+      { kind: 'boolean', path: 'signup.enabled', label: 'Accept sign-up requests' },
+      {
+        kind: 'multiselect',
+        path: 'signup.roles',
+        label: 'Who can request access',
+        options: (['tutor', 'parent', 'student'] as const).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+      },
+      { kind: 'text', path: 'signup.welcomeMessage', label: 'Welcome message', multiline: true, help: 'Shown at the top of the sign-up page.' },
+    ],
+  },
+  {
+    key: 'schedule',
+    title: 'Schedule',
+    description: 'Opening hours, session defaults and automatic confirmation.',
+    fields: [
+      {
+        kind: 'select',
+        path: 'general.weekStartsOn',
+        label: 'Weeks start on',
+        options: WEEKDAYS.map((d) => ({ value: d, label: WEEKDAY_LABELS[d] })),
+        help: 'The first column of the schedule’s week and of every calendar.',
+      },
+      { kind: 'weekHours', path: 'schedule.defaultWeek', label: 'Default opening hours', help: 'Each weekday’s usual hours. Dates set in “Opening hours by date” below (or edited on the schedule) override them. Sessions already booked outside new hours stay booked and show as conflicts on the schedule until moved.' },
+      { kind: 'number', path: 'schedule.defaultSessionMinutes', label: 'Default session length', min: 15, max: 480, step: 5, suffix: 'min' },
+      { kind: 'number', path: 'schedule.snapMinutes', label: 'Time snap', min: 1, max: 60, step: 1, suffix: 'min', help: 'Clicks, drags and resizes snap to this step.' },
+      {
+        kind: 'select',
+        path: 'schedule.defaultView',
+        label: 'Default view',
+        options: [
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Month' },
+        ],
+      },
+      { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending sessions automatically' },
+      { kind: 'number', path: 'schedule.autoConfirm.hoursBefore', label: 'Confirm this long before the start', min: 1, max: 168, suffix: 'hours' },
+      { kind: 'boolean', path: 'schedule.noShow.countsTowardStudentHours', label: 'No Show sessions count toward the student’s hours' },
+      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated sessions', options: SESSION_STATUS_OPTIONS.slice(0, 2) },
+      { kind: 'list', path: 'schedule.events.titlePresets', label: 'Event title presets', help: 'One per line. Offered when adding an event.' },
+      { kind: 'number', path: 'schedule.alerts.conferenceNoteDays', label: 'Bell: parent-conference note within', min: 0, max: 90, suffix: 'days', visible: (r) => r.conferences.enabled },
+      { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Bell: student’s first session' },
+      { kind: 'number', path: 'trash.retentionDays', label: 'Keep deleted sessions in Trash for', min: 1, max: 365, suffix: 'days' },
+    ],
+  },
+  {
+    key: 'availability',
+    title: 'Availability',
+    description: 'How far ahead tutors must enter availability, and when it locks.',
+    fields: [
+      { kind: 'number', path: 'availability.leadTimeDays', label: 'Ask tutors to set availability at least', min: 0, max: 90, suffix: 'days ahead' },
+      {
+        kind: 'select',
+        path: 'availability.leadTimeEnforcement',
+        label: 'When a tutor is later than that',
+        options: [
+          { value: 'off', label: 'Do nothing' },
+          { value: 'warn', label: 'Show a warning' },
+          { value: 'block', label: 'Block the change' },
+        ],
+      },
+      {
+        kind: 'number',
+        path: 'availability.lockWindowDays',
+        label: 'Lock availability that starts within',
+        min: 0,
+        max: 60,
+        suffix: 'days',
+        help: 'Tutors can’t add, change or remove availability inside this window. Admins always can. 0 turns the lock off.',
+      },
+      { kind: 'number', path: 'availability.maxRangesPerDay', label: 'Time ranges per day', min: 1, max: 6 },
+      { kind: 'number', path: 'availability.stepMinutes', label: 'Picker step', min: 5, max: 60, step: 5, suffix: 'min' },
+      { kind: 'number', path: 'availability.minBlockMinutes', label: 'Shortest range', min: 5, max: 240, step: 5, suffix: 'min' },
+    ],
+  },
+  {
+    key: 'students',
+    title: 'Students',
+    description: 'Automatic status changes and billed hours.',
+    fields: [
+      { kind: 'boolean', path: 'students.autoStatus.enabled', label: 'Update student statuses automatically', help: 'Signed Up → Enrolled after the first session; Enrolled ↔ Paused by activity.' },
+      { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', label: 'Pause after no sessions for', min: 1, max: 180, suffix: 'days' },
+      { kind: 'boolean', path: 'students.autoStatus.respectManual', label: 'Keep a status set by hand', help: 'A manual status stops the automatic changes until someone changes it again.' },
+      {
+        kind: 'select',
+        path: 'students.hourRounding',
+        label: 'Billed hours rounding',
+        options: [
+          { value: 'te_business', label: 'Business rounding (½-hour steps with grace)' },
+          { value: 'exact_quarter', label: 'Nearest quarter hour' },
+          { value: 'exact', label: 'Exact minutes' },
+        ],
+      },
+      { kind: 'list', path: 'students.gradeOptions', label: 'Grades', help: 'One per line.' },
+    ],
+  },
+  {
+    key: 'sessionLogs',
+    title: 'Session logs',
+    description: 'What tutors fill in after each session.',
+    fields: [
+      { kind: 'list', path: 'sessionLogs.sessionTypes', label: 'Session types', help: 'One per line. SAT, PSAT and ACT use the topic picker.' },
+      {
+        kind: 'list',
+        path: 'sessionLogs.homeworkStatuses',
+        label: 'Homework statuses',
+        help: 'One per line. Progress reports count “Completed”, “Partially Done”, “Not Done” and “Not Assigned” by these names.',
+      },
+      {
+        kind: 'list',
+        path: 'sessionLogs.ratingDimensions',
+        label: 'Ratings (1–5)',
+        help: 'One per line. Renaming a rating starts a new one: earlier logs keep their scores under the old name.',
+      },
+      { kind: 'multiselect', path: 'sessionLogs.allowForStatuses', label: 'Sessions that can be logged', options: SESSION_STATUS_OPTIONS.slice(0, 3) },
+      { kind: 'boolean', path: 'sessionLogs.tutorsSeeAllLogs', label: 'Tutors can read other tutors’ logs' },
+      { kind: 'boolean', path: 'sessionLogs.allowEditAfterSubmit', label: 'Tutors can edit a log after submitting' },
+      { kind: 'boolean', path: 'sessionLogs.ai.enabled', label: 'AI summary, homework and next-session plan', help: 'The log, including the student’s name, is sent to an AI service to write these.' },
+      {
+        kind: 'number',
+        path: 'sessionLogs.autosaveSeconds',
+        label: 'Autosave drafts at least every',
+        help: 'Drafts also save a moment after the tutor stops typing.',
+        min: 5,
+        max: 300,
+        suffix: 'sec',
+      },
+    ],
+  },
+  {
+    key: 'progressReports',
+    title: 'Progress reports',
+    description: 'How reports for families are drafted, checked and shared.',
+    fields: [
+      {
+        kind: 'boolean',
+        path: 'progressReports.ai.enabled',
+        label: 'Write report text with AI',
+        help: 'Session notes for the period and the student’s first name are sent to an AI service to draft the text. Staff review it before it’s shared. Figures and the status are always calculated.',
+      },
+      { kind: 'boolean', path: 'progressReports.aiDisclosure', label: 'Mention AI help in the report', help: 'Adds “Written with the help of AI and reviewed by our team.” to reports drafted with AI.' },
+      { kind: 'boolean', path: 'progressReports.tutorsCanCreate', label: 'Tutors can create report drafts', help: 'Only admins share reports with families. Tutors also need to be able to read every log.' },
+      {
+        kind: 'select',
+        path: 'progressReports.defaultPeriod',
+        label: 'Default period for a new report',
+        options: [
+          { value: 'since_last', label: 'Since the last report' },
+          { value: 'last_month', label: 'Last month' },
+          { value: 'last_30', label: 'Last 30 days' },
+          { value: 'last_90', label: 'Last 90 days' },
+        ],
+      },
+      { kind: 'boolean', path: 'progressReports.emailFamiliesOnShare', label: 'Email families when a report is shared', help: 'The email holds only a link; the family signs in to read the report.' },
+      { kind: 'boolean', path: 'progressReports.sections.status', label: 'Show the progress status in reports' },
+      { kind: 'boolean', path: 'progressReports.sections.practice', label: 'Show practice accuracy in reports', help: 'Question counts are entered by tutors in session logs.' },
+      { kind: 'boolean', path: 'progressReports.sections.resources', label: 'Show the resources used in reports' },
+      { kind: 'boolean', path: 'progressReports.sections.conference', label: 'Show the next parent conference in reports', visible: (rules) => rules.conferences.enabled },
+      { kind: 'number', path: 'progressReports.risk.needsAttentionHomeworkBelow', label: 'Needs Attention when homework done is below', min: 0, max: 100, suffix: '%' },
+      { kind: 'number', path: 'progressReports.risk.atRiskHomeworkBelow', label: 'At Risk when homework done is below', min: 0, max: 100, suffix: '%' },
+      { kind: 'number', path: 'progressReports.risk.needsAttentionMotivationBelow', label: 'Needs Attention when average motivation is below', min: 1, max: 5, step: 0.1 },
+      { kind: 'number', path: 'progressReports.risk.atRiskFocusBelow', label: 'At Risk when average focus is below', min: 1, max: 5, step: 0.1 },
+      {
+        kind: 'select',
+        path: 'progressReports.risk.flagRule',
+        label: 'Sessions tutors flag change the status',
+        options: [
+          { value: 'share', label: 'When they’re a quarter of the sessions, or the last two' },
+          { value: 'any', label: 'After a single flagged session' },
+        ],
+      },
+      { kind: 'number', path: 'progressReports.risk.needsAttentionAttendanceBelow', label: 'Needs Attention when attendance is below', min: 0, max: 100, suffix: '%', help: '0 turns it off.' },
+      { kind: 'number', path: 'progressReports.risk.atRiskAttendanceBelow', label: 'At Risk when attendance is below', min: 0, max: 100, suffix: '%', help: '0 turns it off.' },
+    ],
+  },
+  {
+    key: 'payroll',
+    title: 'Payroll & time clock',
+    description: 'What counts as teaching time, pay periods and the automatic clock-out.',
+    fields: [
+      {
+        kind: 'multiselect',
+        path: 'payroll.teachingSessionStatuses',
+        label: 'Sessions that count as teaching time',
+        options: SESSION_STATUS_OPTIONS.slice(0, 4),
+        help: 'By default only sessions whose log was submitted.',
+      },
+      {
+        kind: 'select',
+        path: 'payroll.payPeriod.type',
+        label: 'Pay period',
+        options: [
+          { value: 'weekly', label: 'Weekly' },
+          { value: 'biweekly', label: 'Every two weeks' },
+          { value: 'semimonthly', label: 'Twice a month (1–15, 16–end)' },
+          { value: 'monthly', label: 'Monthly' },
+        ],
+      },
+      { kind: 'date', path: 'payroll.payPeriod.anchorDate', label: 'A pay period starts on', help: 'For weekly and two-week periods.' },
+      { kind: 'boolean', path: 'timeClock.autoClockOut.enabled', label: 'Clock everyone out automatically' },
+      { kind: 'hhmm', path: 'timeClock.autoClockOut.localTime', label: 'Automatic clock-out time' },
+      { kind: 'number', path: 'timeClock.kiosk.pinLength', label: 'Kiosk PIN length', min: 4, max: 8 },
+      { kind: 'number', path: 'timeEntries.stepMinutes', label: 'Time entry step', min: 1, max: 30, suffix: 'min' },
+    ],
+  },
+  {
+    key: 'home',
+    title: 'Home & announcements',
+    description: 'What the admin Home dashboard looks at, and the announcement categories.',
+    fields: [
+      { kind: 'number', path: 'home.missingLogLookbackDays', label: 'Look for missing session logs in the last', min: 1, max: 90, suffix: 'days' },
+      {
+        kind: 'number',
+        path: 'home.missingLogGraceMinutes',
+        label: 'Flag a missing log after the session starts by',
+        min: 0,
+        max: 1440,
+        suffix: 'min',
+        help: '0 flags it as soon as the session starts.',
+      },
+      { kind: 'number', path: 'home.clockLookbackDays', label: 'Look for automatic clock-outs in the last', min: 1, max: 31, suffix: 'days' },
+      { kind: 'list', path: 'announcements.defaultCategories', label: 'Announcement categories', help: 'One per line. Listed first, in this order.' },
+    ],
+  },
+  {
+    key: 'notifications',
+    title: 'Notifications',
+    description: 'Push notifications arrive with the phone app; the app already records them.',
+    fields: [
+      { kind: 'number', path: 'notifications.sessionChangeWindowHours', label: 'Notify tutors of changes within', min: 1, max: 168, suffix: 'hours' },
+      { kind: 'number', path: 'notifications.retentionDays', label: 'Keep notifications for', min: 1, max: 365, suffix: 'days' },
+    ],
+  },
+]
