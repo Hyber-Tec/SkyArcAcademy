@@ -67,10 +67,9 @@ Sky Arc's three priorities are mostly **new work on top of the kept core**:
    database is empty, so persisted values cost nothing to rename now.
 4. **Remove** the Super Admin platform, landing page, live demo, inquiries, session logs, AI report writing,
    subjects, school and conference features, and tutoring-hours billing.
-5. **Fix on the way:** HyberCRM's `storage.rules` admin check is stale (only a Super Admin passes it), uploaded
-   files are shared through public download links, the kiosk runs inside a signed-in admin's browser, PIN hashes
-   use no secret, and parents can read staff-only fields. None of these may reach Sky Arc, whose files and records
-   concern minors (§11).
+5. **Hold minors' data to a stricter standard** than a tutoring CRM needed: report files only through the rules,
+   staff-only fields out of parent-readable documents, a kiosk that is its own locked identity, secret-keyed PIN
+   hashes with attempt limits (§7, §11).
 
 **Before the fork starts**, §15 lists what Goo needs to confirm. The top ones: the plan itself (fixed academy,
 flattened URLs, removals), whether HyberTec keeps a support login, the owners' sign-in emails and the email
@@ -122,7 +121,7 @@ carried over. **New** = built for Sky Arc.
 | "View as" | `components/app/ViewAs.tsx` (Super Admin only) | Adapt | Owner and admins preview the coach and parent views |
 | Sign-in pages | `pages/public/{Login,SignUp,VerifyEmail,ForgotPassword,AuthAction,GoogleButton,authParts}.tsx` | Keep | **Google and email/password sign-in and sign-up** carry over as they are; rebrand; Korean + English |
 | App resolver, root page | `pages/public/{AppResolver,RootRoute,Landing}.tsx` | Adapt | Always opens the academy; `/` is the placeholder homepage (added in #1) |
-| Account (people, invites) | `features/access/{AccountPage,MemberDialog,invites,api}.tsx`, `functions/src/invites.ts` | Adapt | Owner Sunny, admin Matt; Korean + English invite emails; sender per §15 |
+| Account (people, invites) | `features/access/{AccountPage,MemberDialog,invites,api}.tsx`, `functions/src/invites.ts` | Adapt | The owner and the manager; Korean + English invite emails; sender per §15 |
 | Access Control | `features/access/AccessControlPage.tsx` | Keep | Per-admin restrictions (pay rates, payroll, time entries, access control) |
 | Sign-up requests | `features/signup/BranchSignupPage.tsx`, `features/access/SignupShare.tsx` | Adapt | Coach and parent requests, Korean + English; separate from the public trial page |
 | Super Admin platform | `pages/platform/*` (8 files), `functions/src/platform.ts`, `shared/src/{branchFactory,slug}.ts` | Remove | A seed script creates the one academy; see §3 for support access |
@@ -314,7 +313,7 @@ All paths are under `branches/skyarc/` unless marked root.
 `sessionLogs`, `subjects`, `subjectCategories`, `conferenceCategories`, `students/{id}/conferenceNotes`, root
 `inquiries`, the demo data, and `platformAdmins` unless Q3 keeps it.
 
-### New settings (defaults until Matt confirms)
+### New settings (defaults until the academy confirms)
 
 | Section | Settings |
 |---|---|
@@ -353,7 +352,7 @@ conferences, the missing-log Home settings.
 | Mon | 4:30–6, 6–7, 7–8 |
 | Tue | 5–6, 6–7, 7–8 |
 | Wed | 5–6, 6–7, 7–8 |
-| Thu | 5–6, 6–7, **7–8:30** (one week also shows a 4:30–6 group: confirm with Matt) |
+| Thu | 5–6, 6–7, **7–8:30** (one week also shows a 4:30–6 group: confirm with the academy) |
 | Sun | 2–3, 3–4:30, 4:30–5:30, then 5:30–7:30 "Range Practice" |
 | Fri, Sat | No columns: closed. The website says Fri–Sun are "by arrangement" for open range and private coaching. |
 
@@ -363,7 +362,7 @@ conferences, the missing-log Home settings.
   empty in all four weeks.
 - Each seat shows a **level** and a student. The ladder has nine levels: Discovery, Scout, Hunter, Hunter+,
   Marksman, Marksman+, Sharp Shooter, Expert, Precision (three appear only in the legend). Also marked: Practice,
-  Trial, MU, and an unexplained "Marksman JG" (ask Matt).
+  Trial, MU, and an unexplained "Marksman JG" (ask the academy).
 - **Trials** are two visits, mostly **30 minutes** inside a block ("Trial 1 (7–7:30)", "Trial 2 (5:30–6:00)"), up to
   three in one block; 18 trial seats in four weeks.
 - **Makeups** sit in a regular block as "MU for 10/13": 21 in four weeks, taken from 16 days *before* to 18 days
@@ -375,9 +374,9 @@ conferences, the missing-log Home settings.
   come twice a week, but "Mon/Wed or Tue/Thu" covers only 5 of them (9 different day pairs), and Sunday is one of the
   two days for 8. One student alternates Thursday and Sunday.
 - **People:** 39 distinct names: 29 enrolled with a level, 1 practice-only, 8 trial prospects, 1 not returned.
-  That matches Matt's "about 40".
+  That matches the academy's "about 40".
 - **No coach appears anywhere** — not per block, seat column or day. Capacity today is per block. (The two seat
-  columns could mean two coaches; ask Matt.)
+  columns could mean two coaches; ask the academy.)
 
 ### The Sky Arc model
 
@@ -395,7 +394,7 @@ conferences, the missing-log Home settings.
    class blocks depends on Q7.
 6. **Parent cancellation** (`cancelClass` callable): checks the cutoff (Settings, default 24 h), records who and
    when, marks late cancels, creates a makeup credit if the rules allow, writes the audit entry and notifies the
-   admins immediately (Matt at 9 PM the night before).
+   admins immediately (the manager at 9 PM the night before).
 7. **Makeups** (`makeupCredits` + `bookMakeup` callable): parents see open seats in eligible classes within the
    rules (per month, expiry, book-ahead, notice) and book one in a transaction. Cancelling a future class in time
    creates the credit right away, so a makeup can also come **before** the missed class, as it often does today.
@@ -404,7 +403,7 @@ conferences, the missing-log Home settings.
    (default two 30-minute visits) in a transaction, records a `trialBookings` lead, emails the family and notifies
    the admins. Bot protection comes from HyberCRM's inquiry endpoint. A trial converts into a student and
    enrollments.
-9. **Coach patterns** (`coachPatterns`, any staff member, Matt included): weekdays every N weeks from an anchor
+9. **Coach patterns** (`coachPatterns`, any staff member, the manager included): weekdays every N weeks from an anchor
    date, reusing the events' recurrence code. The Sunday rotation is two patterns with opposite week parity.
 10. **Shifts**: shift = first class start − 30 min (Settings) → last class end. Shifts are kept apart from opening
     hours (HyberCRM clips availability to opening hours, which would cut a 4:30 shift on a 5:00 day). They feed the
@@ -418,15 +417,16 @@ conferences, the missing-log Home settings.
 
 ## 7. Employees, kiosk, time entries, payroll
 
-### Kiosk: what HyberCRM does and what Sky Arc needs
+### Kiosk: what Sky Arc needs
 
-| | HyberCRM today | Sky Arc |
-|---|---|---|
-| Who the kiosk is | A signed-in **admin's** browser opened at `/{b}/kiosk`; the kiosk callables require an admin | A **registered kiosk device** with its own identity that can only open `/kiosk` and call the two kiosk functions |
-| Leaving kiosk mode | `window.confirm('Exit kiosk mode?')` lands on admin Home, still signed in | Leaving signs the device out; an admin must sign in again |
-| PIN storage | `sha256("hyber-kiosk:{branch}:{pin}")`, no secret: a stolen database dump reveals every 4-digit PIN in 10,000 tries | **HMAC-SHA256 with a secret pepper** in Secret Manager; lookup stays deterministic, so uniqueness still works |
-| Wrong PINs | Unlimited | Per-device limit (e.g. 5 wrong PINs → 1-minute wait, growing), failures audited without the PIN |
-| Copy | "PINs are encrypted" | "PINs are stored hashed" |
+- **Its own identity.** A registered kiosk device can only open `/kiosk` and call the two kiosk functions; it never
+  runs inside an admin's session.
+- **Leaving kiosk mode** signs the device out; an admin must sign in again.
+- **PINs** are hashed with **HMAC-SHA256 and a secret pepper** in Secret Manager. Lookup stays deterministic, so
+  uniqueness still works, and a copy of the database alone reveals nothing.
+- **Wrong PINs** are limited per device (e.g. 5 wrong PINs → a 1-minute wait, growing); failures are audited without
+  the PIN.
+- The wording says "PINs are stored hashed".
 
 **How the device gets its identity** (recommended; HyberCRM's own plan, never built): an admin signs in on the
 kiosk computer and chooses "Make this a kiosk". A callable registers `kioskDevices/{id}` and returns a Firebase
@@ -443,10 +443,11 @@ lets anyone with the password sign in elsewhere.
 - Rates are priced from the history entry in effect on the shift's date (today the current rate re-prices past
   periods on screen), and locked pay-period snapshots are read back instead of recomputed.
 - The duplicate `priceShifts` in `web/src/features/timeclock/api.ts` merges into `shared/src/pay/`.
-- **Expected shift** = first class start − 30 min → last class end, from the coach's pattern. Sunny's review can
+- **Expected shift** = first class start − 30 min → last class end, from the coach's pattern. The owner's review can
   compare it with the clocked time.
-- Sunny is `owner` (payroll access); Matt is `admin` with whatever restrictions Sunny chooses.
-- Pay period type and rates stay settings until Sunny sends them (default: biweekly).
+- The owner has the `owner` role (payroll access); the manager is an `admin` with whatever restrictions the owner
+  chooses.
+- Pay period type and rates stay settings until the owner sends them (default: biweekly).
 
 ---
 
@@ -619,7 +620,7 @@ the bell for admins and parents; recipients resolved for admins and for parents 
 ### Announcements
 
 Kept, with parents as an audience (rules, a parent reader page, receipts, notifications), a Tournament category
-and Korean + English reading screens. Attached files stop using public download links (§11). A public news feed for
+and Korean + English reading screens. Attached files are read through the Storage rules (§11). A public news feed for
 the future website would be a separate, server-maintained copy, never the announcements collection, whose receipts
 and comments hold emails.
 
@@ -651,15 +652,19 @@ and comments hold emails.
 
 ## 11. Security and minors' data
 
-| Issue found in HyberCRM | What Sky Arc does |
+Sky Arc's records and files concern minors, so:
+
+| Area | What Sky Arc does |
 |---|---|
-| `storage.rules` checks the old `roles` array, so only a Super Admin passes the admin check (owners and admins can't upload); no Storage rules tests | New Storage rules written against the current `role`, with emulator tests |
-| Uploaded files are shared with `getDownloadURL`, a link that bypasses the rules and works for anyone who has it | Report files and announcement attachments are read with `getBlob` through the rules. Report access: parents of the linked student, published reports only, checked with `firestore.get()` on the report (the Storage service agent already has the role this needs) |
-| The kiosk runs on an admin session; PIN hashes have no secret; wrong PINs are unlimited | §7 |
-| Parents can read staff-only fields (`learningNote`, `schoolRecord`, a class's staff note) because the rules allow the whole document | Staff-only fields move to `private` documents; rules tests assert parents can't read them |
-| The public inquiry endpoint is the only unauthenticated write | `/trial` reuses its honeypot, timing check and hashed-IP rate limit, checks capacity in a transaction, and may add App Check later |
-| Photos carry EXIF data, including GPS | Paper-target photos are re-encoded in the browser before upload (orientation applied, metadata dropped, resized) |
-| — | Kiosk PINs never appear in logs, audit entries or errors; real student data and report files never enter the repository (CI's guard) |
+| Storage rules | Written against the one-role model, with emulator tests for every path |
+| Files | Report files and announcement attachments are read with `getBlob` through the rules, never through download links (which bypass them). Report access: parents of the linked student, published reports only, checked with `firestore.get()` on the report (the Storage service agent already has the role this needs) |
+| Kiosk and PINs | §7 |
+| Parent-readable documents | Staff-only fields live in `private` documents; rules tests assert parents can't read them |
+| Public endpoints | `/trial` uses a honeypot, a timing check and a hashed-IP rate limit, checks capacity in a transaction, and may add App Check later |
+| Photos | Paper-target photos are re-encoded in the browser before upload (orientation applied, metadata including GPS dropped, resized) |
+| Logs and the repository | Kiosk PINs never appear in logs, audit entries or errors; real student data and report files never enter the repository (CI's guard) |
+
+Findings about HyberCRM's own code are kept in the local `docs/internal/` (this repository is public).
 
 ---
 
@@ -702,12 +707,12 @@ type and scope.
 |---|---|
 | Rules regressions while reshaping a 542-line rule set that protects minors' data | Keep the branch structure (§3); rules tests first, for every new collection, with a decoy academy |
 | Removing session logs breaks attendance, payroll, student history and Home at once | Build attendance and hourly pay before deleting logs, in the same pull request |
-| Matt's values (rules, hours, capacity, pay, roster) arrive late or change | Everything is a setting with a sensible default; nothing hard-coded |
+| The academy's values (rules, hours, capacity, pay, roster) arrive late or change | Everything is a setting with a sensible default; nothing hard-coded |
 | The SIUS PDF layout changes with a SIUS software update | The parser is tolerant, every value can be corrected in the review table, and fixtures cover the variants seen |
 | Korean wording that sounds machine-made to Korean parents | A native reviewer before launch; terms collected in one dictionary |
 | Big pull requests are slow to review | The fork's import commit is verbatim, so the review reads only the second commit |
-| GitHub can't enforce "pull requests only" on a private Free-plan repository | Convention (CLAUDE.md); upgrading the organization to GitHub Team would enforce it |
-| End-of-November launch | Web only; the phone app waits; priorities in the brief's order |
+| Changes reaching `main` without review | The repository is public, so a ruleset on `main` requires a pull request and green CI; owner approval stays a convention (CLAUDE.md) |
+| A near launch date | Web only; the phone app waits; priorities in the brief's order |
 
 ---
 
@@ -715,16 +720,19 @@ type and scope.
 
 ### Needed before the fork (step 3)
 
-- **Q1. The plan.** One fixed academy internally, Super Admin UI removed, URLs flattened (`/admin`, `/coach`,
-  `/parent`, `/kiosk`, `/trial`), and the removals in §2. Confirm?
-- **Q2. Copy then strip,** with the verbatim import as its own commit (§13)?
-- **Q3. HyberTec support access.** Keep `platformAdmins` in the rules only (no UI) so HyberTec can fix data for
-  Sky Arc, or remove it so only Sky Arc's owners and admins exist?
-- **Q4. The owners.** Sunny's and Matt's sign-in emails (and Goo's own access during development) for the seed.
+Answered by Goo on 2026-10-15 (`DECISIONS.md`):
+
+- ~~Q1. The plan~~ (fixed academy, flat URLs, removals): **confirmed**.
+- ~~Q2. Copy then strip~~ with the verbatim import as its own commit: **confirmed**.
+- ~~Q3. Support access~~: **no hidden Super Admin**; Goo has an ordinary owner login the academy can see and remove.
+- ~~Q4. The first account~~: **Goo (goochoi913@gmail.com) as owner**; the academy's owner and manager are invited
+  from the Account page later.
+- ~~Q6. Time zone~~: from skyarcacademy.com, the academy is in Suwanee, GA, so **America/New_York** (a setting).
+
+Still open:
+
 - **Q5. Email sender** for invites, trial confirmations and report notices: HyberTec's `hybertecofficial@gmail.com`
   (as HyberCRM does), or a Sky Arc address with its own app password?
-- ~~Q6. Time zone.~~ Answered from skyarcacademy.com: the academy is in Suwanee, GA, so **America/New_York**
-  (still a setting).
 
 ### Product questions (needed before the matching pull request)
 
@@ -739,11 +747,11 @@ type and scope.
   read-only (the brief's default)?
 - **Q12. Compare.** HyberCRM has no compare view, and the True Education source isn't on this Mac. Screenshots or
   access, or design it fresh?
-- **Q13. Matt on the rotation.** Matt is an admin but works every day. Shift patterns apply to any staff member,
+- **Q13. The manager on the rotation.** The manager is an admin but works every day. Shift patterns apply to any staff member,
   not only coaches. Correct?
-- **Q14. Korean review.** Who reviews the Korean wording (Matt, a parent, someone at HyberTec)?
+- **Q14. Korean review.** Who reviews the Korean wording (the manager, a parent, someone at HyberTec)?
 
-### For Matt (next check-in, Oct 20–21)
+### For the academy (next check-in)
 
 1. Can the shooter's name be set on the SIUS lane so it prints on the report? (Today it doesn't.)
 2. The second SIUS computer's clock is 3 hours behind (its Windows time zone is UTC−7, most likely Pacific); please

@@ -20,7 +20,10 @@ service-account*.json
 /Sample paper target photos/
 /logo/
 /SkyArc_Meeting_Notes.md
-# anything else Matt sends that lands at the top level
+# Client-internal notes (people's names, contacts, timeline, money) and findings about other HyberTec products: this
+# repository is public, so they stay on Goo's Mac mini (see docs/internal/README.md there).
+/docs/internal/
+# anything else the academy sends that lands at the top level
 /*.pdf
 /*.xls
 /*.xlsx
