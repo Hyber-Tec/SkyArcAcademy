@@ -31,8 +31,15 @@ service account `github-deploy@skyarcacademy.iam.gserviceaccount.com`. No servic
 
 - Pool `github`, provider `github-actions` (issuer `https://token.actions.githubusercontent.com`). The provider only
   accepts tokens from repository ID `1419241358` (`Hyber-Tec/SkyArcAcademy`) owned by ID `280069423` (`Hyber-Tec`).
-- Only the subject `repo:Hyber-Tec/SkyArcAcademy:ref:refs/heads/main` may act as the service account
-  (`roles/iam.workloadIdentityUser`). Pull requests and other branches can't deploy.
+  IDs, unlike names, can't be reused by a renamed or recreated repository.
+- Only tokens whose `ref` is `refs/heads/main` may act as the service account (`roles/iam.workloadIdentityUser` on
+  `principalSet://…/workloadIdentityPools/github/attribute.ref/refs/heads/main`). Pull requests and other branches
+  can't deploy.
+- The binding uses the `ref` attribute, not the token's subject, because this repository uses GitHub's **immutable
+  subject** format (`repo:Hyber-Tec@280069423/SkyArcAcademy@1419241358:…`, see
+  `gh api repos/Hyber-Tec/SkyArcAcademy/actions/oidc/customization/sub`). A binding to the name-only subject
+  `repo:Hyber-Tec/SkyArcAcademy:ref:refs/heads/main` never matches, and firebase-tools then reports only
+  "Failed to authenticate, have you run firebase login?".
 - The service account's project roles: Firebase Hosting Admin, Firebase Rules Admin, Cloud Datastore Index Admin,
   Firebase Realtime Database Admin, Service Usage Consumer, Firebase Viewer.
 
@@ -48,7 +55,7 @@ gcloud iam workload-identity-pools providers create-oidc github-actions --projec
   --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name" \
   --attribute-condition "assertion.repository_id == '1419241358' && assertion.repository_owner_id == '280069423'"
 gcloud iam service-accounts add-iam-policy-binding $SA --project $P --role roles/iam.workloadIdentityUser \
-  --member "principal://iam.googleapis.com/projects/$N/locations/global/workloadIdentityPools/github/subject/repo:Hyber-Tec/SkyArcAcademy:ref:refs/heads/main"
+  --member "principalSet://iam.googleapis.com/projects/$N/locations/global/workloadIdentityPools/github/attribute.ref/refs/heads/main"
 for role in roles/firebasehosting.admin roles/firebaserules.admin roles/datastore.indexAdmin \
   roles/firebasedatabase.admin roles/serviceusage.serviceUsageConsumer roles/firebase.viewer; do
   gcloud projects add-iam-policy-binding $P --member "serviceAccount:$SA" --role $role --condition=None
