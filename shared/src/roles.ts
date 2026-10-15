@@ -20,6 +20,15 @@ export const ROLE_LABELS: Record<Role, string> = {
   student: 'Student',
 }
 
+/** "Coaches", not "Coachs". */
+export const ROLE_LABELS_PLURAL: Record<Role, string> = {
+  owner: 'Owners',
+  admin: 'Admins',
+  coach: 'Coaches',
+  parent: 'Parents',
+  student: 'Students',
+}
+
 export const PORTAL_LABELS: Record<Portal, string> = {
   admin: 'Admin Portal',
   coach: 'Coach Portal',

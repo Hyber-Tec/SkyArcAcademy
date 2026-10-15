@@ -71,6 +71,8 @@ export function newStudentData(input: { firstName: string; lastName: string; cre
     nameLower: name.toLowerCase(),
     grade: '',
     school: '',
+    level: null,
+    program: null,
     status: 'signed_up',
     statusSource: 'auto',
     signUpDate: null,

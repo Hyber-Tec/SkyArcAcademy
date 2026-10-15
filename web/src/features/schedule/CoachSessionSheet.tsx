@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { type Conflict, coachConflictText } from '@shared/schedule/conflicts'
 import { formatDateKey, formatDuration, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { StatePill } from '@/features/home/parts'
@@ -39,7 +40,7 @@ export function CoachSessionSheet({
               <div className="flex items-center gap-2 pr-8">
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: SESSION_CARD_STYLE[s.status]?.bar }} aria-hidden />
                 <SheetTitle className="truncate text-lg">{s.studentName}</SheetTitle>
-                {s.studentGrade ? <span className="shrink-0 text-sm text-muted-foreground">Grade {s.studentGrade}</span> : null}
+                {s.studentGrade ? <span className="shrink-0 text-sm text-muted-foreground">{gradeLabel(s.studentGrade)}</span> : null}
               </div>
               <SheetDescription className="tabular-nums">
                 {formatDateKey(s.dateKey, 'weekdayLong').replace(/, \d{4}$/, '')} · {formatMinutes(s.startMin)} – {formatMinutes(s.endMin)} · {formatDuration(s.endMin - s.startMin)}

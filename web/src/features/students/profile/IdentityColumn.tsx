@@ -1,9 +1,10 @@
 import { LuArrowRight, LuCalendarPlus, LuMail, LuPhone } from 'react-icons/lu'
-import { formatPhone } from '@shared/people'
+import { formatPhone, gradeLabel } from '@shared/people'
 import { formatDateKey } from '@shared/time'
 import type { Staff, Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { StudentStatusBadge } from '@/components/app/StatusBadge'
 import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -77,9 +78,11 @@ export function IdentityColumn({
             <span className="flex size-full items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-black text-xl font-semibold text-white">{initialsOf(student.name)}</span>
           </span>
           <h1 className="mt-3 text-xl font-semibold tracking-tight">{student.name}</h1>
-          <p className="text-sm text-muted-foreground">{[student.grade ? (/^\d+$/.test(student.grade) ? `Grade ${student.grade}` : student.grade) : null, student.school || null].filter(Boolean).join(' · ') || 'No grade or school yet'}</p>
+          <p className="text-sm text-muted-foreground">{[student.grade ? gradeLabel(student.grade) : null, student.school || null].filter(Boolean).join(' · ') || 'No grade or school yet'}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <StudentStatusBadge status={student.status} />
+            {student.level ? <Badge variant="outline">{student.level}</Badge> : null}
+            {student.program ? <Badge variant="secondary">{student.program}</Badge> : null}
           </div>
           {actions.length ? (
             <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(2, actions.length)}, minmax(0, 1fr))` }}>

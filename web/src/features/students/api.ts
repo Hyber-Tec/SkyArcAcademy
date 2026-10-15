@@ -24,7 +24,7 @@ export const EMPTY_PRIVATE: StudentPrivateProfile = {
 export async function createStudent(
   branchId: string,
   actor: Actor,
-  input: { firstName: string; lastName: string; grade: string; signUpDate: string },
+  input: { firstName: string; lastName: string; grade: string; level: string | null; program: string | null; signUpDate: string },
 ): Promise<string> {
   const ref = doc(branchCol(branchId, COL.students))
   const name = `${input.firstName} ${input.lastName}`.trim()
@@ -32,6 +32,8 @@ export async function createStudent(
   batch.set(ref, {
     ...newStudentData({ firstName: input.firstName, lastName: input.lastName, createdBy: actor.email }),
     grade: input.grade,
+    level: input.level,
+    program: input.program,
     signUpDate: input.signUpDate,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -91,6 +93,8 @@ const INFO_LABELS: Record<string, string> = {
   firstName: 'First name',
   lastName: 'Last name',
   grade: 'Grade',
+  level: 'Level',
+  program: 'Program',
   school: 'School',
   status: 'Status',
   signUpDate: 'Sign-up date',

@@ -115,6 +115,11 @@ export function fullName(first: string, last: string): string {
 }
 
 /** Student label used on schedule cards: "Ava Patel (11)". */
+/** "Grade 8" for a school grade; other grades ("College", "Adult") as they are. */
+export function gradeLabel(grade: string): string {
+  return /^\d+$/.test(grade.trim()) ? `Grade ${grade.trim()}` : grade
+}
+
 export function studentLabel(name: string, grade: string | null | undefined): string {
   return grade ? `${name} (${grade})` : name
 }
