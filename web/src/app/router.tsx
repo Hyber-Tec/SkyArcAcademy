@@ -3,6 +3,7 @@ import { FullPageMessage } from '@/components/app/FullPage'
 import { AuthAction } from '@/pages/public/AuthAction'
 import { ForgotPassword } from '@/pages/public/ForgotPassword'
 import { Login } from '@/pages/public/Login'
+import { PrivacyPage } from '@/pages/public/PrivacyPage'
 import { SignUp } from '@/pages/public/SignUp'
 import { TrialPage } from '@/pages/public/TrialPage'
 import { VerifyEmail } from '@/pages/public/VerifyEmail'
@@ -18,6 +19,7 @@ const routes: RouteObject[] = [
   { path: '/auth/action', element: <AuthAction /> },
   // The homepage's "Book a trial" (the booking itself comes later).
   { path: '/trial', element: <TrialPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
   // Asking the academy for access (coaches, parents), once signed in.
   { path: '/join', lazy: page(() => import('@/features/signup/BranchSignupPage'), 'BranchSignupPage') },
   academyRoute,

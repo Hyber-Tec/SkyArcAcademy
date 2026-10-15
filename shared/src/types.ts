@@ -66,7 +66,7 @@ export interface Branch extends AuditStamp {
   businessRules?: Partial<BusinessRules>
 }
 
-/** `branches/{b}/public/profile`: world-readable, used by the sign-up page and pickers. */
+/** `branches/{b}/public/profile`: world-readable, used by the sign-up page, pickers and the privacy policy. */
 export interface BranchPublicProfile {
   name: string
   shortName: string
@@ -77,6 +77,8 @@ export interface BranchPublicProfile {
   signupEnabled: boolean
   signupRoles: Role[]
   signupMessage: string
+  /** The academy's contact details (Settings → Academy), shown on the privacy policy. Missing on profiles saved before. */
+  contact?: BranchContact
 }
 
 // ------------------------------------------------------------- people/access

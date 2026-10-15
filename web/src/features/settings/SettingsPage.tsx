@@ -2,7 +2,7 @@ import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'fi
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { LuImageUp, LuTrash2 } from 'react-icons/lu'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { publicProfileFor } from '@shared/branchFactory'
 import { COL, DOC, ROOT } from '@shared/paths'
@@ -204,7 +204,13 @@ function BranchProfileCard() {
     <Card>
       <CardHeader>
         <CardTitle>Academy</CardTitle>
-        <CardDescription>The academy’s name, time zone and contact details, as people see them in the app.</CardDescription>
+        <CardDescription>
+          The academy’s name, time zone and contact details, as people see them in the app. The contact details also appear on the{' '}
+          <Link to="/privacy" target="_blank" className="underline underline-offset-2">
+            privacy policy
+          </Link>
+          , which anyone can open.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
