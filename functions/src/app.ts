@@ -4,8 +4,9 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 
 // Imported first by every module so the Admin SDK is ready before use.
 initializeApp()
-// Every function runs as functions@<project> (docs/DEPLOY.md lists its roles), never the default compute account.
-setGlobalOptions({ region: 'us-central1', maxInstances: 10, serviceAccount: 'functions@' })
+// Every function runs as this account (docs/DEPLOY.md lists its roles), never the default compute account. It's
+// spelled out: the Firebase CLI doesn't expand the short `functions@` when it grants the account a secret.
+setGlobalOptions({ region: 'us-central1', maxInstances: 10, serviceAccount: 'functions@skyarcacademy.iam.gserviceaccount.com' })
 export const db = getFirestore()
 
 /**
