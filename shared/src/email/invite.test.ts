@@ -57,6 +57,6 @@ describe('reserved addresses', () => {
     expect(isReservedEmail('someone@example.com')).toBe(true)
     expect(isReservedEmail('x@demo.invalid')).toBe(true)
     expect(isReservedEmail('maya@school.org')).toBe(false)
-    expect(isReservedEmail('goochoi913@gmail.com')).toBe(false)
+    expect(isReservedEmail('someone@gmail.com')).toBe(false)
   })
 })

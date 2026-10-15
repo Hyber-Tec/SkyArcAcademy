@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { LuLock, LuMail, LuPencil, LuPhone, LuPlus, LuTrash2 } from 'react-icons/lu'
 import { toast } from 'sonner'
-import { STUDENT_STATUSES, STUDENT_STATUS_LABELS, formatPhone } from '@shared/people'
+import { formatPhone, gradeLabel, STUDENT_STATUS_LABELS, STUDENT_STATUSES } from '@shared/people'
 import { formatDateKey, todayKey } from '@shared/time'
 import type { ParentContact, Student, StudentPrivateProfile, StudentStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -17,18 +17,21 @@ import { EMPTY_PRIVATE, resumeAutoStatus, saveStudentInfo } from './api'
 import { Avatar } from './profile/IdentityColumn'
 import { ageOn } from './profile/model'
 
-type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'school' | 'status' | 'signUpDate'>
+type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'level' | 'program' | 'school' | 'status' | 'signUpDate'>
 
 const pickPublic = (s: Student): PublicForm => ({
   firstName: s.firstName ?? '',
   lastName: s.lastName ?? '',
   grade: s.grade ?? '',
+  level: s.level ?? null,
+  program: s.program ?? null,
   school: s.school ?? '',
   status: s.status,
   signUpDate: s.signUpDate ?? null,
 })
 
-const gradeLabel = (g: string) => (/^\d+$/.test(g) ? `Grade ${g}` : g)
+/** A Select can't hold an empty value, so "none" has its own. */
+const NONE = '__none'
 
 /**
  * Student page → Info. Reads like a profile; Edit turns it into the form (admins).
@@ -109,6 +112,8 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
             <Item label="First name">{student.firstName || '—'}</Item>
             <Item label="Last name">{student.lastName || '—'}</Item>
             <Item label="Grade">{student.grade ? gradeLabel(student.grade) : '—'}</Item>
+            <Item label="Level">{student.level || '—'}</Item>
+            <Item label="Program">{student.program || '—'}</Item>
             <Item label="Status">
               <StudentStatusBadge status={student.status} />
               {statusNote ? <div className="mt-1.5">{statusNote}</div> : null}
@@ -252,6 +257,38 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
                   {[...new Set([...settings.students.gradeOptions, form.grade].filter(Boolean))].map((g) => (
                     <SelectItem key={g} value={g}>
                       {gradeLabel(g)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Level</FieldLabel>
+              <Select value={form.level ?? NONE} onValueChange={(v) => set('level', v === NONE ? null : v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Not assessed yet</SelectItem>
+                  {[...new Set([...settings.students.levels, form.level ?? ''].filter(Boolean))].map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Program</FieldLabel>
+              <Select value={form.program ?? NONE} onValueChange={(v) => set('program', v === NONE ? null : v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>None yet</SelectItem>
+                  {[...new Set([...settings.students.programs, form.program ?? ''].filter(Boolean))].map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
                     </SelectItem>
                   ))}
                 </SelectContent>

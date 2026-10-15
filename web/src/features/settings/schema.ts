@@ -121,12 +121,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: 'students',
     title: 'Students',
-    description: 'Automatic status changes and grades.',
+    description: 'Automatic status changes, grades, levels and programs.',
     fields: [
       { kind: 'boolean', path: 'students.autoStatus.enabled', label: 'Update student statuses automatically', help: 'Signed Up → Enrolled after the first class; Enrolled ↔ Paused by activity.' },
       { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', label: 'Pause after no classes for', min: 1, max: 180, suffix: 'days' },
       { kind: 'boolean', path: 'students.autoStatus.respectManual', label: 'Keep a status set by hand', help: 'A manual status stops the automatic changes until someone changes it again.' },
       { kind: 'list', path: 'students.gradeOptions', label: 'Grades', help: 'One per line.' },
+      { kind: 'list', path: 'students.levels', label: 'Levels', help: 'The skill ladder, lowest first. One per line.' },
+      { kind: 'list', path: 'students.programs', label: 'Programs', help: 'One per line.' },
     ],
   },
   {

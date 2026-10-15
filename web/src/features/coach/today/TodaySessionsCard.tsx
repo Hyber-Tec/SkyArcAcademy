@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { coachConflictText } from '@shared/schedule/conflicts'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -57,7 +58,7 @@ export function TodaySessionsCard({ t }: { t: CoachDay }) {
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">
                 {s.studentName}
-                {s.studentGrade ? <span className="font-normal text-muted-foreground"> · Grade {s.studentGrade}</span> : null}
+                {s.studentGrade ? <span className="font-normal text-muted-foreground"> · {gradeLabel(s.studentGrade)}</span> : null}
               </div>
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                 {s.note ? (

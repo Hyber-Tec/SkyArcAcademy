@@ -4,7 +4,7 @@ import { LuCheck, LuCopy, LuMailPlus, LuPencil, LuQrCode, LuSearch, LuTrash2, Lu
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
-import { ROLES, ROLE_LABELS, type Role, isAdminRole } from '@shared/roles'
+import { isAdminRole, ROLE_LABELS, ROLE_LABELS_PLURAL, ROLES, type Role } from '@shared/roles'
 import { formatInstant } from '@shared/time'
 import type { Member, SignupRequest, Staff, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -153,7 +153,7 @@ export function AccountPage() {
               </ToggleGroupItem>
               {ROLES.map((r) => (
                 <ToggleGroupItem key={r} value={r}>
-                  {ROLE_LABELS[r]}s <span className="ml-1 text-muted-foreground tabular-nums">{counts[r]}</span>
+                  {ROLE_LABELS_PLURAL[r]} <span className="ml-1 text-muted-foreground tabular-nums">{counts[r]}</span>
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

@@ -14,14 +14,14 @@ functions/lib/
 service-account*.json
 
 # Client material from Sky Arc (real students' names, SIUS reports, target photos, schedules, meeting notes):
-# never committed. It stays in this folder on Goo's Mac mini only; see CLAUDE.md, "Locations".
+# never committed. It stays in this folder on the owner's machine only; see CLAUDE.md, "Local files".
 /Google Sheets for Scheduling/
 /Sample SIUS PDFs/
 /Sample paper target photos/
 /logo/
 /SkyArc_Meeting_Notes.md
 # Client-internal notes (people's names, contacts, timeline, money) and findings about other HyberTec products: this
-# repository is public, so they stay on Goo's Mac mini (see docs/internal/README.md there).
+# repository is public, so they stay on the owner's machine (see docs/internal/README.md there).
 /docs/internal/
 # anything else the academy sends that lands at the top level
 /*.pdf
@@ -40,3 +40,5 @@ service-account*.json
 .vscode/*
 !.vscode/extensions.json
 .claude/*.local.json
+# each developer's own instructions for Claude Code: accounts, local paths (see CLAUDE.md)
+CLAUDE.local.md

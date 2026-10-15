@@ -199,6 +199,10 @@ export interface Student extends AuditStamp {
   nameLower: string
   grade: string
   school: string
+  /** One of `settings.students.levels`, or null when not assessed yet. */
+  level: string | null
+  /** One of `settings.students.programs`, or null. */
+  program: string | null
   status: StudentStatus
   statusSource: 'auto' | 'manual'
   signUpDate: DateKey | null

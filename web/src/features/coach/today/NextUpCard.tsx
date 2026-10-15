@@ -4,6 +4,7 @@ import { coachConflictText } from '@shared/schedule/conflicts'
 import { isFirstSession } from '@shared/schedule/firstSession'
 import { addDays, formatDateKey, formatDuration, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -150,7 +151,7 @@ function NextSession({ s, t }: { s: WithId<Session>; t: CoachDay }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h2 className="truncate text-lg leading-tight font-semibold">{s.studentName}</h2>
-            {s.studentGrade ? <span className="text-sm text-muted-foreground">Grade {s.studentGrade}</span> : null}
+            {s.studentGrade ? <span className="text-sm text-muted-foreground">{gradeLabel(s.studentGrade)}</span> : null}
             {first ? (
               <StatePill tone="info">
                 <LuSparkles className="size-3" /> First class

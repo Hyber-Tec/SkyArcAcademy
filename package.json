@@ -10,6 +10,7 @@
     "test": "vitest run --root shared",
     "test:rules": "bash scripts/test-rules.sh",
     "seed": "tsx scripts/seed.ts",
+    "seed:sample": "tsx scripts/seed-sample.ts",
     "emulators": "npm --prefix functions run build && PATH=\"/opt/homebrew/opt/openjdk@21/bin:$PATH\" firebase emulators:start --only auth,firestore,database,functions,storage --project demo-skyarc",
     "dev:emulators": "cd web && VITE_USE_EMULATORS=1 npx vite --host 127.0.0.1 --port 5174 --strictPort"
   },

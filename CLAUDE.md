@@ -2,9 +2,9 @@
 
 Project context lives in **`SKYARC_PROJECT_BRIEF.md`**. Read it first.
 
-This project is forked/refactored from **HyberCRM** (`/Users/goomini/Documents/HyberTec/HyberCRM`). **Merge in every rule and convention from HyberCRM's `CLAUDE.md`** that still applies (architecture, folder conventions, Firebase patterns, testing, design system). The rules below are **strict** and apply to every developer and every AI session. If HyberCRM's `CLAUDE.md` conflicts with these, **these win.** The HyberCRM rules that apply are already merged into this file (sections "Conventions" and "Git and commits").
+This project is forked/refactored from **HyberCRM**, HyberTec's CRM (a separate repository; its path on your machine goes in your `CLAUDE.local.md`). **Merge in every rule and convention from HyberCRM's `CLAUDE.md`** that still applies (architecture, folder conventions, Firebase patterns, testing, design system). The rules below are **strict** and apply to every developer and every AI session. If HyberCRM's `CLAUDE.md` conflicts with these, **these win.** The HyberCRM rules that apply are already merged into this file (sections "Conventions" and "Git and commits").
 
-Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win over the brief and the review) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) (the fork plan) → [`docs/DEPLOY.md`](docs/DEPLOY.md) (how `main` reaches production).
+Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they win over the brief and the review) → [`docs/QUESTIONS.md`](docs/QUESTIONS.md) (what's still open, with the defaults used meanwhile) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) (the fork plan) → [`docs/DEPLOY.md`](docs/DEPLOY.md) (how `main` reaches production).
 
 ---
 
@@ -15,9 +15,9 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 - A session works on a **branch**, opens the pull request, and **says so**.
 - It **never pushes to `main`** and **never merges** unless the owner asks for exactly that.
 
-### GitHub account
-- On Goo's Mac mini this folder uses **only Goo's personal GitHub account, `goochoi913`**, never the work account `goo913`.
-- The repository's own git config (`.git/config`) sets `user.name goochoi913`, `user.email goochoi913@gmail.com`, and a credential helper that pushes with goochoi913's token from `gh` (`gh auth token --user goochoi913`), ahead of the macOS keychain (which holds the work login). Don't change or bypass it.
+### Your accounts and local setup
+- Commit and push with **your own personal GitHub account**, never a shared or work account. If your global git identity is another account, set `user.name` and `user.email` in this repository's `.git/config`; never change another developer's setup.
+- Your machine-specific setup (accounts, credential helpers, local paths) goes in **`CLAUDE.local.md`** at the repository root. It's git-ignored, and Claude Code reads it together with this file. Never put personal details in this file.
 
 ### AI naming (permanent rule)
 - The app **never names the AI model or provider** in labels, settings, messages, or errors. It is always **"AI."**
@@ -68,12 +68,14 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 - **Kiosk PINs** are stored hashed and never logged.
 - **Language:** parent-facing screens support Korean + English.
 
-## Owner, accounts, production
+## Owner and production
 
-- The owner is **Goo Choi, goochoi913@gmail.com**. Everything run for this project uses that account: Firebase, Google Cloud (organization hybertec.com) and GitHub (`goochoi913`).
+- The project owner is **Goo Choi** (HyberTec; `@goochoi913` on GitHub). The owner makes the product decisions, approves changes to the shared files (`.github/CODEOWNERS`) and gives developers access to the production accounts. Each developer uses their own Google and GitHub accounts.
 - Production is the Firebase project **`skyarcacademy`** (Auth with Google and email/password, Firestore `nam5`, Realtime Database `us-central1`, Storage and Cloud Functions in `us-central1`, Hosting). The site is **https://skyarcacademy.web.app** until `skyarcacademy.com` moves here at launch.
 - **GitHub deploys `main` to production** after every merge, once CI passes on `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)). Sessions don't deploy by hand. If GitHub Actions is down, deploy only from an up-to-date `main`, never from a branch: production runs reviewed code only.
-- When something in the brief is unclear or conflicts with the code, ask Goo (the brief's rule). Record his answers in `docs/DECISIONS.md`.
+- **When skyarcacademy.com moves to the app** (the last step before launch), follow `docs/DEPLOY.md`, "Moving to skyarcacademy.com". It includes **asking the owner about the email sender**: mail goes from HyberTec's Gmail until then, and an address on the academy's domain is less likely to land in spam.
+- **Production holds sample data** until the academy's real data arrives: fictional people with `sample-` IDs. Remove it with `npm run seed:sample -- --remove` before importing real data (`docs/DEPLOY.md`, "Sample data").
+- When something in the brief is unclear or conflicts with the code, ask the owner (the brief's rule). Open questions live in `docs/QUESTIONS.md`; record the answers in `docs/DECISIONS.md` and take them off that list.
 
 ## Layout
 
@@ -84,17 +86,18 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, nightly jobs. |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
 | `tests/rules/` | Firestore rules tests (emulator). |
-| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
-| `docs/` | `DECISIONS.md` (Goo's answers), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
+| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
+| `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
 ## Commands
 
 - Install once: `npm ci && npm ci --prefix web && npm ci --prefix functions`.
-- Local, against the emulators (Java 21): `npm run emulators`, then `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed`, then `npm run dev:emulators` → http://127.0.0.1:5174. The emulators run as the `demo-skyarc` project, so nothing reaches production. Sign in from the browser console with `__skyarcSignIn('someone@example.test')` (emulators only).
+- Local, against the emulators (Java 21): `npm run emulators`, then `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed -- --owner you@example.test --owner-name "You"`, then `npm run dev:emulators` → http://127.0.0.1:5174. The emulators run as the `demo-skyarc` project, so nothing reaches production. Sign in from the browser console with `__skyarcSignIn('you@example.test')` (emulators only).
 - `npm run dev` → http://localhost:5173 against **production** Firebase (needs `web/.env.local`: copy `web/.env.example`; values in the Firebase console, Project settings → Your apps → Sky Arc). Real data: prefer the emulators.
 - Checks, as CI runs them: `bash scripts/check-repo.sh`, `npm run typecheck`, `npm test` (unit), `npm run lint`, `npm run build` (website → `web/dist`), `npm --prefix functions run build`, `npm run test:rules` (rules, emulator).
-- `npm run seed` → creates the academy and its first owner in production once (safe to run again; uses your gcloud login).
+- `npm run seed -- --owner <email> --owner-name "<name>"` → creates the academy and its first owner (production already has them; safe to run again; uses your gcloud login).
+- `npm run seed:sample` → adds the sample data (fictional people and ten weeks of classes) to production, or to the emulators with `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`; `npm run seed:sample -- --remove` deletes it.
 - `npx tsx scripts/smoke.ts /login /trial` → opens pages in headless Chrome and reports console errors (dev server running).
 
 ## Conventions
@@ -118,16 +121,15 @@ Carried over from HyberCRM, adapted to one academy:
 ## Git and commits
 
 - The repository is HyberTec's: **https://github.com/Hyber-Tec/SkyArcAcademy** (public).
-- **`main` is reached through a pull request** (Strict Rules): CI green, plus the code owner's approval where a shared file changed. `.github/CODEOWNERS` lists the shared files; the code owner is `@goochoi913`.
+- **`main` is reached through a pull request** (Strict Rules): CI green, plus the code owner's approval where a shared file changed. `.github/CODEOWNERS` lists the shared files; the code owner is the project owner.
   - GitHub enforces the first part with a ruleset on `main`: a pull request, with the CI checks "Typecheck, tests and builds" and "Security rules tests" passing. Code-owner approval stays a convention: GitHub doesn't let authors approve their own pull requests.
   - Start the branch from the latest `main`, named `<type>/<topic>` (`feat/kiosk-pin`). Open the pull request with `gh pr create`: the title is a Conventional Commits subject; the body says what changed, how it was checked, and what the deploy after merging will do (or that it changes nothing in production). Give the owner its link.
   - CI (`.github/workflows/ci.yml`) runs the repository guard, typecheck, unit tests, lint, the website and functions builds, and the rules tests. Run the parts the change touches before pushing.
 - Scopes name the part of the app (e.g. `auth`, `access`, `settings`, `schedule`, `availability`, `trial`, `students`, `parents`, `coaches`, `payroll`, `kiosk`, `reports`, `announcements`, `i18n`, `home`, `rules`, `functions`, `shared`, `deploy`). Leave the scope off when a change spans several.
 - Breaking changes take `!` before the colon, a `BREAKING CHANGE:` footer, or both.
 
-## Locations (Goo's Mac mini)
+## Local files
 
-- **HyberCRM (reference, read-only):** `/Users/goomini/Documents/HyberTec/HyberCRM`. Never edit, commit, or push there.
-- **Client assets + brief:** the `SkyArcAcademy/` folder (schedule PDFs, logos, paper target photos, SIUS PDFs, meeting notes). Folder names contain spaces; always quote paths. Assets are never committed.
-- This folder is also the git repository. The client material in it (the asset folders, `logo/`, `SkyArc_Meeting_Notes.md`, `docs/internal/`, and any PDF, spreadsheet or photo at the top level) is git-ignored; the brief is committed without students' or staff names. The app's copies of the logos live in `web/public/brand/`.
+- **HyberCRM (reference, read-only):** never edit, commit, or push there from a Sky Arc session. Its path on your machine goes in `CLAUDE.local.md`.
+- **Client material** (schedule sheets, logos, paper target photos, SIUS PDFs, meeting notes) can sit in the repository folder on the owner's machine, but it's git-ignored and never committed: the asset folders, `logo/`, `SkyArc_Meeting_Notes.md`, `docs/internal/`, and any PDF, spreadsheet or photo at the top level. Folder names contain spaces; always quote paths. The brief is committed without students' or staff names, and the app's copies of the logos live in `web/public/brand/`.
 - **`docs/internal/`** (local only): the full brief with the academy's people, the full HyberCRM review including findings about HyberCRM's code, and anything else that can't be public.

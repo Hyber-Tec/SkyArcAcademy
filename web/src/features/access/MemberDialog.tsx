@@ -6,6 +6,7 @@ import { ROLES, ROLE_LABELS, type Role, isAdminRole, isStaffRole } from '@shared
 import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
 import type { Member, SignupRequest, Staff, StaffRole, Student, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { MultiOptionPicker, OptionPicker } from '@/components/app/OptionPicker'
 import { useConfirm } from '@/components/app/useConfirm'
@@ -115,7 +116,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
       disabled: linkedStaffIds.has(s.id),
     })),
   ]
-  const studentOptions = students.map((s) => ({ value: s.id, label: s.name, hint: s.grade ? `Grade ${s.grade}` : undefined }))
+  const studentOptions = students.map((s) => ({ value: s.id, label: s.name, hint: s.grade ? gradeLabel(s.grade) : undefined }))
   const staffRole = isStaffRole(role)
   // A new employee record is asked for its hourly rate, so payroll never prices their time at $0.
   const newStaff = staffRole && staffId === 'new'

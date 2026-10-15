@@ -18,6 +18,7 @@ import { COL } from '@shared/paths'
 import { ROLE_LABELS } from '@shared/roles'
 import { type DateKey, addDays, formatDateKey, formatMinutes, formatTimeRange } from '@shared/time'
 import type { Student, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, type MenuEntry, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
@@ -156,7 +157,7 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       items: attention.newStudents.map(({ student: s, since }) => ({
         key: s.id,
         title: s.name,
-        detail: `Grade ${s.grade || '—'} · signed up ${since ? dayLabel(since, today).replace(/^(Today|Yesterday|Tomorrow)$/, (m) => m.toLowerCase()) : 'recently'}`,
+        detail: `${s.grade ? gradeLabel(s.grade) : 'No grade'} · signed up ${since ? dayLabel(since, today).replace(/^(Today|Yesterday|Tomorrow)$/, (m) => m.toLowerCase()) : 'recently'}`,
         onOpen: () => navigate(`${admin}/students/${s.id}`),
         action: { label: 'Done', title: 'Mark as followed up', onClick: () => void markFollowedUp(s) },
         actions: menu(

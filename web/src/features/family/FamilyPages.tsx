@@ -204,6 +204,8 @@ export function StudentInfoPage() {
   const rows: [string, React.ReactNode][] = [
     ['Name', me.name],
     ['Grade', me.grade || '—'],
+    ['Level', me.level || '—'],
+    ['Program', me.program || '—'],
     ['School', me.school || '—'],
     ['Status', <Badge key="s" variant="secondary">{STUDENT_STATUS_LABELS[me.status] ?? me.status}</Badge>],
     ['Signed up', me.signUpDate ? formatDateKey(me.signUpDate, 'medium') : '—'],

@@ -718,52 +718,5 @@ type and scope.
 
 ## 15. Questions for Goo
 
-### Needed before the fork (step 3)
-
-Answered by Goo on 2026-10-15 (`DECISIONS.md`):
-
-- ~~Q1. The plan~~ (fixed academy, flat URLs, removals): **confirmed**.
-- ~~Q2. Copy then strip~~ with the verbatim import as its own commit: **confirmed**.
-- ~~Q3. Support access~~: **no hidden Super Admin**; Goo has an ordinary owner login the academy can see and remove.
-- ~~Q4. The first account~~: **Goo (goochoi913@gmail.com) as owner**; the academy's owner and manager are invited
-  from the Account page later.
-- ~~Q6. Time zone~~: from skyarcacademy.com, the academy is in Suwanee, GA, so **America/New_York** (a setting).
-
-Still open:
-
-- **Q5. Email sender** for invites, trial confirmations and report notices: HyberTec's `hybertecofficial@gmail.com`
-  (as HyberCRM does), or a Sky Arc address with its own app password?
-
-### Product questions (needed before the matching pull request)
-
-- **Q7. Coach assignment.** The sheets list students per class block, not per coach. Rows by coach (students
-  assigned to a coach) or rows by class block with coaches on duty?
-- **Q8. Levels.** The sheets color-code nine skill levels (Discovery … Precision); the website sells four programs
-  (Launchpad, Foundations, Development, Performance). Model a student `level` (and maybe `program`) as catalogs in
-  Settings?
-- **Q9. Kiosk identity.** Registered device with a custom token (recommended) or a separate kiosk login?
-- **Q10. Pay.** Hourly for all clocked time? Approval per time entry, or locking the pay period is the approval?
-- **Q11. Reports.** Publish on upload by default (the brief's suggestion)? Coaches see all students' reports,
-  read-only (the brief's default)?
-- **Q12. Compare.** HyberCRM has no compare view, and the True Education source isn't on this Mac. Screenshots or
-  access, or design it fresh?
-- **Q13. The manager on the rotation.** The manager is an admin but works every day. Shift patterns apply to any staff member,
-  not only coaches. Correct?
-- **Q14. Korean review.** Who reviews the Korean wording (the manager, a parent, someone at HyberTec)?
-
-### For the academy (next check-in)
-
-1. Can the shooter's name be set on the SIUS lane so it prints on the report? (Today it doesn't.)
-2. The second SIUS computer's clock is 3 hours behind (its Windows time zone is UTC−7, most likely Pacific); please
-   set it to Eastern.
-3. Do sighter-only sessions (Total 0) count as evaluations? With 21–22 match shots, use all shots or the first 20?
-4. What do the `0.0` entries without an arrow mean?
-5. Show parents decimal scores (SIUS), whole-number scores (paper cards), or both?
-6. Do the black cells mean a class is capped at 5? Do the two seat columns mean two coaches?
-7. Which day was week 1's unlabeled 4:30–6 Precision block? What does "Marksman JG" mean?
-8. Practice and Range Practice: bookable? Do they count toward capacity?
-9. Trials: always two 30-minute visits, up to three per class?
-10. Makeup rules: how far before and after the missed class, how many per month?
-11. Is the 3-position set (10 shots each, out of 300, with a coach note) the standard level test?
-12. The rest of the pending list: roster, coach names and days, Sunday rotation, pay rates and period,
-    cancellation / makeup / trial rules, Korean reviewer.
+Moved: the open questions, for Goo and for the academy, are in [`QUESTIONS.md`](QUESTIONS.md), and the answers in
+[`DECISIONS.md`](DECISIONS.md). Q1–Q8 and Q13 are answered; Q9–Q12 and Q14 are still open.

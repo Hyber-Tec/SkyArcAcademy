@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fails when the repository tracks client material or a secret (CLAUDE.md, "Secrets"). Real students' SIUS reports,
-# target photos and schedules stay on Goo's Mac mini; parser and upload tests use synthetic files in tests/fixtures/.
+# target photos and schedules stay on the owner's machine; parser and upload tests use synthetic files in tests/fixtures/.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 status=0

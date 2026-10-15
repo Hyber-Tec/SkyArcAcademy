@@ -8,6 +8,7 @@ import type { Conflict } from '@shared/schedule/conflicts'
 import { occursOn } from '@shared/schedule/events'
 import { type DateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
@@ -127,7 +128,7 @@ export function TodayCard({
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">
                 {s.studentName}
-                {s.studentGrade ? <span className="font-normal text-muted-foreground"> · Grade {s.studentGrade}</span> : null}
+                {s.studentGrade ? <span className="font-normal text-muted-foreground"> · {gradeLabel(s.studentGrade)}</span> : null}
               </div>
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                 <PersonDot name={s.coachName} color={colorOf(s.coachId)} size="xs" />

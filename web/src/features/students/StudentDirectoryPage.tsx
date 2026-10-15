@@ -15,13 +15,7 @@ import {
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
-import {
-  STUDENT_STATUSES,
-  STUDENT_STATUS_LABELS,
-  isInactiveStudent,
-  nextGrade,
-  relativeDayLabel,
-} from '@shared/people'
+import { gradeLabel, isInactiveStudent, nextGrade, relativeDayLabel, STUDENT_STATUS_LABELS, STUDENT_STATUSES } from '@shared/people'
 import { addDays, formatDateKey, todayKey } from '@shared/time'
 import type { Session, Student, StudentStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -49,7 +43,10 @@ import { useStudentList } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { advanceGrades, createStudent, setStudentStatus } from './api'
 
-type SortKey = 'name' | 'grade' | 'signUp'
+type SortKey = 'name' | 'grade' | 'level' | 'signUp'
+
+/** A Select can't hold an empty value, so "none" has its own. */
+const NONE = '__none'
 
 /** Student IDs a coach teaches: sessions in the last 90 days or upcoming. */
 function useTaughtStudentIds(enabled: boolean): Set<string> | null {
@@ -64,7 +61,7 @@ function useTaughtStudentIds(enabled: boolean): Set<string> | null {
 }
 
 export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
-  const { branchId, actor, timezone } = useBranch()
+  const { branchId, actor, timezone, settings } = useBranch()
   const navigate = useNavigate()
   const { data: students, loading } = useStudentList()
   const taught = useTaughtStudentIds(mode === 'coach')
@@ -74,6 +71,8 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
 
   const [search, setSearch] = useState('')
   const [statuses, setStatuses] = useState<StudentStatus[]>([])
+  const [levels, setLevels] = useState<string[]>([])
+  const ladder = settings.students.levels
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'signUp', dir: 'desc' })
   const [creating, setCreating] = useState(false)
   const [advancing, setAdvancing] = useState(false)
@@ -106,13 +105,18 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
       .filter((s) => !taught || taught.has(s.id))
       .filter((s) => !q || s.nameLower.includes(q))
       .filter((s) => statuses.length === 0 || statuses.includes(s.status))
+      .filter((s) => levels.length === 0 || levels.includes(s.level ?? NONE))
     const dir = sort.dir === 'asc' ? 1 : -1
+    // Lowest level first, then levels no longer on the ladder, then no level.
+    const levelRank = (level: string | null) => (level === null ? ladder.length + 1 : ladder.includes(level) ? ladder.indexOf(level) : ladder.length)
     return [...list].sort((a, b) => {
       switch (sort.key) {
         case 'name':
           return a.nameLower.localeCompare(b.nameLower) * dir
         case 'grade':
           return ((Number(a.grade) || 0) - (Number(b.grade) || 0)) * dir
+        case 'level':
+          return (levelRank(a.level ?? null) - levelRank(b.level ?? null)) * dir || a.nameLower.localeCompare(b.nameLower)
         case 'signUp': {
           const av = a.signUpDate ?? ''
           const bv = b.signUpDate ?? ''
@@ -122,7 +126,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
         }
       }
     })
-  }, [students, taught, search, statuses, sort])
+  }, [students, taught, search, statuses, levels, ladder, sort])
 
   const header = (key: SortKey, label: string, className?: string) => (
     <TableHead className={className}>
@@ -186,6 +190,30 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="justify-start sm:w-44">
+              <LuListFilter />
+              {levels.length === 0 ? 'Level: All' : levels.length === 1 ? `Level: ${levels[0] === NONE ? 'None' : levels[0]}` : `Level: ${levels.length} selected`}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuCheckboxItem checked={levels.length === 0} onCheckedChange={() => setLevels([])}>
+              All
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            {[...ladder, NONE].map((l) => (
+              <DropdownMenuCheckboxItem
+                key={l}
+                checked={levels.includes(l)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={(v) => setLevels((prev) => (v ? [...prev, l] : prev.filter((x) => x !== l)))}
+              >
+                {l === NONE ? 'No level yet' : l}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <Card className="py-0">
         <Table>
@@ -193,6 +221,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
             <TableRow>
               {header('name', 'Name')}
               {header('grade', 'Grade', 'w-20')}
+              {header('level', 'Level', 'hidden sm:table-cell')}
               <TableHead className="w-40">Status</TableHead>
               {header('signUp', 'Sign up', 'hidden lg:table-cell')}
               <TableHead className="hidden md:table-cell">Last class</TableHead>
@@ -207,6 +236,10 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
                   <TableRow className="cursor-pointer" onClick={() => navigate(`${base}/${s.id}`)}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>{s.grade || '—'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {s.level ? <span>{s.level}</span> : <span className="text-muted-foreground">—</span>}
+                      {s.program ? <div className="text-xs text-muted-foreground">{s.program}</div> : null}
+                    </TableCell>
                     <TableCell onClick={(e) => isAdmin && e.stopPropagation()}>
                       {isAdmin ? (
                         <Select
@@ -281,6 +314,8 @@ function NewStudentDialog({ open, onOpenChange, onCreated }: { open: boolean; on
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [grade, setGrade] = useState('')
+  const [level, setLevel] = useState(NONE)
+  const [program, setProgram] = useState(NONE)
   const [busy, setBusy] = useState(false)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -291,11 +326,20 @@ function NewStudentDialog({ open, onOpenChange, onCreated }: { open: boolean; on
             if (!firstName.trim()) return toast.error('Enter the student’s first name.')
             setBusy(true)
             try {
-              const id = await createStudent(branchId, actor, { firstName, lastName, grade, signUpDate: todayKey(timezone) })
+              const id = await createStudent(branchId, actor, {
+                firstName,
+                lastName,
+                grade,
+                level: level === NONE ? null : level,
+                program: program === NONE ? null : program,
+                signUpDate: todayKey(timezone),
+              })
               onOpenChange(false)
               setFirstName('')
               setLastName('')
               setGrade('')
+              setLevel(NONE)
+              setProgram(NONE)
               onCreated(id)
             } catch (err) {
               toast.error('Could not add the student', { description: (err as Error).message })
@@ -328,12 +372,46 @@ function NewStudentDialog({ open, onOpenChange, onCreated }: { open: boolean; on
                 <SelectContent>
                   {settings.students.gradeOptions.map((g) => (
                     <SelectItem key={g} value={g}>
-                      {/^\d+$/.test(g) ? `Grade ${g}` : g}
+                      {gradeLabel(g)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field>
+                <FieldLabel>Level</FieldLabel>
+                <Select value={level} onValueChange={setLevel}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Not assessed yet</SelectItem>
+                    {settings.students.levels.map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Program</FieldLabel>
+                <Select value={program} onValueChange={setProgram}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>None yet</SelectItem>
+                    {settings.students.programs.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

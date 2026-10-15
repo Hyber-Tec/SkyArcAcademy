@@ -1,13 +1,13 @@
 /**
  * Creates the academy's document (once) and its first owner, so the app has something to sign in to. Safe to run
- * again: anything that already exists is left as it is. It never writes sample data; the academy's people are added in
- * the app (Account page).
+ * again: anything that already exists is left as it is. It never writes sample data (npm run seed:sample does); the
+ * academy's people are added in the app (Account page).
  *
- *   npm run seed                                     # production (skyarcacademy); first owner Goo
- *   npm run seed -- --owner someone@example.com --owner-name "Someone"
+ *   npm run seed -- --owner you@example.com --owner-name "Your Name"
  *
- * Uses the developer's gcloud login (see scripts/lib/firestore-rest.ts), or the emulators when FIRESTORE_EMULATOR_HOST
- * is set.
+ * Production (skyarcacademy) already has its academy and first owner. Locally, seed the emulators with yourself as the
+ * owner and sign in with the same address. Uses the developer's gcloud login (see scripts/lib/firestore-rest.ts), or
+ * the emulators when FIRESTORE_EMULATOR_HOST is set.
  */
 import { parseArgs } from 'node:util'
 import { ACADEMY_ID } from '../shared/src/academy'
@@ -18,10 +18,15 @@ const { values } = parseArgs({
     name: { type: 'string', default: 'Sky Arc Sports Academy' },
     'short-name': { type: 'string', default: 'Sky Arc' },
     tz: { type: 'string', default: 'America/New_York' },
-    owner: { type: 'string', default: 'goochoi913@gmail.com' },
-    'owner-name': { type: 'string', default: 'Goo Choi' },
+    owner: { type: 'string' },
+    'owner-name': { type: 'string' },
   },
 })
+
+if (!values.owner || !values['owner-name']) {
+  console.error('Name the first owner: npm run seed -- --owner you@example.com --owner-name "Your Name"')
+  process.exit(1)
+}
 
 seedAcademy({
   academyId: ACADEMY_ID,
