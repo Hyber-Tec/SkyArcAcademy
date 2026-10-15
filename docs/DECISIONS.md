@@ -27,8 +27,9 @@ end of the matching section, with the date.
   committed is world-readable, so client-internal details (people's names, contacts, timeline, money) and findings
   about other HyberTec products stay in the git-ignored `docs/internal/` on Goo's Mac mini, and the public brief and
   review name the academy's people by role.
-- **GitHub account:** only `goochoi913` in this folder (repo-local `user.name`/`user.email` and a credential helper
-  using goochoi913's `gh` token), never the work account `goo913`.
+- **Accounts:** each developer commits and pushes with their own personal GitHub account. Personal setup
+  (accounts, credential helpers, local paths) lives in each developer's git-ignored `CLAUDE.local.md`, never in the
+  shared files (Goo, 2026-10-15).
 - **Firebase project `skyarcacademy`:** sign-in with Google and email/password; Firestore in `nam5`; Realtime
   Database in `us-central1`; Hosting at `skyarcacademy.web.app`. Nothing uses the Realtime Database yet, so its
   rules stay deny-all until a feature needs it.
@@ -46,7 +47,7 @@ end of the matching section, with the date.
 - **Copy, then strip:** an exact import of HyberCRM `d659d34` as its own commit, then the Sky Arc changes.
 - **No hidden Super Admin.** HyberTec's support access is an ordinary owner login that the academy can see on the
   Account page and remove at handover.
-- **First account:** Goo (goochoi913@gmail.com) as owner while the app is built; the academy's owner and manager
+- **First account:** Goo as the first owner while the app is built; the academy's owner and manager
   are invited from the Account page.
 
 ## 4. Built in the fork (2026-10-15)
@@ -66,12 +67,29 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
   settings the academy can change.
 - **Brand:** HyberCRM's black-and-white theme with Sky Arc red as the brand color; the academy's logo on sign-in
   pages, the reticle mark in the app and the icons. No "Powered by" line.
-- **Email:** from HyberTec's Gmail under the academy's name, until Q5 is answered. The app password isn't set, so no
-  email goes out yet: invites show a sign-in link to copy, and account emails fall back to Firebase's own.
+- **Email:** from HyberTec's Gmail under the academy's name (Q5, §5). Until its app password is set, no email goes
+  out: invites show a sign-in link to copy, and account emails fall back to Firebase's own.
 - **Cloud Functions** run as their own service account with only the roles they use. Callable functions are opened by
   turning off Cloud Run's invoker check, because HyberTec's organization doesn't allow `allUsers` in IAM policies
   (`docs/DEPLOY.md`).
 - **`/trial`** says that online booking opens soon and points to skyarcacademy.com (Korean or English) until trial
   booking is built.
 - **Privacy policy:** HyberCRM's was removed. Sky Arc needs its own before families sign up or book trials (open).
+
+## 5. Goo's answers, second round (2026-10-15)
+
+- **Q5. Email sender: HyberTec's Gmail for now.** The academy owns skyarcacademy.com, but moving the app there is
+  the last step before launch, and mail from the academy's own domain is less likely to land in spam. Switching the
+  sender is on the launch checklist (`docs/DEPLOY.md`, "Moving to skyarcacademy.com"), so it comes up when the domain
+  moves.
+- **Q7. Schedule rows: by coach, with time across**, as in HyberCRM. The academy's own sheets put time down and days
+  across; Sky Arc keeps HyberCRM's layout.
+- **Q8. Students have a level and a program.** Both are lists the academy edits in Settings → Students. They start
+  with the sheets' nine levels (Discovery, Scout, Hunter, Hunter+, Marksman, Marksman+, Sharp Shooter, Expert,
+  Precision) and the website's four programs (Launchpad, Foundations, Development, Performance).
+- **Q13. Shift patterns apply to any staff member, and the manager can also coach.** Built with the schedule work
+  (step 4): staff of any role can teach and get a row on the schedule.
+- **Test data.** The academy's real data (A12 in `docs/QUESTIONS.md`) isn't in yet, so the app runs on sample data:
+  fictional coaches, a manager, families and ten weeks of classes, added with `npm run seed:sample` and removed with
+  `npm run seed:sample -- --remove` before the real data is imported (`docs/DEPLOY.md`, "Sample data").
 

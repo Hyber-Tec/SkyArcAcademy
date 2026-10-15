@@ -1,5 +1,5 @@
 /* The placeholder homepage: logo, one line, Book a trial and Log in, in Korean or English. The landing page comes
-   later (Goo); keep this minimal. Brand colors come from the logo: black, white and red #FB0202. White text on
+   later (the owner); keep this minimal. Brand colors come from the logo: black, white and red #FB0202. White text on
    #FB0202 is 4.1:1, so solid buttons use the deeper #E00000 (5:1) and the brand red stays for accents. */
 :root {
   --brand-red: #fb0202;

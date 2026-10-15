@@ -13,6 +13,9 @@ the Sky Arc features (class slots, makeups, trials, reports, Korean) come next, 
   [`SKYARC_PROJECT_BRIEF.md`](SKYARC_PROJECT_BRIEF.md) (what we're building) →
   [`docs/DECISIONS.md`](docs/DECISIONS.md) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md).
 - **Production:** https://skyarcacademy.web.app, deployed by GitHub from `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)).
+  Until the academy's real data arrives it holds fictional sample data (`npm run seed:sample`; remove it with
+  `npm run seed:sample -- --remove`).
+- **Open questions:** [`docs/QUESTIONS.md`](docs/QUESTIONS.md).
 
 ## Development
 
@@ -21,7 +24,8 @@ Node 22 or later, and Java 21 for the Firebase emulators.
 ```bash
 npm ci && npm ci --prefix web && npm ci --prefix functions
 npm run emulators                                    # Auth, Firestore, Functions, Storage as the demo-skyarc project
-SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed   # the academy and its first owner
+SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed -- --owner you@example.test --owner-name "You"
+SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed:sample   # optional: sample people and classes
 npm run dev:emulators                                # http://127.0.0.1:5174
 ```
 

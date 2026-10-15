@@ -166,8 +166,44 @@ gcloud secrets add-iam-policy-binding GMAIL_APP_PASSWORD --project $P --member s
 ## The academy's first data
 
 `isMember` in the rules requires the academy's document, so production needs it before anyone can sign in. After the
-first deploy, `npm run seed` (from `main`, with Goo's gcloud login) creates `branches/skyarc`, its public profile and
-the first owner (Goo). It's safe to run again: anything that exists is left alone.
+first deploy, `npm run seed -- --owner <email> --owner-name "<name>"` (from `main`, with an owner's gcloud login)
+creates `branches/skyarc`, its public profile and that first owner. It's safe to run again: anything that exists is
+left alone. (Done on 2026-10-15.)
+
+## Sample data
+
+Until the academy's real data arrives (A12 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
+tried with real-looking weeks. `npm run seed:sample` adds:
+
+- a manager and four coaches with pay rates, availability and four weeks of time entries;
+- 35 students with levels, programs and families (seven parents with a sign-in);
+- ten weeks of classes in the academy's blocks, with makeups, trial visits, one coach's sick day and Thanksgiving;
+- announcements and events.
+
+Everything is fictional (`shared/src/sample/data.ts`): document IDs start with `sample-`, and emails end in
+`@skyarc-sample.test`, a reserved domain that never gets mail. Preview a coach's or a parent's view with View as (the
+eye icon by your name). To try the kiosk, set a sample coach's PIN on their Employees page.
+
+**Before the real data is imported, remove it all:** `npm run seed:sample -- --remove`. It also deletes what the app
+made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and
+never touches anyone else. Running `npm run seed:sample` again refreshes the classes around the new date.
+
+## Moving to skyarcacademy.com (launch)
+
+The academy owns skyarcacademy.com, and moving the app there is the last step before launch. When it happens, also:
+
+1. **Hosting:** add the domain in the Firebase console (Hosting → Add custom domain) and the DNS records it asks for
+   at the academy's registrar.
+2. **Sign-in:** add `skyarcacademy.com` to Authentication → Settings → Authorized domains. Keep `authDomain` on
+   `skyarcacademy.firebaseapp.com` unless the domain's `/__/auth/handler` is registered on the Google OAuth client.
+3. **The app's own address:** `APP_DOMAIN` in `shared/src/brand.ts` (links in emails), the origins in
+   `storage.cors.json` (apply it again, see "Storage"), `og:image` in `web/app.html`, and the address in `CLAUDE.md`
+   and `README.md`.
+4. **The email sender (decided 2026-10-15):** emails go from HyberTec's Gmail until now. Ask the owner for an address on the
+   academy's domain (e.g. a Google Workspace mailbox) so mail stops landing in spam; publish SPF, DKIM and DMARC for
+   it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
+   `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
+5. **Sample data:** removed (see above), and the privacy policy online (Q15 in `docs/QUESTIONS.md`).
 
 ## Manual deploy (only when GitHub Actions is down)
 
