@@ -71,7 +71,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 ## Owner, accounts, production
 
 - The owner is **Goo Choi, goochoi913@gmail.com**. Everything run for this project uses that account: Firebase, Google Cloud (organization hybertec.com) and GitHub (`goochoi913`).
-- Production is the Firebase project **`skyarcacademy`** (Auth with Google and email/password, Firestore `nam5`, Realtime Database `us-central1`, Hosting). The site is **https://skyarcacademy.web.app** until `skyarcacademy.com` moves here at launch.
+- Production is the Firebase project **`skyarcacademy`** (Auth with Google and email/password, Firestore `nam5`, Realtime Database `us-central1`, Storage and Cloud Functions in `us-central1`, Hosting). The site is **https://skyarcacademy.web.app** until `skyarcacademy.com` moves here at launch.
 - **GitHub deploys `main` to production** after every merge, once CI passes on `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)). Sessions don't deploy by hand. If GitHub Actions is down, deploy only from an up-to-date `main`, never from a branch: production runs reviewed code only.
 - When something in the brief is unclear or conflicts with the code, ask Goo (the brief's rule). Record his answers in `docs/DECISIONS.md`.
 
@@ -79,26 +79,31 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 
 | Path | What |
 |---|---|
-| `web/` | The website (Vite). Today only the placeholder homepage: `index.html`, `src/home.*`, brand files in `public/`. The HyberCRM fork adds the app here (React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons) as `app.html`. |
-| `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules (deny-all until the fork) and indexes. |
-| `scripts/check-repo.sh` | CI's guard: no client material, `.env` files or secrets tracked. |
+| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.*` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code, `components/ui/` shadcn components, `pages/public/` sign-in and the trial page. `public/` holds the brand files and icons. |
+| `shared/` | Pure TypeScript used by the website and the functions: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates. Unit tests sit next to the code. |
+| `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, nightly jobs. |
+| `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
+| `tests/rules/` | Firestore rules tests (emulator). |
+| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
 | `docs/` | `DECISIONS.md` (Goo's answers), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
-The fork also brings HyberCRM's `shared/` (pure TypeScript business logic used by web and functions), `functions/` (Cloud Functions v2), `tests/` and `scripts/`. Update this table when it lands.
-
 ## Commands
 
-- `npm --prefix web install` once, then `npm --prefix web run dev` → http://localhost:5173.
-- `npm --prefix web run build` → `web/dist` (what Hosting serves).
-- `bash scripts/check-repo.sh` → the repository guard CI runs.
-- Local Firebase settings: `web/.env.local` (copy `web/.env.example`; values in the Firebase console, Project settings → Your apps → Sky Arc).
+- Install once: `npm ci && npm ci --prefix web && npm ci --prefix functions`.
+- Local, against the emulators (Java 21): `npm run emulators`, then `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed`, then `npm run dev:emulators` → http://127.0.0.1:5174. The emulators run as the `demo-skyarc` project, so nothing reaches production. Sign in from the browser console with `__skyarcSignIn('someone@example.test')` (emulators only).
+- `npm run dev` → http://localhost:5173 against **production** Firebase (needs `web/.env.local`: copy `web/.env.example`; values in the Firebase console, Project settings → Your apps → Sky Arc). Real data: prefer the emulators.
+- Checks, as CI runs them: `bash scripts/check-repo.sh`, `npm run typecheck`, `npm test` (unit), `npm run lint`, `npm run build` (website → `web/dist`), `npm --prefix functions run build`, `npm run test:rules` (rules, emulator).
+- `npm run seed` → creates the academy and its first owner in production once (safe to run again; uses your gcloud login).
+- `npx tsx scripts/smoke.ts /login /trial` → opens pages in headless Chrome and reports console errors (dev server running).
 
 ## Conventions
 
 Carried over from HyberCRM, adapted to one academy:
 
-- **Identity:** one person, exactly **one role**: `owner` | `admin` | `coach` | `parent` (`student` comes with the phone app). People sign in with **Google** or an **email and password**; access follows the **verified** email only. People records are referenced by ID only.
+- **Identity:** one person, exactly **one role**: `owner` | `admin` | `coach` | `parent` | `student`. People sign in with **Google** or an **email and password**; access follows the **verified** email only. People records are referenced by ID only.
+- **One academy in the code:** its data lives under `branches/skyarc` (`ACADEMY_ID` in `shared/src/academy.ts`). HyberCRM's internal names stay (`branchId`, `useBranch()`, `BranchSettings`); people never see "branch".
+- **Words in code:** stored values and code say `coach` (`coachId`, `/coach`). A class is a `session` in code and data (`class` is reserved in JavaScript) and **Class** on screen.
 - **Rules:** every collection gets explicit security rules; never a catch-all allow. Rules tests run in the emulator.
 - **Settings:** defaults live in code (`shared/src/settings/defaults.ts`); the academy stores only its overrides; always read settings through the resolver. Never hard-code values the academy hasn't confirmed.
 - **Time:** the academy's IANA time zone only, never the browser's. Wall-clock `dateKey` (`YYYY-MM-DD`) + `startMin`/`endMin`, plus absolute `startAt`/`endAt`.
@@ -106,15 +111,17 @@ Carried over from HyberCRM, adapted to one academy:
 - **Schedule UI:** keep HyberCRM's structure (coaches as rows, time across, Day / Week / Month, the side rail).
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
 - **Language:** Korean + English on every parent-facing screen. The chosen language is stored under `skyarc.lang` (the homepage already uses it).
-- **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy.
+- **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logo is `SkyArcLogo` (full) or `SkyArcMark` (the reticle); `scripts/brand-icons.ts` rebuilds the icons from the favicon.
+- **Cloud Functions** run as `functions@skyarcacademy.iam.gserviceaccount.com` with only the roles they use (`docs/DEPLOY.md`). A function that needs another Google service needs that role added there first.
+- **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy. The email app password is the Secret Manager secret `GMAIL_APP_PASSWORD`.
 
 ## Git and commits
 
 - The repository is HyberTec's: **https://github.com/Hyber-Tec/SkyArcAcademy** (public).
 - **`main` is reached through a pull request** (Strict Rules): CI green, plus the code owner's approval where a shared file changed. `.github/CODEOWNERS` lists the shared files; the code owner is `@goochoi913`.
-  - GitHub enforces the first part with a ruleset on `main` (a pull request and green CI), added with the fork's final CI. Code-owner approval stays a convention: GitHub doesn't let authors approve their own pull requests.
+  - GitHub enforces the first part with a ruleset on `main`: a pull request, with the CI checks "Typecheck, tests and builds" and "Security rules tests" passing. Code-owner approval stays a convention: GitHub doesn't let authors approve their own pull requests.
   - Start the branch from the latest `main`, named `<type>/<topic>` (`feat/kiosk-pin`). Open the pull request with `gh pr create`: the title is a Conventional Commits subject; the body says what changed, how it was checked, and what the deploy after merging will do (or that it changes nothing in production). Give the owner its link.
-  - CI (`.github/workflows/ci.yml`) runs the repository guard and the website build (later also typecheck, unit tests, functions build and rules tests). Run the parts the change touches before pushing.
+  - CI (`.github/workflows/ci.yml`) runs the repository guard, typecheck, unit tests, lint, the website and functions builds, and the rules tests. Run the parts the change touches before pushing.
 - Scopes name the part of the app (e.g. `auth`, `access`, `settings`, `schedule`, `availability`, `trial`, `students`, `parents`, `coaches`, `payroll`, `kiosk`, `reports`, `announcements`, `i18n`, `home`, `rules`, `functions`, `shared`, `deploy`). Leave the scope off when a change spans several.
 - Breaking changes take `!` before the colon, a `BREAKING CHANGE:` footer, or both.
 
