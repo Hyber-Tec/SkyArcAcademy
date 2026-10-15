@@ -2,10 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { LuEye, LuEyeOff } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
 import { PASSWORD_STRENGTH_LABELS, passwordStrength } from '@shared/auth'
-import { PRODUCT_NAME } from '@shared/brand'
-import { BrandMark } from '@/components/app/BrandMark'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
-import { HyberMark } from '@/components/app/HyberMark'
+import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { usePublicProfile } from '@/lib/publicProfile'
@@ -33,7 +31,7 @@ export function withQuery(path: string, query: Record<string, string | null | un
 }
 
 /**
- * The card every sign-in page shows: the academy's name and logo, then the page's own content.
+ * The card every sign-in page shows: Sky Arc's logo, then the page's own content.
  */
 export function AuthShell({
   title,
@@ -46,21 +44,10 @@ export function AuthShell({
   children: ReactNode
   footer?: ReactNode
 }) {
-  const { profile } = useAuthBranch()
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted/40 px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-sm">
-        {profile ? (
-          <div className="mb-8 flex items-center gap-3">
-            <BrandMark name={profile.name} logoUrl={profile.logoUrl} accentColor={profile.accentColor} className="size-10" />
-            <div className="min-w-0">
-              <div className="truncate font-semibold leading-tight">{profile.name}</div>
-              <div className="text-xs text-muted-foreground">on {PRODUCT_NAME}</div>
-            </div>
-          </div>
-        ) : (
-          <HyberMark withName className="mb-8" />
-        )}
+        <SkyArcLogo className="mb-8 h-14" />
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {description ? <div className="mt-1 text-sm text-muted-foreground">{description}</div> : null}
         <div className="mt-6">{children}</div>

@@ -1,4 +1,4 @@
-import { APP_URL, COMPANY_NAME, PRODUCT_NAME } from '../brand'
+import { ACADEMY_NAME, APP_URL } from '../brand'
 import { ROLE_LABELS, type Role } from '../roles'
 
 /**
@@ -61,7 +61,7 @@ export function inviteCopy(i: InviteEmailInput) {
         subject: `You’re now an owner of ${i.branchName}`,
         title: `You’re now an owner of ${i.branchName}`,
         greeting,
-        intro: `${who} made you an owner of ${i.branchName} on ${PRODUCT_NAME}. ${ROLE_BLURB.owner}`,
+        intro: `${who} made you an owner of ${i.branchName}. ${ROLE_BLURB.owner}`,
         button: `Sign in to ${i.branchName}`,
       }
     case 'approved':
@@ -77,7 +77,7 @@ export function inviteCopy(i: InviteEmailInput) {
         subject: `You’ve been added to ${i.branchName}`,
         title: `Welcome to ${i.branchName}`,
         greeting,
-        intro: `${i.inviterName ? `${i.inviterName} added you` : `You’ve been added`} to ${i.branchName} on ${PRODUCT_NAME} as ${asRole}. ${ROLE_BLURB[i.role]}`,
+        intro: `${i.inviterName ? `${i.inviterName} added you` : `You’ve been added`} to ${i.branchName} as ${asRole}. ${ROLE_BLURB[i.role]}`,
         button: `Sign in to ${i.branchName}`,
       }
   }
@@ -108,7 +108,7 @@ export function inviteEmail(i: InviteEmailInput): EmailContent {
     '',
     '—',
     why,
-    `${PRODUCT_NAME} is software by ${COMPANY_NAME}. ${appUrl}`,
+    `${ACADEMY_NAME} · ${appUrl}`,
   ].join('\n')
 
   const p = 'margin:0 0 16px;font-size:15px;line-height:24px;color:#3f3f46;'
@@ -127,8 +127,8 @@ export function inviteEmail(i: InviteEmailInput): EmailContent {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 <tr><td style="padding:0 4px 20px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;"><img src="${esc(appUrl)}/brand/hybercrm-email.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;"></td>
-<td style="vertical-align:middle;padding-left:10px;font-size:16px;font-weight:600;color:#18181b;">${esc(PRODUCT_NAME)}</td>
+<td style="vertical-align:middle;"><img src="${esc(appUrl)}/brand/skyarc-email.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;"></td>
+<td style="vertical-align:middle;padding-left:10px;font-size:16px;font-weight:600;color:#18181b;">${esc(ACADEMY_NAME)}</td>
 </tr></table>
 </td></tr>
 <tr><td style="background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;padding:32px;">
@@ -149,7 +149,7 @@ ${steps.map((line, n) => `<div>${n + 2}. ${esc(line).replace('“Continue with G
 </td></tr>
 <tr><td style="padding:20px 4px 0;font-size:12px;line-height:18px;color:#71717a;">
 <p style="margin:0 0 8px;">${esc(why)}</p>
-<p style="margin:0;">${esc(PRODUCT_NAME)} is software by ${esc(COMPANY_NAME)}. <a href="${esc(appUrl)}" style="color:#71717a;">${esc(appUrl.replace(/^https?:\/\//, ''))}</a></p>
+<p style="margin:0;">${esc(ACADEMY_NAME)} · <a href="${esc(appUrl)}" style="color:#71717a;">${esc(appUrl.replace(/^https?:\/\//, ''))}</a></p>
 </td></tr>
 </table>
 </td></tr>

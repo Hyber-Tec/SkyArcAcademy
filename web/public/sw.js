@@ -1,11 +1,10 @@
-// Hyber CRM service worker: makes the app installable and shows the last app
+// Sky Arc service worker: makes the app installable and shows the last app
 // shell when the network is down. Data always comes live from Firestore, and
 // hashed assets are left to the HTTP cache (they are immutable).
 //
-// Two pages are kept: the website's landing page (`/`) and the app (app.html,
-// served at `/app` and at every app address). The live demo and the website's
-// own static pages (the privacy policy) are never kept in their place.
-const CACHE = 'hyber-shell-v3'
+// Two pages are kept: the homepage (`/`) and the app (app.html, served at
+// `/app` and at every app address).
+const CACHE = 'skyarc-shell-v1'
 const APP = '/app'
 const LANDING = '/'
 
@@ -31,17 +30,8 @@ self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET' || req.mode !== 'navigate') return
   const url = new URL(req.url)
-  // Firebase Auth's sign-in helper pages, the demo and static pages always come from the network.
-  if (
-    url.origin !== self.location.origin ||
-    url.pathname.startsWith('/__/') ||
-    url.pathname.startsWith('/.well-known/') ||
-    url.pathname === '/demo' ||
-    url.pathname.startsWith('/demo/') ||
-    url.pathname === '/privacy' ||
-    url.pathname.endsWith('.html')
-  )
-    return
+  // Firebase Auth's sign-in helper pages and static pages always come from the network.
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/__/') || url.pathname.endsWith('.html')) return
   const key = url.pathname === LANDING ? LANDING : APP
   event.respondWith(
     fetch(req)

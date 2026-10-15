@@ -71,10 +71,10 @@ export function IdentityColumn({
   return (
     <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start" data-testid="student-identity">
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="h-20 bg-gradient-to-r from-indigo-100 via-sky-50 to-emerald-50 dark:from-indigo-950/60 dark:via-sky-950/40 dark:to-emerald-950/40" />
+        <div className="h-20 bg-gradient-to-r from-zinc-200 via-zinc-50 to-red-50 dark:from-zinc-800 dark:via-zinc-900 dark:to-red-950/40" />
         <div className="-mt-10 px-5 pb-5">
           <span className="flex size-[76px] items-center justify-center rounded-2xl bg-card p-1 shadow-sm ring-1 ring-border">
-            <span className="flex size-full items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-xl font-semibold text-white">{initialsOf(student.name)}</span>
+            <span className="flex size-full items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-black text-xl font-semibold text-white">{initialsOf(student.name)}</span>
           </span>
           <h1 className="mt-3 text-xl font-semibold tracking-tight">{student.name}</h1>
           <p className="text-sm text-muted-foreground">{[student.grade ? (/^\d+$/.test(student.grade) ? `Grade ${student.grade}` : student.grade) : null, student.school || null].filter(Boolean).join(' · ') || 'No grade or school yet'}</p>

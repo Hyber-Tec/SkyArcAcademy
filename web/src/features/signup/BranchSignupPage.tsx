@@ -55,10 +55,7 @@ export function BranchSignupPage() {
       <header className="mx-auto flex max-w-xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-3">
           <BrandMark name={profile.name} logoUrl={profile.logoUrl} accentColor={profile.accentColor} className="size-10" />
-          <div>
-            <div className="font-semibold leading-tight">{profile.name}</div>
-            <div className="text-xs text-muted-foreground">Powered by Hyber CRM</div>
-          </div>
+          <div className="font-semibold leading-tight">{profile.name}</div>
         </div>
         {user ? <UserMenu /> : null}
       </header>

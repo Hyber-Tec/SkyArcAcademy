@@ -21,11 +21,10 @@ type State =
   | { step: 'failed'; message: string }
 
 /** Whether this page was opened on a phone, where the person most likely came from the app. */
-const onPhone = () => /iPhone|iPad|Android/i.test(navigator.userAgent)
 
 /**
  * Where the links in account emails land (`/auth/action?mode=…&oobCode=…`): confirming an email, choosing a new
- * password, or undoing an email change. The links come from Hyber's emails (functions/src/account.ts) and, as a
+ * password, or undoing an email change. The links come from the app's emails (functions/src/account.ts) and, as a
  * fallback, from Firebase's own.
  */
 export function AuthAction() {
@@ -103,7 +102,7 @@ export function AuthAction() {
     return (
       <AuthShell
         title="Email confirmed"
-        description={onPhone() ? 'Thanks! Go back to the Hyber CRM app: it moves on by itself. Or continue here.' : 'Thanks! You can sign in with it now.'}
+        description="Thanks! You can sign in with it now."
       >
         <Icon ok />
         <Button className="w-full" onClick={() => navigate(user ? next : withQuery('/login', { next: next === '/app' ? null : next }), { replace: true })}>
@@ -136,7 +135,7 @@ export function AuthAction() {
     return (
       <AuthShell
         title="Password changed"
-        description={onPhone() ? 'Go back to the Hyber CRM app and sign in with your new password, or sign in here.' : 'Sign in with your new password.'}
+        description="Sign in with your new password."
       >
         <Icon ok />
         <Button className="w-full" asChild>

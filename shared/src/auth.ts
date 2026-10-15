@@ -7,7 +7,7 @@
  * before it sees anything. Google accounts are verified by Google.
  */
 
-/** Firebase accepts 6; Hyber asks for 8. */
+/** Firebase accepts 6; the app asks for 8. */
 export const PASSWORD_MIN_LENGTH = 8
 export const PASSWORD_MAX_LENGTH = 128
 
@@ -80,7 +80,7 @@ export function authErrorMessage(code: string | undefined | null, action: AuthAc
     case 'credential-already-in-use':
       return 'That account is already linked to another sign-in.'
     case 'operation-not-allowed':
-      return action === 'google' ? 'Google sign-in isn’t turned on for Hyber CRM yet.' : 'Signing in with a password isn’t turned on for Hyber CRM yet.'
+      return action === 'google' ? 'Google sign-in isn’t turned on for Sky Arc yet.' : 'Signing in with a password isn’t turned on for Sky Arc yet.'
     case 'expired-action-code':
       return 'This link has expired. Ask for a new one.'
     case 'invalid-action-code':
@@ -132,7 +132,7 @@ export function queryParams(urlOrQuery: string): Map<string, string> {
   return out
 }
 
-/** Turns the link Firebase makes into one for Hyber's own page, keeping the one-time code. */
+/** Turns the link Firebase makes into one for the app's own page, keeping the one-time code. */
 export function accountActionUrl(firebaseLink: string, appUrl: string, next?: string | null): string {
   const from = queryParams(firebaseLink)
   const pairs: string[] = []

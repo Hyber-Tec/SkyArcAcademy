@@ -8,7 +8,7 @@ interface ThemeContextValue {
   setTheme: (theme: ThemeSetting | string) => void
 }
 
-const STORAGE_KEY = 'hyber:theme'
+const STORAGE_KEY = 'skyarc:theme'
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function readStored(fallback: ThemeSetting): ThemeSetting {

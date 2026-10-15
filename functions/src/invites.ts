@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
-import { PRODUCT_NAME, isReservedEmail, signInUrl } from '@shared/brand'
+import { isReservedEmail, signInUrl } from '@shared/brand'
 import { type InviteKind, inviteEmail } from '@shared/email/invite'
 import { COL, DOC, ROOT } from '@shared/paths'
 import { ROLE_LABELS } from '@shared/roles'
@@ -48,7 +48,7 @@ async function deliverInvite(opts: { branchId: string; email: string; member: Me
     inviterName,
     signInUrl: signInUrl(email),
   })
-  const result = await sendMail({ to: email, ...content, fromName: `${branch.name} via ${PRODUCT_NAME}`, replyTo })
+  const result = await sendMail({ to: email, ...content, fromName: branch.name, replyTo })
   await record(result.status, result.status === 'failed' ? result.error : null)
   return result.status
 }

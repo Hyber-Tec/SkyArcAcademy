@@ -40,7 +40,7 @@ if (usingEmulators) {
   connectStorageEmulator(storage, '127.0.0.1', 9199)
   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
   // Test hook: sign in as any Google account without the popup (emulator only).
-  ;(window as unknown as { __hyberSignIn: (email: string) => Promise<unknown> }).__hyberSignIn = (email: string) =>
+  ;(window as unknown as { __skyarcSignIn: (email: string) => Promise<unknown> }).__skyarcSignIn = (email: string) =>
     signInWithCredential(
       auth,
       GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, email_verified: true, name: email.split('@')[0] })),

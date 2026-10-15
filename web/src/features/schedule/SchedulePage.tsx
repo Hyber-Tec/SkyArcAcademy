@@ -49,9 +49,9 @@ import { useScheduleRoute } from './useScheduleRoute'
 import { type RailNumbers, type RailCoach, ScheduleMenu, ScheduleRail, SlimRail, ViewSwitch } from './ScheduleRail'
 import { WeekEventHeader } from './WeekEventHeader'
 
-const CLIP_KEY = 'hyber:schedule-clipboard'
+const CLIP_KEY = 'skyarc:schedule-clipboard'
 // The redesign starts everyone at 100% (the old key held True Education's 80%).
-const ZOOM_KEY = 'hyber:schedule-zoom-v2'
+const ZOOM_KEY = 'skyarc:schedule-zoom'
 
 interface Clip {
   studentId: string
@@ -71,7 +71,7 @@ function readClip(): Clip | null {
 
 const NO_CONFLICTS: Conflict[] = []
 
-const PANEL_KEY = 'hyber:schedule-panel'
+const PANEL_KEY = 'skyarc:schedule-panel'
 
 function readPanelOpen(): boolean {
   try {

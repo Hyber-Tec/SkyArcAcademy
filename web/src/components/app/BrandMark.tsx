@@ -1,11 +1,12 @@
 import { cn } from '@/lib/utils'
+import { SkyArcMark } from './SkyArcMark'
 
 export function initials(name: string, max = 2): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   return parts.slice(0, max).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?'
 }
 
-/** A branch's logo, or a monogram in the branch accent color. */
+/** The academy's uploaded logo, a monogram in its chosen color, or else Sky Arc's mark. */
 export function BrandMark({
   name,
   logoUrl,
@@ -26,13 +27,11 @@ export function BrandMark({
       />
     )
   }
+  if (!accentColor) return <SkyArcMark className={className} />
   return (
     <div
-      className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground',
-        className,
-      )}
-      style={accentColor ? { backgroundColor: accentColor, color: '#fff' } : undefined}
+      className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white', className)}
+      style={{ backgroundColor: accentColor }}
       aria-hidden="true"
     >
       {initials(name)}

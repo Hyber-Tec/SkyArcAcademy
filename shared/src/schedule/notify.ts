@@ -65,7 +65,7 @@ export function sessionCreatedNotices(s: SessionSnapshot, ctx: NoticeContext): S
 
 /**
  * True Education's decision table for session updates, limited to sessions
- * starting inside the window (before or after the change), plus Hyber's
+ * starting inside the window (before or after the change), plus HyberCRM's
  * delete/restore-from-trash notices. At most one notice per coach.
  */
 export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnapshot, ctx: NoticeContext): SessionNotice[] {

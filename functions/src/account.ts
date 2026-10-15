@@ -3,7 +3,7 @@ import { FieldValue, type Timestamp } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions/v2'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { type AccountEmailKind, accountActionUrl, looksLikeEmail } from '@shared/auth'
-import { APP_URL, PRODUCT_NAME, isReservedEmail } from '@shared/brand'
+import { ACADEMY_NAME, APP_URL, isReservedEmail } from '@shared/brand'
 import { accountEmail } from '@shared/email/account'
 import { COL, ROOT, USER_COL } from '@shared/paths'
 import { db } from './app'
@@ -35,8 +35,8 @@ async function allowed(uid: string, kind: AccountEmailKind): Promise<boolean> {
 const safeNext = (next: unknown): string | null => (typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next.slice(0, 300) : null)
 
 /**
- * Hyber's own "Confirm your email" and "Reset your password" emails, sent from HyberTec's address with a link to
- * Hyber's page (`/auth/action`), not Firebase's plain ones.
+ * The app's own "Confirm your email" and "Reset your password" emails, sent from the app's address with a link to
+ * its page (`/auth/action`), not Firebase's plain ones.
  * - `verify`: the signed-in caller's own address (a new password account).
  * - `reset`: any address. The answer never says whether an account exists.
  * `{ sent: false, fallback: true }` tells the app to ask Firebase to send its own email instead (the sending
@@ -56,7 +56,7 @@ export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstanc
     if (isReservedEmail(user.email)) return { sent: false, fallback: false }
     const link = await auth.generateEmailVerificationLink(user.email, { url: `${APP_URL}/login` })
     const content = accountEmail({ kind, to: user.email, name: user.displayName ?? '', url: accountActionUrl(link, APP_URL, safeNext(next)) })
-    const result = await sendMail({ to: user.email, ...content, fromName: PRODUCT_NAME })
+    const result = await sendMail({ to: user.email, ...content, fromName: ACADEMY_NAME })
     if (result.status !== 'sent') logger.warn('Verification email not sent', { uid: user.uid, status: result.status })
     return { sent: result.status === 'sent', fallback: result.status !== 'sent' }
   }
@@ -77,7 +77,7 @@ export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstanc
   if (isReservedEmail(email) || !(await allowed(uid, 'reset'))) return { sent: true }
   const link = await auth.generatePasswordResetLink(email, { url: `${APP_URL}/login?email=${encodeURIComponent(email)}` })
   const content = accountEmail({ kind, to: email, name, url: accountActionUrl(link, APP_URL, safeNext(next)) })
-  const result = await sendMail({ to: email, ...content, fromName: PRODUCT_NAME })
+  const result = await sendMail({ to: email, ...content, fromName: ACADEMY_NAME })
   if (result.status !== 'sent') logger.warn('Password reset email not sent', { uid, status: result.status })
   return { sent: result.status === 'sent', fallback: result.status !== 'sent' }
 })

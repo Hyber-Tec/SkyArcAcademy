@@ -24,7 +24,7 @@ import { useScheduleUi } from './context'
 import { CARD_H } from './geometry'
 import { sessionDrag } from './dragState'
 
-export const SESSION_DRAG_TYPE = 'application/x-hyber-session'
+export const SESSION_DRAG_TYPE = 'application/x-skyarc-session'
 
 interface Props {
   session: WithId<Session>

@@ -16,16 +16,16 @@ describe('invite emails', () => {
     const e = inviteEmail({ ...base, kind: 'added' })
     expect(e.subject).toBe('You’ve been added to Demo Academy')
     expect(e.text).toContain('Hi Maya,')
-    expect(e.text).toContain('Grace Liu added you to Demo Academy on Hyber CRM as a coach.')
+    expect(e.text).toContain('Grace Liu added you to Demo Academy as a coach.')
     expect(e.text).toContain('a password for maya@school.org')
-    expect(e.html).toContain('href="https://hybercrm.com/login?email=maya%40school.org"')
-    expect(e.text).toContain('Hyber CRM is software by HyberTec LLC.')
+    expect(e.html).toContain('href="https://skyarcacademy.web.app/login?email=maya%40school.org"')
+    expect(e.text).toContain('Sky Arc Sports Academy · https://skyarcacademy.web.app')
   })
 
   it('tells new owners who made them an owner', () => {
     const e = inviteEmail({ ...base, role: 'owner', kind: 'owner' })
     expect(e.subject).toBe('You’re now an owner of Demo Academy')
-    expect(e.text).toContain('Grace Liu made you an owner of Demo Academy on Hyber CRM.')
+    expect(e.text).toContain('Grace Liu made you an owner of Demo Academy.')
   })
 
   it('tells approved sign-ups they are in', () => {

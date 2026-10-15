@@ -31,7 +31,7 @@ import { sessionDrag } from './dragState'
 import { SESSION_DRAG_TYPE, SessionCard } from './SessionCard'
 import type { EventDoc } from './useScheduleData'
 
-export const EVENT_DRAG_TYPE = 'application/x-hyber-event'
+export const EVENT_DRAG_TYPE = 'application/x-skyarc-event'
 
 /** Unavailable time on a coach's row: a faint hatch under the white availability bands. */
 const OFF_HATCH = 'bg-[repeating-linear-gradient(135deg,rgba(161,161,170,0.10)_0,rgba(161,161,170,0.10)_1px,transparent_1px,transparent_6px)]'
