@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sky Arc Sports Academy</title>
+    <meta name="description" content="Sky Arc Sports Academy: precision air rifle training for young shooters." />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // Korean or English before the first paint: ?lang=ko|en, then the saved choice, then the browser's language.
+      (function () {
+        var lang = 'en'
+        try {
+          var asked = new URLSearchParams(location.search).get('lang')
+          var saved = localStorage.getItem('skyarc.lang')
+          if (asked === 'ko' || asked === 'en') lang = asked
+          else if (saved === 'ko' || saved === 'en') lang = saved
+          else if (/^ko\b/i.test(navigator.language)) lang = 'ko'
+        } catch (e) {}
+        document.documentElement.lang = lang
+      })()
+    </script>
+    <link rel="stylesheet" href="/src/home.css" />
+  </head>
+  <body>
+    <header class="top">
+      <button type="button" class="lang" id="lang-toggle">
+        <span data-show="en" lang="ko">한국어</span>
+        <span data-show="ko" lang="en">English</span>
+      </button>
+    </header>
+
+    <main class="hero">
+      <h1 class="logo">
+        <img src="/brand/skyarc-logo-white.svg" alt="Sky Arc Sports Academy" width="1150" height="610" />
+      </h1>
+      <p class="line">
+        <span data-show="en">Precision air rifle training for young shooters.</span>
+        <span data-show="ko">청소년을 위한 정밀 공기소총 사격 교육</span>
+      </p>
+      <nav class="actions">
+        <a class="btn btn-primary" href="/trial">
+          <span data-show="en">Book a trial</span>
+          <span data-show="ko">체험 수업 예약</span>
+        </a>
+        <a class="btn btn-outline" href="/login">
+          <span data-show="en">Log in</span>
+          <span data-show="ko">로그인</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="foot">© Sky Arc Sports Academy</footer>
+
+    <script type="module" src="/src/home.ts"></script>
+  </body>
+</html>

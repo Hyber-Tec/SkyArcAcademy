@@ -1,0 +1,8 @@
+rules_version = '2';
+
+// Nothing in Firestore is readable or writable yet: the app's rules arrive with the HyberCRM fork
+// (docs/HYBERCRM_REVIEW.md). Every collection gets explicit rules; never add a catch-all allow.
+service cloud.firestore {
+  match /databases/{database}/documents {
+  }
+}
