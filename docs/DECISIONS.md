@@ -15,6 +15,8 @@ end of the matching section, with the date.
 - **Terminology:** Coach, Class, Academy, Makeup (MU), Position (Standing / Kneeling / Prone).
 - **Korean and English** on every parent-facing screen (parent portal, trial booking, homepage).
 - Values Matt hasn't sent yet (hours, rules, capacity, pay) are **settings with sensible defaults**, never hard-coded.
+- **Time zone: America/New_York.** The academy is at 730 Peachtree Industrial Blvd, Suwanee, GA (skyarcacademy.com,
+  checked 2026-10-15). It is the academy's time-zone setting, used for every class time, the kiosk and payroll.
 
 ## 2. Setup (2026-10-15)
 
