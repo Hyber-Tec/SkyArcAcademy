@@ -22,11 +22,14 @@
 | Person | Role |
 |---|---|
 | **Goo Choi** | HyberTec, project owner / lead dev |
-| **David Kim** | HyberTec |
-| **Matt** | Manager of Sky Arc. Manages the coaches (doesn't teach classes). Our main contact. At the academy every day. |
-| **Sunny** | Matt's mom. **Main boss / owner.** She handles **payroll**. |
-| **Coaches** | 4 part-time coaches (+ Matt = 5 staff). Known names so far: Ethan, Hope. |
+| **HyberTec developers** | The rest of the team |
+| **The manager** | Runs Sky Arc day to day and manages the coaches (doesn't teach classes). Our main contact. At the academy every day. |
+| **The owner** | **Main boss.** Handles **payroll**. |
+| **Coaches** | 4 part-time coaches (+ the manager = 5 staff). |
 | **Students** | About 40, mostly middle school to early high school. Many families are **Korean**. |
+
+This repository is public: the client's people are named by role here. Names and contacts stay in the local
+`docs/internal/` (git-ignored).
 
 **HyberTec** builds websites, custom platforms, CRMs, and iOS/Android apps.
 
@@ -112,7 +115,7 @@ Confirm with Goo if any naming feels off.
 ## 5. Scheduling: Requirements
 
 ### How Sky Arc works today
-- Managed in **Google Sheets**, duplicated every week. Matt says scheduling is the hardest part of the job.
+- Managed in **Google Sheets**, duplicated every week. The manager says scheduling is the hardest part of the job.
 - Very **structured**: the same kids come on the same days every week. Most students take **2 classes/week** (Mon/Wed or Tue/Thu).
 - Lots of **new trial students** right now.
 - **Real examples of their weekly sheets** are in the assets (§9). **Read all four PDFs** to understand the slot structure, capacity, how coaches are assigned, what "MU" looks like, trials, and Thursday hours. Use them to design the model and to **seed realistic data**.
@@ -129,25 +132,25 @@ Confirm with Goo if any naming feels off.
 
 ### Student scheduling
 - **Recurring weekly slots** per student (e.g., every Mon & Wed 5:00).
-- **Cancellations:** parents can cancel from the parent portal. **Admin gets notified** immediately (e.g., parent cancels at 9 PM the night before → Matt is notified). Sunny specifically asked for cancel/reschedule notifications.
-- **Cancellation rules** are configurable in Settings (e.g., "no cancelling within 24 hours"). Actual values are **pending from Matt**, so use sensible defaults and make them editable.
+- **Cancellations:** parents can cancel from the parent portal. **Admin gets notified** immediately (e.g., parent cancels at 9 PM the night before → the manager is notified). The owner specifically asked for cancel/reschedule notifications.
+- **Cancellation rules** are configurable in Settings (e.g., "no cancelling within 24 hours"). Actual values are **pending from the academy**, so use sensible defaults and make them editable.
 - **Makeup classes (MU):** a missed class can be made up. Parents can **see open slots and book a makeup themselves** (no more calling to ask "is this slot open?"). Rules (how many, how far ahead, which slots) are configurable; values pending.
 - **Capacity:** max students per coach / per slot. Configurable; value pending (check the PDFs for current practice).
-- **Trials:** currently the website form just emails Matt and he replies manually. New: a **public trial booking page** that shows **real availability** and books a slot (with trial length and per-slot limits, configurable). It can live at a simple route like `/trial` and be linked from the placeholder homepage.
+- **Trials:** currently the website form just emails the manager, who replies by hand. New: a **public trial booking page** that shows **real availability** and books a slot (with trial length and per-slot limits, configurable). It can live at a simple route like `/trial` and be linked from the placeholder homepage.
 - Views: **Day / Week / Month**, by coach, with conflicts and pending items, same as HyberCRM's schedule screens.
 
 ### Coach scheduling
-- All coaches are **part-time on fixed days** (e.g., Ethan Tue/Wed; Hope Mon–Thu; Matt every day).
+- All coaches are **part-time on fixed days** (e.g., one coach Tue/Wed, another Mon–Thu; the manager every day).
 - **Shift = class time minus 30 minutes** (class 5–8 → coach 4:30–8).
 - **Sunday rotation:** 2 coaches one Sunday, 2 different coaches the next (alternating). The schedule model must support **alternating-week recurrence**.
 - Coaches can fill in their **own availability / time off** (as in HyberCRM).
-- Matt & Sunny are finalizing a fixed coach schedule. Real coach names and hours are **pending**.
+- The manager and the owner are finalizing a fixed coach schedule. Real coach names and hours are **pending**.
 
 ---
 
 ## 6. Progress Reports: Requirements (NEW, core feature)
 
-This was **Matt's #1 priority.** Parents currently never see their kids' results. Reports get saved to a local folder or printed into a file cabinet, and most are never looked at. One parent already complained: "Where's the data? We want to see our kids improve."
+This was the **manager's #1 priority.** Parents currently never see their kids' results. Reports get saved to a local folder or printed into a file cabinet, and most are never looked at. Parents have asked to see how their kids improve.
 
 ### Sources
 1. **SIUS electronic target PDFs.** Staff click Stop → Save in the SIUS software and get a PDF with scores and the target image. **Samples in §9** (Kneeling / Prone / Standing, all 20-shot).
@@ -168,7 +171,7 @@ This was **Matt's #1 priority.** Parents currently never see their kids' results
 ### What to extract from SIUS PDFs
 - **Open and study every sample PDF first.** Document the exact structure in the review doc: which fields exist (total, series totals, decimal vs. integer scoring, averages, shot coordinates/plot, time, etc.).
 - Store structured score data **and** the rendered pages/target image.
-- Don't assume the format Matt described in the meeting (10 shots out of 100). **The samples are 20-shot reports. Go by the real files.**
+- Don't assume the format described in the kickoff meeting (10 shots out of 100). **The samples are 20-shot reports. Go by the real files.**
 
 ### Parent: view
 - Per-student **report library ("folder")**, organized by **date**, filterable by **position** and **source** (electronic/paper).
@@ -188,24 +191,24 @@ This was **Matt's #1 priority.** Parents currently never see their kids' results
 
 Keep HyberCRM's **Directory, Calendar, Pay Rates, Payroll, Time Entries** and adapt them to coaches.
 
-- **Today:** Matt logs all coach hours **by hand** (hours are fixed).
+- **Today:** the manager logs all coach hours **by hand** (hours are fixed).
 - **Clock in/out (decided): kiosk.** A **kiosk page** runs on a device at the academy. The coach enters a **PIN** to clock in or out.
   - PINs are stored **hashed**. They're never logged and never committed.
   - The kiosk device is locked to kiosk mode (no access to the rest of the admin app).
   - If HyberCRM already has kiosk, location, or Wi-Fi clock-in, reuse its patterns. **Kiosk is the method for Sky Arc.**
 - Admin can **review, edit, and approve time entries**. The system **calculates hours and pay**.
-- **Payroll is run by Sunny**, so she needs admin/payroll access. Pay rates and pay period are **pending**; keep them configurable.
+- **Payroll is run by the owner**, who needs admin/payroll access. Pay rates and pay period are **pending**; keep them configurable.
 - Coaches can see their **own** hours, schedule, availability, and payroll history.
 
 ---
 
 ## 8. Other Modules & Requirements
 
-- **Students & Parents:** roster (~40; real list pending from Matt), parent accounts linked to one or more children, emergency/contact info as in HyberCRM.
-- **Announcements / News:** keep from HyberCRM. Matt wants **tournament/competition updates and important announcements** for parents. A public "News" feed for the future website should be able to reuse the same data.
+- **Students & Parents:** roster (~40; real list pending from the academy), parent accounts linked to one or more children, emergency/contact info as in HyberCRM.
+- **Announcements / News:** keep from HyberCRM. The academy wants **tournament/competition updates and important announcements** for parents. A public "News" feed for the future website should be able to reuse the same data.
 - **Notifications:** cancellations/reschedules → admin; new report / announcements → parents.
-- **Language: Korean + English.** Many families are Korean, and Matt said this is important. Required at minimum on **parent-facing** screens (parent portal, trial booking, homepage). Admin screens can stay English unless HyberCRM already has i18n. Check what HyberCRM supports and propose an approach.
-- **Access Control & roles:** Admin (Matt), Owner/Admin with payroll (Sunny), Coach, Parent. (Student role comes with mobile.)
+- **Language: Korean + English.** Many families are Korean, and the academy said this is important. Required at minimum on **parent-facing** screens (parent portal, trial booking, homepage). Admin screens can stay English unless HyberCRM already has i18n. Check what HyberCRM supports and propose an approach.
+- **Access Control & roles:** Admin (the manager), Owner with payroll (the owner), Coach, Parent. (Student role comes with mobile.)
 - **Homepage:** simple placeholder: Sky Arc logo, one line, **Login**, and **Book a Trial** links. Use brand colors. **No landing-page design work.**
 
 ### Brand
@@ -215,7 +218,7 @@ Keep HyberCRM's **Directory, Calendar, Pay Rates, Payroll, Time Entries** and ad
 
 ---
 
-## 9. Assets (received from Matt)
+## 9. Assets (received from the academy)
 
 Location: the **`SkyArcAcademy/`** folder on Goo's Mac mini. It's the folder this brief lives in, and Claude Code runs from there. Run `pwd` to get the absolute path. Folder names contain spaces, so **always quote paths** in shell commands.
 
@@ -223,7 +226,7 @@ Location: the **`SkyArcAcademy/`** folder on Goo's Mac mini. It's the folder thi
 
 ```
 SkyArcAcademy
-├── SkyArc_Meeting_Notes.md             → notes from the Oct 13 meeting with Matt
+├── SkyArc_Meeting_Notes.md             → notes from the kickoff meeting (local only)
 ├── Google Sheets for Scheduling        → real weekly schedules (exported to PDF)
 │   ├── 9_21-9_27, 2026.xlsx - Sheet1.pdf
 │   ├── 9_28-10_4, 2026.xlsx - Sheet1.pdf
@@ -249,12 +252,12 @@ SkyArcAcademy
 
 ---
 
-## 10. Still Pending from Matt (design for these, use placeholders)
+## 10. Still Pending from the Academy (design for these, use placeholders)
 
 - Full student roster + exact headcount
 - Student class schedule (who's in which slot). Partly visible in the schedule PDFs.
 - Coach names + working hours; finalized coach schedule incl. Sunday rotation
-- Payroll details: pay rates, pay period (from Sunny)
+- Payroll details: pay rates, pay period (from the owner)
 - Detailed operating hours
 - Rules: max students per coach, cancellation, makeup, trial booking
 - Website content (programs, tuition, about, gallery, news). Only needed for the landing page later.
@@ -283,9 +286,9 @@ Each of these is its own branch → PR (see `CLAUDE.md` rules).
 
 ## 12. Timeline Context
 
-- Meeting: Oct 13, 2026. Matt wants the platform live around **end of November 2026**.
-- We told Matt building can go fast, but **going live (especially App Store publishing) takes longer**. The web app is what matters for the first launch.
-- Weekly check-ins with Matt. Next one around Oct 20–21 (Goo only; David out that week).
+- The web app is what matters for the first launch. Building can go fast, but **going live (especially App Store
+  publishing) takes longer**.
+- Weekly check-ins with the academy. Dates live in the local `docs/internal/`.
 
 ---
 

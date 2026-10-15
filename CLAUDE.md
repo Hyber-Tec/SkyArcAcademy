@@ -31,6 +31,9 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (Goo's answers; they win ove
 - **Never commit** API keys, service-account files, tokens, passwords, or PINs.
 - Never copy secrets or `.env` values from HyberCRM. Sky Arc has its own Firebase project.
 - Never commit real student data, real SIUS reports, or real target photos. Use anonymized fixtures.
+- **This repository is public.** Never commit client-internal details (people's names, contacts, schedules, money) or
+  findings about other HyberTec products (e.g. HyberCRM's weaknesses). They go in `docs/internal/` (git-ignored).
+  In committed docs, name the academy's people by role (the owner, the manager, coaches).
 
 ### Commits: no attribution
 - Commits carry **no attribution trailers**: no `Co-authored-by` line, no session line, no "generated with" footer, in commit messages **or** pull request bodies.
@@ -97,7 +100,7 @@ Carried over from HyberCRM, adapted to one academy:
 
 - **Identity:** one person, exactly **one role**: `owner` | `admin` | `coach` | `parent` (`student` comes with the phone app). People sign in with **Google** or an **email and password**; access follows the **verified** email only. People records are referenced by ID only.
 - **Rules:** every collection gets explicit security rules; never a catch-all allow. Rules tests run in the emulator.
-- **Settings:** defaults live in code (`shared/src/settings/defaults.ts`); the academy stores only its overrides; always read settings through the resolver. Never hard-code values Matt hasn't confirmed.
+- **Settings:** defaults live in code (`shared/src/settings/defaults.ts`); the academy stores only its overrides; always read settings through the resolver. Never hard-code values the academy hasn't confirmed.
 - **Time:** the academy's IANA time zone only, never the browser's. Wall-clock `dateKey` (`YYYY-MM-DD`) + `startMin`/`endMin`, plus absolute `startAt`/`endAt`.
 - **Audit:** every schedule, availability, people, pay and settings change writes an append-only `auditLog` entry in the same batch.
 - **Schedule UI:** keep HyberCRM's structure (coaches as rows, time across, Day / Week / Month, the side rail).
@@ -107,9 +110,9 @@ Carried over from HyberCRM, adapted to one academy:
 
 ## Git and commits
 
-- The repository is HyberTec's: **https://github.com/Hyber-Tec/SkyArcAcademy** (private).
+- The repository is HyberTec's: **https://github.com/Hyber-Tec/SkyArcAcademy** (public).
 - **`main` is reached through a pull request** (Strict Rules): CI green, plus the code owner's approval where a shared file changed. `.github/CODEOWNERS` lists the shared files; the code owner is `@goochoi913`.
-  - The organization is on GitHub's Free plan, so GitHub can't enforce this on a private repository (no branch protection, and CODEOWNERS doesn't request reviews). It holds because everyone follows it.
+  - GitHub enforces the first part with a ruleset on `main` (a pull request and green CI), added with the fork's final CI. Code-owner approval stays a convention: GitHub doesn't let authors approve their own pull requests.
   - Start the branch from the latest `main`, named `<type>/<topic>` (`feat/kiosk-pin`). Open the pull request with `gh pr create`: the title is a Conventional Commits subject; the body says what changed, how it was checked, and what the deploy after merging will do (or that it changes nothing in production). Give the owner its link.
   - CI (`.github/workflows/ci.yml`) runs the repository guard and the website build (later also typecheck, unit tests, functions build and rules tests). Run the parts the change touches before pushing.
 - Scopes name the part of the app (e.g. `auth`, `access`, `settings`, `schedule`, `availability`, `trial`, `students`, `parents`, `coaches`, `payroll`, `kiosk`, `reports`, `announcements`, `i18n`, `home`, `rules`, `functions`, `shared`, `deploy`). Leave the scope off when a change spans several.
@@ -119,4 +122,5 @@ Carried over from HyberCRM, adapted to one academy:
 
 - **HyberCRM (reference, read-only):** `/Users/goomini/Documents/HyberTec/HyberCRM`. Never edit, commit, or push there.
 - **Client assets + brief:** the `SkyArcAcademy/` folder (schedule PDFs, logos, paper target photos, SIUS PDFs, meeting notes). Folder names contain spaces; always quote paths. Assets are never committed.
-- This folder is also the git repository. The client material in it (the asset folders, `logo/`, `SkyArc_Meeting_Notes.md`, and any PDF, spreadsheet or photo at the top level) is git-ignored; the brief is committed without students' names. The app's copies of the logos live in `web/public/brand/`.
+- This folder is also the git repository. The client material in it (the asset folders, `logo/`, `SkyArc_Meeting_Notes.md`, `docs/internal/`, and any PDF, spreadsheet or photo at the top level) is git-ignored; the brief is committed without students' or staff names. The app's copies of the logos live in `web/public/brand/`.
+- **`docs/internal/`** (local only): the full brief with the academy's people, the full HyberCRM review including findings about HyberCRM's code, and anything else that can't be public.
