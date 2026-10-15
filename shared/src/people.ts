@@ -32,7 +32,7 @@ export const STUDENT_STATUS_COLORS: Record<StudentStatus, { bg: string; text: st
   finished: { bg: '#fff1f2', text: '#9f1239', border: '#fecdd3' },
 }
 
-/** Statuses excluded from conference logic and grade advancement. */
+/** Statuses excluded from grade advancement. */
 export const INACTIVE_STUDENT_STATUSES: readonly StudentStatus[] = ['finished', 'no_answer', 'not_interested']
 
 export function isInactiveStudent(status: StudentStatus): boolean {
@@ -89,31 +89,6 @@ export const STAFF_STATUS_COLORS: Record<StaffStatus, { bg: string; text: string
   active: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
   on_hold: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
   finished: { bg: '#f8fafc', text: '#475569', border: '#cbd5e1' },
-}
-
-// ---------------------------------------------------------------- conference
-
-export interface ConferenceInput {
-  totalSessionHours: number
-  /** Hours on the student's total when the last conference was completed (or the cycle was reset). */
-  baselineHours: number
-}
-
-export interface ConferenceState {
-  hoursSince: number
-  cycleHours: number
-  needed: boolean
-}
-
-/**
- * The parent-conference cycle (TE: every 25 hours). Saving a conference note or
- * "Skip & restart" sets the baseline to the student's hours at that moment.
- */
-export function conferenceState(input: ConferenceInput, cycleHours: number): ConferenceState {
-  const total = Math.max(0, input.totalSessionHours || 0)
-  const baseline = Math.max(0, Math.min(total, input.baselineHours || 0))
-  const hoursSince = Math.round((total - baseline) * 100) / 100
-  return { hoursSince, cycleHours, needed: hoursSince >= cycleHours }
 }
 
 // ------------------------------------------------------------------- helpers

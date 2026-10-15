@@ -53,7 +53,7 @@ function summary(t: TutorDay): string {
  * time clock and the week. Two columns on computers, one on phones.
  */
 export function TutorTodayPage() {
-  const { branchId, staffId } = useBranch()
+  const { staffId } = useBranch()
   const wide = useWide()
   const t = useTutorDay()
   if (!staffId) return <p className="text-sm text-muted-foreground">{NOT_LINKED}</p>
@@ -82,12 +82,12 @@ export function TutorTodayPage() {
       {wide ? (
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link to={`/${branchId}/tutor/availability`}>
+            <Link to={`/tutor/availability`}>
               <LuCalendarClock /> Availability
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/${branchId}/tutor/schedule`}>
+            <Link to={`/tutor/schedule`}>
               <LuCalendarDays /> Open schedule
             </Link>
           </Button>

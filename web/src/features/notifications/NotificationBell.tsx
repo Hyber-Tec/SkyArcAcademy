@@ -65,7 +65,7 @@ export function NotificationBell() {
     void markRead(n)
     if (n.link) {
       setOpen(false)
-      navigate(`/${branchId}/${n.link}`)
+      navigate(`/${n.link}`)
     }
   }
 

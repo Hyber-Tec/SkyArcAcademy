@@ -39,7 +39,7 @@ export async function pushItems(branchId: string, items: { id: string; n: Outgoi
             branchId,
             notificationId: id,
             link: n.link,
-            url: `${APP_URL}/${branchId}/${n.link}`,
+            url: `${APP_URL}/${n.link}`,
             sessionId: n.refs.sessionId ?? '',
             announcementId: n.refs.announcementId ?? '',
             dateKey: n.refs.dateKey ?? '',

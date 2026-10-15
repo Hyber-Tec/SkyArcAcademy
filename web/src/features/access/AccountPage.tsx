@@ -40,7 +40,7 @@ import { InviteStatus, copySignInLink, resendInvite } from './invites'
 type RoleFilter = 'all' | Role
 
 export function AccountPage() {
-  const { branchId, branch, actor, isOwner, isSuperAdmin, timezone } = useBranch()
+  const { branchId, branch, actor, isOwner, timezone } = useBranch()
   const members = useQuery<Member>(useMemo(() => query(branchCol(branchId, COL.members), orderBy('email')), [branchId]), `members-${branchId}`)
   const staff = useQuery<Staff>(useMemo(() => query(branchCol(branchId, COL.staff), orderBy('nameLower')), [branchId]), `staff-${branchId}`)
   const students = useQuery<Student>(useMemo(() => query(branchCol(branchId, COL.students), orderBy('nameLower')), [branchId]), `students-${branchId}`)
@@ -67,13 +67,14 @@ export function AccountPage() {
         disabled: m.status !== 'active',
         onSelect: () => void resendInvite(branchId, m.email),
       },
-      { label: 'Copy sign-in link', icon: LuCopy, onSelect: () => void copySignInLink(branchId, m.email) },
+      { label: 'Copy sign-in link', icon: LuCopy, onSelect: () => void copySignInLink(m.email) },
       {
         label: 'Remove access',
         icon: LuTrash2,
         destructive: true,
         separatorBefore: true,
-        disabled: (m.role === 'owner' && !isSuperAdmin) || (isAdminRole(m.role) && !isOwner) || m.id === actor.email,
+        // Only owners remove owners and admins, and nobody removes themselves, so the academy always keeps an owner.
+        disabled: (isAdminRole(m.role) && !isOwner) || m.id === actor.email,
         onSelect: () => setRemoving(m),
       },
     )

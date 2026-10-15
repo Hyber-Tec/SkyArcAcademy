@@ -14,7 +14,6 @@ function session(over: Partial<ConflictSession> = {}): ConflictSession {
     startMin: 15 * 60,
     endMin: 16 * 60,
     status: 'confirmed',
-    logStatus: 'none',
     isDeleted: false,
     ...over,
   }
@@ -97,9 +96,9 @@ describe('session conflicts', () => {
     expect(kinds(session(), ctx({ studentStatus: 'signed_up' }))).toEqual([])
   })
 
-  it('ignores sessions that are canceled, no-shows, attended, logged or deleted', () => {
+  it('ignores sessions that are canceled, no-shows, attended or deleted', () => {
     const c = ctx({ availability: null })
-    for (const over of [{ status: 'canceled' }, { status: 'no_show' }, { status: 'present' }, { logStatus: 'submitted' }, { isDeleted: true }] as const) {
+    for (const over of [{ status: 'canceled' }, { status: 'no_show' }, { status: 'present' }, { isDeleted: true }] as const) {
       expect(kinds(session(over), c)).toEqual([])
     }
     expect(kinds(session({ status: 'pending' }), c)).toEqual(['tutor_unavailable'])

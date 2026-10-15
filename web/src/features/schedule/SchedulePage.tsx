@@ -7,13 +7,11 @@ import type { Conflict } from '@shared/schedule/conflicts'
 import { buildDayRows, orderTutors } from '@shared/schedule/dayModel'
 import { fitsCapacity, seatsLeft, unionMinutes } from '@shared/schedule/lanes'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import { canLog } from '@shared/sessions/logs'
 import type { ScheduleView, SessionStatus } from '@shared/settings/defaults'
 import {
   type DateKey,
   addDays,
   addMonths,
-  diffDays,
   formatDateKey,
   formatTimeRange,
   nowMinutes,
@@ -25,11 +23,11 @@ import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { useMembers, useStaffList, useStudentList, useSubjects } from '@/features/data/hooks'
+import { useMembers, useStaffList, useStudentList } from '@/features/data/hooks'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useLoadWindow } from '@/lib/useLoadWindow'
 import { cn } from '@/lib/utils'
-import { LOGGED_STAYS_PRESENT, type ScheduleCtx, createSession, deleteSession, reorderSessions, updateSession } from './api'
+import { type ScheduleCtx, createSession, deleteSession, reorderSessions, updateSession } from './api'
 import { computeConflicts } from './conflicts'
 import { writeAvailability } from '@/features/availability/api'
 import { useNavigate } from 'react-router'
@@ -59,8 +57,6 @@ interface Clip {
   studentId: string
   studentName: string
   studentGrade: string
-  subjectId: string | null
-  subject: string
   note: string
   durationMin: number
 }
@@ -89,7 +85,7 @@ export function SchedulePage() {
   const branch = useBranch()
   const { branchId, settings, timezone, actor } = branch
   const isMobile = useIsMobile()
-  const route = useScheduleRoute(`/${branchId}/admin/schedule`)
+  const route = useScheduleRoute(`/admin/schedule`)
   const { view, date } = route
   const weekStartsOn = settings.general.weekStartsOn
   const [today, setToday] = useState(() => todayKey(timezone))
@@ -144,7 +140,6 @@ export function SchedulePage() {
 
   const { data: staff } = useStaffList()
   const { data: students } = useStudentList()
-  const { data: subjects } = useSubjects()
   const { data: members } = useMembers()
   const studentMap = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
   const staffMap = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
@@ -264,13 +259,8 @@ export function SchedulePage() {
       const st = studentMap.get(s.studentId)
       if (!st) return []
       const items: BellItem[] = []
-      const noteDate = branch.rules.conferences.enabled ? st.conference?.lastNoteDate : null
-      const days = settings.schedule.alerts.conferenceNoteDays
-      if (noteDate && diffDays(noteDate, today) >= 0 && diffDays(noteDate, today) <= days) {
-        items.push({ kind: 'conference', title: 'Parent conference note', subtitle: `Date: ${formatDateKey(noteDate, 'medium')}` })
-      }
       if (settings.schedule.alerts.firstSession && s.status !== 'canceled') {
-        const noHistory = !st.lastSessionDate && !(st.totalSessionHours > 0)
+        const noHistory = !st.lastSessionDate
         const isFirst = st.firstSessionDate ? st.firstSessionDate === s.dateKey : firstSessionIds.has(s.id)
         if (noHistory && isFirst && !isInactiveStudent(st.status)) {
           items.push({ kind: 'first_session', title: 'First session', subtitle: 'This student is attending a first session.' })
@@ -278,25 +268,11 @@ export function SchedulePage() {
       }
       return items
     },
-    [studentMap, settings.schedule.alerts, today, firstSessionIds, branch.rules.conferences.enabled],
+    [studentMap, settings.schedule.alerts, firstSessionIds],
   )
 
   // ------------------------------------------------------------- actions
   const navigate = useNavigate()
-  const openLog = useCallback(
-    (s: WithId<Session>) => {
-      if (s.logStatus !== 'submitted' && !canLog(s.status, settings.sessionLogs.allowForStatuses)) {
-        toast.info(`${SESSION_STATUS_LABELS[s.status]} sessions don’t take a session log.`)
-        return
-      }
-      window.open(`/${branchId}/session-log/${s.id}`, '_blank', 'noopener')
-    },
-    [branchId, settings.sessionLogs.allowForStatuses],
-  )
-  const viewLog = useCallback(
-    (s: WithId<Session>) => window.open(`/${branchId}/session-log/${s.id}/view`, '_blank', 'noopener'),
-    [branchId],
-  )
 
   const reassignOptions = useCallback(
     (s: WithId<Session>) => {
@@ -347,7 +323,6 @@ export function SchedulePage() {
     (s: WithId<Session>, status: SessionStatus) => {
       if (status === s.status) return
       if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      if (s.logStatus === 'submitted' && status !== 'present') return toast.error(LOGGED_STAYS_PRESENT)
       if (s.status === 'canceled') {
         const others = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.tutorId === s.tutorId && x.status !== 'canceled')
         if (!fitsCapacity(others, s.startMin, s.endMin, maxLanes, s.id)) return toast.error('It is already full.')
@@ -434,8 +409,6 @@ export function SchedulePage() {
         studentId: s.studentId,
         studentName: s.studentName,
         studentGrade: s.studentGrade,
-        subjectId: s.subjectId,
-        subject: s.subject,
         note: s.note,
         status: 'pending',
         dateKey: addDays(s.dateKey, 7),
@@ -462,8 +435,6 @@ export function SchedulePage() {
         studentId: s.studentId,
         studentName: s.studentName,
         studentGrade: studentMap.get(s.studentId)?.grade ?? s.studentGrade,
-        subjectId: s.subjectId,
-        subject: s.subject,
         note: s.note,
         durationMin: Math.max(5, s.endMin - s.startMin),
       }
@@ -584,7 +555,6 @@ export function SchedulePage() {
     today,
     nowMin,
     maxLanes,
-    loggableStatuses: settings.sessionLogs.allowForStatuses,
     snap: settings.schedule.snapMinutes,
     defaultDuration: settings.schedule.defaultSessionMinutes,
     selection,
@@ -602,10 +572,8 @@ export function SchedulePage() {
     moveSession,
     resizeSession: (s, startMin, endMin) => void run(() => updateSession(ctx, s, { startMin, endMin })),
     reorderSession: reorder,
-    openLog,
-    viewLog,
     openStudent: (s, newTab) => {
-      const path = `/${branchId}/admin/students/${s.studentId}/info`
+      const path = `/admin/students/${s.studentId}/info`
       if (newTab) window.open(path, '_blank', 'noopener')
       else navigate(path)
     },
@@ -617,7 +585,7 @@ export function SchedulePage() {
     duplicateSession,
     trashSession,
     openEmployee: (staffId, newTab) => {
-      const path = `/${branchId}/admin/employees/directory/${staffId}`
+      const path = `/admin/employees/directory/${staffId}`
       if (newTab) window.open(path, '_blank', 'noopener')
       else navigate(path)
     },
@@ -662,18 +630,19 @@ export function SchedulePage() {
   }, [tutors, data.sessions, data.availabilityByKey, view, date, weekStartsOn, staffMap, conflicts, clocksByKey, today, hoursOf])
   const railNumbers: RailNumbers | null = useMemo(() => {
     if (view === 'month') return null
-    const list = data.sessions.filter((s) => shownDays.includes(s.dateKey) && s.status !== 'canceled')
+    const shown = data.sessions.filter((s) => shownDays.includes(s.dateKey))
+    const list = shown.filter((s) => s.status !== 'canceled')
     const ended = (s: WithId<Session>) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin)
     return {
       label: view === 'day' ? (date === today ? 'Today' : formatDateKey(date, 'weekdayMedium')) : weekDays(date, weekStartsOn).includes(today) ? 'This week' : `Week of ${formatDateKey(shownDays[0], 'monthDay')}`,
       sessions: list.length,
       conflicts: list.filter((s) => (conflicts.get(s.id) ?? []).length > 0).length,
       pending: list.filter((s) => s.status === 'pending' && !ended(s)).length,
-      missingLogs: list.filter((s) => ended(s) && s.logStatus !== 'submitted' && canLog(s.status, settings.sessionLogs.allowForStatuses)).length,
+      canceled: shown.length - list.length,
     }
     // shownDays is derived from view, date and weekStartsOn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, date, weekStartsOn, data.sessions, today, nowMin, conflicts, settings.sessionLogs.allowForStatuses])
+  }, [view, date, weekStartsOn, data.sessions, today, nowMin, conflicts])
 
   const monthShown = view === 'month' && topMonth ? topMonth : date
   const railTitle =
@@ -882,7 +851,6 @@ export function SchedulePage() {
         onClose={() => setSessionDialog(null)}
         students={students.filter((s) => s.status !== 'finished')}
         staff={staff}
-        subjects={subjects}
         isLocked={isLocked}
         onSave={async (draft, existing) => {
           if (existing) await updateSession(ctx, existing, draft)
@@ -894,7 +862,6 @@ export function SchedulePage() {
           await deleteSession(ctx, s)
           toast.success('Session moved to Trash')
         }}
-        onOpenLog={openLog}
       />
       <EventDialog state={eventDialog} onClose={() => setEventDialog(null)} ctx={ctx} />
       <DayEditDialog dateKey={dayEdit} onClose={() => setDayEdit(null)} ctx={ctx} tutors={tutors} sessions={dayEdit ? data.sessionsByDate.get(dayEdit) ?? [] : []} availabilityByKey={data.availabilityByKey} dayConfigs={data.dayConfigs} />

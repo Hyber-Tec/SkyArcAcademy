@@ -20,14 +20,13 @@ const CATEGORIES: { value: AuditCategory | 'all'; label: string }[] = [
   { value: 'availability', label: 'Availability' },
   { value: 'people', label: 'People' },
   { value: 'pay', label: 'Pay' },
-  { value: 'sessions', label: 'Sessions' },
   { value: 'announcements', label: 'Announcements' },
   { value: 'settings', label: 'Settings' },
   { value: 'access', label: 'Access' },
 ]
 
 const ROLE_LABEL: Record<string, string> = {
-  super_admin: 'Super Admin',
+  owner: 'Owner',
   admin: 'Admin',
   tutor: 'Tutor',
   parent: 'Parent',
@@ -35,7 +34,7 @@ const ROLE_LABEL: Record<string, string> = {
   system: 'System',
 }
 
-/** The branch's append-only audit log (Settings → Audit Log). */
+/** The academy's append-only audit log (Settings → Audit Log). */
 export function AuditLogSection() {
   const { branchId, timezone } = useBranch()
   const [category, setCategory] = useState<AuditCategory | 'all'>('all')

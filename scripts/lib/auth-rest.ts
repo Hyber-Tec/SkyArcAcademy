@@ -12,7 +12,7 @@ const BASE = EMULATOR
 
 function headers(): Record<string, string> {
   if (EMULATOR) return { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }
-  const account = process.env.HYBER_GCLOUD_ACCOUNT ? ` --account ${process.env.HYBER_GCLOUD_ACCOUNT}` : ''
+  const account = process.env.SKYARC_GCLOUD_ACCOUNT ? ` --account ${process.env.SKYARC_GCLOUD_ACCOUNT}` : ''
   const token = execSync(`gcloud auth print-access-token${account}`, { encoding: 'utf8' }).trim()
   return { Authorization: `Bearer ${token}`, 'x-goog-user-project': PROJECT_ID, 'Content-Type': 'application/json' }
 }

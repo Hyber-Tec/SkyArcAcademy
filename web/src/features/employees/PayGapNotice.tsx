@@ -1,6 +1,5 @@
 import { LuBadgeDollarSign } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { useBranch } from '@/branch/BranchProvider'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { type PayGap, gapLabel } from './payGaps'
@@ -12,7 +11,6 @@ const AMBER = 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900
  * to Pay Rates unless the page already is Pay Rates.
  */
 export function PayGapNotice({ gaps, link = true, className }: { gaps: PayGap[]; link?: boolean; className?: string }) {
-  const { branchId } = useBranch()
   if (!gaps.length) return null
   const one = gaps.length === 1
   return (
@@ -25,7 +23,7 @@ export function PayGapNotice({ gaps, link = true, className }: { gaps: PayGap[];
           {link ? (
             <>
               {' '}
-              <Link to={`/${branchId}/admin/employees/pay-rates`} className="font-medium underline underline-offset-2">
+              <Link to={`/admin/employees/pay-rates`} className="font-medium underline underline-offset-2">
                 Set rates
               </Link>
             </>

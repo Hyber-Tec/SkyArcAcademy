@@ -1,10 +1,11 @@
 rules_version = '2';
 
-// Hyber CRM security rules.
-// - Every branch's data lives under branches/{branchId}; access needs an active
-//   membership in that branch (or platform super admin).
+// Sky Arc security rules (forked from HyberCRM).
+// - The academy's data lives under branches/{ACADEMY_ID} ('skyarc'; shared/src/academy.ts); access needs an active
+//   membership in it. There is no Super Admin.
 // - There is no catch-all rule: a collection without a rule is closed.
-// - Members are keyed by lower-cased Google email (branches/{b}/members/{email}).
+// - Members are keyed by lower-cased email (branches/{b}/members/{email}); one role per person.
+// - Records concern minors: parents read only their own children's records.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -19,11 +20,6 @@ service cloud.firestore {
 
     function emailKey() {
       return request.auth.token.email.lower();
-    }
-
-    function isSuperAdmin() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/platformAdmins/$(emailKey()));
     }
 
     function branchDoc(b) {
@@ -51,7 +47,7 @@ service cloud.firestore {
     }
 
     function isAdmin(b) {
-      return isSuperAdmin() || (isMember(b) && member(b).get('role', '') in ['owner', 'admin']);
+      return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
     }
 
     function isTutor(b) {
@@ -63,11 +59,11 @@ service cloud.firestore {
     }
 
     function isOwner(b) {
-      return isSuperAdmin() || hasRole(b, 'owner');
+      return hasRole(b, 'owner');
     }
 
     function notRestricted(b, page) {
-      return isSuperAdmin() || !(page in member(b).get('restrictions', []));
+      return !(page in member(b).get('restrictions', []));
     }
 
     function myStaffId(b) {
@@ -92,18 +88,13 @@ service cloud.firestore {
       return request.resource.data.updatedAt == request.time;
     }
 
-    // ------------------------------------------------------------ platform
-
-    match /platformAdmins/{email} {
-      allow read: if signedIn() && (email == emailKey() || isSuperAdmin());
-      allow write: if isSuperAdmin();
-    }
+    // ---------------------------------------------------------------- users
 
     match /users/{uid} {
-      allow read: if signedIn() && (uid == request.auth.uid || isSuperAdmin());
+      allow read: if signedIn() && uid == request.auth.uid;
       allow create, update: if signedIn() && uid == request.auth.uid
         && request.resource.data.email.lower() == emailKey();
-      allow delete: if isSuperAdmin();
+      // Deleting an account runs on the server (deleteMyAccount).
 
       // The phone app's installs and their push tokens (shared/src/push.ts). The server
       // finds a recipient's phones by email; each install removes its own at sign-out.
@@ -122,41 +113,24 @@ service cloud.firestore {
       // no rule, so no client access.
     }
 
-    // "Talk to us" requests from the landing page: written only by the
-    // submitInquiry function; the Super Admin reads them and marks them handled.
-    match /inquiries/{id} {
-      allow read, delete: if isSuperAdmin();
-      allow update: if isSuperAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'handledAt', 'handledBy']);
-    }
-
-    // "Which branches am I in?" — collection-group query on my own email.
-    match /{path=**}/members/{memberId} {
-      allow read: if signedIn() && resource.data.email == emailKey();
-    }
-
-    // "Which sign-up requests did I send?" — same pattern.
-    match /{path=**}/signupRequests/{requestId} {
-      allow read: if signedIn() && resource.data.email == emailKey();
-    }
-
     // "Which announcements have I read?" — my own read receipts across posts.
     match /{path=**}/reads/{readerKey} {
       allow read: if signedIn() && resource.data.email == emailKey();
     }
 
-    // ------------------------------------------------------------- branches
+    // -------------------------------------------------------------- academy
 
+    // The academy's document is created by the seed script (scripts/seed.ts), never by the app.
     match /branches/{b} {
-      allow read: if isSuperAdmin() || isMember(b);
-      allow create, delete: if isSuperAdmin();
-      allow update: if isSuperAdmin()
-        || (isAdmin(b)
-            && changed().hasOnly(['name', 'shortName', 'timezone', 'locale', 'currency',
-                                  'branding', 'contact', 'settings', 'updatedAt', 'updatedBy'])
-            && stampedNow());
+      allow read: if isMember(b);
+      allow create, delete: if false;
+      // Admins edit the profile, branding and settings; only owners change the academy rules (pay model, capacity).
+      allow update: if isAdmin(b) && stampedNow()
+        && (changed().hasOnly(['name', 'shortName', 'timezone', 'locale', 'currency',
+                               'branding', 'contact', 'settings', 'updatedAt', 'updatedBy'])
+            || (isOwner(b) && changed().hasOnly(['businessRules', 'updatedAt', 'updatedBy'])));
 
-      // Public brand profile for the sign-up page and pickers.
+      // Public brand profile for the homepage, sign-in and sign-up pages.
       match /public/{docId} {
         allow read: if true;
         allow write: if isAdmin(b);
@@ -188,9 +162,10 @@ service cloud.firestore {
             && changed().hasOnly(['uid', 'displayName', 'photoURL', 'firstLoginAt', 'lastLoginAt'])
             && request.resource.data.uid == request.auth.uid);
 
+        // Only owners remove owners and admins, and nobody removes themselves, so an owner always remains.
         allow delete: if isAdmin(b)
           && (isOwner(b) || !grantsAdmin(resource.data))
-          && (isSuperAdmin() || resource.data.role != 'owner');
+          && memberId != emailKey();
       }
 
       match /signupRequests/{email} {
@@ -223,7 +198,7 @@ service cloud.firestore {
         allow create, delete: if isAdmin(b);
         allow update: if isAdmin(b)
           || (isTutor(b) && staffId == myStaffId(b)
-              && changed().hasOnly(['phone', 'dob', 'address', 'notificationPrefs', 'subjectIds', 'updatedAt', 'updatedBy']));
+              && changed().hasOnly(['phone', 'dob', 'address', 'notificationPrefs', 'updatedAt', 'updatedBy']));
 
         match /private/{docId} {
           allow read: if (docId == 'compensation'
@@ -239,36 +214,12 @@ service cloud.firestore {
         allow read: if isStaff(b)
           || (hasRole(b, 'student') && studentId == myStudentId(b))
           || (hasRole(b, 'parent') && studentId in myStudentIds(b));
-        allow create, delete: if isAdmin(b);
-        // Tutors keep the School tab up to date.
-        allow update: if isAdmin(b)
-          || (isTutor(b) && changed().hasOnly(['schoolRecord', 'updatedAt', 'updatedBy']));
+        allow create, update, delete: if isAdmin(b);
 
-        // Contacts, parents, address, school login: admins only.
+        // Contacts, parents, address, internal notes: admins only.
         match /private/{docId} {
           allow read, write: if isAdmin(b);
         }
-
-        match /conferenceNotes/{noteId} {
-          allow read, write: if isAdmin(b);
-        }
-      }
-
-      // ------------------------------------------------------ catalogs
-
-      match /subjectCategories/{id} {
-        allow read: if isMember(b) || isSuperAdmin();
-        allow write: if isAdmin(b);
-      }
-
-      match /subjects/{id} {
-        allow read: if isMember(b) || isSuperAdmin();
-        allow write: if isAdmin(b);
-      }
-
-      match /conferenceCategories/{id} {
-        allow read: if isStaff(b);
-        allow write: if isAdmin(b);
       }
 
       // ------------------------------------------------------ availability
@@ -309,7 +260,7 @@ service cloud.firestore {
       }
 
       match /dayConfigs/{dateKey} {
-        allow read: if isMember(b) || isSuperAdmin();
+        allow read: if isMember(b);
         allow write: if isAdmin(b);
       }
 
@@ -327,15 +278,8 @@ service cloud.firestore {
           || (isTutor(b) && resource.data.tutorId == myStaffId(b))
           || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
           || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
-        // A session with a submitted log stays Present: its log marked attendance and billed the hours.
-        function keepsLoggedPresent() {
-          return resource.data.get('logStatus', 'none') != 'submitted'
-            || request.resource.data.status == resource.data.status
-            || request.resource.data.status == 'present';
-        }
-
         allow create: if isAdmin(b) && dayOpen(request.resource.data);
-        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data) && keepsLoggedPresent();
+        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data);
         // Trashed sessions can be purged even after their day.
         allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
       }
@@ -387,74 +331,6 @@ service cloud.firestore {
 
       match /kioskPinOwners/{id} {
         allow read, write: if false;
-      }
-
-      // ------------------------------------------------------ sessions
-
-      function tutorsSeeAllLogs() {
-        return branchDoc(b).data.get('settings', {}).get('sessionLogs', {}).get('tutorsSeeAllLogs', true) == true;
-      }
-
-      function sessionOf(sessionId) {
-        return get(/databases/$(database)/documents/branches/$(b)/sessions/$(sessionId)).data;
-      }
-
-      // One log per session (doc ID = session ID). Drafts are written by the
-      // tutor or an admin; submitting goes through the submitSessionLog function.
-      match /sessionLogs/{sessionId} {
-        // A missing log reads as missing (the form opens before the first draft exists).
-        allow read: if isAdmin(b)
-          || (isTutor(b) && (tutorsSeeAllLogs() || resource == null || resource.data.tutorId == myStaffId(b)));
-        // Drafts only: submitting runs on the server. Drafts hold the log's own fields and nothing else.
-        allow create, update: if request.resource.data.status == 'draft'
-          && (resource == null || resource.data.status == 'draft')
-          && request.resource.data.sessionId == sessionId
-          && request.resource.data.keys().hasOnly([
-            'sessionId', 'status', 'sessionType', 'topics', 'topicCovered', 'homeworkStatus', 'homeworkComments',
-            'materials', 'questionsAttempted', 'questionsWrong', 'lessonActivity', 'learningInsight', 'nextFocus',
-            'homeworkGiven', 'ratings', 'studentFlag', 'tutorId', 'tutorName', 'studentId', 'studentName', 'subject',
-            'subjectId', 'dateKey', 'startMin', 'endMin', 'updatedAt', 'updatedBy'])
-          && (isAdmin(b) || (isTutor(b) && sessionOf(sessionId).tutorId == myStaffId(b)));
-        allow delete: if isAdmin(b);
-      }
-
-      // Reports are made and shared by functions (generateProgressReport, shareProgressReport).
-      // Staff edit a draft's written sections, switches and name; families read shared reports.
-      match /progressReports/{reportId} {
-        function shared() {
-          return resource.data.sharedWithParents == true;
-        }
-        function ownDraft() {
-          return isTutor(b) && resource.data.get('generatedBy', {}).get('staffId', '') == myStaffId(b);
-        }
-        allow read: if isAdmin(b)
-          || (isTutor(b) && (shared() || ownDraft()))
-          || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b) && shared())
-          || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b) && shared());
-        allow create: if false;
-        allow update: if (
-            resource.data.get('status', 'shared') == 'draft'
-            && (isAdmin(b) || ownDraft())
-            && changed().hasOnly(['narrative', 'narrativeMeta', 'options', 'customName', 'updatedAt', 'updatedBy'])
-            && request.resource.data.updatedAt == request.time
-          ) || (
-            isAdmin(b) && changed().hasOnly(['customName', 'updatedAt', 'updatedBy'])
-          );
-        allow delete: if isAdmin(b);
-
-        // A family member's first opening of a shared report (write-once).
-        match /views/{viewerKey} {
-          function report() {
-            return get(/databases/$(database)/documents/branches/$(b)/progressReports/$(reportId)).data;
-          }
-          allow read: if isStaff(b);
-          allow create: if viewerKey == emailKey()
-            && request.resource.data.viewedAt == request.time
-            && report().sharedWithParents == true
-            && ((hasRole(b, 'parent') && report().studentId in myStudentIds(b))
-              || (hasRole(b, 'student') && report().studentId == myStudentId(b)));
-          allow update, delete: if false;
-        }
       }
 
       // ------------------------------------------------------ communication
@@ -516,10 +392,10 @@ service cloud.firestore {
       // In-app inbox. Items are written by Cloud Functions; people read,
       // mark read and delete their own.
       match /notifications/{notificationId} {
-        allow read: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey();
-        allow update: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey()
+        allow read: if isMember(b) && resource.data.recipientKey == emailKey();
+        allow update: if isMember(b) && resource.data.recipientKey == emailKey()
           && changed().hasOnly(['readAt']);
-        allow delete: if (isMember(b) || isSuperAdmin()) && resource.data.recipientKey == emailKey();
+        allow delete: if isMember(b) && resource.data.recipientKey == emailKey();
         allow create: if false;
       }
 

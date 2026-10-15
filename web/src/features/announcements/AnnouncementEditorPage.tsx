@@ -96,7 +96,7 @@ export function AnnouncementEditorPage() {
 function Wizard({ id, editing, initial }: { id: string; editing: boolean; initial: Draft }) {
   const { branchId, actor, settings } = useBranch()
   const navigate = useNavigate()
-  const list = `/${branchId}/admin/announcements`
+  const list = `/admin/announcements`
   const [step, setStep] = useState<1 | 2>(1)
   const [draft, setDraft] = useState<Draft>(initial)
   const [error, setError] = useState<string | null>(null)

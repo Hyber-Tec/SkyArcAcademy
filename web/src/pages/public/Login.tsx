@@ -14,16 +14,15 @@ import { AuthShell, OrDivider, PasswordInput, useAuthBranch, useNext, withQuery 
 import { GoogleSignInButton } from './GoogleButton'
 
 /**
- * Sign-in: Google (the recommended way) or an email and password. Opened from a branch link (`?next=/demo-academy`)
- * it shows that branch's name and logo; invite emails add `?email=`, which pre-selects that Google account and fills
- * in the email field.
+ * Sign-in: Google (the recommended way) or an email and password. Invite emails add `?email=`, which pre-selects that
+ * Google account and fills in the email field.
  */
 export function Login() {
   const { status, needsVerification, signInWithPassword } = useAuth()
   const [params] = useSearchParams()
   const target = useNext()
   const hint = params.get('email')?.trim().toLowerCase() || null
-  const { branchId, profile, loading } = useAuthBranch(target)
+  const { profile, loading } = useAuthBranch()
   const [email, setEmail] = useState(hint ?? '')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -56,15 +55,14 @@ export function Login() {
 
   return (
     <AuthShell
-      target={target}
       title={profile ? `Sign in to ${profile.shortName || profile.name}` : 'Sign in'}
       description={
         hint ? (
           <>
-            Use <span className="font-medium wrap-anywhere text-foreground">{hint}</span>, the email your center has for you.
+            Use <span className="font-medium wrap-anywhere text-foreground">{hint}</span>, the email the academy has for you.
           </>
         ) : (
-          'Use the email your center has for you.'
+          'Use the email the academy has for you.'
         )
       }
       footer={
@@ -74,17 +72,17 @@ export function Login() {
             <Link to={withQuery('/signup', query)} className="font-medium text-foreground underline underline-offset-2">
               Create an account
             </Link>
-            {profile && branchId && signupOpen(profile) ? (
+            {profile && signupOpen(profile) ? (
               <>
                 {' '}or{' '}
-                <Link to={`/${branchId}/signup`} className="font-medium text-foreground underline underline-offset-2">
+                <Link to="/join" className="font-medium text-foreground underline underline-offset-2">
                   request access to {profile.shortName || profile.name}
                 </Link>
               </>
             ) : null}
             .
           </p>
-          {!profile ? <p>Your center emails you an invitation, or gives you its sign-up link to request access.</p> : null}
+          {!profile ? <p>The academy emails you an invitation, or gives you its sign-up link to request access.</p> : null}
         </>
       }
     >

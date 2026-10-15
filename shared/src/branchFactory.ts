@@ -2,13 +2,12 @@ import { type BusinessRules, DEFAULT_BUSINESS_RULES } from './settings/businessR
 import { DEFAULT_SETTINGS } from './settings/defaults'
 import type { Branch, BranchPublicProfile, Member } from './types'
 
-/** Plain data for a new branch. Timestamps are filled in by the writer. */
+/** Plain data for the academy's document (the seed writes it once). Timestamps are filled in by the writer. */
 export function newBranchData(input: {
   name: string
   timezone: string
   createdBy: string
   shortName?: string
-  /** Chosen by the Super Admin at creation. */
   businessRules?: BusinessRules
 }): Omit<Branch, 'createdAt' | 'updatedAt'> {
   return {
@@ -22,7 +21,6 @@ export function newBranchData(input: {
     contact: { email: '', phone: '', address: '', website: '' },
     settings: {},
     businessRules: input.businessRules ?? DEFAULT_BUSINESS_RULES,
-    extensions: [],
     createdBy: input.createdBy,
     updatedBy: input.createdBy,
   }

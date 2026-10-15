@@ -84,17 +84,15 @@ export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstanc
 
 /**
  * "Delete my account" (Apple asks it of every app where people create accounts, guideline 5.1.1(v)): the sign-in and
- * the personal profile (users/{uid}, with the phone app's devices) go at once. The centers' own records stay theirs:
- * the member docs (their access lists) are only unlinked from the account, and employee, student, session and pay
- * records are untouched, as the privacy policy says. Needs a sign-in within the last 10 minutes. The platform
- * owner's account can't be deleted this way.
+ * the personal profile (users/{uid}, with the phone app's devices) go at once. The academy's own records stay its own:
+ * the member doc (its access list) is only unlinked from the account, and employee, student, class and pay records
+ * are untouched. Needs a sign-in within the last 10 minutes.
  */
 export const deleteMyAccount = onCall({ timeoutSeconds: 60 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
   const { uid, token } = req.auth
   const email = typeof token.email === 'string' ? token.email.toLowerCase() : null
   if (Date.now() / 1000 - Number(token.auth_time ?? 0) > 600) throw new HttpsError('failed-precondition', 'For your security, sign in again, then delete the account.')
-  if (email && (await db.doc(`${ROOT.platformAdmins}/${email}`).get()).exists) throw new HttpsError('failed-precondition', 'The platform owner’s account can’t be deleted from the app.')
   if (email) {
     const members = await db.collectionGroup(COL.members).where('email', '==', email).get()
     await Promise.all(members.docs.map((m) => m.ref.update({ uid: null, photoURL: null, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'account-deleted' }).catch(() => undefined)))

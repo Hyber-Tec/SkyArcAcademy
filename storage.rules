@@ -1,6 +1,8 @@
 rules_version = '2';
 
-// Files are scoped by branch like Firestore data. Membership is checked in Firestore.
+// Sky Arc Storage rules (forked from HyberCRM). Files are scoped by the academy like its Firestore data, and access
+// follows the academy's member documents in Firestore (one role per person). There is no Super Admin and no
+// catch-all rule. Report files concern minors: they get their own rules with the progress reports.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -14,11 +16,6 @@ service firebase.storage {
       return request.auth.token.email.lower();
     }
 
-    function isSuperAdmin() {
-      return signedIn()
-        && firestore.exists(/databases/(default)/documents/platformAdmins/$(emailKey()));
-    }
-
     function member(b) {
       return firestore.get(/databases/(default)/documents/branches/$(b)/members/$(emailKey())).data;
     }
@@ -30,7 +27,7 @@ service firebase.storage {
     }
 
     function isAdmin(b) {
-      return isSuperAdmin() || (isMember(b) && 'admin' in member(b).roles);
+      return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
     }
 
     function isImage(maxBytes) {
@@ -38,14 +35,14 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    // Logos are public so the branch sign-up page can show them.
+    // The academy's logo is public: the homepage, sign-in and sign-up pages show it.
     match /branches/{b}/branding/{file} {
       allow read: if true;
       allow write: if isAdmin(b) && (request.resource == null || isImage(2 * 1024 * 1024));
     }
 
     match /branches/{b}/announcements/{rest=**} {
-      allow read: if isMember(b) || isSuperAdmin();
+      allow read: if isMember(b);
       allow write: if isAdmin(b) && (request.resource == null || request.resource.size < 20 * 1024 * 1024);
     }
   }

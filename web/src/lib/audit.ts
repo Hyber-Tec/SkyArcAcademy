@@ -7,7 +7,7 @@ export interface Actor {
   uid: string
   email: string
   name: string
-  role: Role | 'super_admin'
+  role: Role
 }
 
 export interface AuditInput {

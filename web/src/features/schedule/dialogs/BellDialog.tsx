@@ -6,10 +6,9 @@ import { cn } from '@/lib/utils'
 import type { BellItem } from '../context'
 
 const PILL: Record<BellItem['kind'], string> = {
-  conference: 'border-[#f2cd9a] bg-[#fff7ed] text-[#92400e]',
   first_session: 'border-[#86efac] bg-[#f0fdf4] text-[#166534]',
 }
-const LABEL: Record<BellItem['kind'], string> = { conference: 'Conference', first_session: 'First session' }
+const LABEL: Record<BellItem['kind'], string> = { first_session: 'First session' }
 
 export function BellDialog({ state, onClose }: { state: { session: WithId<Session>; items: BellItem[] } | null; onClose: () => void }) {
   if (!state) return null

@@ -12,7 +12,7 @@ export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
 
 /**
  * Session card colors (fixed design tokens, from True Education): the card
- * background shows the status; a blue check means "log submitted".
+ * background shows the status.
  */
 export const SESSION_STATUS_STYLE: Record<SessionStatus, { bg: string; border: string; text: string }> = {
   pending: { bg: '#FFFFD7', border: '#d4d090', text: '#78610a' },

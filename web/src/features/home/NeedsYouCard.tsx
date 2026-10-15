@@ -9,8 +9,6 @@ import {
   LuCircleCheck,
   LuClockAlert,
   LuGraduationCap,
-  LuHandshake,
-  LuNotebookPen,
   LuSparkles,
   LuUserPlus,
 } from 'react-icons/lu'
@@ -22,10 +20,8 @@ import { type DateKey, addDays, formatDateKey, formatMinutes, formatTimeRange } 
 import type { Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, type MenuEntry, menu } from '@/components/app/ItemMenu'
-import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { gapLabel } from '@/features/employees/payGaps'
-import { restartConferenceCycle } from '@/features/students/api'
 import type { ClockShift } from '@/features/timeclock/api'
 import { branchDocRef } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
@@ -55,12 +51,11 @@ const TONES = {
  * sidebar's Home badge.
  */
 export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; onFixClock: (s: WithId<ClockShift>) => void }) {
-  const { branchId, actor, rules, can } = useBranch()
+  const { branchId, actor, can } = useBranch()
   const navigate = useNavigate()
-  const { confirm, dialog } = useConfirm()
   const [open, setOpen] = useState<string | null>(null)
   const { today } = attention
-  const admin = `/${branchId}/admin`
+  const admin = `/admin`
   const toggle = (key: string) => setOpen((o) => (o === key ? null : key))
   const openTab = (path: string) => window.open(path, '_blank', 'noopener')
 
@@ -68,23 +63,6 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
     updateDoc(branchDocRef(branchId, COL.students, s.id), { followUpReviewedAt: serverTimestamp(), updatedBy: actor.email })
       .then(() => toast.success(`${s.name} marked as followed up`))
       .catch(() => toast.error('Could not update the student.'))
-
-  const skipConference = async (s: WithId<Student>) => {
-    const cycle = rules.conferences.everyHours
-    const ok = await confirm({
-      title: 'Skip this conference?',
-      description: `Restart the ${cycle}-hour conference cycle for ${s.name} without a conference note.`,
-      confirmLabel: `Skip & restart ${cycle} hrs`,
-      destructive: true,
-    })
-    if (!ok) return
-    try {
-      await restartConferenceCycle(branchId, actor, s)
-      toast.success(`Conference cycle restarted for ${s.name}`)
-    } catch (e) {
-      toast.error(`Failed to skip the conference cycle: ${(e as Error).message}`)
-    }
-  }
 
   const groups: GroupProps[] = []
   if (attention.conflicts.length) {
@@ -97,34 +75,12 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       subtitle: `${first.conflicts[0]?.message ?? ''}${attention.conflicts.length > 1 ? ` · +${attention.conflicts.length - 1} more` : ''}`,
       items: attention.conflicts.map(({ session: s, conflicts }) => ({
         key: s.id,
-        title: `${s.studentName} · ${s.subject || 'No subject'}`,
+        title: `${s.studentName} · ${s.tutorName}`,
         detail: `${dayLabel(s.dateKey, today)} · ${formatTimeRange(s.startMin, s.endMin)} · ${conflicts[0]?.message ?? ''}`,
         onOpen: () => navigate(`${admin}/schedule/day/${s.dateKey}`),
         actions: menu(
           { label: 'Go to Schedule on this day', icon: LuCalendarDays, onSelect: () => navigate(`${admin}/schedule/day/${s.dateKey}`) },
           { label: 'Open Schedule in new tab', onSelect: () => openTab(`${admin}/schedule/day/${s.dateKey}`) },
-        ),
-      })),
-    })
-  }
-  if (attention.missingLogs.length) {
-    const oldest = attention.missingLogs[attention.missingLogs.length - 1]
-    groups.push({
-      id: 'logs',
-      icon: LuNotebookPen,
-      tone: 'amber',
-      title: `${plural(attention.missingLogs.length, 'missing session log')}`,
-      subtitle: `Oldest from ${formatDateKey(oldest.dateKey, 'weekdayMedium')}`,
-      seeAll: { label: 'Open in Session Log', to: `${admin}/sessions/log?status=missing` },
-      items: attention.missingLogs.map((s) => ({
-        key: s.id,
-        title: `${s.studentName} · ${s.subject || 'No subject'}`,
-        detail: `${dayLabel(s.dateKey, today)} · ${formatTimeRange(s.startMin, s.endMin)} · ${s.tutorName}`,
-        onOpen: () => openTab(`/${branchId}/session-log/${s.id}`),
-        action: { label: 'Add log', onClick: () => openTab(`/${branchId}/session-log/${s.id}`) },
-        actions: menu(
-          { label: `Write log on behalf of ${s.tutorName}`, icon: LuNotebookPen, onSelect: () => openTab(`/${branchId}/session-log/${s.id}`) },
-          { label: 'Go to Schedule on this day', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`${admin}/schedule/day/${s.dateKey}`) },
         ),
       })),
     })
@@ -210,28 +166,6 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       })),
     })
   }
-  if (attention.conferenceDue.length) {
-    const cycle = rules.conferences.everyHours
-    groups.push({
-      id: 'conferences',
-      icon: LuHandshake,
-      tone: 'teal',
-      title: `${plural(attention.conferenceDue.length, 'parent conference')} due`,
-      subtitle: nameList(attention.conferenceDue.map((c) => c.student.name)),
-      items: attention.conferenceDue.map(({ student: s, state }) => ({
-        key: s.id,
-        title: s.name,
-        detail: `${Math.floor(state.hoursSince)} of ${cycle} tutoring hours since the last conference`,
-        onOpen: () => navigate(`${admin}/students/${s.id}/conference`),
-        actions: menu(
-          { label: 'Conference notes', icon: LuHandshake, onSelect: () => navigate(`${admin}/students/${s.id}/conference`) },
-          { label: 'Open student', icon: LuGraduationCap, onSelect: () => navigate(`${admin}/students/${s.id}`) },
-          { label: `Skip & restart ${cycle} hrs`, destructive: true, separatorBefore: true, onSelect: () => void skipConference(s) },
-        ),
-      })),
-    })
-  }
-
   const total = attention.total
   return (
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="home-needs-you">
@@ -253,7 +187,6 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
           You’re all caught up.
         </div>
       )}
-      {dialog}
     </section>
   )
 }

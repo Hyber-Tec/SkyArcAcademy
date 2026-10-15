@@ -1,48 +1,21 @@
-import type { SessionStatus } from '@shared/settings/defaults'
-import { canLog } from '@shared/sessions/logs'
 import { type DateKey, formatDateKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import type { Tone } from '@/features/home/parts'
 
-/** The session log opens in a new tab, as from the schedule (the demo keeps it in the same window). */
+/** Opens a page in a new tab (a student's profile from the schedule). */
 export function openInNewTab(path: string) {
   window.open(path, '_blank', 'noopener')
-}
-
-export interface LogAction {
-  label: string
-  path: string
-  /** The log is owed (the session ended without one). */
-  due: boolean
-}
-
-/**
- * What a session's log button says and opens: Prepare before it starts (the
- * log's first step shows the student and last session), Session log while it
- * runs, Write log once it's over, View log after it's submitted.
- */
-export function logAction(s: WithId<Session>, ctx: { branchId: string; today: DateKey; nowMin: number; allowed: readonly SessionStatus[] }): LogAction | null {
-  const base = `/${ctx.branchId}/session-log/${s.id}`
-  if (s.logStatus === 'submitted') return { label: 'View log', path: `${base}/view`, due: false }
-  if (!canLog(s.status, ctx.allowed)) return null
-  const started = s.dateKey < ctx.today || (s.dateKey === ctx.today && s.startMin <= ctx.nowMin)
-  const ended = s.dateKey < ctx.today || (s.dateKey === ctx.today && s.endMin <= ctx.nowMin)
-  if (ended) return { label: 'Write log', path: base, due: true }
-  return { label: started ? 'Session log' : 'Prepare', path: base, due: false }
 }
 
 /** How a session stands, for the pill on its row (the admin Home's words, from the tutor's side). */
 export function sessionState(
   s: WithId<Session>,
-  ctx: { today: DateKey; nowMin: number; allowed: readonly SessionStatus[]; waiting: string | null },
+  ctx: { today: DateKey; nowMin: number; waiting: string | null },
 ): { label: string; tone: Tone; pulse?: boolean; title?: string } {
   if (s.status === 'canceled') return { label: 'Canceled', tone: 'muted' }
   if (s.status === 'no_show') return { label: 'No show', tone: 'danger' }
   const ended = s.dateKey < ctx.today || (s.dateKey === ctx.today && s.endMin <= ctx.nowMin)
-  if (ended) {
-    if (s.logStatus === 'submitted') return { label: 'Logged', tone: 'done' }
-    return canLog(s.status, ctx.allowed) ? { label: s.logStatus === 'draft' ? 'Draft saved' : 'Log due', tone: 'warn' } : { label: 'Done', tone: 'muted' }
-  }
+  if (ended) return s.status === 'present' ? { label: 'Present', tone: 'done' } : { label: 'Done', tone: 'muted' }
   if (ctx.waiting) return { label: 'Waiting for admin', tone: 'danger', title: ctx.waiting }
   if (s.dateKey === ctx.today && s.startMin <= ctx.nowMin) return { label: 'In progress', tone: 'live', pulse: true }
   if (s.status === 'pending') return { label: 'Unconfirmed', tone: 'warn', title: 'Booked, not confirmed yet.' }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { type FirstSessionCandidate, type FirstSessionStudent, isFirstSession } from './firstSession'
 
-const NEW: FirstSessionStudent = { status: 'signed_up', firstSessionDate: null, lastSessionDate: null, totalSessionHours: 0 }
+const NEW: FirstSessionStudent = { status: 'signed_up', firstSessionDate: null, lastSessionDate: null }
 
 function s(id: string, dateKey: string, over: Partial<FirstSessionCandidate> = {}): FirstSessionCandidate {
   return { id, studentId: 'ava', dateKey, startMin: 16 * 60, status: 'confirmed', ...over }
@@ -30,7 +30,6 @@ describe('isFirstSession', () => {
   it('never marks a student who already has history or has stopped coming', () => {
     const one = s('a', '2026-10-05')
     expect(isFirstSession(one, { ...NEW, lastSessionDate: '2026-09-30' }, [one])).toBe(false)
-    expect(isFirstSession(one, { ...NEW, totalSessionHours: 1.5 }, [one])).toBe(false)
     expect(isFirstSession(one, { ...NEW, status: 'finished' }, [one])).toBe(false)
   })
 

@@ -1,39 +1,57 @@
+import { doc } from 'firebase/firestore'
 import { useNavigate } from 'react-router'
+import { ACADEMY_ID } from '@shared/academy'
+import { COL, ROOT } from '@shared/paths'
+import type { SignupRequest } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { FullPageMessage, FullPageSpinner } from '@/components/app/FullPage'
+import { db } from '@/lib/firebase'
+import { useDoc } from '@/lib/firestore'
 import { signupOpen, usePublicProfile } from '@/lib/publicProfile'
 
 /**
- * A branch link opened by someone without access: says which account is signed
- * in and offers the ways in (another account, the sign-up page).
+ * Someone signed in whom the academy hasn't given access: says which account is signed in, whether their request is
+ * waiting, and the ways in (another account, asking for access).
  */
-export function NoBranchAccess({ branchId }: { branchId: string }) {
-  const { email, memberships, isSuperAdmin, signOut } = useAuth()
-  const { data: profile, loading } = usePublicProfile(branchId)
+export function NoBranchAccess() {
+  const { email, signOut } = useAuth()
+  const { data: profile, loading } = usePublicProfile()
+  const request = useDoc<SignupRequest>(email ? doc(db, ROOT.branches, ACADEMY_ID, COL.signupRequests, email) : null)
   const navigate = useNavigate()
-  if (loading) return <FullPageSpinner />
-  if (!profile) {
-    return <FullPageMessage title="Center not found" description={`There’s no center at “/${branchId}”. Check the link you were given.`} actions={[{ label: 'Go to my centers', to: '/app' }]} />
+  if (loading || request.loading) return <FullPageSpinner />
+
+  const name = profile?.name ?? 'the academy'
+  const otherAccount = {
+    label: 'Use another account',
+    variant: 'outline' as const,
+    onClick: () => void signOut().then(() => navigate('/login')),
   }
-  const others = memberships.some((m) => m.branchId !== branchId && m.member.status === 'active') || isSuperAdmin
+  const account = <span className="font-medium wrap-anywhere text-foreground">{email}</span>
+
+  if (request.data?.status === 'pending') {
+    return (
+      <FullPageMessage
+        title="Your request is waiting for approval"
+        description={
+          <>
+            You’re signed in as {account}. {name} will review your request; you’ll get an email and can sign in as soon as
+            it’s approved.
+          </>
+        }
+        actions={[otherAccount]}
+      />
+    )
+  }
   return (
     <FullPageMessage
-      title={`No access to ${profile.name}`}
+      title={`No access to ${name} yet`}
       description={
         <>
-          You’re signed in as <span className="font-medium wrap-anywhere text-foreground">{email}</span>, which {profile.name} hasn’t given access. If the center
-          invited you, sign in with the address the invitation was sent to.
+          You’re signed in as {account}, which {name} hasn’t given access. If the academy invited you, sign in with the
+          address the invitation was sent to.
         </>
       }
-      actions={[
-        {
-          label: 'Use another account',
-          variant: signupOpen(profile) || others ? 'outline' : 'default',
-          onClick: () => void signOut().then(() => navigate(`/login?next=${encodeURIComponent(`/${branchId}`)}`)),
-        },
-        ...(signupOpen(profile) ? [{ label: 'Request access', to: `/${branchId}/signup` }] : []),
-        ...(others ? [{ label: 'Go to my centers', to: '/app', variant: 'ghost' as const }] : []),
-      ]}
+      actions={[otherAccount, ...(signupOpen(profile) ? [{ label: 'Request access', to: '/join' }] : [])]}
     />
   )
 }

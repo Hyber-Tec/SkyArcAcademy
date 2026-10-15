@@ -115,7 +115,6 @@ export type NotificationType =
   | 'session_reassigned_in'
   | 'session_reassigned_out'
   | 'session_no_show'
-  | 'session_subject_changed'
 
 /** `branches/{b}/notifications/{id}`: the in-app inbox (written by Cloud Functions). */
 export interface AppNotification {
@@ -142,7 +141,6 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   session_reassigned_in: { label: 'You Were Assigned', color: '#16A34A' },
   session_reassigned_out: { label: 'Session Reassigned', color: '#D97706' },
   session_no_show: { label: 'No Show', color: '#DC2626' },
-  session_subject_changed: { label: 'Subject Changed', color: '#0891B2' },
 }
 
 export function notificationMeta(type: string): { label: string; color: string } {

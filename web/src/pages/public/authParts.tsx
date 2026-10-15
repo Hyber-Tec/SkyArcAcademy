@@ -8,7 +8,7 @@ import { CompanyFooter } from '@/components/app/CompanyFooter'
 import { HyberMark } from '@/components/app/HyberMark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { branchIdOfPath, usePublicProfile } from '@/lib/publicProfile'
+import { usePublicProfile } from '@/lib/publicProfile'
 import { cn } from '@/lib/utils'
 
 /** `?next=` when it's a path inside the app, else `/app`. */
@@ -18,11 +18,10 @@ export function useNext(): string {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/app'
 }
 
-/** The branch a sign-in page is for (from `?next=/demo-academy/…`), with its public name and logo. */
-export function useAuthBranch(target: string) {
-  const branchId = branchIdOfPath(target)
-  const { data: profile, loading } = usePublicProfile(branchId)
-  return { branchId, profile, loading: !!branchId && loading }
+/** The academy's public name and logo, for the sign-in pages. */
+export function useAuthBranch() {
+  const { data: profile, loading } = usePublicProfile()
+  return { profile, loading }
 }
 
 /** Keeps the query (next, email) when moving between the sign-in pages. */
@@ -34,23 +33,20 @@ export function withQuery(path: string, query: Record<string, string | null | un
 }
 
 /**
- * The card every sign-in page shows: the branch's name and logo when the link came from a branch, else Hyber CRM's,
- * then the page's own content.
+ * The card every sign-in page shows: the academy's name and logo, then the page's own content.
  */
 export function AuthShell({
-  target,
   title,
   description,
   children,
   footer,
 }: {
-  target: string
   title: ReactNode
   description?: ReactNode
   children: ReactNode
   footer?: ReactNode
 }) {
-  const { profile } = useAuthBranch(target)
+  const { profile } = useAuthBranch()
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted/40 px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-sm">

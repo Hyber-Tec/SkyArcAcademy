@@ -5,7 +5,7 @@ import { initials } from '@/components/app/BrandMark'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useIsMobile } from '@/hooks/use-mobile'
 
-/** The tutor's own photo when it's really them; initials in their color otherwise (or while a Super Admin previews). */
+/** The tutor's own photo when it's really them; initials in their color otherwise (or while an owner or admin previews). */
 export function MeAvatar({ staff, className }: { staff: WithId<Staff> | null; className?: string }) {
   const { user } = useAuth()
   const { viewAs } = useBranch()

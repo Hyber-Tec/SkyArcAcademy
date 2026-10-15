@@ -1,13 +1,12 @@
-import { type DocumentData, type Query, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { type DocumentData, type Query, onSnapshot, query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { COL } from '@shared/paths'
 import type { DateKey } from '@shared/time'
 import type { Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import type { AnyReport as ProgressReport } from '@/features/reports/model'
 import { branchCol, branchDocRef } from '@/lib/firestore'
 
-/** Parents see their linked children; students see themselves (also while a Super Admin previews them). */
+/** Parents see their linked children; students see themselves (also while an admin previews them). */
 export function useLinkedStudentIds(mode: 'parent' | 'student'): string[] {
   const { studentId, studentIds } = useBranch()
   const key = mode === 'student' ? (studentId ?? '') : studentIds.join(',')
@@ -92,21 +91,5 @@ export function useFamilySessions(ids: string[], from: DateKey, to: DateKey) {
     () => res.data.filter((s) => !s.isDeleted).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin),
     [res.data],
   )
-  return { data, loading: res.loading }
-}
-
-/** Progress reports the branch shared with the family. */
-export function useSharedReports(ids: string[]) {
-  const { branchId } = useBranch()
-  const queries = useMemo(
-    () =>
-      ids.map((id) =>
-        query(branchCol(branchId, COL.progressReports), where('studentId', '==', id), where('sharedWithParents', '==', true), orderBy('generatedAt', 'desc')),
-      ),
-    [branchId, ids],
-  )
-  const res = useMergedQueries<ProgressReport>(queries, `family-reports-${branchId}-${ids.join(',')}`)
-  const at = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? 0
-  const data = useMemo(() => res.data.slice().sort((a, b) => at(b.sharedAt ?? b.generatedAt) - at(a.sharedAt ?? a.generatedAt)), [res.data])
   return { data, loading: res.loading }
 }

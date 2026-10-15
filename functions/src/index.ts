@@ -22,7 +22,7 @@ interface Caller {
   uid: string
   email: string
   name: string
-  superAdmin: boolean
+  role: 'owner' | 'admin'
 }
 
 async function requireAdmin(branchId: string, auth: { uid: string; token: Record<string, unknown> } | undefined): Promise<Caller> {
@@ -30,14 +30,10 @@ async function requireAdmin(branchId: string, auth: { uid: string; token: Record
     throw new HttpsError('unauthenticated', 'Sign in first.')
   }
   const email = (auth.token.email as string).toLowerCase()
-  const [platform, member] = await Promise.all([
-    db.doc(`${ROOT.platformAdmins}/${email}`).get(),
-    db.doc(`${ROOT.branches}/${branchId}/${COL.members}/${email}`).get(),
-  ])
+  const member = await db.doc(`${ROOT.branches}/${branchId}/${COL.members}/${email}`).get()
   const m = member.data()
-  const isAdmin = !!m && m.status === 'active' && (m.role === 'owner' || m.role === 'admin')
-  if (!platform.exists && !isAdmin) throw new HttpsError('permission-denied', 'Only branch admins can do this.')
-  return { uid: auth.uid, email, name: (m?.displayName as string) || (auth.token.name as string) || email, superAdmin: platform.exists }
+  if (!m || m.status !== 'active' || (m.role !== 'owner' && m.role !== 'admin')) throw new HttpsError('permission-denied', 'Only the academy’s admins can do this.')
+  return { uid: auth.uid, email, name: (m.displayName as string) || (auth.token.name as string) || email, role: m.role }
 }
 
 async function loadBranch(branchId: string): Promise<{ branch: Branch; settings: BranchSettings }> {
@@ -100,7 +96,7 @@ export const setKioskPin = onCall(async (req) => {
     actorUid: caller.uid,
     actorEmail: caller.email,
     actorName: caller.name,
-    actorRole: caller.superAdmin ? 'super_admin' : 'admin',
+    actorRole: caller.role,
     via: 'web',
     action: pin != null ? 'kiosk.pin_set' : 'kiosk.pin_clear',
     category: 'pay',
@@ -348,13 +344,8 @@ export const onSessionCreated = onDocumentCreated({ document: `${ROOT.branches}/
   await deliverSessionNotices(branchId, sessionId, notices, `sess-${sessionId}-created`)
 })
 
-export { onLoggedSessionUpdated, onSessionLogWritten, sessionAi, sessionLogContext, submitSessionLog } from './sessions'
-export { generateProgressReport, onReportViewed, regenerateReportSection, shareProgressReport } from './reports'
 export { onAnnouncementComment, onAnnouncementRead, onAnnouncementWritten } from './announcements'
-export { seedDemoData } from './platform'
 export { onSessionUpdated } from './sessionNotify'
 export { purgeExpired, studentLifecycleDaily } from './jobs'
 export { onMemberWritten, resendInvite } from './invites'
-export { submitInquiry } from './inquiries'
 export { deleteMyAccount, sendAccountEmail } from './account'
-export { demoLiveNightly, demoLiveTick } from './demoLive'

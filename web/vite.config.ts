@@ -4,14 +4,12 @@ import react from '@vitejs/plugin-react'
 import { type Plugin, defineConfig } from 'vite'
 
 /**
- * The site has two pages: the landing page (index.html, at `/`) and the app
- * (app.html, every other address), as Firebase Hosting serves them. The dev
- * server does the same. The live demo is a third page with its own config
- * (vite.demo.config.ts).
+ * The site has two pages: the homepage (index.html, at `/`) and the app (app.html, every other address), as Firebase
+ * Hosting serves them. The dev server does the same.
  */
 function appPages(): Plugin {
   return {
-    name: 'hyber-app-pages',
+    name: 'skyarc-app-pages',
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         const [pathname, query] = (req.url ?? '/').split('?')

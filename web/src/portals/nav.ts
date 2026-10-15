@@ -2,12 +2,10 @@ import type { IconType } from 'react-icons'
 import {
   LuCalendarClock,
   LuCalendarDays,
-  LuChartLine,
   LuCircleUserRound,
   LuGraduationCap,
   LuHouse,
   LuMegaphone,
-  LuNotebookPen,
   LuSettings,
   LuShieldCheck,
   LuSun,
@@ -62,19 +60,9 @@ export const ADMIN_NAV: PortalNav = {
       children: [
         { key: 'employeeDirectory', label: 'Directory', to: 'employees/directory' },
         { key: 'employeeCalendar', label: 'Calendar', to: 'employees/calendar' },
-        { key: 'subjects', label: 'Subjects', to: 'employees/subjects' },
         { key: 'payRates', label: 'Pay Rates', to: 'employees/pay-rates', restrict: 'payRates' },
         { key: 'payroll', label: 'Payroll', to: 'employees/payroll', restrict: 'payroll' },
         { key: 'timeEntries', label: 'Time Entries', to: 'employees/time-entries', restrict: 'timeEntries' },
-      ],
-    },
-    {
-      key: 'sessions',
-      label: 'Sessions',
-      icon: LuNotebookPen,
-      children: [
-        { key: 'sessionLog', label: 'Session Log', to: 'sessions/log' },
-        { key: 'progressReports', label: 'Progress Reports', to: 'sessions/progress-reports' },
       ],
     },
   ],
@@ -86,10 +74,8 @@ export const ADMIN_NAV: PortalNav = {
 }
 
 /**
- * The tutor portal: the same five places as the phone app (Today, Schedule,
- * Availability, News, Profile), plus the desktop's session pages, students and
- * pay. Profile holds the person's own pages (account, subjects, notifications,
- * sign-in, appearance).
+ * The tutor portal: the same five places as the phone app (Today, Schedule, Availability, News, Profile), plus
+ * students and pay. Profile holds the person's own pages (account, notifications, sign-in, appearance).
  */
 export const TUTOR_NAV: PortalNav = {
   main: [
@@ -97,15 +83,6 @@ export const TUTOR_NAV: PortalNav = {
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
-    {
-      key: 'sessions',
-      label: 'Sessions',
-      icon: LuNotebookPen,
-      children: [
-        { key: 'sessionLog', label: 'Session Log', to: 'sessions/log' },
-        { key: 'progressReports', label: 'Progress Reports', to: 'sessions/progress-reports' },
-      ],
-    },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
     { key: 'payroll', label: 'Payroll', to: 'payroll', icon: LuWallet },
   ],
@@ -120,15 +97,8 @@ export const TUTOR_NAV: PortalNav = {
 }
 
 export const PARENT_NAV: PortalNav = {
-  main: [
-    { key: 'home', label: 'Upcoming Sessions', to: 'home', icon: LuCalendarDays },
-    { key: 'progressReports', label: 'Progress Reports', to: 'progress-reports', icon: LuChartLine },
-  ],
+  main: [{ key: 'home', label: 'Upcoming Sessions', to: 'home', icon: LuCalendarDays }],
   secondary: [],
-  mobileTabs: [
-    { key: 'home', label: 'Sessions', to: 'home', icon: LuCalendarDays },
-    { key: 'progressReports', label: 'Reports', to: 'progress-reports', icon: LuChartLine },
-  ],
 }
 
 export const STUDENT_NAV: PortalNav = {

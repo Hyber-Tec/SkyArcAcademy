@@ -1,6 +1,6 @@
 import { query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
-import { LuFileText, LuTrash2, LuTriangleAlert } from 'react-icons/lu'
+import { LuTrash2, LuTriangleAlert } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { dayHours, effectiveRanges, rangesContain } from '@shared/availability'
 import { COL } from '@shared/paths'
@@ -9,10 +9,9 @@ import type { Conflict } from '@shared/schedule/conflicts'
 import { orderTutors } from '@shared/schedule/dayModel'
 import { seatsLeft } from '@shared/schedule/lanes'
 import { SESSION_STATUSES, SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import { canLog } from '@shared/sessions/logs'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, formatDateKey, formatTimeRange } from '@shared/time'
-import type { Availability, Session, Staff, Student, Subject, WithId } from '@shared/types'
+import type { Availability, Session, Staff, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { OptionPicker } from '@/components/app/OptionPicker'
 import { TimeSelect } from '@/components/app/TimeSelect'
@@ -27,8 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDayConfigs } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { StudentMonthCalendar } from '../StudentMonthCalendar'
-import { LOGGED_STAYS_PRESENT, type SessionDraft } from '../api'
-import { SubjectPicker } from './SubjectPicker'
+import type { SessionDraft } from '../api'
 
 export type SessionDialogState =
   | { mode: 'create'; draft: Partial<SessionDraft> & { dateKey: DateKey; startMin: number; endMin: number } }
@@ -40,22 +38,18 @@ export function SessionDialog({
   onClose,
   students,
   staff,
-  subjects,
   isLocked,
   onSave,
   onDelete,
-  onOpenLog,
   conflicts = [],
 }: {
   state: SessionDialogState
   onClose: () => void
   students: WithId<Student>[]
   staff: WithId<Staff>[]
-  subjects: WithId<Subject>[]
   isLocked: (d: DateKey) => boolean
   onSave: (draft: SessionDraft, existing: WithId<Session> | null) => Promise<void>
   onDelete: (s: WithId<Session>) => Promise<void>
-  onOpenLog: (s: WithId<Session>) => void
   /** Why the session being edited may not happen as booked. */
   conflicts?: Conflict[]
 }) {
@@ -77,8 +71,6 @@ export function SessionDialog({
         studentId: s.studentId,
         studentName: s.studentName,
         studentGrade: s.studentGrade,
-        subjectId: s.subjectId,
-        subject: s.subject,
         note: s.note,
         status: s.status,
         dateKey: s.dateKey,
@@ -93,8 +85,6 @@ export function SessionDialog({
         studentId: d.studentId ?? '',
         studentName: d.studentName ?? '',
         studentGrade: d.studentGrade ?? '',
-        subjectId: d.subjectId ?? null,
-        subject: d.subject ?? '',
         note: d.note ?? '',
         status: d.status ?? 'pending',
         dateKey: d.dateKey,
@@ -129,20 +119,17 @@ export function SessionDialog({
   const closed = hours ? !hours.isOpen : false
   const pastDate = !existing && isLocked(form.dateKey)
   const current = options.find((o) => o.tutor.id === form.tutorId)
-  const tutorRecord = staff.find((t) => t.id === form.tutorId) ?? null
-  const teaches = (t: Staff) => !!form.subjectId && (t.subjectIds ?? []).includes(form.subjectId)
   const studentOptions = students.map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), hint: s.status === 'finished' ? 'finished' : undefined }))
   const snap = settings.schedule.snapMinutes
 
   async function save() {
     if (!form) return
     if (!form.studentId) return setError('Choose a student.')
-    if (!form.subject.trim()) return setError('Choose or type a subject.')
     if (closed && (!existing || existing.dateKey !== form.dateKey)) return setError('This day is closed — please choose another date.')
     if (pastDate) return setError('Past days can’t be changed.')
     if (form.endMin <= form.startMin) return setError('The end time must be after the start time.')
     if (!form.tutorId) return setError('Choose a tutor.')
-    // A session in conflict can still get a new status, subject or note: the tutor's
+    // A session in conflict can still get a new status or note: the tutor's
     // time and seat are checked when the tutor, date or time change.
     const moved =
       !existing || existing.tutorId !== form.tutorId || existing.dateKey !== form.dateKey || existing.startMin !== form.startMin || existing.endMin !== form.endMin
@@ -225,25 +212,14 @@ export function SessionDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {SESSION_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} disabled={existing.logStatus === 'submitted' && s !== 'present' && s !== existing.status}>
+                        <SelectItem key={s} value={s}>
                           {SESSION_STATUS_LABELS[s]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {existing.logStatus === 'submitted' ? <FieldDescription>{LOGGED_STAYS_PRESENT}</FieldDescription> : null}
                 </Field>
               ) : null}
-              <Field>
-                <FieldLabel>Subject</FieldLabel>
-                <SubjectPicker
-                  subjects={subjects}
-                  value={{ subjectId: form.subjectId, subject: form.subject }}
-                  onChange={(v) => set(v)}
-                  disabled={readOnly}
-                  tutor={tutorRecord ? { name: tutorRecord.name, subjectIds: tutorRecord.subjectIds ?? [] } : null}
-                />
-              </Field>
               <div className="grid grid-cols-[1fr_auto] items-end gap-3">
                 <Field>
                   <FieldLabel htmlFor="sd-date">Date</FieldLabel>
@@ -292,12 +268,9 @@ export function SessionDialog({
                   <SelectContent>
                     {options
                       .filter((o) => o.ok)
-                      // Tutors who teach the subject come first (a hint only; anyone free can be booked).
-                      .sort((a, b) => Number(teaches(b.tutor)) - Number(teaches(a.tutor)))
                       .map((o) => (
                         <SelectItem key={o.tutor.id} value={o.tutor.id}>
                           {o.tutor.name} ({o.left} seat{o.left === 1 ? '' : 's'} left)
-                          {teaches(o.tutor) ? <span className="text-xs text-emerald-700 dark:text-emerald-400">· teaches {form.subject}</span> : null}
                         </SelectItem>
                       ))}
                     {form.tutorId && !current?.ok ? (
@@ -309,6 +282,7 @@ export function SessionDialog({
               <Field>
                 <FieldLabel htmlFor="sd-note">Short note</FieldLabel>
                 <Textarea id="sd-note" rows={2} value={form.note} disabled={readOnly} onChange={(e) => set({ note: e.target.value })} placeholder="Optional note…" />
+                <FieldDescription>The student and their parents can see this note.</FieldDescription>
               </Field>
               {error ? <FieldError>{error}</FieldError> : null}
             </FieldGroup>
@@ -326,20 +300,6 @@ export function SessionDialog({
                 }}
               >
                 <LuTrash2 /> Delete
-              </Button>
-            ) : null}
-            {existing && (existing.logStatus === 'submitted' || canLog(existing.status, settings.sessionLogs.allowForStatuses)) ? (
-              <Button
-                variant="outline"
-                onClick={() => onOpenLog(existing)}
-                title={
-                  existing.logStatus === 'submitted'
-                    ? 'A log already exists for this session — open it to review or edit'
-                    : 'Add a session log for this session on behalf of the tutor'
-                }
-                className={existing.logStatus === 'submitted' ? 'border-green-200 bg-green-50 text-green-700' : undefined}
-              >
-                <LuFileText /> {existing.logStatus === 'submitted' ? 'View session log' : 'Add session log'}
               </Button>
             ) : null}
           </div>

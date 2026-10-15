@@ -40,7 +40,7 @@ export function TimeEntriesPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Time Entries"
-        description="Clock-ins from the kiosk and time added by admins. Pay is split into teaching and admin time automatically."
+        description="Clock-ins from the kiosk and time added by admins. Pay follows the academy’s pay model automatically."
         actions={
           <Button onClick={() => setDialog('new')}>
             <LuPlus /> Add time entry
@@ -90,8 +90,8 @@ export function TimeEntriesPage() {
                     disabled: locked(s.dateKey),
                     onSelect: () => window.confirm('Delete this time entry?') && void deleteShift(branchId, actor, s).then(() => toast.success('Deleted')),
                   },
-                  { label: 'Open employee profile', icon: LuUserRound, separatorBefore: true, onSelect: () => navigate(`/${branchId}/admin/employees/directory/${s.staffId}`) },
-                  { label: 'Clock in/out calendar', icon: LuCalendarClock, onSelect: () => navigate(`/${branchId}/admin/employees/calendar?staff=${s.staffId}&mode=clock`) },
+                  { label: 'Open employee profile', icon: LuUserRound, separatorBefore: true, onSelect: () => navigate(`/admin/employees/directory/${s.staffId}`) },
+                  { label: 'Clock in/out calendar', icon: LuCalendarClock, onSelect: () => navigate(`/admin/employees/calendar?staff=${s.staffId}&mode=clock`) },
                 )}
               >
                 <TableRow>

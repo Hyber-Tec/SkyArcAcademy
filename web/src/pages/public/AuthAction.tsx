@@ -76,7 +76,7 @@ export function AuthAction() {
 
   if (state.step === 'working') {
     return (
-      <AuthShell target={next} title="One moment…">
+      <AuthShell title="One moment…">
         <div className="flex justify-center py-6">
           <Spinner className="size-6" />
         </div>
@@ -86,7 +86,7 @@ export function AuthAction() {
 
   if (state.step === 'failed') {
     return (
-      <AuthShell target={next} title="This link didn’t work" description={state.message}>
+      <AuthShell title="This link didn’t work" description={state.message}>
         <Icon ok={false} />
         <div className="grid gap-2">
           <Button asChild>
@@ -102,7 +102,6 @@ export function AuthAction() {
   if (state.step === 'verified') {
     return (
       <AuthShell
-        target={next}
         title="Email confirmed"
         description={onPhone() ? 'Thanks! Go back to the Hyber CRM app: it moves on by itself. Or continue here.' : 'Thanks! You can sign in with it now.'}
       >
@@ -117,7 +116,6 @@ export function AuthAction() {
   if (state.step === 'recovered') {
     return (
       <AuthShell
-        target={next}
         title="Email restored"
         description={`Your sign-in email is ${state.email} again. If you didn’t ask for the change, reset your password too.`}
       >
@@ -137,7 +135,6 @@ export function AuthAction() {
   if (state.step === 'resetDone') {
     return (
       <AuthShell
-        target={next}
         title="Password changed"
         description={onPhone() ? 'Go back to the Hyber CRM app and sign in with your new password, or sign in here.' : 'Sign in with your new password.'}
       >
@@ -149,7 +146,7 @@ export function AuthAction() {
     )
   }
 
-  return <NewPassword email={state.email} code={code} next={next} onDone={() => setState({ step: 'resetDone', email: state.email })} />
+  return <NewPassword email={state.email} code={code} onDone={() => setState({ step: 'resetDone', email: state.email })} />
 }
 
 function Icon({ ok }: { ok: boolean }) {
@@ -162,7 +159,7 @@ function Icon({ ok }: { ok: boolean }) {
   )
 }
 
-function NewPassword({ email, code, next, onDone }: { email: string; code: string; next: string; onDone: () => void }) {
+function NewPassword({ email, code, onDone }: { email: string; code: string; onDone: () => void }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
@@ -187,7 +184,6 @@ function NewPassword({ email, code, next, onDone }: { email: string; code: strin
 
   return (
     <AuthShell
-      target={next}
       title="Choose a new password"
       description={
         <>

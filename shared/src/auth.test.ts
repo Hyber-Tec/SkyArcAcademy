@@ -45,13 +45,13 @@ describe('account emails', () => {
   const link = 'https://hyber-crm.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=ABC123&apiKey=key&continueUrl=x&lang=en'
 
   it('sends the one-time code to Hyber’s own page, keeping a safe next path only', () => {
-    const out = accountActionUrl(link, 'https://hybercrm.com', '/demo-academy')
+    const out = accountActionUrl(link, 'https://hybercrm.com', '/admin/schedule')
     expect(out.split('?')[0]).toBe('https://hybercrm.com/auth/action')
     const q = queryParams(out)
     expect(q.get('mode')).toBe('resetPassword')
     expect(q.get('oobCode')).toBe('ABC123')
     expect(q.get('apiKey')).toBeUndefined()
-    expect(q.get('next')).toBe('/demo-academy')
+    expect(q.get('next')).toBe('/admin/schedule')
     expect(queryParams(accountActionUrl(link, 'https://hybercrm.com', '//evil.example')).get('next')).toBeUndefined()
   })
 

@@ -20,10 +20,10 @@ type PricedShiftInput = Pick<ClockShift, 'staffId' | 'dateKey' | 'inMin' | 'cloc
 type TeachingSession = Pick<Session, 'tutorId' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
 
 /**
- * Prices shifts with the shared engine, oldest first (the website's payroll pages and the phone app's payroll
- * history): teaching is time inside the person's sessions whose status counts as teaching
- * (`payroll.teachingSessionStatuses`, by default logged sessions only), the rest of the shift is admin time, and
- * each shift follows the branch's pay model on its date. Open shifts are listed without pay.
+ * Prices shifts with the shared engine, oldest first (the website's payroll pages): teaching is time inside the
+ * person's sessions whose status counts as teaching (`payroll.teachingSessionStatuses`, by default attended sessions
+ * only), the rest of the shift is admin time, and each shift follows the academy's pay model on its date. Open shifts
+ * are listed without pay.
  */
 export function priceShifts<S extends PricedShiftInput>(opts: {
   shifts: readonly S[]

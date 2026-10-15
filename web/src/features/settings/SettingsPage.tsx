@@ -26,26 +26,27 @@ import { AuditLogSection } from '@/features/audit/AuditLogSection'
 import { type AuditInput, addAudit } from '@/lib/audit'
 import { db, storage } from '@/lib/firebase'
 import { cn } from '@/lib/utils'
+import { AcademyRulesCard } from './AcademyRulesCard'
 import { DateHoursCard } from './DateHoursCard'
 import { SettingField } from './SettingsFields'
 import { SETTINGS_SECTIONS, type FieldDef } from './schema'
 
 const SECTIONS = [
-  { key: 'branch', title: 'Branch' },
+  { key: 'academy', title: 'Academy' },
   { key: 'branding', title: 'Branding' },
   ...SETTINGS_SECTIONS.map((s) => ({ key: s.key, title: s.title })),
   { key: 'audit-log', title: 'Audit Log' },
 ]
 
 export function SettingsPage() {
-  const { branchId } = useBranch()
+  const { isOwner } = useBranch()
   const { section } = useParams()
   const navigate = useNavigate()
-  const active = SECTIONS.some((s) => s.key === section) ? section! : 'branch'
-  const setActive = (key: string) => navigate(`/${branchId}/admin/settings/${key}`)
+  const active = SECTIONS.some((s) => s.key === section) ? section! : 'academy'
+  const setActive = (key: string) => navigate(`/admin/settings/${key}`)
   return (
     <div>
-      <PageHeader title="Settings" description="Your branch profile, branding and day-to-day settings. Anything you don’t change keeps the standard setup." />
+      <PageHeader title="Settings" description="The academy’s profile, branding and day-to-day settings. Anything you don’t change keeps the standard setup." />
       <div className="flex flex-col gap-6 lg:flex-row">
         <nav className="lg:sticky lg:top-4 lg:w-52 lg:shrink-0 lg:self-start">
           <div className="lg:hidden">
@@ -80,10 +81,10 @@ export function SettingsPage() {
           </ul>
         </nav>
         <div className={cn('min-w-0 flex-1', active === 'audit-log' ? 'lg:max-w-5xl' : 'lg:max-w-3xl')}>
-          {active === 'branch' ? (
+          {active === 'academy' ? (
             <div className="space-y-4">
               <BranchProfileCard />
-              <BusinessRulesCard />
+              {isOwner ? <AcademyRulesCard /> : <BusinessRulesCard />}
             </div>
           ) : active === 'branding' ? (
             <BrandingCard />
@@ -120,7 +121,7 @@ function useBranchWriter() {
   }
 }
 
-/** Read-only: the core rules HyberTec chose when the branch was set up. */
+/** Read-only, for admins: the core rules the academy's owners set (Academy rules). */
 function BusinessRulesCard() {
   const { rules, timezone } = useBranch()
   const today = todayKey(timezone)
@@ -132,17 +133,13 @@ function BusinessRulesCard() {
       value: PAY_MODEL_LABELS[now],
       help: next ? `Changes to ${PAY_MODEL_LABELS[next.model]} on ${formatDateKey(next.from, 'medium')}. ${PAY_MODEL_HELP[now]}` : PAY_MODEL_HELP[now],
     },
-    { label: 'Students per tutor at once', value: String(rules.maxStudentsPerTutor), help: rules.maxStudentsPerTutor === 1 ? 'One-to-one sessions.' : undefined },
-    {
-      label: 'Parent conferences',
-      value: rules.conferences.enabled ? `Every ${rules.conferences.everyHours} tutoring hours` : 'Off',
-    },
+    { label: 'Students per tutor at once', value: String(rules.maxStudentsPerTutor), help: rules.maxStudentsPerTutor === 1 ? 'One-to-one classes.' : undefined },
   ]
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Business rules</CardTitle>
-        <CardDescription>Set when your branch was created. To change them, contact support.</CardDescription>
+        <CardTitle>Academy rules</CardTitle>
+        <CardDescription>Only the academy’s owners can change these.</CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="divide-y rounded-lg border text-sm">

@@ -2,13 +2,10 @@ import { query, where } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LuChevronLeft, LuChevronRight, LuTriangleAlert } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
-import { toast } from 'sonner'
 import { dayHours, effectiveRanges } from '@shared/availability'
 import { COL } from '@shared/paths'
 import type { Conflict } from '@shared/schedule/conflicts'
 import { buildDayRows } from '@shared/schedule/dayModel'
-import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import { canLog } from '@shared/sessions/logs'
 import { type DateKey, addDays, formatDateKey, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
 import type { Availability, Session, Staff, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -75,14 +72,6 @@ export function TutorSchedulePage() {
   const { data: shifts } = useShifts(from, to, staffId, !!staffId)
   const studentMap = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
   const sessions = useMemo(() => sessionsRaw.filter((s) => !s.isDeleted), [sessionsRaw])
-  const loggable = (s: WithId<Session>) => canLog(s.status, settings.sessionLogs.allowForStatuses)
-  const openLog = (s: WithId<Session>) => {
-    if (s.logStatus !== 'submitted' && !loggable(s)) {
-      toast.info(`${SESSION_STATUS_LABELS[s.status]} sessions don’t take a session log.`)
-      return
-    }
-    window.open(`/${branchId}/session-log/${s.id}`, '_blank', 'noopener')
-  }
 
   // Sessions that may not happen as booked: shown as waiting for the admin.
   const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, dayConfigs), [settings, dayConfigs])
@@ -134,7 +123,6 @@ export function TutorSchedulePage() {
     today,
     nowMin,
     maxLanes: rules.maxStudentsPerTutor,
-    loggableStatuses: settings.sessionLogs.allowForStatuses,
     snap: settings.schedule.snapMinutes,
     defaultDuration: settings.schedule.defaultSessionMinutes,
     selection: null,
@@ -150,10 +138,8 @@ export function TutorSchedulePage() {
     moveSession: () => undefined,
     resizeSession: () => undefined,
     reorderSession: () => undefined,
-    openLog,
-    viewLog: (s) => window.open(`/${branchId}/session-log/${s.id}/view`, '_blank', 'noopener'),
     openStudent: (s, newTab) => {
-      const path = `/${branchId}/tutor/students/${s.studentId}/info`
+      const path = `/tutor/students/${s.studentId}/info`
       if (newTab) window.open(path, '_blank', 'noopener')
       else navigate(path)
     },
@@ -184,7 +170,6 @@ export function TutorSchedulePage() {
         sessions={sessions}
         hoursOf={hoursOf}
         conflictsOf={conflictsOf}
-        studentOf={(id) => studentMap.get(id)}
         focus={dateParam && isDateKey(dateParam) ? dateParam : null}
         onWeek={(step) => setAnchor(step === 0 ? today : addDays(anchor, step * 7))}
         waitingNote={waitingNote}

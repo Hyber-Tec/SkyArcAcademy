@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { LuCalendarClock, LuChartLine, LuChevronRight, LuExternalLink, LuMail, LuMapPin, LuPhone } from 'react-icons/lu'
+import { LuCalendarClock, LuExternalLink, LuMail, LuMapPin, LuPhone } from 'react-icons/lu'
 import type { SessionStatus } from '@shared/settings/defaults'
-import { type DateKey, addDays, formatDateKey, formatInstant, formatTimeRange, todayKey } from '@shared/time'
+import { type DateKey, addDays, formatDateKey, formatTimeRange, todayKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { type AnyReport, reportName } from '@/features/reports/model'
 import { cn } from '@/lib/utils'
 
 /** Session statuses in family-friendly words. */
@@ -76,8 +74,7 @@ export function SessionList({
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-medium tabular-nums sm:hidden">{formatTimeRange(s.startMin, s.endMin)}</div>
                 <div className={cn('truncate text-sm font-medium', s.status === 'canceled' && 'line-through')}>
-                  {showStudent ? `${s.studentName} · ` : ''}
-                  {s.subject || 'Tutoring session'}
+                  {showStudent ? s.studentName : 'Class'}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">with {s.tutorName}</div>
               </div>
@@ -98,7 +95,7 @@ export function SessionDetails({ session: s, onClose }: { session: WithId<Sessio
       {s ? (
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{s.subject || 'Tutoring session'}</DialogTitle>
+            <DialogTitle>Class</DialogTitle>
             <DialogDescription>{s.studentName}</DialogDescription>
           </DialogHeader>
           <dl className="grid grid-cols-[6rem_1fr] gap-y-2 text-sm">
@@ -151,47 +148,6 @@ export function ContactCard({ title = 'Questions or changes?' }: { title?: strin
           </a>
         ) : null}
       </div>
-    </Card>
-  )
-}
-
-/** Shared progress reports, newest first; "New" until someone in the family opens it. */
-export function ReportList({ reports, showStudent }: { reports: WithId<AnyReport>[]; showStudent?: boolean }) {
-  const { branchId, timezone } = useBranch()
-  const navigate = useNavigate()
-  const when = (t: unknown) => ((t as { toDate?: () => Date } | null)?.toDate ? formatInstant((t as { toDate: () => Date }).toDate(), timezone, { dateStyle: 'medium' }) : null)
-  return (
-    <Card className="gap-0 overflow-hidden py-0" data-testid="family-reports">
-      {reports.map((r) => {
-        const shared = when(r.sharedAt) ?? when(r.generatedAt)
-        const fresh = r.schemaVersion === 2 && !r.firstViewedAt
-        return (
-          <button
-            key={r.id}
-            type="button"
-            onClick={() => navigate(`/${branchId}/progress-report/${r.id}`)}
-            className="flex w-full items-center gap-4 border-b px-4 py-3 text-left last:border-b-0 hover:bg-muted/50"
-          >
-            <LuChartLine className="size-5 shrink-0 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium">
-                  {showStudent ? `${r.studentName} · ` : ''}
-                  {reportName(r).replace(/^./, (c) => c.toUpperCase())}
-                </span>
-                {fresh ? <span className="shrink-0 rounded-full bg-sky-100 px-1.5 text-[10px] leading-4 font-semibold text-sky-800 dark:bg-sky-900 dark:text-sky-100">New</span> : null}
-              </div>
-              <div className="truncate text-xs text-muted-foreground">
-                {shared ? `Shared ${shared}` : 'Shared'}
-                {r.sessionCount ? ` · ${r.sessionCount} ${r.sessionCount === 1 ? 'session' : 'sessions'}` : ''}
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1 text-sm font-medium">
-              Open <LuChevronRight className="size-4" />
-            </span>
-          </button>
-        )
-      })}
     </Card>
   )
 }

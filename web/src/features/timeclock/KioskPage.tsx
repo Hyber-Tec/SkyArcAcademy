@@ -150,7 +150,7 @@ export function KioskPage() {
           size="icon"
           className="ml-2 text-neutral-300 hover:bg-white/10 hover:text-white"
           aria-label="Exit kiosk"
-          onClick={() => window.confirm('Exit kiosk mode?') && navigate(`/${branchId}/admin/home`)}
+          onClick={() => window.confirm('Exit kiosk mode?') && navigate(`/admin/home`)}
         >
           <LuLogOut />
         </Button>

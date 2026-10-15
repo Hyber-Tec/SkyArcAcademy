@@ -47,7 +47,6 @@ export function ForgotPassword() {
   if (sentTo) {
     return (
       <AuthShell
-        target={target}
         title="Check your email"
         description={
           <>
@@ -77,7 +76,6 @@ export function ForgotPassword() {
 
   return (
     <AuthShell
-      target={target}
       title="Reset your password"
       description="Enter the email you sign in with. We’ll email you a link to choose a new password."
       footer={

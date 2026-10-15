@@ -6,7 +6,6 @@ import { SESSION_STATUS_LABELS } from './status'
 export interface SessionSnapshot {
   tutorId: string | null
   studentName: string
-  subject: string
   status: string
   dateKey: DateKey
   startMin: number
@@ -126,8 +125,6 @@ export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnap
     changed({ type: 'session_date_changed', title: 'Session Date Changed', body: `${after.studentName}'s session moved from ${date(before.dateKey)} to ${date(after.dateKey)} at ${range(after)}.` })
   } else if (before.startMin !== after.startMin || before.endMin !== after.endMin) {
     changed({ type: 'session_time_changed', title: 'Time Changed', body: `${after.studentName}'s session on ${date(after.dateKey)}: ${range(before)} → ${range(after)}.` })
-  } else if ((before.subject ?? '') !== (after.subject ?? '')) {
-    changed({ type: 'session_subject_changed', title: 'Subject Changed', body: `${after.studentName}'s session on ${date(after.dateKey)}: subject changed from "${before.subject || 'none'}" to "${after.subject || 'none'}".` })
   }
   return out
 }

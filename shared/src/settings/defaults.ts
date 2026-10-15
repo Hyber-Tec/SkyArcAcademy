@@ -2,11 +2,10 @@ import type { Role } from '../roles'
 import type { Weekday } from '../time'
 
 /**
- * Branch settings the branch's admins may change (the core rules the Super
- * Admin sets live in `businessRules.ts`). A branch stores only
- * its overrides (`branches/{b}.settings`); everything reads
- * `resolveSettings(branch.settings)`. Defaults follow True Education's
- * behavior, adjusted by the owner's decisions (docs/hyber/DECISIONS.md).
+ * Settings the academy's admins may change (the core rules the owner sets live in `businessRules.ts`). The academy
+ * stores only its overrides (`branches/{b}.settings`); everything reads `resolveSettings(branch.settings)`. Defaults
+ * follow Sky Arc's current practice (its weekly sheets and website, Oct 2026) until Matt confirms the real values
+ * (docs/DECISIONS.md); they are never hard-coded anywhere else.
  */
 
 export interface DayHours {
@@ -25,7 +24,6 @@ export interface MinuteRange {
 
 export type LeadTimeEnforcement = 'off' | 'warn' | 'block'
 export type PayPeriodType = 'weekly' | 'biweekly' | 'semimonthly' | 'monthly'
-export type HourRounding = 'te_business' | 'exact_quarter' | 'exact'
 export type ScheduleView = 'day' | 'week' | 'month'
 export type SessionStatus = 'pending' | 'confirmed' | 'present' | 'no_show' | 'canceled'
 
@@ -37,17 +35,16 @@ export interface BranchSettings {
   schedule: {
     defaultWeek: WeekHours
     snapMinutes: number
+    /** Length of a new class. */
     defaultSessionMinutes: number
-    minSessionMinutes: number
     defaultView: ScheduleView
     /** Ordered staff IDs; staff not listed follow alphabetically. */
     tutorOrder: string[]
     pasteStatus: SessionStatus
     autoConfirm: { enabled: boolean; hoursBefore: number }
-    noShow: { countsTowardStudentHours: boolean }
-    duplicate: { overwriteTargetDays: boolean; checkAvailability: boolean }
+    duplicate: { overwriteTargetDays: boolean }
     events: { titlePresets: string[]; defaultMinutes: number; monthDefaultStartMin: number }
-    alerts: { conferenceNoteDays: number; firstSession: boolean }
+    alerts: { firstSession: boolean }
     /** Bounds of the day-hours editors. */
     editorRange: MinuteRange
   }
@@ -64,50 +61,11 @@ export interface BranchSettings {
   }
   students: {
     autoStatus: { enabled: boolean; inactivityPauseDays: number; respectManual: boolean }
-    hourRounding: HourRounding
     gradeOptions: string[]
-  }
-  sessionLogs: {
-    sessionTypes: string[]
-    homeworkStatuses: string[]
-    ratingDimensions: string[]
-    studentFlags: { key: string; label: string }[]
-    /** Session statuses a tutor may write a log for. */
-    allowForStatuses: SessionStatus[]
-    tutorsSeeAllLogs: boolean
-    allowEditAfterSubmit: boolean
-    ai: { enabled: boolean }
-    autosaveSeconds: number
-  }
-  progressReports: {
-    ai: { enabled: boolean }
-    /** The progress status rule (True Education's thresholds; never decided by AI). */
-    risk: {
-      atRiskHomeworkBelow: number
-      atRiskFocusBelow: number
-      needsAttentionHomeworkBelow: number
-      needsAttentionMotivationBelow: number
-      /** `share`: flagged sessions count when they're `flagShare`% of the period or the last two; `any`: one is enough (TE). */
-      flagRule: 'share' | 'any'
-      flagShare: number
-      /** Attendance below this percent (0 = off). */
-      atRiskAttendanceBelow: number
-      needsAttentionAttendanceBelow: number
-      /** Which ratings the rule reads (lower-cased dimension labels). */
-      focusKey: string
-      motivationKey: string
-    }
-    tutorsCanCreate: boolean
-    defaultPeriod: 'since_last' | 'last_month' | 'last_30' | 'last_90'
-    emailFamiliesOnShare: boolean
-    /** Footer line "Written with the help of AI and reviewed by our team." */
-    aiDisclosure: boolean
-    /** Sections shown by default (each report can switch them). */
-    sections: { status: boolean; practice: boolean; resources: boolean; conference: boolean }
   }
   /** The pay model itself is a branch rule (`businessRules`); owners and admins are always paid one rate. */
   payroll: {
-    /** Sessions in these statuses count as teaching time (owner: only logged sessions). */
+    /** Sessions in these statuses count as teaching time (default: only attended sessions). */
     teachingSessionStatuses: SessionStatus[]
     hoursDecimals: number
     payPeriod: { type: PayPeriodType; anchorDate: string }
@@ -120,26 +78,19 @@ export interface BranchSettings {
     stepMinutes: number
   }
   home: {
-    missingLogLookbackDays: number
-    /** Minutes after a session starts before its missing log is flagged (TE: 0). */
-    missingLogGraceMinutes: number
     /** How far back Home looks for automatic clock-outs to fix. */
     clockLookbackDays: number
   }
   announcements: { defaultCategories: string[] }
   notifications: {
     retentionDays: number
-    /** Window in which new sessions and changes notify the tutor (future phone app). */
+    /** Window in which new classes and changes notify the tutor (future phone app). */
     sessionChangeWindowHours: number
   }
-  audit: { logPendingSessions: boolean }
   signup: {
     enabled: boolean
     roles: Role[]
     welcomeMessage: string
-  }
-  integrations: {
-    googleCalendar: { enabled: boolean; calendarId: string | null }
   }
 }
 
@@ -152,30 +103,29 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     timeFormat: '12h',
   },
   schedule: {
+    // Sky Arc's class hours: Sun 2–5:30, Mon 4:30–8, Tue and Wed 5–8, Thu 5–8:30; Fri and Sat by arrangement only.
     defaultWeek: {
-      sunday: closed(),
-      monday: open(840, 1260),
-      tuesday: open(840, 1260),
-      wednesday: open(840, 1260),
-      thursday: open(840, 1260),
-      friday: open(840, 1260),
-      saturday: open(540, 1020),
+      sunday: open(840, 1050),
+      monday: open(990, 1200),
+      tuesday: open(1020, 1200),
+      wednesday: open(1020, 1200),
+      thursday: open(1020, 1230),
+      friday: closed(),
+      saturday: closed(),
     },
     snapMinutes: 5,
-    defaultSessionMinutes: 110,
-    minSessionMinutes: 5,
+    defaultSessionMinutes: 60,
     defaultView: 'day',
     tutorOrder: [],
     pasteStatus: 'pending',
     autoConfirm: { enabled: true, hoursBefore: 24 },
-    noShow: { countsTowardStudentHours: true },
-    duplicate: { overwriteTargetDays: true, checkAvailability: false },
+    duplicate: { overwriteTargetDays: true },
     events: {
-      titlePresets: ['Consultation', 'Follow-up', 'Payment Reminder', 'Parent Meeting', 'Interview'],
+      titlePresets: ['Tournament', 'Closed', 'Range Practice', 'Private Coaching', 'Parent Meeting'],
       defaultMinutes: 60,
       monthDefaultStartMin: 840,
     },
-    alerts: { conferenceNoteDays: 20, firstSession: true },
+    alerts: { firstSession: true },
     editorRange: { startMin: 360, endMin: 1320 },
   },
   trash: { retentionDays: 14 },
@@ -189,43 +139,7 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   },
   students: {
     autoStatus: { enabled: true, inactivityPauseDays: 20, respectManual: true },
-    hourRounding: 'te_business',
-    gradeOptions: ['Pre-K', 'K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'College', 'Adult', 'Other'],
-  },
-  sessionLogs: {
-    sessionTypes: ['School Help', 'SAT', 'PSAT', 'ACT', 'Skill Building', 'Homework Support', 'Other'],
-    homeworkStatuses: ['Completed', 'Partially Done', 'Not Done', 'Not Assigned'],
-    ratingDimensions: ['Effort', 'Motivation', 'Behavior', 'Focus', 'Confidence'],
-    studentFlags: [
-      { key: 'on_track', label: 'On Track' },
-      { key: 'needs_attention', label: 'Needs Attention' },
-      { key: 'at_risk', label: 'At Risk' },
-    ],
-    allowForStatuses: ['pending', 'confirmed', 'present'],
-    tutorsSeeAllLogs: true,
-    allowEditAfterSubmit: true,
-    ai: { enabled: true },
-    autosaveSeconds: 30,
-  },
-  progressReports: {
-    ai: { enabled: true },
-    risk: {
-      atRiskHomeworkBelow: 50,
-      atRiskFocusBelow: 3,
-      needsAttentionHomeworkBelow: 70,
-      needsAttentionMotivationBelow: 3.5,
-      flagRule: 'share',
-      flagShare: 25,
-      atRiskAttendanceBelow: 0,
-      needsAttentionAttendanceBelow: 0,
-      focusKey: 'focus',
-      motivationKey: 'motivation',
-    },
-    tutorsCanCreate: true,
-    defaultPeriod: 'since_last',
-    emailFamiliesOnShare: true,
-    aiDisclosure: true,
-    sections: { status: true, practice: true, resources: true, conference: true },
+    gradeOptions: ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'College', 'Adult'],
   },
   payroll: {
     teachingSessionStatuses: ['present'],
@@ -238,19 +152,14 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   },
   timeEntries: { stepMinutes: 5 },
   home: {
-    missingLogLookbackDays: 14,
-    missingLogGraceMinutes: 0,
     clockLookbackDays: 7,
   },
-  announcements: { defaultCategories: ['General', 'Updates'] },
+  announcements: { defaultCategories: ['General', 'Tournaments', 'Updates'] },
   notifications: { retentionDays: 14, sessionChangeWindowHours: 24 },
-  audit: { logPendingSessions: true },
+  // Students sign in with the phone app later (Phase 2); on the web, coaches and parents ask for access.
   signup: {
     enabled: true,
-    roles: ['tutor', 'parent', 'student'],
+    roles: ['tutor', 'parent'],
     welcomeMessage: '',
-  },
-  integrations: {
-    googleCalendar: { enabled: false, calendarId: null },
   },
 }

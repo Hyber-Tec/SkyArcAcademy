@@ -1,5 +1,6 @@
 import { LuCircleAlert } from 'react-icons/lu'
 import { type RateKind, tutorsNeedAdminRate } from '@shared/pay/rates'
+import { payModelOn } from '@shared/settings/businessRules'
 import { todayKey } from '@shared/time'
 import type { StaffRole } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -14,6 +15,7 @@ import { type RateDraft, askedRates } from './rateDraft'
 export function PayRateFields({ role, value, onChange, idPrefix }: { role: StaffRole; value: RateDraft; onChange: (v: RateDraft) => void; idPrefix: string }) {
   const { rules, timezone, can } = useBranch()
   const needAdmin = tutorsNeedAdminRate(rules, todayKey(timezone))
+  const hourly = payModelOn(rules, todayKey(timezone)) === 'hourly'
   if (!can('payRates')) {
     return (
       <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -30,8 +32,10 @@ export function PayRateFields({ role, value, onChange, idPrefix }: { role: Staff
       : role === 'admin'
         ? 'Paid for all clocked time.'
         : needAdmin
-          ? 'Teaching rate for time in logged sessions; admin rate for the rest of the shift.'
-          : 'Paid for teaching time: time in sessions with a submitted log.'
+          ? 'Teaching rate for time in attended sessions; admin rate for the rest of the shift.'
+          : hourly
+            ? 'Paid this rate for every clocked hour.'
+            : 'Paid for teaching time only: time in attended sessions.'
   return (
     <FieldSet>
       <FieldLegend variant="label">Pay</FieldLegend>

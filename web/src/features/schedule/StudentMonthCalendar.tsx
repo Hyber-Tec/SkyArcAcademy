@@ -128,7 +128,7 @@ export function StudentMonthCalendar({
                       highlightSessionId === s.id && 'outline-1 outline-foreground outline-dashed',
                     )}
                     style={{ backgroundColor: st.bg, borderColor: st.border, color: st.text, borderLeft: s.note ? '3px solid #335586' : undefined }}
-                    title={`${s.tutorName} · ${s.subject || 'No subject'}${s.note ? `\nNote: ${s.note}` : ''}`}
+                    title={`${s.tutorName}${s.note ? `\nNote: ${s.note}` : ''}`}
                   >
                     {compact ? (
                       <>

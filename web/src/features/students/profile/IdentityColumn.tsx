@@ -1,38 +1,31 @@
-import { LuArrowRight, LuCalendarPlus, LuChevronRight, LuFilePlus2, LuMail, LuPhone } from 'react-icons/lu'
+import { LuArrowRight, LuCalendarPlus, LuMail, LuPhone } from 'react-icons/lu'
 import { formatPhone } from '@shared/people'
-import { type ConferenceState } from '@shared/people'
 import { formatDateKey } from '@shared/time'
 import type { Staff, Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { StudentStatusBadge } from '@/components/app/StatusBadge'
 import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { LEVEL_STYLE, levelLabel } from '@/features/reports/model'
 import { cn } from '@/lib/utils'
-import { Ring } from './charts'
 import { initialsOf, timeSpan } from './model'
 import type { StudentActivity } from './useStudentActivity'
 
-export type ProfileTab = 'sessions' | 'info' | 'school' | 'conference' | 'calendar'
+export type ProfileTab = 'sessions' | 'info' | 'calendar'
 
 const actionClass = 'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/50 hover:text-foreground [&_svg]:size-[18px] [&_svg]:text-foreground'
 
 /**
- * The student page's left column: who the student is, quick actions, key
- * numbers, the next session, family, tutors and the conference cycle. It
- * stays in view while the tabs change.
+ * The student page's left column: who the student is, quick actions, attendance, the next session, family and tutors.
+ * It stays in view while the tabs change.
  */
 export function IdentityColumn({
   student,
   activity,
   priv,
   isAdmin,
-  conference,
   staffById,
-  canCreateReport,
   onTab,
   onNewSession,
-  onNewReport,
   onOpenSession,
 }: {
   student: WithId<Student>
@@ -40,17 +33,15 @@ export function IdentityColumn({
   /** Contact details (admins only). */
   priv: StudentPrivateProfile | null
   isAdmin: boolean
-  /** Parent conferences, when the branch holds them (admins only). */
-  conference: ConferenceState | null
   staffById: Map<string, WithId<Staff>>
-  canCreateReport: boolean
   onTab: (tab: ProfileTab) => void
   onNewSession: () => void
-  onNewReport: () => void
   onOpenSession: (id: string) => void
 }) {
-  const { summary, attendance, next } = activity
-  const level = summary?.progress.level ?? null
+  const { attendance, next } = activity
+  const upcoming = activity.sessions.filter(
+    (s) => s.status !== 'canceled' && (s.dateKey > activity.today || (s.dateKey === activity.today && s.endMin > activity.nowMin)),
+  ).length
   const first = student.firstName || student.name.split(' ')[0]
   const emails = priv
     ? [
@@ -71,12 +62,6 @@ export function IdentityColumn({
         Session
       </button>
     ) : null,
-    canCreateReport ? (
-      <button key="report" type="button" className={actionClass} onClick={onNewReport}>
-        <LuFilePlus2 />
-        Report
-      </button>
-    ) : null,
     emails.length ? (
       <ContactMenu key="email" icon={<LuMail />} label="Email" title="Send an email" items={emails.map((e) => ({ ...e, href: `mailto:${e.value}` }))} all={emails.length > 1 ? `mailto:${emails.map((e) => e.value).join(',')}` : null} />
     ) : null,
@@ -95,12 +80,6 @@ export function IdentityColumn({
           <p className="text-sm text-muted-foreground">{[student.grade ? (/^\d+$/.test(student.grade) ? `Grade ${student.grade}` : student.grade) : null, student.school || null].filter(Boolean).join(' · ') || 'No grade or school yet'}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <StudentStatusBadge status={student.status} />
-            {level ? (
-              <span className={cn('inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ring-1 ring-inset', LEVEL_STYLE[level].chip)}>
-                <span className="size-1.5 rounded-full" style={{ backgroundColor: LEVEL_STYLE[level].dot }} />
-                {levelLabel(level, 'staff')}
-              </span>
-            ) : null}
           </div>
           {actions.length ? (
             <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(2, actions.length)}, minmax(0, 1fr))` }}>
@@ -109,10 +88,10 @@ export function IdentityColumn({
           ) : null}
         </div>
         <dl className="grid grid-cols-2 border-t text-center">
-          <Stat label="Total hours" value={(student.totalSessionHours ?? 0).toFixed(1)} className="border-r border-b" />
-          <Stat label="Sessions logged" value={String(activity.logs.length)} className="border-b" />
+          <Stat label="Attended" value={String(attendance.attended)} className="border-r border-b" />
+          <Stat label="Missed" value={String(attendance.missed)} className="border-b" />
           <Stat label="Attendance" value={attendance.percent !== null ? `${attendance.percent}%` : '—'} className="border-r" />
-          <Stat label="Homework done" value={summary?.facts.homework.percent != null ? `${summary.facts.homework.percent}%` : '—'} />
+          <Stat label="Upcoming" value={String(upcoming)} />
         </dl>
         <dl className="hidden space-y-2 border-t px-5 py-4 text-sm sm:block">
           <DateRow label="Signed up" value={student.signUpDate} />
@@ -131,7 +110,6 @@ export function IdentityColumn({
             <div className="mt-3 text-lg font-semibold">{formatDateKey(next.dateKey, 'weekdayLong').replace(/, \d{4}$/, '')}</div>
             <div className="text-sm text-zinc-300">
               {timeSpan(next.startMin, next.endMin)}
-              {next.subject ? ` · ${next.subject}` : ''}
             </div>
             <div className="mt-3 flex items-center gap-2 text-sm">
               <span className="flex size-6 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold">{initialsOf(next.tutorName)}</span>
@@ -196,28 +174,14 @@ export function IdentityColumn({
                 <Avatar name={t.name} color={staffById.get(t.id)?.color} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{t.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{t.subjects.join(' · ') || 'No subject'}</div>
                 </div>
-                <span className="text-xs text-muted-foreground tabular-nums">{t.logs ? `${t.logs} log${t.logs === 1 ? '' : 's'}` : 'Booked'}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{`${t.sessions} session${t.sessions === 1 ? '' : 's'}`}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      {conference ? (
-        <button type="button" className="hidden w-full items-center gap-3 rounded-xl border bg-card p-4 text-left hover:bg-muted/40 lg:flex" onClick={() => onTab('conference')}>
-          <Ring value={conference.hoursSince} max={conference.cycleHours} label={conference.hoursSince.toFixed(0)} color={conference.needed ? '#d03b3b' : undefined} />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Parent conference</div>
-            <div className="text-xs text-muted-foreground">
-              {conference.hoursSince.toFixed(0)} of {conference.cycleHours} hours ·{' '}
-              {conference.needed ? 'due now' : `due in about ${Math.max(1, Math.round(conference.cycleHours - conference.hoursSince))} hours`}
-            </div>
-          </div>
-          <LuChevronRight className="size-4 text-muted-foreground" />
-        </button>
-      ) : null}
     </aside>
   )
 }

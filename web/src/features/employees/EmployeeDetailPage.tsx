@@ -1,4 +1,4 @@
-import { query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
+import { query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LuArrowLeft, LuExternalLink } from 'react-icons/lu'
 import { Link, useLocation, useParams } from 'react-router'
@@ -9,12 +9,10 @@ import { missingRates, rateName, tutorsNeedAdminRate } from '@shared/pay/rates'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
 import { payModelOn } from '@shared/settings/businessRules'
-import { sortSubjects } from '@shared/subjects'
 import { formatInstant, todayKey } from '@shared/time'
 import type { Compensation, Member, Staff, StaffNotes, StaffRole, StaffStatus } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { initials } from '@/components/app/BrandMark'
-import { MultiOptionPicker } from '@/components/app/OptionPicker'
 import { StaffStatusBadge } from '@/components/app/StatusBadge'
 import { DatePicker } from '@/components/app/DatePicker'
 import { useConfirm } from '@/components/app/useConfirm'
@@ -30,9 +28,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
-import { useSubjectCategories, useSubjects } from '@/features/data/hooks'
-import { addAudit } from '@/lib/audit'
-import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { KioskPinCard } from '@/features/timeclock/KioskPinCard'
@@ -51,7 +46,7 @@ export function EmployeeDetailPage() {
   if (!staff) {
     return (
       <div className="text-sm text-muted-foreground">
-        Employee not found. <Link to={`/${branchId}/admin/employees/directory`} className="underline">Back to the directory</Link>
+        Employee not found. <Link to={`/admin/employees/directory`} className="underline">Back to the directory</Link>
       </div>
     )
   }
@@ -60,7 +55,7 @@ export function EmployeeDetailPage() {
   return (
     <div className="max-w-4xl space-y-4">
       <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link to={`/${branchId}/admin/employees/directory`}>
+        <Link to={`/admin/employees/directory`}>
           <LuArrowLeft /> Employees
         </Link>
       </Button>
@@ -80,7 +75,6 @@ export function EmployeeDetailPage() {
       </div>
       <ProfileCard staff={staff} member={member} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <SubjectsCard staff={staff} />
         <AccessCard member={member} />
       </div>
       {can('payRates') ? <PayCard staff={staff} /> : null}
@@ -180,7 +174,7 @@ function ProfileCard({ staff, member }: { staff: Staff & { id: string }; member:
               {member ? (
                 <FieldDescription>
                   Managed with their sign-in on the{' '}
-                  <Link to={`/${branchId}/admin/account`} className="underline">
+                  <Link to={`/admin/account`} className="underline">
                     Account page
                   </Link>
                   .
@@ -243,83 +237,8 @@ function pick(s: Staff): Partial<Staff> {
   }
 }
 
-function SubjectsCard({ staff }: { staff: Staff & { id: string } }) {
-  const { branchId, actor } = useBranch()
-  const { data: subjects } = useSubjects()
-  const { data: categories } = useSubjectCategories()
-  const categoryName = new Map(categories.map((c) => [c.id, c.name]))
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState<string[]>(staff.subjectIds)
-  useEffect(() => setValue(staff.subjectIds), [staff.subjectIds])
-  const byId = new Map(subjects.map((s) => [s.id, s]))
-
-  async function save() {
-    const batch = writeBatch(db)
-    batch.update(branchDocRef(branchId, COL.staff, staff.id), { subjectIds: value, updatedAt: serverTimestamp(), updatedBy: actor.email })
-    addAudit(batch, branchId, actor, {
-      action: 'staff.subjects',
-      category: 'people',
-      entityType: 'staff',
-      entityId: staff.id,
-      summary: `Updated ${staff.name}’s subjects`,
-      tutorId: staff.id,
-      tutorName: staff.name,
-    })
-    await batch.commit()
-    setEditing(false)
-    toast.success('Subjects saved')
-  }
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Subjects</CardTitle>
-          <CardDescription>{staff.subjectIds.length} qualified</CardDescription>
-        </div>
-        {!editing ? (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        {editing ? (
-          <div className="space-y-3">
-            <MultiOptionPicker
-              value={value}
-              onChange={setValue}
-              options={sortSubjects(subjects, categories).map((s) => ({ value: s.id, label: s.name, hint: categoryName.get(s.categoryId) }))}
-              placeholder="Add a subject…"
-              searchPlaceholder="Search subjects…"
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => (setValue(staff.subjectIds), setEditing(false))}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={() => void save()}>
-                Save
-              </Button>
-            </div>
-          </div>
-        ) : staff.subjectIds.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No subjects yet.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {staff.subjectIds.map((id) => (
-              <Badge key={id} variant="secondary">
-                {byId.get(id)?.name ?? 'Removed subject'}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 function AccessCard({ member }: { member: (Member & { id: string }) | null }) {
-  const { branchId, timezone } = useBranch()
+  const { timezone } = useBranch()
   return (
     <Card>
       <CardHeader>
@@ -343,7 +262,7 @@ function AccessCard({ member }: { member: (Member & { id: string }) | null }) {
           <p className="text-muted-foreground">No sign-in yet. Give them access on the Account page.</p>
         )}
         <Button variant="link" className="h-auto px-0" asChild>
-          <Link to={`/${branchId}/admin/account`}>
+          <Link to={`/admin/account`}>
             Manage access <LuExternalLink />
           </Link>
         </Button>
@@ -402,9 +321,11 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
       ]
   const description = single
     ? 'Paid this hourly rate for all clocked time.'
-    : modelNow === 'teaching_only'
-      ? 'Paid for teaching time only: time inside sessions with a submitted log. Other clocked time is unpaid.'
-      : 'Time inside logged sessions is paid at the teaching rate; the rest of the shift at the admin rate.'
+    : modelNow === 'hourly'
+      ? 'Paid the teaching rate for every clocked hour.'
+      : modelNow === 'teaching_only'
+        ? 'Paid for teaching time only: time inside attended sessions. Other clocked time is unpaid.'
+        : 'Time inside attended sessions is paid at the teaching rate; the rest of the shift at the admin rate.'
 
   return (
     <Card ref={card} id="pay" className="scroll-mt-4">

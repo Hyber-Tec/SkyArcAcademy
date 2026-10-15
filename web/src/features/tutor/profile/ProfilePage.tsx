@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { LuBell, LuBookOpen, LuChevronLeft, LuChevronRight, LuKeyRound, LuLogOut, LuSunMoon, LuUserRound, LuWallet } from 'react-icons/lu'
+import { LuBell, LuChevronLeft, LuChevronRight, LuKeyRound, LuLogOut, LuSunMoon, LuUserRound, LuWallet } from 'react-icons/lu'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { formatDateKey } from '@shared/time'
 import type { Staff, WithId } from '@shared/types'
@@ -25,7 +25,6 @@ interface Section {
 
 const SECTIONS: Section[] = [
   { to: 'account', label: 'Account details', icon: LuUserRound },
-  { to: 'subjects', label: 'Subjects', icon: LuBookOpen, value: ({ staff }) => (staff ? String(staff.subjectIds?.length ?? 0) : null) },
   {
     to: 'notifications',
     label: 'Notifications',
@@ -45,11 +44,10 @@ const SECTIONS: Section[] = [
  * phones get the list on its own (as in the phone app) and open each section.
  */
 export function ProfilePage() {
-  const { branchId } = useBranch()
   const isMobile = useIsMobile()
   const { pathname } = useLocation()
   const { data: staff, loading } = useMyStaff()
-  const base = `/${branchId}/tutor/profile`
+  const base = `/tutor/profile`
   const atIndex = pathname.replace(/\/$/, '') === base
   const current = SECTIONS.find((s) => pathname.startsWith(`${base}/${s.to}`))
 
@@ -80,7 +78,6 @@ export function ProfilePage() {
         <nav aria-label="Profile" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
           {SECTIONS.map((s) => {
             const active = current ? current.to === s.to : s.to === 'account'
-            const value = s.to === 'subjects' ? s.value?.({ staff, theme: '' }) : null
             return (
               <NavLink
                 key={s.to}
@@ -93,7 +90,6 @@ export function ProfilePage() {
               >
                 <s.icon className="size-4 shrink-0" />
                 <span className="flex-1 truncate">{s.label}</span>
-                {value ? <span className="text-xs text-muted-foreground tabular-nums">{value}</span> : null}
               </NavLink>
             )
           })}
@@ -140,7 +136,7 @@ function ProfileHeader({ staff, loading }: { staff: WithId<Staff> | null; loadin
           Tutor at {branch.name}
           {since}
         </p>
-        {/* The sign-in email (a previewing Super Admin sees the tutor's own). */}
+        {/* The sign-in email (an owner or admin previewing with View as sees the tutor's own). */}
         <p className="truncate text-sm text-muted-foreground">{viewAs ? staff.email : (email ?? staff.email)}</p>
       </div>
     </header>
@@ -149,7 +145,6 @@ function ProfileHeader({ staff, loading }: { staff: WithId<Staff> | null; loadin
 
 /** Phones: the sections as grouped rows, then Payroll and Sign out (the phone app's Profile). */
 function ProfileList({ base, staff }: { base: string; staff: WithId<Staff> | null }) {
-  const { branchId } = useBranch()
   const { theme } = useTheme()
   const { signOut } = useAuth()
   const navigate = useNavigate()
@@ -166,15 +161,14 @@ function ProfileList({ base, staff }: { base: string; staff: WithId<Staff> | nul
     </li>
   )
   const value = (s: Section) => s.value?.({ staff, theme }) ?? null
-  const [account, subjects, notifications, security, appearance] = SECTIONS
+  const [account, notifications, security, appearance] = SECTIONS
   return (
     <div className="mt-6 space-y-6">
       <section>
         <h2 className="mb-1.5 px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Your account</h2>
         <ul className="divide-y overflow-hidden rounded-xl border bg-card">
           {row(`${base}/${account.to}`, account.label, account.icon)}
-          {row(`${base}/${subjects.to}`, 'My subjects', subjects.icon, value(subjects))}
-          {row(`/${branchId}/tutor/payroll`, 'Payroll', LuWallet)}
+          {row(`/tutor/payroll`, 'Payroll', LuWallet)}
         </ul>
       </section>
       <section>

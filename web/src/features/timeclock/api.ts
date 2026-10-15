@@ -47,7 +47,7 @@ export interface ShiftPay {
 
 /**
  * Prices closed shifts with the shared engine: teaching = time inside sessions
- * whose status counts as teaching (default: logged sessions only).
+ * whose status counts as teaching (default: attended sessions only).
  */
 export function priceShifts(opts: {
   shifts: WithId<ClockShift>[]

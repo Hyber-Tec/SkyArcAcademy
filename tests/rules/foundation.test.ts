@@ -6,18 +6,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import {
-  collectionGroup,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
+import { collectionGroup, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
 let env: RulesTestEnvironment
@@ -44,7 +33,7 @@ const member = (email: string, role: string, extra: Record<string, unknown> = {}
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: 'demo-hyber',
+    projectId: 'demo-skyarc',
     firestore: { rules: readFileSync(resolve(__dirname, '../../firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 },
   })
 })
@@ -57,6 +46,7 @@ beforeEach(async () => {
   await env.clearFirestore()
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore()
+    // A leftover from HyberCRM's Super Admin: it must grant nothing in Sky Arc.
     await setDoc(doc(db, 'platformAdmins/super@hyber.test'), { email: 'super@hyber.test' })
     for (const b of [A, B]) {
       await setDoc(doc(db, `branches/${b}`), { name: b, status: 'active', timezone: 'America/New_York', settings: {} })
@@ -105,13 +95,19 @@ describe('branch isolation', () => {
       await updateDoc(doc(ctx.firestore(), `branches/${A}`), { status: 'suspended' })
     })
     await assertFails(getDoc(doc(user('tutor@a.test'), `branches/${A}`)))
-    await assertSucceeds(getDoc(doc(user('super@hyber.test'), `branches/${A}`)))
   })
 
-  it('super admins read every branch', async () => {
+  it('there is no Super Admin: a platformAdmins document grants nothing', async () => {
     const sa = user('super@hyber.test')
-    await assertSucceeds(getDoc(doc(sa, `branches/${B}`)))
-    await assertSucceeds(getDoc(doc(sa, `branches/${A}/staff/staff-other/private/compensation`)))
+    await assertFails(getDoc(doc(sa, `branches/${A}`)))
+    await assertFails(getDoc(doc(sa, `branches/${A}/staff/staff-other/private/compensation`)))
+    await assertFails(getDoc(doc(sa, `branches/${A}/students/s1`)))
+    await assertFails(setDoc(doc(sa, `branches/${A}/members/sa@x.test`), member('sa@x.test', 'owner')))
+  })
+
+  it('nobody creates or deletes the academy from the browser', async () => {
+    await assertFails(setDoc(doc(user('owner@a.test'), 'branches/new-academy'), { name: 'New', status: 'active' }))
+    await assertFails(deleteDoc(doc(user('owner@a.test'), `branches/${A}`)))
   })
 
   it('unverified emails get nothing', async () => {
@@ -121,10 +117,11 @@ describe('branch isolation', () => {
 })
 
 describe('membership', () => {
-  it('finds my own memberships by email, not other people’s', async () => {
+  it('reads my own member doc, not other people’s, and never across academies', async () => {
     const tutor = user('tutor@a.test')
-    await assertSucceeds(getDocs(query(collectionGroup(tutor, 'members'), where('email', '==', 'tutor@a.test'))))
-    await assertFails(getDocs(query(collectionGroup(tutor, 'members'), where('email', '==', 'owner@a.test'))))
+    await assertSucceeds(getDoc(doc(tutor, `branches/${A}/members/tutor@a.test`)))
+    await assertFails(getDoc(doc(tutor, `branches/${A}/members/owner@a.test`)))
+    await assertFails(getDocs(query(collectionGroup(tutor, 'members'), where('email', '==', 'tutor@a.test'))))
   })
 
   it('people link their own account but cannot change their role', async () => {
@@ -142,11 +139,21 @@ describe('membership', () => {
     await assertSucceeds(setDoc(doc(user('owner@a.test'), `branches/${A}/members/boss@a.test`), member('boss@a.test', 'admin')))
   })
 
-  it('only owners make owners, and only the super admin removes one', async () => {
+  it('only owners make and remove owners, and nobody removes themselves', async () => {
     await assertFails(setDoc(doc(user('admin@a.test'), `branches/${A}/members/o2@a.test`), member('o2@a.test', 'owner')))
     await assertSucceeds(setDoc(doc(user('owner@a.test'), `branches/${A}/members/o2@a.test`), member('o2@a.test', 'owner')))
-    await assertFails(deleteDoc(doc(user('owner@a.test'), `branches/${A}/members/o2@a.test`)))
-    await assertSucceeds(deleteDoc(doc(user('super@hyber.test'), `branches/${A}/members/o2@a.test`)))
+    await assertFails(deleteDoc(doc(user('admin@a.test'), `branches/${A}/members/o2@a.test`)))
+    await assertFails(deleteDoc(doc(user('owner@a.test'), `branches/${A}/members/owner@a.test`)))
+    await assertFails(deleteDoc(doc(user('admin@a.test'), `branches/${A}/members/admin@a.test`)))
+    await assertSucceeds(deleteDoc(doc(user('owner@a.test'), `branches/${A}/members/o2@a.test`)))
+  })
+
+  it('only owners change the academy rules; admins edit the settings', async () => {
+    const rules = { businessRules: { maxStudentsPerTutor: 4 }, updatedAt: serverTimestamp(), updatedBy: 'x' }
+    await assertFails(updateDoc(doc(user('admin@a.test'), `branches/${A}`), rules))
+    await assertSucceeds(updateDoc(doc(user('owner@a.test'), `branches/${A}`), rules))
+    await assertSucceeds(updateDoc(doc(user('admin@a.test'), `branches/${A}`), { settings: { schedule: { snapMinutes: 10 } }, updatedAt: serverTimestamp(), updatedBy: 'x' }))
+    await assertFails(updateDoc(doc(user('owner@a.test'), `branches/${A}`), { status: 'suspended', updatedAt: serverTimestamp(), updatedBy: 'x' }))
   })
 
   it('a member has exactly one valid role', async () => {
@@ -233,33 +240,5 @@ describe('audit log', () => {
     await assertFails(updateDoc(ref, { summary: 'changed' }))
     await assertFails(setDoc(doc(admin, `branches/${A}/auditLog/e2`), entry('someone@else.test')))
     await assertFails(getDoc(doc(user('tutor@a.test'), `branches/${A}/auditLog/e1`)))
-  })
-})
-
-describe('inquiries from the landing page', () => {
-  const inquiry = { name: 'Jordan Lee', email: 'jordan@center.test', center: 'Northside', phone: '', students: '50–150', locations: '1', message: '', status: 'new' }
-
-  beforeEach(async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'inquiries/q1'), inquiry)
-    })
-  })
-
-  it('only the Super Admin reads them', async () => {
-    await assertSucceeds(getDoc(doc(user('super@hyber.test'), 'inquiries/q1')))
-    await assertFails(getDoc(doc(user('owner@a.test'), 'inquiries/q1')))
-    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'inquiries/q1')))
-  })
-
-  it('nobody writes them from the browser (the function does)', async () => {
-    await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'inquiries/q2'), inquiry))
-    await assertFails(setDoc(doc(user('super@hyber.test'), 'inquiries/q2'), inquiry))
-  })
-
-  it('the Super Admin marks them handled, and changes nothing else', async () => {
-    const db = user('super@hyber.test')
-    await assertSucceeds(updateDoc(doc(db, 'inquiries/q1'), { status: 'handled', handledAt: serverTimestamp(), handledBy: 'super@hyber.test' }))
-    await assertFails(updateDoc(doc(db, 'inquiries/q1'), { email: 'other@center.test' }))
-    await assertFails(updateDoc(doc(user('owner@a.test'), 'inquiries/q1'), { status: 'handled' }))
   })
 })

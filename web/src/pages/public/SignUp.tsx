@@ -14,7 +14,7 @@ import { GoogleSignInButton } from './GoogleButton'
 
 /**
  * A new account with an email and a password (or Google, the quicker way). Creating an account doesn't give access
- * by itself: a center gives access to an email (an invitation, or an approved sign-up request), and the account is
+ * by itself: the academy gives access to an email (an invitation, or an approved sign-up request), and the account is
  * matched to it once the email is confirmed.
  */
 export function SignUp() {
@@ -22,7 +22,7 @@ export function SignUp() {
   const [params] = useSearchParams()
   const target = useNext()
   const hint = params.get('email')?.trim().toLowerCase() || null
-  const { profile, loading } = useAuthBranch(target)
+  const { profile, loading } = useAuthBranch()
   const [name, setName] = useState('')
   const [email, setEmail] = useState(hint ?? '')
   const [password, setPassword] = useState('')
@@ -58,9 +58,8 @@ export function SignUp() {
 
   return (
     <AuthShell
-      target={target}
       title="Create your account"
-      description={profile ? `Use the email ${profile.shortName || profile.name} has for you.` : 'Use the email your center has for you.'}
+      description={profile ? `Use the email ${profile.shortName || profile.name} has for you.` : 'Use the email the academy has for you.'}
       footer={
         <p>
           Already have an account?{' '}

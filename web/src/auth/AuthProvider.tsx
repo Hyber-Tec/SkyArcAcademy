@@ -16,26 +16,17 @@ import {
   updatePassword,
   updateProfile,
 } from 'firebase/auth'
-import {
-  collectionGroup,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ACADEMY_ID } from '@shared/academy'
 import { type SignInMethods, signInMethods } from '@shared/auth'
 import { COL, DOC, ROOT, emailKey } from '@shared/paths'
 import type { BranchPublicProfile, Member, WithId } from '@shared/types'
 import { auth, db, functions, googleProvider } from '@/lib/firebase'
 
+/** The signed-in person's place in the academy, when they have one. */
 export interface Membership {
-  branchId: string
   member: WithId<Member>
   profile: BranchPublicProfile | null
 }
@@ -49,14 +40,14 @@ interface AuthContextValue {
   email: string | null
   /**
    * A password account whose email isn't confirmed yet. The rules only trust verified emails, so it can't reach
-   * any branch until the person opens the link we emailed (the pages send it to /verify-email).
+   * the academy until the person opens the link we emailed (the pages send it to /verify-email).
    */
   needsVerification: boolean
   /** How this account signs in (Google, a password, or both). */
   methods: SignInMethods
-  isSuperAdmin: boolean
-  memberships: Membership[]
-  /** True once the super-admin check and membership lookup finished. */
+  /** The academy's member doc for this email (any status), or null. */
+  membership: Membership | null
+  /** True once the membership lookup finished. */
   ready: boolean
   /** Google. `hint`: the email to pre-select in Google's account chooser (from an invite link). */
   signIn: (hint?: string | null) => Promise<void>
@@ -87,40 +78,14 @@ const callAccountEmail = httpsCallable<
   { sent: boolean; fallback?: boolean; throttled?: boolean; alreadyVerified?: boolean }
 >(functions, 'sendAccountEmail')
 
-async function loadAccess(user: User) {
+async function loadAccess(user: User): Promise<Membership | null> {
   const email = emailKey(user.email ?? '')
-  const [adminSnap, memberSnap] = await Promise.all([
-    getDoc(doc(db, ROOT.platformAdmins, email)).catch(() => null),
-    getDocs(query(collectionGroup(db, COL.members), where('email', '==', email))),
+  const memberRef = doc(db, ROOT.branches, ACADEMY_ID, COL.members, email)
+  const [memberSnap, profileSnap] = await Promise.all([
+    getDoc(memberRef),
+    getDoc(doc(db, ROOT.branches, ACADEMY_ID, COL.public, DOC.publicProfile)).catch(() => null),
   ])
-
-  const memberships: Membership[] = await Promise.all(
-    memberSnap.docs.map(async (snap) => {
-      const branchId = snap.ref.parent.parent?.id ?? ''
-      const member = { id: snap.id, ...(snap.data() as Member) }
-      const profileSnap = await getDoc(doc(db, ROOT.branches, branchId, COL.public, DOC.publicProfile)).catch(
-        () => null,
-      )
-      const profile = profileSnap?.exists() ? (profileSnap.data() as BranchPublicProfile) : null
-
-      // Link the account to the member doc on first sign-in, then refresh occasionally.
-      // Nothing waits for these writes: access is known once the reads are done.
-      const lastLogin = member.lastLoginAt?.toMillis?.() ?? 0
-      if (member.uid !== user.uid || Date.now() - lastLogin > RELINK_AFTER_MS) {
-        const patch: Record<string, unknown> = {
-          uid: user.uid,
-          displayName: member.displayName || user.displayName || '',
-          photoURL: user.photoURL ?? null,
-          lastLoginAt: serverTimestamp(),
-        }
-        if (!member.firstLoginAt) patch.firstLoginAt = serverTimestamp()
-        void updateDoc(snap.ref, patch).catch((e) => console.warn('Could not link member', branchId, e))
-      }
-      return { branchId, member, profile }
-    }),
-  )
-
-  memberships.sort((a, b) => (a.profile?.name ?? a.branchId).localeCompare(b.profile?.name ?? b.branchId))
+  const profile = profileSnap?.exists() ? (profileSnap.data() as BranchPublicProfile) : null
 
   // Global profile (one per account).
   void setDoc(
@@ -135,7 +100,23 @@ async function loadAccess(user: User) {
     { merge: true },
   ).catch((e) => console.warn('Could not save profile', e))
 
-  return { isSuperAdmin: adminSnap?.exists() ?? false, memberships }
+  if (!memberSnap.exists()) return null
+  const member = { id: memberSnap.id, ...(memberSnap.data() as Member) }
+
+  // Link the account to the member doc on first sign-in, then refresh occasionally.
+  // Nothing waits for this write: access is known once the reads are done.
+  const lastLogin = member.lastLoginAt?.toMillis?.() ?? 0
+  if (member.uid !== user.uid || Date.now() - lastLogin > RELINK_AFTER_MS) {
+    const patch: Record<string, unknown> = {
+      uid: user.uid,
+      displayName: member.displayName || user.displayName || '',
+      photoURL: user.photoURL ?? null,
+      lastLoginAt: serverTimestamp(),
+    }
+    if (!member.firstLoginAt) patch.firstLoginAt = serverTimestamp()
+    void updateDoc(memberRef, patch).catch((e) => console.warn('Could not link member', e))
+  }
+  return { member, profile }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -144,17 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Mirrors user.emailVerified, which changes in place when the account is reloaded (no auth event fires).
   const [verified, setVerified] = useState(false)
   const [providers, setProviders] = useState<string[]>([])
-  const [access, setAccess] = useState<{ isSuperAdmin: boolean; memberships: Membership[]; uid: string } | null>(
-    null,
-  )
+  const [access, setAccess] = useState<{ membership: Membership | null; uid: string } | null>(null)
 
   const refreshFor = useCallback(async (u: User) => {
     try {
-      const result = await loadAccess(u)
-      setAccess({ ...result, uid: u.uid })
+      setAccess({ membership: await loadAccess(u), uid: u.uid })
     } catch (e) {
       console.error('Could not load access', e)
-      setAccess({ isSuperAdmin: false, memberships: [], uid: u.uid })
+      setAccess({ membership: null, uid: u.uid })
     }
   }, [])
 
@@ -165,12 +143,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus(u ? 'signedIn' : 'signedOut')
         setVerified(!!u?.emailVerified)
         setProviders(u?.providerData.map((p) => p.providerId) ?? [])
-        // The landing page (no Firebase there) offers "Open the app" to people signed in on this device.
-        try {
-          localStorage.setItem('hyber:signedIn', u ? '1' : '0')
-        } catch {
-          /* private mode */
-        }
         setAccess(null)
         // An unconfirmed email reaches nothing (rules): access is looked up once it's confirmed.
         if (u?.emailVerified) void refreshFor(u)
@@ -210,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.throttled) return 'throttled'
       if (data.sent) return 'sent'
     } catch (e) {
-      console.warn('Hyber email not sent, using Firebase’s', e)
+      console.warn('Our email wasn’t sent, using Firebase’s', e)
     }
     // Our email couldn't go out: Firebase sends its own, with the same kind of link.
     await sendEmailVerification(u, { url: continueUrl(next ?? '/login') })
@@ -247,7 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const code = (e as { code?: string }).code ?? ''
       if (code.endsWith('invalid-argument')) throw Object.assign(new Error('That doesn’t look like an email address.'), { code: 'auth/invalid-email' })
-      console.warn('Hyber email not sent, using Firebase’s', e)
+      console.warn('Our email wasn’t sent, using Firebase’s', e)
     }
     await sendPasswordResetEmail(auth, address, { url: continueUrl(`/login?email=${encodeURIComponent(address)}`) })
   }, [])
@@ -283,8 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: user?.email ? emailKey(user.email) : null,
       needsVerification,
       methods: signInMethods(providers),
-      isSuperAdmin: current?.isSuperAdmin ?? false,
-      memberships: current?.memberships ?? [],
+      membership: current?.membership ?? null,
       ready: status === 'signedOut' || needsVerification || current !== null,
       signIn,
       signInWithPassword,

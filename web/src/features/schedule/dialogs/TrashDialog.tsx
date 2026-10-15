@@ -73,7 +73,7 @@ export function TrashDialog({ open, onOpenChange, ctx, tutorFilter }: { open: bo
               <div className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1 text-sm">
                   <div className="truncate">
-                    <span className="font-semibold">{s.studentName}</span> — {s.subject || 'No subject'}
+                    <span className="font-semibold">{s.studentName}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {s.tutorName} · {formatDateKey(s.dateKey, 'weekdayMedium')} · {formatTimeRange(s.startMin, s.endMin)}

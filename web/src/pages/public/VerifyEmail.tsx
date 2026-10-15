@@ -78,7 +78,6 @@ export function VerifyEmail() {
 
   return (
     <AuthShell
-      target={target}
       title="Confirm your email"
       description={
         <>

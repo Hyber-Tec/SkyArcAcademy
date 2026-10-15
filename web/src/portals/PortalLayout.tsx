@@ -66,8 +66,7 @@ function badgeText(n: number) {
 }
 
 function usePortalBase(portal: Portal) {
-  const { branchId } = useBranch()
-  return `/${branchId}/${portal}`
+  return `/${portal}`
 }
 
 function isActivePath(pathname: string, base: string, leaf: NavLeaf) {

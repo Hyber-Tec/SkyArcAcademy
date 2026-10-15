@@ -1,4 +1,4 @@
-import { arrayRemove, arrayUnion, doc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore'
+import { doc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore'
 import { COL, DOC } from '@shared/paths'
 import { STAFF_STATUS_LABELS } from '@shared/people'
 import { isAhead, isCheckable } from '@shared/schedule/conflicts'
@@ -142,31 +142,4 @@ export async function saveCompensation(
 
 export async function saveStaffNotes(branchId: string, actor: Actor, staffId: string, adminNote: string) {
   await setDoc(staffNotesRef(branchId, staffId), { adminNote, updatedAt: serverTimestamp(), updatedBy: actor.email })
-}
-
-/** Qualifies or unqualifies an employee for a subject (single source: staff.subjectIds). */
-export async function setQualification(
-  branchId: string,
-  actor: Actor,
-  staffId: string,
-  subjectId: string,
-  on: boolean,
-  names?: { staff: string; subject: string },
-) {
-  const batch = writeBatch(db)
-  batch.update(branchDocRef(branchId, COL.staff, staffId), {
-    subjectIds: on ? arrayUnion(subjectId) : arrayRemove(subjectId),
-    updatedAt: serverTimestamp(),
-    updatedBy: actor.email,
-  })
-  addAudit(batch, branchId, actor, {
-    action: 'staff.subjects',
-    category: 'people',
-    entityType: 'staff',
-    entityId: staffId,
-    tutorId: staffId,
-    tutorName: names?.staff ?? null,
-    summary: names ? `${on ? 'Added' : 'Removed'} ${names.subject} ${on ? 'to' : 'from'} ${names.staff}’s subjects` : `${on ? 'Added a subject to' : 'Removed a subject from'} a tutor’s subjects`,
-  })
-  await batch.commit()
 }

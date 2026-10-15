@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { COL, DOC, ROOT } from '@shared/paths'
 import {
   type BusinessRules,
+  PAY_MODELS,
   PAY_MODEL_LABELS,
   PAY_MODEL_SINCE_START,
   type PayModel,
@@ -14,7 +15,7 @@ import {
   withPayModelChange,
 } from '@shared/settings/businessRules'
 import { type DateKey, formatDateKey, todayKey } from '@shared/time'
-import type { AuditChange, Branch } from '@shared/types'
+import type { AuditChange } from '@shared/types'
 import { DatePicker } from '@/components/app/DatePicker'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -24,26 +25,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
-import { type Actor, auditData } from '@/lib/audit'
+import { auditData } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { useDoc } from '@/lib/firestore'
-import { type CapacityAndConferences, CapacityAndConferenceFields, PayModelChoice, conferenceHoursError } from './BusinessRulesFields'
+import { useBranch } from '@/branch/BranchProvider'
+import { CapacityField, PayModelChoice } from './BusinessRulesFields'
 
-/** Super Admin only: the branch's business rules, including pay-model changes from a date. */
-export function PlatformRulesCard({ branchId, branch, actor }: { branchId: string; branch: Branch; actor: Actor }) {
+/** Owners only: the academy's core rules, including pay-model changes from a date. Admins see them read-only. */
+export function AcademyRulesCard() {
+  const { branchId, branch, actor } = useBranch()
   const rules = resolveBusinessRules(branch.businessRules)
   const today = todayKey(branch.timezone)
   const stateRef = useMemo(() => doc(db, ROOT.branches, branchId, COL.payroll, DOC.payrollState), [branchId])
   const { data: payroll } = useDoc<{ lockedThrough?: DateKey | null }>(stateRef)
   const lockedThrough = payroll?.lockedThrough ?? null
-  const saved: CapacityAndConferences = {
-    maxStudentsPerTutor: rules.maxStudentsPerTutor,
-    conferencesEnabled: rules.conferences.enabled,
-    everyHours: String(rules.conferences.everyHours),
-  }
-  const [draft, setDraft] = useState<CapacityAndConferences | null>(null)
-  const value = draft ?? saved
-  const dirty = JSON.stringify(value) !== JSON.stringify(saved)
+  const [draft, setDraft] = useState<number | null>(null)
+  const value = draft ?? rules.maxStudentsPerTutor
+  const dirty = value !== rules.maxStudentsPerTutor
   const [busy, setBusy] = useState(false)
   const [changing, setChanging] = useState(false)
 
@@ -58,24 +56,14 @@ export function PlatformRulesCard({ branchId, branch, actor }: { branchId: strin
   }
 
   async function saveCapacity() {
-    const err = conferenceHoursError(value)
-    if (err) return toast.error(err)
-    const next: BusinessRules = {
-      ...rules,
-      maxStudentsPerTutor: value.maxStudentsPerTutor,
-      conferences: { enabled: value.conferencesEnabled, everyHours: Number(value.everyHours) || rules.conferences.everyHours },
-    }
-    const conf = (r: BusinessRules) => (r.conferences.enabled ? `Every ${r.conferences.everyHours} h` : 'Off')
+    const next: BusinessRules = { ...rules, maxStudentsPerTutor: value }
     setBusy(true)
     try {
-      await write(next, 'Changed the branch rules', [
-        ...(next.maxStudentsPerTutor !== rules.maxStudentsPerTutor
-          ? [{ field: 'maxStudentsPerTutor', label: 'Students per tutor at once', from: rules.maxStudentsPerTutor, to: next.maxStudentsPerTutor }]
-          : []),
-        ...(conf(next) !== conf(rules) ? [{ field: 'conferences', label: 'Parent conferences', from: conf(rules), to: conf(next) }] : []),
+      await write(next, 'Changed the academy rules', [
+        { field: 'maxStudentsPerTutor', label: 'Students per tutor at once', from: rules.maxStudentsPerTutor, to: next.maxStudentsPerTutor },
       ])
       setDraft(null)
-      toast.success('Branch rules saved')
+      toast.success('Academy rules saved')
     } catch (e) {
       toast.error('Could not save', { description: (e as Error).message })
     } finally {
@@ -88,8 +76,8 @@ export function PlatformRulesCard({ branchId, branch, actor }: { branchId: strin
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Business rules</CardTitle>
-        <CardDescription>How this center works. Only you can change these; the branch’s admins see them read-only in Settings.</CardDescription>
+        <CardTitle>Academy rules</CardTitle>
+        <CardDescription>How coaches are paid and how many students they take at once. Only owners can change these; admins see them read-only.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
@@ -121,12 +109,12 @@ export function PlatformRulesCard({ branchId, branch, actor }: { branchId: strin
         </div>
         <Separator />
         <FieldGroup>
-          <CapacityAndConferenceFields value={value} onChange={setDraft} idPrefix="pr" />
+          <CapacityField value={value} onChange={setDraft} />
         </FieldGroup>
-        {value.maxStudentsPerTutor < rules.maxStudentsPerTutor ? (
+        {value < rules.maxStudentsPerTutor ? (
           <Alert>
             <LuClock />
-            <AlertDescription>Sessions already on the schedule stay as they are; new sessions, moves and pastes follow the new limit.</AlertDescription>
+            <AlertDescription>Classes already on the schedule stay as they are; new classes, moves and pastes follow the new limit.</AlertDescription>
           </Alert>
         ) : null}
       </CardContent>
@@ -171,7 +159,7 @@ function ChangePayModelDialog({
   onSave: (model: PayModel, from: DateKey) => Promise<void>
 }) {
   const earliest = earliestPayModelChange(lockedThrough)
-  const [model, setModel] = useState<PayModel>(payModelOn(rules, today) === 'teaching_admin' ? 'teaching_only' : 'teaching_admin')
+  const [model, setModel] = useState<PayModel>(PAY_MODELS.find((m) => m !== payModelOn(rules, today)) ?? 'hourly')
   const [from, setFrom] = useState<DateKey>(earliest && earliest > today ? earliest : today)
   const [busy, setBusy] = useState(false)
   const tooEarly = !!earliest && from < earliest
@@ -198,7 +186,7 @@ function ChangePayModelDialog({
             </FieldDescription>
             {tooEarly ? <FieldError>Pick a date after the last locked pay period.</FieldError> : null}
           </Field>
-          {same ? <p className="text-sm text-muted-foreground">The branch already uses {PAY_MODEL_LABELS[model]} on that date.</p> : null}
+          {same ? <p className="text-sm text-muted-foreground">The academy already uses {PAY_MODEL_LABELS[model]} on that date.</p> : null}
           {inPast && !tooEarly && !same ? (
             <Alert>
               <LuClock />

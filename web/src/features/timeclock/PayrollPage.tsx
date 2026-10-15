@@ -65,7 +65,7 @@ function modelsBetween(rules: BusinessRules, from: DateKey, to: DateKey): PayMod
  * Payroll in True Education's layout: filters (role, status, employee, dates),
  * the most recent payroll records 25 at a time, and a generated report for one
  * employee and date range with pay totals. Rows are pieces of time entries
- * (shifts), split into teaching and admin time; Edit and Delete act on the
+ * (shifts), priced by the academy's pay model; Edit and Delete act on the
  * time entry they come from. The applied filters live in the URL.
  */
 export function PayrollPage() {
@@ -205,7 +205,7 @@ export function PayrollPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Payroll"
-        description="Worked time split into teaching (logged sessions) and admin time, priced with each employee’s rates."
+        description="Worked time priced with each employee’s rates under the academy’s pay model."
         actions={
           <>
             <Button variant="outline" onClick={exportCsv} disabled={!rows.length}>
@@ -325,7 +325,7 @@ export function PayrollPage() {
           {reportMissing.length && person ? (
             <RateMissingNotice>
               {person.name} has no {reportMissing.map((k) => rateName(k, person.role).replace(/ rate$/, '')).join(' or ')} rate, so this time is priced at $0.{' '}
-              <Link to={`/${branchId}/admin/employees/directory/${person.id}#pay`} className="font-medium underline underline-offset-2">
+              <Link to={`/admin/employees/directory/${person.id}#pay`} className="font-medium underline underline-offset-2">
                 Set it
               </Link>
             </RateMissingNotice>
@@ -389,7 +389,7 @@ export function PayrollPage() {
             ) : (
               pageRows.map((r, i) => {
                 const locked = isLocked(r.shift.dateKey)
-                const employeePath = `/${branchId}/admin/employees/directory/${r.shift.staffId}`
+                const employeePath = `/admin/employees/directory/${r.shift.staffId}`
                 return (
                   <ContextMenuFor
                     key={r.id}
@@ -403,7 +403,7 @@ export function PayrollPage() {
                       {
                         label: 'Clock in/out calendar',
                         icon: LuCalendarClock,
-                        onSelect: () => navigate(`/${branchId}/admin/employees/calendar?staff=${r.shift.staffId}&mode=clock`),
+                        onSelect: () => navigate(`/admin/employees/calendar?staff=${r.shift.staffId}&mode=clock`),
                       },
                     )}
                   >
@@ -472,7 +472,7 @@ export function PayrollPage() {
         staff={staff.map((s) => ({ id: s.id, name: s.name }))}
         isLocked={isLocked}
         defaultStaff={null}
-        note={editing ? `This row is part of ${entryLabel(editing)}. Pay is split into teaching and admin time again when you save.` : undefined}
+        note={editing ? `This row is part of ${entryLabel(editing)}. Its pay is worked out again when you save.` : undefined}
       />
       <ConfirmDialog
         open={!!deleting}

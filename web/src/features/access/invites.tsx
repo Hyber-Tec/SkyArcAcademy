@@ -1,7 +1,7 @@
 import { httpsCallable } from 'firebase/functions'
 import { LuMail, LuMailCheck, LuMailX } from 'react-icons/lu'
 import { toast } from 'sonner'
-import { branchSignInUrl } from '@shared/brand'
+import { signInUrl } from '@shared/brand'
 import { formatInstant } from '@shared/time'
 import type { Member, MemberInvite } from '@shared/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -10,9 +10,9 @@ import { cn } from '@/lib/utils'
 
 const call = httpsCallable<{ branchId: string; email: string }, { status: MemberInvite['status']; error: string | null }>(functions, 'resendInvite')
 
-/** The link a person uses to sign in to the branch (this site's address, their email pre-selected). */
-export function signInLink(branchId: string, email: string) {
-  return branchSignInUrl(branchId, email, window.location.origin)
+/** The link a person uses to sign in (this site's address, their email pre-selected). */
+export function signInLink(email: string) {
+  return signInUrl(email, window.location.origin)
 }
 
 /** Emails someone their sign-in link again and says how it went. */
@@ -21,16 +21,16 @@ export async function resendInvite(branchId: string, email: string) {
     const { data } = await call({ branchId, email })
     if (data.status === 'sent') toast.success('Sign-in email sent', { description: `${email} got a link to sign in.` })
     else if (data.status === 'not_configured') toast.info('Email isn’t set up yet', { description: 'Copy the sign-in link and send it yourself for now.' })
-    else if (data.status === 'skipped') toast.info('Not sent', { description: 'This person’s access is paused, or the center isn’t active.' })
+    else if (data.status === 'skipped') toast.info('Not sent', { description: 'This person’s access is paused, or the academy isn’t active.' })
     else toast.error('The email couldn’t be sent', { description: data.error ?? undefined })
   } catch (e) {
     toast.error('The email couldn’t be sent', { description: (e as Error).message })
   }
 }
 
-export async function copySignInLink(branchId: string, email: string) {
-  await navigator.clipboard.writeText(signInLink(branchId, email))
-  toast.success('Sign-in link copied', { description: `Send it to ${email}. It opens the center’s sign-in page.` })
+export async function copySignInLink(email: string) {
+  await navigator.clipboard.writeText(signInLink(email))
+  toast.success('Sign-in link copied', { description: `Send it to ${email}. It opens the academy’s sign-in page.` })
 }
 
 /**

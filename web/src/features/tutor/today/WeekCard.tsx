@@ -1,12 +1,10 @@
 import { Link } from 'react-router'
 import { WEEKDAY_SHORT, formatDateKey, formatDuration, weekdayOf } from '@shared/time'
-import { useBranch } from '@/branch/BranchProvider'
 import { cn } from '@/lib/utils'
 import type { TutorDay } from './useTutorDay'
 
 /** The week at a glance: booked time per day (each day opens the schedule there), then the week's numbers. */
 export function WeekCard({ t }: { t: TutorDay }) {
-  const { branchId } = useBranch()
   const { week, today } = t
   const most = Math.max(240, ...week.days.map((d) => d.minutes))
   const first = week.days[0].dateKey
@@ -29,7 +27,7 @@ export function WeekCard({ t }: { t: TutorDay }) {
             return (
               <li key={d.dateKey}>
                 <Link
-                  to={`/${branchId}/tutor/schedule?date=${d.dateKey}`}
+                  to={`/tutor/schedule?date=${d.dateKey}`}
                   aria-label={`${formatDateKey(d.dateKey, 'weekdayLong')}: ${d.sessions ? `${d.sessions} sessions, ${formatDuration(d.minutes)}` : d.isOpen ? 'nothing booked' : 'closed'}`}
                   className="group flex flex-col items-center gap-1 rounded-lg py-1 hover:bg-muted/60"
                 >
@@ -58,10 +56,9 @@ export function WeekCard({ t }: { t: TutorDay }) {
             )
           })}
         </ol>
-        <dl className="grid grid-cols-3 gap-2 border-t pt-3 text-center @xl:grid-cols-1 @xl:gap-3 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-6 @xl:text-left">
+        <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-center @xl:grid-cols-1 @xl:gap-3 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-6 @xl:text-left">
           <Stat label="Sessions" value={String(week.sessions)} hint={week.sessions ? `${week.done} done` : null} />
           <Stat label="Booked" value={formatDuration(week.minutes)} />
-          <Stat label="Logs" value={week.loggable ? `${week.logged}/${week.loggable}` : '—'} hint={week.loggable ? (week.logged === week.loggable ? 'all written' : `${week.loggable - week.logged} to write`) : null} />
         </dl>
       </div>
     </section>

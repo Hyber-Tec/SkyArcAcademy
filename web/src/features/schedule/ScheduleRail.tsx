@@ -17,7 +17,6 @@ import { useNavigate } from 'react-router'
 import { SESSION_STATUSES, SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import type { ScheduleView } from '@shared/settings/defaults'
 import { type DateKey, type Weekday, formatDateKey, isSameMonth, weekDays } from '@shared/time'
-import { useBranch } from '@/branch/BranchProvider'
 import { MonthScroller } from '@/components/app/MonthScroller'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -43,7 +42,7 @@ export interface RailNumbers {
   sessions: number
   conflicts: number
   pending: number
-  missingLogs: number
+  canceled: number
 }
 
 const ZOOM_MIN = 0.5
@@ -97,7 +96,6 @@ export function ScheduleMenu({
   onTrash: () => void
   onTutorOrder: () => void
 }) {
-  const { branchId } = useBranch()
   const navigate = useNavigate()
   return (
     <DropdownMenu>
@@ -117,7 +115,7 @@ export function ScheduleMenu({
         <DropdownMenuItem onSelect={onTutorOrder}>
           <LuListOrdered /> Tutor display order
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate(`/${branchId}/admin/settings`)}>
+        <DropdownMenuItem onSelect={() => navigate(`/admin/settings`)}>
           <LuClock /> Default opening hours
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -297,7 +295,7 @@ export function ScheduleRail(p: ScheduleRailProps) {
             {num(n.sessions, n.sessions === 1 ? 'session' : 'sessions')}
             {num(n.conflicts, 'in conflict', 'text-red-600')}
             {num(n.pending, 'pending', 'text-amber-600')}
-            {num(n.missingLogs, n.missingLogs === 1 ? 'log missing' : 'logs missing')}
+            {num(n.canceled, 'canceled')}
           </div>
         </div>
       ) : null}

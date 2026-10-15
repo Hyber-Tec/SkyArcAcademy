@@ -37,7 +37,7 @@ export function EmployeeDirectoryPage() {
   const { branchId, actor, timezone } = useBranch()
   const navigate = useNavigate()
   const { confirm, dialog: confirmDialog } = useConfirm()
-  const pathOf = (id: string) => `/${branchId}/admin/employees/directory/${id}`
+  const pathOf = (id: string) => `/admin/employees/directory/${id}`
 
   /** Asks first when a tutor with upcoming sessions stops teaching (they'd become conflicts). */
   async function changeStatus(s: WithId<Staff>, next: StaffStatus) {
@@ -127,7 +127,7 @@ export function EmployeeDirectoryPage() {
                   { kind: 'label', label: s.name },
                   { label: 'Open employee profile', icon: LuUserRound, onSelect: () => navigate(pathOf(s.id)) },
                   { label: 'Open in new tab', onSelect: () => window.open(pathOf(s.id), '_blank', 'noopener') },
-                  s.role === 'tutor' && { label: 'Availability calendar', icon: LuCalendarClock, onSelect: () => navigate(`/${branchId}/admin/employees/calendar?staff=${s.id}`) },
+                  s.role === 'tutor' && { label: 'Availability calendar', icon: LuCalendarClock, onSelect: () => navigate(`/admin/employees/calendar?staff=${s.id}`) },
                   {
                     kind: 'sub',
                     label: 'Change status',
@@ -188,7 +188,7 @@ export function EmployeeDirectoryPage() {
         onCreate={async (input, pay) => {
           const id = await createEmployee(branchId, actor, input, pay)
           toast.success('Employee added')
-          navigate(`/${branchId}/admin/employees/directory/${id}`)
+          navigate(`/admin/employees/directory/${id}`)
         }}
       />
       {confirmDialog}

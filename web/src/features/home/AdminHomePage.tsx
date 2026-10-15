@@ -73,7 +73,7 @@ export function AdminHomePage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link to={`/${branchId}/admin/schedule/day/${today}`}>
+            <Link to={`/admin/schedule/day/${today}`}>
               <LuCalendarDays /> Open schedule
             </Link>
           </Button>

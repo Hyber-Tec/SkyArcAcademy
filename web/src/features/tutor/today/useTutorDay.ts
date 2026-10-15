@@ -5,7 +5,6 @@ import { availabilityGaps, dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
 import type { Conflict } from '@shared/schedule/conflicts'
 import { unionMinutes } from '@shared/schedule/lanes'
-import { canLog, logIsDue } from '@shared/sessions/logs'
 import { type DateKey, addDays, nowMinutes, startOfWeek, todayKey } from '@shared/time'
 import type { Availability, Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -59,8 +58,7 @@ export function useTutorDay() {
   const nowMin = nowMinutes(timezone, new Date(now))
   const weekStart = startOfWeek(today, settings.general.weekStartsOn)
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
-  const lookback = addDays(today, -settings.home.missingLogLookbackDays)
-  const from = lookback < weekStart ? lookback : weekStart
+  const from = weekStart
   const to = addDays(today, Math.max(AHEAD_DAYS, settings.availability.leadTimeDays + 1))
 
   const me = useMyStaff()
@@ -85,7 +83,6 @@ export function useTutorDay() {
   const studentsById = useMemo(() => new Map(students.data.map((s) => [s.id, s])), [students.data])
   const sessions = useMemo(() => sessionsState.data.filter((s) => !s.isDeleted).sort(byTime), [sessionsState.data])
   const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, dayConfigs), [settings, dayConfigs])
-  const allowed = settings.sessionLogs.allowForStatuses
 
   const conflicts = useMemo(
     () =>
@@ -121,7 +118,6 @@ export function useTutorDay() {
   }, [sessions, today, nowMin])
 
   const todo = useMemo(() => {
-    const logs = sessions.filter((s) => s.dateKey >= lookback && logIsDue(s, today, nowMin, allowed)).sort((a, b) => byTime(b, a))
     const waiting = sessions.filter((s) => conflicts.has(s.id))
     const ranges = new Map(avail.data.map((a) => [a.dateKey, a.ranges]))
     const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, rangesOn: (d) => ranges.get(d), now: new Date(now) })
@@ -130,8 +126,8 @@ export function useTutorDay() {
       feed.loading || reads.loading
         ? []
         : feed.data.filter((a) => !reads.ids.has(a.id)).sort((a, b) => Number(b.pinned) - Number(a.pinned) || ms(b.createdAt) - ms(a.createdAt))
-    return { logs, waiting, gaps, unread, total: logs.length + waiting.length + gaps.length + unread.length }
-  }, [sessions, lookback, today, nowMin, allowed, conflicts, avail.data, timezone, settings, dayConfigs, now, reads.ids, reads.loading, feed.data, feed.loading])
+    return { waiting, gaps, unread, total: waiting.length + gaps.length + unread.length }
+  }, [sessions, today, conflicts, avail.data, timezone, settings, dayConfigs, now, reads.ids, reads.loading, feed.data, feed.loading])
 
   const week = useMemo(() => {
     const days: WeekDay[] = weekDays.map((d) => {
@@ -148,16 +144,13 @@ export function useTutorDay() {
     })
     const inWeek = sessions.filter((s) => s.dateKey >= weekStart && s.dateKey <= weekDays[6] && s.status !== 'canceled')
     const ended = inWeek.filter((s) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin))
-    const loggable = ended.filter((s) => canLog(s.status, allowed) || s.logStatus === 'submitted')
     return {
       days,
       sessions: inWeek.length,
       done: ended.length,
       minutes: days.reduce((m, d) => m + d.minutes, 0),
-      logged: loggable.filter((s) => s.logStatus === 'submitted').length,
-      loggable: loggable.length,
     }
-  }, [weekDays, sessions, today, nowMin, hoursOf, weekStart, allowed])
+  }, [weekDays, sessions, today, nowMin, hoursOf, weekStart])
 
   const clock = useMemo<ClockState>(() => {
     const minutesOf = (s: WithId<ClockShift>) => Math.max(0, ((s.status === 'open' ? now : ms(s.clockOutAt)) - ms(s.clockInAt)) / 60_000)

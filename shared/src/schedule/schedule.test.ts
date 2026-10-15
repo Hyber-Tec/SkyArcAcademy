@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildDayRows, orderTutors, slotAt } from './dayModel'
 import { occursOn, layoutEventLanes, type ScheduleEvent } from './events'
-import { businessRoundedHours } from './hours'
 import { layoutLanes, peakConcurrency, visibleLaneCount } from './lanes'
 
 const s = (id: string, startMin: number, endMin: number, extra: Partial<{ tutorId: string; status: 'pending' | 'canceled' }> = {}) => ({
@@ -85,12 +84,6 @@ describe('day rows', () => {
   })
   it('orders tutors by display order then name', () => {
     expect(orderTutors(tutors, ['t3']).map((t) => t.id)).toEqual(['t3', 't1', 't2'])
-  })
-})
-
-describe('hours', () => {
-  it('follows the business table', () => {
-    expect([25, 30, 50, 70, 72, 75, 80, 110, 120, 150, 180].map(businessRoundedHours)).toEqual([0.5, 0.5, 1, 1, 1.5, 2, 1.5, 2, 2, 2.5, 3])
   })
 })
 

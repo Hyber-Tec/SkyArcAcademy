@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FaCheckCircle } from 'react-icons/fa'
-import { FaTriangleExclamation } from 'react-icons/fa6'
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
 import { type Conflict, tutorConflictText } from '@shared/schedule/conflicts'
-import { canLog } from '@shared/sessions/logs'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutes, weekdayOf } from '@shared/time'
-import type { Session, Student, WithId } from '@shared/types'
-import { useBranch } from '@/branch/BranchProvider'
+import type { Session, WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { StatePill, plural } from '@/features/home/parts'
 import { sessionState, weekRange } from '@/features/tutor/sessionUi'
@@ -18,8 +14,8 @@ import { TutorSessionSheet } from './TutorSessionSheet'
 /**
  * Phones: the tutor's week as a list (True Education's phone schedule, as in
  * the phone app): week arrows and Today, a day strip, past days of this week
- * folded away, and a card per session with its status, note, log mark and
- * conflict. A tap opens the session as a sheet.
+ * folded away, and a card per class with its status, note and conflict. A tap
+ * opens the class as a sheet.
  */
 export function TutorWeekList({
   days,
@@ -28,7 +24,6 @@ export function TutorWeekList({
   sessions,
   hoursOf,
   conflictsOf,
-  studentOf,
   focus,
   onWeek,
   waitingNote,
@@ -40,15 +35,12 @@ export function TutorWeekList({
   sessions: WithId<Session>[]
   hoursOf: (d: DateKey) => DayHours
   conflictsOf: (s: WithId<Session>) => Conflict[]
-  studentOf: (id: string) => WithId<Student> | undefined
   /** A date to show (from a notification or Today); its day opens and scrolls into view. */
   focus: DateKey | null
   /** -1 / +1 for the previous or next week, 0 for this week. */
   onWeek: (step: -1 | 0 | 1) => void
   waitingNote: React.ReactNode
 }) {
-  const { settings } = useBranch()
-  const allowed = settings.sessionLogs.allowForStatuses
   const isThisWeek = days.includes(today)
   const [showEarlier, setShowEarlier] = useState(false)
   const [open, setOpen] = useState<WithId<Session> | null>(null)
@@ -183,7 +175,7 @@ export function TutorWeekList({
               <ul className="space-y-2">
                 {list.map((s) => (
                   <li key={s.id}>
-                    <SessionRow s={s} today={today} nowMin={nowMin} allowed={allowed} conflicts={conflictsOf(s)} onOpen={() => setOpen(s)} />
+                    <SessionRow s={s} today={today} nowMin={nowMin} conflicts={conflictsOf(s)} onOpen={() => setOpen(s)} />
                   </li>
                 ))}
               </ul>
@@ -198,7 +190,6 @@ export function TutorWeekList({
         today={today}
         nowMin={nowMin}
         conflicts={open ? conflictsOf(open) : []}
-        student={open ? studentOf(open.studentId) : undefined}
       />
     </div>
   )
@@ -208,22 +199,18 @@ function SessionRow({
   s,
   today,
   nowMin,
-  allowed,
   conflicts,
   onOpen,
 }: {
   s: WithId<Session>
   today: DateKey
   nowMin: number
-  allowed: readonly Session['status'][]
   conflicts: Conflict[]
   onOpen: () => void
 }) {
   const why = tutorConflictText(conflicts)
-  const st = sessionState(s, { today, nowMin, allowed, waiting: why })
+  const st = sessionState(s, { today, nowMin, waiting: why })
   const ended = s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin)
-  // True Education's marks: a blue check once the log is in, a red triangle while it's owed.
-  const logState = s.logStatus === 'submitted' ? 'submitted' : ended && canLog(s.status, allowed) ? 'missing' : null
   const bar = SESSION_CARD_STYLE[s.status]?.bar ?? '#a1a1aa'
   const live = s.dateKey === today && s.startMin <= nowMin && !ended
   const upcoming = !ended && !live
@@ -250,11 +237,8 @@ function SessionRow({
           <span className={cn('truncate font-semibold', s.status === 'canceled' && 'line-through decoration-muted-foreground/60')}>{s.studentName}</span>
           {s.studentGrade ? <span className="shrink-0 text-xs text-muted-foreground">Gr {s.studentGrade}</span> : null}
         </span>
-        <span className="mt-0.5 block truncate text-sm text-muted-foreground">
-          {s.subject || 'No subject'}
-          {/* Booked but not confirmed yet: said quietly (the bar is yellow too), it's the usual state further ahead. */}
-          {upcoming && s.status === 'pending' && !why ? <span className="text-amber-700 dark:text-amber-400"> · Pending</span> : null}
-        </span>
+        {/* Booked but not confirmed yet: said quietly (the bar is yellow too), it's the usual state further ahead. */}
+        {upcoming && s.status === 'pending' && !why ? <span className="mt-0.5 block text-sm text-amber-700 dark:text-amber-400">Pending</span> : null}
         {s.note ? (
           <span className="mt-1.5 flex items-start gap-1.5 text-xs text-blue-700 dark:text-blue-300">
             <LuStickyNote className="mt-px size-3 shrink-0" />
@@ -269,15 +253,7 @@ function SessionRow({
         ) : null}
       </span>
       <span className="flex shrink-0 flex-col items-end">
-        {logState === 'submitted' ? (
-          <span title="Session log submitted." data-testid="log-indicator" className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-400">
-            <FaCheckCircle className="size-3.5" aria-hidden /> Logged
-          </span>
-        ) : logState === 'missing' ? (
-          <span title="Please write your session log." data-testid="log-indicator" className="flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400">
-            <FaTriangleExclamation className="size-3.5" aria-hidden /> Write log
-          </span>
-        ) : quiet ? null : (
+        {quiet ? null : (
           <StatePill tone={st.tone} pulse={st.pulse}>
             {st.label}
           </StatePill>

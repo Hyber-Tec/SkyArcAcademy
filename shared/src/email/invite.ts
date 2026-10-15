@@ -3,10 +3,10 @@ import { ROLE_LABELS, type Role } from '../roles'
 
 /**
  * Why someone gets a sign-in email:
- * - `owner`: the Super Admin made them the owner of a new or existing branch.
+ * - `owner`: they were added as an owner.
  * - `promoted_owner`: an existing member became an owner.
  * - `added`: an owner or admin gave them access (or resent the email).
- * - `approved`: the branch approved their sign-up request.
+ * - `approved`: the academy approved their sign-up request.
  */
 export type InviteKind = 'owner' | 'promoted_owner' | 'added' | 'approved'
 
@@ -17,10 +17,8 @@ export interface InviteEmailInput {
   name: string
   role: Role
   branchName: string
-  /** The name of who gave the access, if it was a branch member. */
+  /** The name of who gave the access, if known. */
   inviterName: string | null
-  /** The access came from HyberTec (the Super Admin). */
-  byHyberTec?: boolean
   signInUrl: string
   appUrl?: string
 }
@@ -34,9 +32,9 @@ export interface EmailContent {
 const ROLE_BLURB: Record<Role, string> = {
   owner: 'You can manage everything there: the schedule, students, employees, payroll and who has access.',
   admin: 'You can run the schedule and manage students, employees and payroll.',
-  tutor: 'You can see your schedule, set your availability, log your sessions and read announcements.',
-  parent: 'You can see your child’s sessions and the progress reports the center shares.',
-  student: 'You can see your sessions and your progress.',
+  tutor: 'You can see your schedule, set your availability and read announcements.',
+  parent: 'You can see your child’s sessions.',
+  student: 'You can see your sessions.',
 }
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a')
@@ -53,18 +51,11 @@ function isGoogleMail(email: string) {
 export function inviteCopy(i: InviteEmailInput) {
   const roleLabel = ROLE_LABELS[i.role].toLowerCase()
   const asRole = `${article(roleLabel)} ${roleLabel}`
-  const who = i.byHyberTec ? 'HyberTec' : (i.inviterName ?? i.branchName)
+  const who = i.inviterName ?? i.branchName
   const first = i.name.trim().split(/\s+/)[0] ?? ''
   const greeting = first ? `Hi ${first},` : 'Hi,'
   switch (i.kind) {
     case 'owner':
-      return {
-        subject: `Set up ${i.branchName} on ${PRODUCT_NAME}`,
-        title: `You’re the owner of ${i.branchName}`,
-        greeting,
-        intro: `${who} set up ${i.branchName} on ${PRODUCT_NAME} and made you its owner. ${ROLE_BLURB.owner}`,
-        button: `Sign in to ${i.branchName}`,
-      }
     case 'promoted_owner':
       return {
         subject: `You’re now an owner of ${i.branchName}`,
@@ -100,7 +91,7 @@ export function inviteEmail(i: InviteEmailInput): EmailContent {
   const steps = isGoogleMail(i.to)
     ? [`Choose “Continue with Google” and use ${i.to}.`]
     : [`If ${i.to} is a Google account, choose “Continue with Google”.`, `Otherwise choose “Create an account” and set a password for ${i.to}. We’ll email you a link to confirm the address.`]
-  const giver = i.byHyberTec ? 'HyberTec' : (i.inviterName ?? i.branchName)
+  const giver = i.inviterName ?? i.branchName
   const why =
     i.kind === 'approved'
       ? `You’re getting this because you asked to join ${i.branchName} with ${i.to}.`

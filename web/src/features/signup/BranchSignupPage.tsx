@@ -1,9 +1,10 @@
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { LuCircleCheck, LuClock, LuGraduationCap, LuUserRound, LuUsers } from 'react-icons/lu'
-import { Link, useParams } from 'react-router'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { COL, DOC, ROOT } from '@shared/paths'
+import { ACADEMY_ID } from '@shared/academy'
+import { COL, ROOT } from '@shared/paths'
 import { ROLE_LABELS, type Role } from '@shared/roles'
 import type { BranchPublicProfile, SignupRequest } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -18,7 +19,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { db } from '@/lib/firebase'
 import { useDoc } from '@/lib/firestore'
-import { useBranchTabIcon } from '@/lib/tabIcon'
+import { usePublicProfile } from '@/lib/publicProfile'
 import { cn } from '@/lib/utils'
 import { OrDivider } from '@/pages/public/authParts'
 import { GoogleSignInButton } from '@/pages/public/GoogleButton'
@@ -29,28 +30,24 @@ const ROLE_CHOICES: { role: Role; title: string; text: string; icon: typeof LuUs
   { role: 'student', title: 'Student', text: 'I take classes here.', icon: LuGraduationCap },
 ]
 
+/** `/join`: a signed-in coach or parent asks the academy for access; an admin approves it on the Account page. */
 export function BranchSignupPage() {
-  const { branchId = '' } = useParams()
-  const { status, user, email, memberships, needsVerification } = useAuth()
-  const profileRef = useMemo(() => doc(db, ROOT.branches, branchId, COL.public, DOC.publicProfile), [branchId])
-  const { data: profile, loading } = useDoc<BranchPublicProfile>(profileRef)
-  const requestRef = useMemo(
-    () => (email ? doc(db, ROOT.branches, branchId, COL.signupRequests, email) : null),
-    [branchId, email],
-  )
+  const branchId = ACADEMY_ID
+  const { status, user, email, membership, needsVerification } = useAuth()
+  const { data: profile, loading } = usePublicProfile()
+  const requestRef = useMemo(() => (email ? doc(db, ROOT.branches, ACADEMY_ID, COL.signupRequests, email) : null), [email])
   const { data: request, loading: requestLoading } = useDoc<SignupRequest>(requestRef)
 
   useEffect(() => {
     if (profile) document.title = `Join ${profile.name}`
   }, [profile])
-  useBranchTabIcon(profile ? { id: branchId, name: profile.name, shortName: profile.shortName, logoUrl: profile.logoUrl, accentColor: profile.accentColor } : null)
 
   if (loading || status === 'loading') return <FullPageSpinner />
   if (!profile) {
-    return <FullPageMessage title="Page not found" description="This sign-up link doesn’t match any center." actions={[{ label: 'Go home', to: '/' }]} />
+    return <FullPageMessage title="Sign-up isn’t available" description="The academy isn’t set up for sign-ups yet." actions={[{ label: 'Go home', to: '/' }]} />
   }
 
-  const isMember = memberships.some((m) => m.branchId === branchId && m.member.status === 'active')
+  const isMember = membership?.member.status === 'active'
   const open = profile.status === 'active' && profile.signupEnabled && profile.signupRoles.length > 0
 
   return (
@@ -68,21 +65,21 @@ export function BranchSignupPage() {
       <main className="mx-auto max-w-xl px-4 pb-16">
         <div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
           {!open ? (
-            <Message title="Sign-up is closed" text={`${profile.name} isn’t accepting new sign-ups online right now. Please contact the center.`} />
+            <Message title="Sign-up is closed" text={`${profile.name} isn’t accepting new sign-ups online right now. Please contact the academy.`} />
           ) : status !== 'signedIn' ? (
             <div>
               <h1 className="text-xl font-semibold tracking-tight">Join {profile.name}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {profile.signupMessage || 'Sign in or create an account to request access. The center will review your request.'}
+                {profile.signupMessage || 'Sign in or create an account to request access. The academy will review your request.'}
               </p>
               <GoogleSignInButton className="mt-6 w-full" label="Continue with Google" />
               <OrDivider label="or use your email" />
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button variant="outline" asChild>
-                  <Link to={`/signup?next=${encodeURIComponent(`/${branchId}/signup`)}`}>Create an account</Link>
+                  <Link to={`/signup?next=${encodeURIComponent('/join')}`}>Create an account</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link to={`/login?next=${encodeURIComponent(`/${branchId}/signup`)}`}>Sign in with email</Link>
+                  <Link to={`/login?next=${encodeURIComponent('/join')}`}>Sign in with email</Link>
                 </Button>
               </div>
             </div>
@@ -93,7 +90,7 @@ export function BranchSignupPage() {
                 We sent a link to {user?.email}. Open it, then come back here to send your request.
               </p>
               <Button asChild className="mt-6">
-                <Link to={`/verify-email?next=${encodeURIComponent(`/${branchId}/signup`)}`}>Continue</Link>
+                <Link to={`/verify-email?next=${encodeURIComponent('/join')}`}>Continue</Link>
               </Button>
             </div>
           ) : isMember ? (
@@ -102,7 +99,7 @@ export function BranchSignupPage() {
               <h1 className="text-xl font-semibold">You already have access</h1>
               <p className="mt-2 text-sm text-muted-foreground">{email} is a member of {profile.name}.</p>
               <Button asChild className="mt-6">
-                <Link to={`/${branchId}`}>Open {profile.shortName || profile.name}</Link>
+                <Link to="/app">Open {profile.shortName || profile.name}</Link>
               </Button>
             </div>
           ) : requestLoading ? (
@@ -114,7 +111,7 @@ export function BranchSignupPage() {
           ) : request?.status === 'rejected' ? (
             <Message
               title="Request declined"
-              text={`${profile.name} declined the request from ${email}.${request.decisionNote ? ` Note: ${request.decisionNote}` : ''} Please contact the center if this is a mistake.`}
+              text={`${profile.name} declined the request from ${email}.${request.decisionNote ? ` Note: ${request.decisionNote}` : ''} Please contact the academy if this is a mistake.`}
             />
           ) : request?.status === 'approved' ? (
             <div className="text-center">

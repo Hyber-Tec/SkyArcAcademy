@@ -3,7 +3,6 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "./styles/theme.css";
-@import "./styles/report.css";
 
 /* Rich text (announcements): editor and rendered posts share these styles. */
 @layer components {

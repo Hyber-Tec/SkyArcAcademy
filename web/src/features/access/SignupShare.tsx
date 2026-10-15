@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LuCopy, LuDownload, LuExternalLink, LuQrCode, LuTriangleAlert } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { branchSignupUrl } from '@shared/brand'
+import { joinUrl } from '@shared/brand'
 import { useBranch } from '@/branch/BranchProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -12,10 +12,9 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-/** The branch's public sign-up page address (on this site). */
+/** The academy's sign-up page address (on this site). */
 export function useSignupUrl() {
-  const { branchId } = useBranch()
-  return branchSignupUrl(branchId, window.location.origin)
+  return joinUrl(window.location.origin)
 }
 
 function useQrCode(text: string, enabled: boolean) {
@@ -39,7 +38,7 @@ function useQrCode(text: string, enabled: boolean) {
  * Warns when sign-ups are turned off.
  */
 export function SignupShare({ className }: { className?: string }) {
-  const { branchId, branch, settings } = useBranch()
+  const { branch, settings } = useBranch()
   const url = useSignupUrl()
   const qr = useQrCode(url, true)
   const closed = settings.signup.enabled === false || settings.signup.roles.length === 0
@@ -51,7 +50,7 @@ export function SignupShare({ className }: { className?: string }) {
           <LuTriangleAlert />
           <AlertDescription>
             Sign-ups are turned off, so the page says “Sign-up is closed”.{' '}
-            <Link to={`/${branchId}/admin/settings/signup`} className="font-medium text-foreground underline underline-offset-2">
+            <Link to={`/admin/settings/signup`} className="font-medium text-foreground underline underline-offset-2">
               Turn them on in Settings
             </Link>
             .
@@ -86,7 +85,7 @@ export function SignupShare({ className }: { className?: string }) {
             </Button>
             <Button variant="outline" size="sm" disabled={!qr} asChild={!!qr}>
               {qr ? (
-                <a href={qr} download={`${branch.shortName || branchId}-sign-up-qr.png`}>
+                <a href={qr} download={`${branch.shortName || 'academy'}-sign-up-qr.png`}>
                   <LuDownload /> Download QR code
                 </a>
               ) : (

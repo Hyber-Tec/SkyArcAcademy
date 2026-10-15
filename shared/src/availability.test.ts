@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { availabilityGaps, clipToHours, dayHours, effectiveLockDays, effectiveRanges, isLockedForTutor, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
-import { DEFAULT_SETTINGS } from './settings/defaults'
+import { DEFAULT_SETTINGS as ACADEMY_DEFAULTS } from './settings/defaults'
+
+// A fixed week for these tests (Sunday closed, Mon–Fri 2–9 PM, Saturday 9–5), independent of the academy's defaults.
+const DEFAULT_SETTINGS = {
+  ...ACADEMY_DEFAULTS,
+  schedule: {
+    ...ACADEMY_DEFAULTS.schedule,
+    defaultWeek: {
+      sunday: { isOpen: false, openMin: 840, closeMin: 1260 },
+      monday: { isOpen: true, openMin: 840, closeMin: 1260 },
+      tuesday: { isOpen: true, openMin: 840, closeMin: 1260 },
+      wednesday: { isOpen: true, openMin: 840, closeMin: 1260 },
+      thursday: { isOpen: true, openMin: 840, closeMin: 1260 },
+      friday: { isOpen: true, openMin: 840, closeMin: 1260 },
+      saturday: { isOpen: true, openMin: 540, closeMin: 1020 },
+    },
+  },
+}
 
 const NY = 'America/New_York'
 

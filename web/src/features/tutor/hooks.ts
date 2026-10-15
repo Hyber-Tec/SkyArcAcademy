@@ -4,7 +4,7 @@ import type { Staff } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { branchDocRef, useDoc } from '@/lib/firestore'
 
-/** The signed-in tutor's own employee record (or the previewed tutor's, for a Super Admin). */
+/** The signed-in tutor's own employee record (or the previewed tutor's, for an owner or admin using View as). */
 export function useMyStaff() {
   const { branchId, staffId } = useBranch()
   const ref = useMemo(() => (staffId ? branchDocRef(branchId, COL.staff, staffId) : null), [branchId, staffId])

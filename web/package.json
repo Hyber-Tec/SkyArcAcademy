@@ -1,13 +1,11 @@
 {
-  "name": "hyber-crm-web",
+  "name": "skyarc-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "dev:app": "vite",
-    "dev:demo": "vite -c vite.demo.config.ts",
-    "build": "tsc -b && vite build && vite build -c vite.demo.config.ts && node scripts/prerender.mjs",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc -b"
@@ -22,10 +20,8 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.4.0",
-    "date-fns": "^4.4.0",
     "dompurify": "^3.4.16",
     "firebase": "^12.19.0",
-    "motion": "^14.0.0",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",

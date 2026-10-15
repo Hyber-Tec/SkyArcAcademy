@@ -120,7 +120,7 @@ export function ShiftDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Split automatically (teaching during logged sessions)</SelectItem>
+                <SelectItem value="auto">Automatic (the academy’s pay model)</SelectItem>
                 <SelectItem value="admin">All admin time</SelectItem>
                 <SelectItem value="teaching">All teaching time</SelectItem>
               </SelectContent>

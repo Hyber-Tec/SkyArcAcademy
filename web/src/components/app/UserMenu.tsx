@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LuArrowLeftRight, LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut } from 'react-icons/lu'
+import { LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
 import { useOptionalBranch } from '@/branch/BranchProvider'
@@ -31,7 +31,7 @@ export function UserAvatar({ className }: { className?: string }) {
 }
 
 export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar' }) {
-  const { user, email, isSuperAdmin, memberships, signOut } = useAuth()
+  const { user, email, signOut } = useAuth()
   const branch = useOptionalBranch()
   const navigate = useNavigate()
   const [security, setSecurity] = useState(false)
@@ -64,15 +64,8 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {isSuperAdmin || memberships.length > 1 ? (
-            // Super Admin: the Platform dashboard lists every branch; others pick among theirs.
-            <DropdownMenuItem onSelect={() => navigate(isSuperAdmin ? '/platform' : '/app?choose=1')}>
-              <LuArrowLeftRight />
-              Switch branch
-            </DropdownMenuItem>
-          ) : null}
           {branch && branch.isAdmin ? (
-            <DropdownMenuItem onSelect={() => navigate(`/${branch.branchId}/kiosk`)}>
+            <DropdownMenuItem onSelect={() => navigate('/kiosk')}>
               <LuLayoutGrid />
               Open kiosk mode
             </DropdownMenuItem>

@@ -5,10 +5,12 @@ import { db, LIGHT } from './app'
 import { COL, ROOT } from '@shared/paths'
 import { STUDENT_STATUS_LABELS, autoStudentStatus } from '@shared/people'
 import { resolveSettings } from '@shared/settings/resolve'
-import { todayKey } from '@shared/time'
+import { addDays, todayKey } from '@shared/time'
 import type { Branch, StudentStatus } from '@shared/types'
 
 const DAY_MS = 86_400_000
+/** How far back the daily job looks for sessions that happened (longer than any pause setting). */
+const RECENT_DAYS = 60
 
 async function activeBranches() {
   const snap = await db.collection(ROOT.branches).where('status', '==', 'active').get()
@@ -16,18 +18,19 @@ async function activeBranches() {
 }
 
 /**
- * Daily (early morning US time): applies the automatic student statuses
- * (pause after inactivity, re-enroll when sessions return; manual statuses are
- * kept) and refreshes each student's next session date.
+ * Daily (early morning US time): refreshes each student's first, last and next session dates from the schedule (a past
+ * session that wasn't canceled or missed counts as attended), then applies the automatic student statuses (enroll after
+ * the first session, pause after inactivity, re-enroll when sessions return; manual statuses are kept).
  */
 export const studentLifecycleDaily = onSchedule({ schedule: '0 8 * * *', timeZone: 'UTC', timeoutSeconds: 540, ...LIGHT }, async () => {
   for (const { id: branchId, branch } of await activeBranches()) {
     const settings = resolveSettings(branch.settings)
     const today = todayKey(branch.timezone || 'America/New_York')
     const base = `${ROOT.branches}/${branchId}`
-    const [students, upcoming] = await Promise.all([
+    const [students, upcoming, recent] = await Promise.all([
       db.collection(`${base}/${COL.students}`).get(),
       db.collection(`${base}/${COL.sessions}`).where('dateKey', '>=', today).get(),
+      db.collection(`${base}/${COL.sessions}`).where('dateKey', '>=', addDays(today, -RECENT_DAYS)).where('dateKey', '<', today).get(),
     ])
     const next = new Map<string, string>()
     for (const s of upcoming.docs) {
@@ -36,15 +39,28 @@ export const studentLifecycleDaily = onSchedule({ schedule: '0 8 * * *', timeZon
       const cur = next.get(d.studentId)
       if (!cur || d.dateKey < cur) next.set(d.studentId, d.dateKey)
     }
+    const first = new Map<string, string>()
+    const last = new Map<string, string>()
+    for (const s of recent.docs) {
+      const d = s.data()
+      if (d.isDeleted || d.status === 'canceled' || d.status === 'no_show' || !d.studentId) continue
+      if (!first.has(d.studentId) || d.dateKey < first.get(d.studentId)!) first.set(d.studentId, d.dateKey)
+      if (!last.has(d.studentId) || d.dateKey > last.get(d.studentId)!) last.set(d.studentId, d.dateKey)
+    }
     const writer = db.bulkWriter()
     let changed = 0
     for (const st of students.docs) {
       const d = st.data()
       const nextDate = next.get(st.id) ?? null
+      const recentLast = last.get(st.id) ?? null
+      const stored = (d.lastSessionDate as string | null | undefined) ?? null
+      const lastDate = recentLast && (!stored || recentLast > stored) ? recentLast : stored
       const patch: Record<string, unknown> = {}
       if ((d.nextSessionDate ?? null) !== nextDate) patch.nextSessionDate = nextDate
+      if (stored !== lastDate) patch.lastSessionDate = lastDate
+      if (!d.firstSessionDate && first.has(st.id)) patch.firstSessionDate = first.get(st.id)
       const status = autoStudentStatus(
-        { status: d.status as StudentStatus, statusSource: d.statusSource === 'manual' ? 'manual' : 'auto', lastSessionDate: d.lastSessionDate ?? null, hasUpcoming: !!nextDate },
+        { status: d.status as StudentStatus, statusSource: d.statusSource === 'manual' ? 'manual' : 'auto', lastSessionDate: lastDate, hasUpcoming: !!nextDate },
         today,
         settings.students.autoStatus,
       )

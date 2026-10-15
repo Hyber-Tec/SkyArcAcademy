@@ -4,7 +4,7 @@ import { dayHours } from '@shared/availability'
 import { type DateKey, todayKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import { useStaffList, useStudentList, useSubjects } from '@/features/data/hooks'
+import { useStaffList, useStudentList } from '@/features/data/hooks'
 import { type ScheduleCtx, createSession, deleteSession, updateSession } from './api'
 import { SessionDialog, type SessionDialogState } from './dialogs/SessionDialog'
 
@@ -14,7 +14,6 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
   // Off for tutors, who can't read the staff list (the dialog is admin-only).
   const { data: staff } = useStaffList(enabled)
   const { data: students } = useStudentList(enabled)
-  const { data: subjects } = useSubjects()
   const [state, setState] = useState<SessionDialogState>(null)
   const ctx: ScheduleCtx = useMemo(
     () => ({ branchId, actor, timezone, settings, maxStudentsPerTutor: rules.maxStudentsPerTutor }),
@@ -51,7 +50,6 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
       onClose={() => setState(null)}
       students={students.filter((s) => s.status !== 'finished')}
       staff={staff}
-      subjects={subjects}
       isLocked={isLocked}
       onSave={async (draft, existing) => {
         if (existing) await updateSession(ctx, existing, draft)
@@ -62,7 +60,6 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
         await deleteSession(ctx, s)
         toast.success('Session moved to Trash')
       }}
-      onOpenLog={(s) => window.open(`/${branchId}/session-log/${s.id}`, '_blank', 'noopener')}
     />
   )
   return { element, openCreate, openEdit, isLocked }

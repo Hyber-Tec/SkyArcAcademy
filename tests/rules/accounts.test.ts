@@ -23,7 +23,7 @@ const device = (email: string, extra: Record<string, unknown> = {}) => ({
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: 'demo-hyber',
+    projectId: 'demo-skyarc',
     firestore: { rules: readFileSync(resolve(__dirname, '../../firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 },
   })
 })
@@ -51,7 +51,7 @@ describe('email and password accounts', () => {
   it('once confirmed, the same account is in', async () => {
     const db = user('u-tutor', 'tutor@a.test')
     await assertSucceeds(getDoc(doc(db, `branches/${B}`)))
-    await assertSucceeds(getDocs(query(collectionGroup(db, 'members'), where('email', '==', 'tutor@a.test'))))
+    await assertSucceeds(getDoc(doc(db, `branches/${B}/members/tutor@a.test`)))
   })
 
   it('the server-only account email limits are closed to everyone', async () => {

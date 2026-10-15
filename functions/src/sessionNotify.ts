@@ -13,7 +13,6 @@ export function snapshotOf(d: FirebaseFirestore.DocumentData): SessionSnapshot {
   return {
     tutorId: (d.tutorId as string | null) ?? null,
     studentName: String(d.studentName ?? ''),
-    subject: String(d.subject ?? ''),
     status: String(d.status ?? ''),
     dateKey: String(d.dateKey ?? ''),
     startMin: Number(d.startMin ?? 0),

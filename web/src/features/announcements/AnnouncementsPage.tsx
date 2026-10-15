@@ -64,8 +64,7 @@ import { HtmlContent } from './html'
 type Mode = 'admin' | 'tutor'
 
 function useListPath(mode: Mode) {
-  const { branchId } = useBranch()
-  return `/${branchId}/${mode}/announcements`
+  return `/${mode}/announcements`
 }
 
 function audienceLabel(a: Announcement) {
@@ -398,7 +397,7 @@ function PostView({ mode }: { mode: Mode }) {
   const [receipts, setReceipts] = useState(false)
   const actions = useAdminActions(() => navigate(list))
 
-  // Tutors leave a read receipt the first time they open a post (not a Super Admin previewing a tutor).
+  // Tutors leave a read receipt the first time they open a post (not an owner or admin previewing a tutor with View as).
   const readRef = useMemo(
     () => (admin || viewAs ? null : doc(db, branchColPath(branchId, COL.announcements), announcementId, 'reads', actor.email)),
     [admin, viewAs, branchId, announcementId, actor.email],

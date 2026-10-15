@@ -1,7 +1,6 @@
-import { type WriteBatch, deleteDoc, doc, getDocs, increment, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { type WriteBatch, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { dayStartInstant } from '@shared/availability'
 import { COL, availabilityDocId } from '@shared/paths'
-import { billedHours } from '@shared/schedule/hours'
 import { type LaneItem, fitsCapacity } from '@shared/schedule/lanes'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import type { BranchSettings, SessionStatus } from '@shared/settings/defaults'
@@ -26,8 +25,6 @@ export interface SessionDraft {
   studentId: string
   studentName: string
   studentGrade: string
-  subjectId: string | null
-  subject: string
   note: string
   status: SessionStatus
   dateKey: DateKey
@@ -73,15 +70,10 @@ export function newSessionData(ctx: ScheduleCtx, d: SessionDraft, source: Sessio
     studentId: d.studentId,
     studentName: d.studentName,
     studentGrade: d.studentGrade,
-    subjectId: d.subjectId,
-    subject: d.subject.trim(),
     note: d.note.trim(),
     status: d.status,
     ...timeFields(d.dateKey, d.startMin, d.endMin, ctx.timezone),
     visualOrder: 0,
-    logStatus: 'none',
-    logSubmittedAt: null,
-    noShowAppliedHours: null,
     confirmedAt: null,
     confirmedBy: null,
     source,
@@ -109,31 +101,11 @@ export async function createSession(ctx: ScheduleCtx, d: SessionDraft, source: S
   return ref.id
 }
 
-export type SessionPatch = Partial<Pick<SessionDraft, 'tutorId' | 'tutorName' | 'studentId' | 'studentName' | 'studentGrade' | 'subjectId' | 'subject' | 'note' | 'status' | 'dateKey' | 'startMin' | 'endMin'>> & {
+export type SessionPatch = Partial<Pick<SessionDraft, 'tutorId' | 'tutorName' | 'studentId' | 'studentName' | 'studentGrade' | 'note' | 'status' | 'dateKey' | 'startMin' | 'endMin'>> & {
   visualOrder?: number
 }
 
-/** No Show bills the session's rounded hours to the student (and takes them back when undone). */
-function noShowAccounting(batch: WriteBatch, ctx: ScheduleCtx, before: WithId<Session>, nextStatus: SessionStatus | undefined) {
-  if (!nextStatus || nextStatus === before.status || !ctx.settings.schedule.noShow.countsTowardStudentHours) return {}
-  const studentRef = branchDocRef(ctx.branchId, COL.students, before.studentId)
-  if (nextStatus === 'no_show') {
-    const h = billedHours(before.endMin - before.startMin, ctx.settings.students.hourRounding)
-    batch.update(studentRef, { totalSessionHours: increment(h), updatedAt: serverTimestamp() })
-    return { noShowAppliedHours: h }
-  }
-  if (before.status === 'no_show' && before.noShowAppliedHours) {
-    batch.update(studentRef, { totalSessionHours: increment(-before.noShowAppliedHours), updatedAt: serverTimestamp() })
-    return { noShowAppliedHours: null }
-  }
-  return {}
-}
-
-/** Why a logged session's status can't change: its log marked attendance and billed the hours. */
-export const LOGGED_STAYS_PRESENT = 'This session has a submitted log, so it stays Present.'
-
 export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, patch: SessionPatch) {
-  if (before.logStatus === 'submitted' && patch.status && patch.status !== before.status && patch.status !== 'present') throw new Error(LOGGED_STAYS_PRESENT)
   const next = { ...before, ...patch }
   const timeChanged = next.dateKey !== before.dateKey || next.startMin !== before.startMin || next.endMin !== before.endMin
   const changes: AuditChange[] = []
@@ -155,10 +127,6 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
     changes.push({ field: 'status', label: 'Status', from: SESSION_STATUS_LABELS[before.status], to: SESSION_STATUS_LABELS[next.status] })
     actions.push('session.status')
   }
-  if ((next.subject ?? '') !== (before.subject ?? '')) {
-    changes.push({ field: 'subject', label: 'Subject', from: before.subject || null, to: next.subject || null })
-    actions.push('session.subject')
-  }
   if ((next.note ?? '') !== (before.note ?? '')) {
     changes.push({ field: 'note', label: 'Note', from: before.note || null, to: next.note || null })
     actions.push('session.note')
@@ -169,11 +137,9 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
   }
 
   const batch = writeBatch(db)
-  const ns = noShowAccounting(batch, ctx, before, patch.status)
   batch.update(branchDocRef(ctx.branchId, COL.sessions, before.id), {
     ...patch,
     ...(timeChanged ? timeFields(next.dateKey, next.startMin, next.endMin, ctx.timezone) : {}),
-    ...ns,
     ...(patch.status === 'confirmed' && before.status !== 'confirmed' ? { confirmedAt: serverTimestamp(), confirmedBy: ctx.actor.email } : {}),
     updatedAt: serverTimestamp(),
     updatedBy: ctx.actor.email,
@@ -184,7 +150,6 @@ export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, p
       'session.tutor': 'Changed the tutor of',
       'session.move': 'Moved',
       'session.status': 'Changed the status of',
-      'session.subject': 'Changed the subject of',
       'session.note': 'Changed the note on',
       'session.student': 'Changed the student of',
       'session.update': 'Updated',
@@ -323,8 +288,6 @@ export interface DuplicateSource {
   studentId: string
   studentName: string
   studentGrade: string
-  subjectId: string | null
-  subject: string
   note: string
   visualOrder?: number
 }
@@ -401,8 +364,6 @@ export async function duplicateIntoWeek(
               studentId: src.studentId,
               studentName: src.studentName,
               studentGrade: opts.liveGrade(src.studentId) ?? src.studentGrade,
-              subjectId: src.subjectId,
-              subject: src.subject,
               note: src.note,
               status: ctx.settings.schedule.pasteStatus,
               dateKey,

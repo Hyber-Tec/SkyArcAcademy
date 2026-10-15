@@ -6,7 +6,6 @@ const ctx = { now: NOW, today: '2026-09-30', windowHours: 24 }
 const s = (extra: Partial<SessionSnapshot> = {}): SessionSnapshot => ({
   tutorId: 'maya',
   studentName: 'Ava Patel',
-  subject: 'Algebra 2',
   status: 'confirmed',
   dateKey: '2026-09-30',
   startMin: 960,
@@ -46,15 +45,14 @@ describe('session notifications', () => {
     ])
   })
 
-  it('picks one change in TE order: no-show, date, time, subject', () => {
-    expect(sessionChangeNotices(s(), s({ status: 'no_show', subject: 'Geometry' }), ctx)[0].type).toBe('session_no_show')
-    expect(sessionChangeNotices(s(), s({ ...tomorrow, subject: 'Geometry' }), ctx)[0].body).toBe(
+  it('picks one change in order: no-show, date, time', () => {
+    expect(sessionChangeNotices(s(), s({ status: 'no_show', ...tomorrow }), ctx)[0].type).toBe('session_no_show')
+    expect(sessionChangeNotices(s(), s(tomorrow), ctx)[0].body).toBe(
       "Ava Patel's session moved from Wed, 9/30 to Thu, 10/1 at 10:00 AM – 11:50 AM.",
     )
     expect(sessionChangeNotices(s(), s({ startMin: 990, endMin: 1100 }), ctx)[0].body).toBe(
       "Ava Patel's session on Wed, 9/30: 4:00 PM – 5:50 PM → 4:30 PM – 6:20 PM.",
     )
-    expect(sessionChangeNotices(s(), s({ subject: 'Geometry' }), ctx)[0].type).toBe('session_subject_changed')
   })
 
   it('stays quiet for tentative, silent or far-away changes', () => {

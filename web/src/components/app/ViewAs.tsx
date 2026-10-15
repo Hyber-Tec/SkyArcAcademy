@@ -23,16 +23,16 @@ type PickRole = 'tutor' | 'parent' | 'student'
 
 const PICK_TITLE: Record<PickRole, string> = { tutor: 'Preview as a tutor', parent: 'Preview as a parent', student: 'Preview as a student' }
 
-/** Super Admin only: preview the app as another role. It changes what is shown, never their access. */
+/** Owners and admins: preview the app as another role. It changes what is shown, never their access. */
 export function ViewAsControl({ className }: { className?: string }) {
-  const { isSuperAdmin, viewAs, setViewAs, branchId } = useBranch()
+  const { canPreview, viewAs, setViewAs } = useBranch()
   const navigate = useNavigate()
   const [picking, setPicking] = useState<PickRole | null>(null)
-  if (!isSuperAdmin) return null
+  if (!canPreview) return null
 
   const go = (next: ViewAs | null) => {
     setViewAs(next)
-    navigate(`/${branchId}/${next ? portalOf(next.role) : 'admin'}`)
+    navigate(`/${next ? portalOf(next.role) : 'admin'}`)
   }
   const mark = (on: boolean) => <LuCheck className={cn('ml-auto size-4', on ? 'opacity-100' : 'opacity-0')} />
   const who = (role: PickRole) => (viewAs?.role === role ? <span className="max-w-28 truncate text-xs text-muted-foreground">{viewAs.name}</span> : null)
@@ -58,10 +58,10 @@ export function ViewAsControl({ className }: { className?: string }) {
         <DropdownMenuContent side="top" align="end" className="w-72">
           <DropdownMenuLabel className="text-violet-600 dark:text-violet-400">View the app as</DropdownMenuLabel>
           <DropdownMenuItem onSelect={() => go(null)}>
-            Yourself (Super Admin) {mark(!viewAs)}
+            Yourself {mark(!viewAs)}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => go({ role: 'admin' })}>
-            A regular admin {mark(viewAs?.role === 'admin')}
+            An admin {mark(viewAs?.role === 'admin')}
           </DropdownMenuItem>
           {(['tutor', 'parent', 'student'] as const).map((r) => (
             <DropdownMenuItem key={r} onSelect={() => setPicking(r)}>
@@ -71,7 +71,7 @@ export function ViewAsControl({ className }: { className?: string }) {
           ))}
           <DropdownMenuSeparator />
           <p className="px-2 py-1.5 text-xs text-muted-foreground">
-            Only changes what you see. Your access stays the same. Only super admins can see this.
+            Only changes what you see. Your access stays the same. Only owners and admins can see this.
           </p>
         </DropdownMenuContent>
       </DropdownMenu>

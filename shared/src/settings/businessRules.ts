@@ -1,26 +1,29 @@
 import { type DateKey, addDays } from '../time'
 
 /**
- * Core business rules of a branch (owner decision, round 2). The Super Admin
- * chooses them when creating the branch, after visiting the center, and only the
- * Super Admin changes them later (Platform page). They live in
- * `branches/{b}.businessRules`, which branch admins cannot write. Nothing here is
- * hard-coded to True Education: TE's values are just one possible setup.
+ * Core business rules of the academy: how coaches are paid and how many students a coach takes at once. They live in
+ * `branches/{b}.businessRules`; only the academy's owner changes them (Settings → Academy rules), and admins see them
+ * read-only.
  */
 
-/** Teaching only: tutors are paid for teaching time only. Teaching + Admin: TE's split. */
-export type PayModel = 'teaching_only' | 'teaching_admin'
+/**
+ * Hourly (Sky Arc's default): every clocked hour at the coach's rate. Teaching only: only time in classes is paid.
+ * Teaching + Admin: the class rate in classes and the admin rate for the rest of the shift (e.g. setting up).
+ */
+export type PayModel = 'hourly' | 'teaching_only' | 'teaching_admin'
 
-export const PAY_MODELS: readonly PayModel[] = ['teaching_only', 'teaching_admin']
+export const PAY_MODELS: readonly PayModel[] = ['hourly', 'teaching_admin', 'teaching_only']
 
 export const PAY_MODEL_LABELS: Record<PayModel, string> = {
+  hourly: 'Hourly',
   teaching_only: 'Teaching only',
   teaching_admin: 'Teaching + Admin',
 }
 
 export const PAY_MODEL_HELP: Record<PayModel, string> = {
+  hourly: 'Tutors are paid their teaching rate for every clocked hour.',
   teaching_only: 'Tutors are paid only for time spent teaching. Gaps and idle clocked-in time are unpaid.',
-  teaching_admin: 'Teaching rate for time in sessions, admin rate for the rest of the clocked shift.',
+  teaching_admin: 'Teaching rate for time in classes, admin rate for the rest of the clocked shift.',
 }
 
 export interface PayModelPeriod {
@@ -38,8 +41,6 @@ export interface BusinessRules {
   payModels: PayModelPeriod[]
   /** Students a tutor can teach at the same time (1 = strictly one-to-one). */
   maxStudentsPerTutor: number
-  /** Parent conferences every N tutoring hours. Off: nothing is tracked or shown. */
-  conferences: { enabled: boolean; everyHours: number }
 }
 
 /** From the beginning: the first pay model covers every earlier date. */
@@ -47,11 +48,10 @@ export const PAY_MODEL_SINCE_START: DateKey = '2000-01-01'
 
 export const MAX_STUDENTS_PER_TUTOR_LIMIT = 6
 
-/** A new branch's starting point; the Super Admin picks the real values at creation. */
+/** Until the owner sets them: hourly pay, and up to 6 students at once (a class block has 6 seats). */
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
-  payModels: [{ model: 'teaching_only', from: PAY_MODEL_SINCE_START }],
-  maxStudentsPerTutor: 1,
-  conferences: { enabled: false, everyHours: 25 },
+  payModels: [{ model: 'hourly', from: PAY_MODEL_SINCE_START }],
+  maxStudentsPerTutor: 6,
 }
 
 /** Stored rules with every gap filled from the defaults. */
@@ -63,10 +63,6 @@ export function resolveBusinessRules(stored: Partial<BusinessRules> | null | und
   return {
     payModels: payModels.length ? payModels : DEFAULT_BUSINESS_RULES.payModels,
     maxStudentsPerTutor: Number.isInteger(max) && max >= 1 ? Math.min(max, MAX_STUDENTS_PER_TUTOR_LIMIT) : DEFAULT_BUSINESS_RULES.maxStudentsPerTutor,
-    conferences: {
-      enabled: stored?.conferences?.enabled === true,
-      everyHours: Number(stored?.conferences?.everyHours) > 0 ? Number(stored?.conferences?.everyHours) : DEFAULT_BUSINESS_RULES.conferences.everyHours,
-    },
   }
 }
 
@@ -84,7 +80,7 @@ export function payModelChanges(rules: Pick<BusinessRules, 'payModels'>): PayMod
 
 /**
  * Earliest date a pay-model change may start: after the last locked pay period
- * (locked pay never changes). The Super Admin picks any date from here on.
+ * (locked pay never changes). The owner picks any date from here on.
  */
 export function earliestPayModelChange(lockedThrough: DateKey | null): DateKey | null {
   return lockedThrough ? addDays(lockedThrough, 1) : null

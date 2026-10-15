@@ -1,4 +1,4 @@
-import { deleteField, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
+import { query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
 import { useMemo } from 'react'
 import { LuLock } from 'react-icons/lu'
 import { toast } from 'sonner'
@@ -10,7 +10,6 @@ import { initials } from '@/components/app/BrandMark'
 import { PageHeader } from '@/components/app/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { addAudit } from '@/lib/audit'
@@ -32,9 +31,6 @@ export function AccessControlPage() {
     const batch = writeBatch(db)
     batch.update(branchDocRef(branchId, COL.members, member.id), {
       ...patch,
-      // Fields from before one role per person.
-      roles: deleteField(),
-      isOwner: deleteField(),
       updatedAt: serverTimestamp(),
       updatedBy: actor.email,
     })
@@ -74,7 +70,7 @@ export function AccessControlPage() {
         <Alert className="mb-4">
           <LuLock />
           <AlertTitle>View only</AlertTitle>
-          <AlertDescription>Only branch owners and platform admins can change access control.</AlertDescription>
+          <AlertDescription>Only owners can change access control.</AlertDescription>
         </Alert>
       ) : null}
       <div className="space-y-3">
@@ -137,12 +133,6 @@ export function AccessControlPage() {
           <p className="text-sm text-muted-foreground">No admins yet.</p>
         ) : null}
       </div>
-      <p className="mt-6 text-xs text-muted-foreground">
-        <Badge variant="outline" className="mr-2">
-          Tip
-        </Badge>
-        Platform admins (Super Admins) are never restricted.
-      </p>
     </div>
   )
 }

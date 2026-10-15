@@ -1,4 +1,4 @@
-import { type WriteBatch, deleteField, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { type WriteBatch, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { newMemberData } from '@shared/branchFactory'
 import { pickStaffColor } from '@shared/colors'
 import { COL, emailKey } from '@shared/paths'
@@ -47,7 +47,6 @@ export function newStaffData(input: {
     phone: '',
     role: input.role,
     status: 'active',
-    subjectIds: [],
     color: pickStaffColor(Math.floor(Math.random() * 10)),
     startDate: null,
     endDate: null,
@@ -74,15 +73,10 @@ export function newStudentData(input: { firstName: string; lastName: string; cre
     school: '',
     status: 'signed_up',
     statusSource: 'auto',
-    subjectIds: [],
-    learningNote: '',
     signUpDate: null,
     firstSessionDate: null,
     lastSessionDate: null,
     nextSessionDate: null,
-    totalSessionHours: 0,
-    conference: { baselineHours: 0, lastNoteDate: null, lastResetAt: null },
-    schoolRecord: { courses: {}, gradeSnapshots: [], plan: '' },
     followUpReviewedAt: null,
     createdBy: input.createdBy,
     updatedBy: input.createdBy,
@@ -135,7 +129,6 @@ export async function saveMember(opts: {
       if (staff?.role !== staffRole || (staff && !staff.email)) {
         batch.update(branchDocRef(branchId, COL.staff, staffId), {
           role: staffRole,
-          roles: deleteField(),
           ...(staff && !staff.email ? { email: key } : {}),
           updatedAt: serverTimestamp(),
           updatedBy: actor.email,
@@ -183,9 +176,6 @@ export async function saveMember(opts: {
       ...linkFields,
       // Restrictions apply to admins only.
       ...(role === 'admin' ? {} : { restrictions: [] }),
-      // Fields from before one role per person.
-      roles: deleteField(),
-      isOwner: deleteField(),
       updatedAt: serverTimestamp(),
       updatedBy: actor.email,
     })

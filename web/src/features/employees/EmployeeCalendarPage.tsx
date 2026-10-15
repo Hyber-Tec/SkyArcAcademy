@@ -183,8 +183,8 @@ function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teac
   }, [shifts, sessions, settings, rules, timezone, staff, comps, staffId, mode])
   const notes = {
     clock: 'Worked time from clock-ins and time entries.',
-    teaching: 'Clocked time inside sessions that count as teaching (logged sessions).',
-    admin: 'Clocked time outside teaching sessions.',
+    teaching: 'Clocked time paid as teaching time under the academy’s pay model.',
+    admin: 'Clocked time paid as admin time.',
   }
   return <HoursCalendar cells={cells} tone={mode} onRange={onRange} footnote={notes[mode]} />
 }

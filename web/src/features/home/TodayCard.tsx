@@ -1,12 +1,11 @@
 import { query, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
-import { LuCalendarDays, LuChevronDown, LuGraduationCap, LuNotebookPen, LuPencil } from 'react-icons/lu'
+import { LuCalendarDays, LuChevronDown, LuGraduationCap, LuPencil } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
 import type { Conflict } from '@shared/schedule/conflicts'
 import { occursOn } from '@shared/schedule/events'
-import { canLog } from '@shared/sessions/logs'
 import { type DateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -88,17 +87,12 @@ export function TodayCard({
   const hidden = list.length - visible.length
   const lineIndex = filter === 'all' && day.active.length > 0 ? currentRows.length : -1
   const hours = dayHours(today, settings, dayConfigs)
-  const loggable = settings.sessionLogs.allowForStatuses
-  const missingEarlier = day.earlier.filter((s) => s.logStatus !== 'submitted' && canLog(s.status, loggable)).length
 
   const stateOf = (s: WithId<Session>): { label: string; tone: Tone; pulse?: boolean; title?: string } => {
     if (s.status === 'canceled') return { label: 'Canceled', tone: 'muted' }
     if (s.status === 'no_show') return { label: 'No show', tone: 'danger' }
     const ended = ms(s.endAt) <= now
-    if (ended) {
-      if (s.logStatus === 'submitted') return { label: 'Logged', tone: 'done' }
-      return canLog(s.status, loggable) ? { label: 'Log missing', tone: 'warn' } : { label: 'Done', tone: 'muted' }
-    }
+    if (ended) return s.status === 'present' ? { label: 'Present', tone: 'done' } : { label: 'Done', tone: 'muted' }
     const conflicts = conflictsOf(s.id)
     if (conflicts?.length) return { label: 'In conflict', tone: 'danger', title: conflicts[0].message }
     if (ms(s.startAt) <= now) return { label: 'In progress', tone: 'live', pulse: true }
@@ -109,21 +103,14 @@ export function TodayCard({
 
   const sessionRow = (s: WithId<Session>, muted = false) => {
     const st = stateOf(s)
-    const logged = s.logStatus === 'submitted'
-    const logOk = logged || canLog(s.status, loggable)
     return (
       <ContextMenuFor
         key={s.id}
         entries={menu(
           { kind: 'label', label: `${s.studentName} · ${formatMinutes(s.startMin)}` },
           { label: 'Edit session…', icon: LuPencil, onSelect: () => onEdit(s) },
-          logOk && {
-            label: logged ? 'View session log' : 'Write session log',
-            icon: LuNotebookPen,
-            onSelect: () => window.open(`/${branchId}/session-log/${s.id}${logged ? '/view' : ''}`, '_blank', 'noopener'),
-          },
-          { label: 'Open in schedule', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`/${branchId}/admin/schedule/day/${today}`) },
-          { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`/${branchId}/admin/students/${s.studentId}`) },
+          { label: 'Open in schedule', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`/admin/schedule/day/${today}`) },
+          { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`/admin/students/${s.studentId}`) },
         )}
       >
         <li>
@@ -143,8 +130,6 @@ export function TodayCard({
                 {s.studentGrade ? <span className="font-normal text-muted-foreground"> · Grade {s.studentGrade}</span> : null}
               </div>
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="truncate">{s.subject || 'No subject'}</span>
-                <span className="text-muted-foreground/50">·</span>
                 <PersonDot name={s.tutorName} color={colorOf(s.tutorId)} size="xs" />
                 <span className="truncate">{s.tutorName}</span>
               </div>
@@ -225,7 +210,7 @@ export function TodayCard({
         <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
           <LuCalendarDays className="size-6 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{hours.isOpen ? 'No sessions today.' : 'The center is closed today.'}</p>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/${branchId}/admin/schedule/day/${today}`)}>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/schedule/day/${today}`)}>
             Open schedule
           </Button>
         </div>
@@ -241,7 +226,6 @@ export function TodayCard({
               >
                 <LuChevronDown className={cn('size-4 transition-transform', !showEarlier && '-rotate-90')} />
                 {plural(day.earlier.length, 'earlier session')}
-                {missingEarlier ? <span className="text-amber-700 dark:text-amber-400">· {plural(missingEarlier, 'log')} missing</span> : null}
               </button>
             </li>
           ) : null}

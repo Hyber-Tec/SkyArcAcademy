@@ -1,4 +1,4 @@
-import { LuArrowUpRight, LuCalendarClock, LuCalendarDays, LuGraduationCap, LuSparkles, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
+import { LuCalendarClock, LuCalendarDays, LuGraduationCap, LuSparkles, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { tutorConflictText } from '@shared/schedule/conflicts'
 import { isFirstSession } from '@shared/schedule/firstSession'
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatePill } from '@/features/home/parts'
 import { SESSION_CARD_STYLE } from '@/features/schedule/cardStyle'
 import { cn } from '@/lib/utils'
-import { leftText, logAction, openInNewTab, untilText } from '../sessionUi'
+import { leftText, untilText } from '../sessionUi'
 import type { TutorDay } from './useTutorDay'
 
 /** Sessions shown in the card before "and N more". */
@@ -22,9 +22,9 @@ const SHOWN = 3
  * next day with sessions.
  */
 export function NextUpCard({ t }: { t: TutorDay }) {
-  const { branchId, settings } = useBranch()
+  const { settings } = useBranch()
   const next = t.day.next
-  const tutor = `/${branchId}/tutor`
+  const tutor = `/tutor`
 
   if (t.loading) {
     return (
@@ -114,7 +114,6 @@ export function NextUpCard({ t }: { t: TutorDay }) {
       {next.kind === 'now' && next.then ? (
         <Footer>
           Then at <span className="font-medium text-foreground tabular-nums">{formatMinutes(next.then.startMin)}</span> · {next.then.studentName}
-          {next.then.subject ? `, ${next.then.subject}` : ''}
         </Footer>
       ) : null}
       {next.kind === 'day' ? (
@@ -138,13 +137,11 @@ export function NextUpCard({ t }: { t: TutorDay }) {
 }
 
 function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
-  const { branchId, settings } = useBranch()
+  const { settings } = useBranch()
   const student = t.student(s.studentId)
   const waiting = tutorConflictText(t.conflictsOf(s.id))
-  const action = logAction(s, { branchId, today: t.today, nowMin: t.nowMin, allowed: settings.sessionLogs.allowForStatuses })
   // The schedule bell's "First session" notice, from the same rule.
   const first = settings.schedule.alerts.firstSession && !!student && isFirstSession(s, student, t.sessions)
-  const learning = student?.learningNote?.trim()
   const bar = SESSION_CARD_STYLE[s.status]?.bar ?? '#a1a1aa'
   return (
     <li className="flex gap-4 px-5 py-4" data-testid="next-session">
@@ -166,8 +163,6 @@ function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            <span className="font-medium whitespace-nowrap text-foreground">{s.subject || 'No subject'}</span>
-            <span className="mx-1.5 text-muted-foreground/50">·</span>
             <span className="whitespace-nowrap tabular-nums">
               {formatMinutes(s.startMin)} – {formatMinutes(s.endMin)}
             </span>
@@ -180,11 +175,6 @@ function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
               {s.note}
             </p>
           ) : null}
-          {learning ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">About {s.studentName.split(' ')[0]}:</span> {learning}
-            </p>
-          ) : null}
           {waiting ? (
             <p className="mt-2.5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
               <LuTriangleAlert className="mt-0.5 size-3.5 shrink-0 text-red-600" />
@@ -195,18 +185,8 @@ function NextSession({ s, t }: { s: WithId<Session>; t: TutorDay }) {
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          {action ? (
-            <Button
-              variant={action.due || action.label === 'Session log' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => openInNewTab(action.path)}
-              data-testid="next-log"
-            >
-              {action.label} <LuArrowUpRight />
-            </Button>
-          ) : null}
           <Button variant="ghost" size="sm" asChild>
-            <Link to={`/${branchId}/tutor/students/${s.studentId}`}>
+            <Link to={`/tutor/students/${s.studentId}`}>
               <LuGraduationCap /> Student
             </Link>
           </Button>

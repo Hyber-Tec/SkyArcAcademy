@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process'
  * key is needed. Requests made this way bypass security rules (IAM access).
  */
 
-export const PROJECT_ID = process.env.HYBER_PROJECT ?? 'hyber-crm'
+export const PROJECT_ID = process.env.SKYARC_PROJECT ?? 'skyarcacademy'
 /** When set (e.g. 127.0.0.1:8080), talk to the Firestore emulator instead of production. */
 const EMULATOR = process.env.FIRESTORE_EMULATOR_HOST
 const BASE = EMULATOR
@@ -18,7 +18,7 @@ let cachedToken: { value: string; at: number } | null = null
 function token(): string {
   if (EMULATOR) return 'owner'
   if (!cachedToken || Date.now() - cachedToken.at > 30 * 60 * 1000) {
-    const account = process.env.HYBER_GCLOUD_ACCOUNT ? ` --account ${process.env.HYBER_GCLOUD_ACCOUNT}` : ''
+    const account = process.env.SKYARC_GCLOUD_ACCOUNT ? ` --account ${process.env.SKYARC_GCLOUD_ACCOUNT}` : ''
     cachedToken = { value: execSync(`gcloud auth print-access-token${account}`, { encoding: 'utf8' }).trim(), at: Date.now() }
   }
   return cachedToken.value

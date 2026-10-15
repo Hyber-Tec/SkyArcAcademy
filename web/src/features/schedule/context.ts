@@ -12,7 +12,7 @@ export type Selection =
   | null
 
 export interface BellItem {
-  kind: 'conference' | 'first_session'
+  kind: 'first_session'
   title: string
   subtitle: string
 }
@@ -22,8 +22,6 @@ export interface ScheduleUi {
   today: DateKey
   nowMin: number
   maxLanes: number
-  /** Statuses a log can be written for (settings.sessionLogs.allowForStatuses). */
-  loggableStatuses?: string[]
   snap: number
   defaultDuration: number
   selection: Selection
@@ -40,9 +38,6 @@ export interface ScheduleUi {
   moveSession: (id: string, staffId: string, dateKey: DateKey, startMin: number) => void
   resizeSession: (s: WithId<Session>, startMin: number, endMin: number) => void
   reorderSession: (draggedId: string, targetId: string) => void
-  openLog: (s: WithId<Session>) => void
-  /** A submitted log, read-only. */
-  viewLog: (s: WithId<Session>) => void
   openStudent: (s: WithId<Session>, newTab?: boolean) => void
   showBell: (s: WithId<Session>, items: BellItem[]) => void
   /** Tutors free at the session's time with a seat left; null when the schedule can't tell (one tutor shown). */

@@ -1,40 +1,35 @@
 /**
- * Creates (or refreshes) a branch with sample data, and makes sure the platform
- * owner is a Super Admin.
+ * Creates the academy's document (once) and its first owner, so the app has something to sign in to. Safe to run
+ * again: anything that already exists is left as it is. It never writes sample data; the academy's people are added in
+ * the app (Account page).
  *
- *   npm run seed                      # Demo Academy (demo-academy)
- *   npm run seed -- --branch my-test --name "My Test Center" --tz America/Chicago
- *   npm run seed -- --no-sample       # branch + super admin only
+ *   npm run seed                                     # production (skyarcacademy); first owner Goo
+ *   npm run seed -- --owner someone@example.com --owner-name "Someone"
  *
- * Uses the developer's gcloud login (see scripts/lib/firestore-rest.ts), or the
- * Firestore emulator when FIRESTORE_EMULATOR_HOST is set.
+ * Uses the developer's gcloud login (see scripts/lib/firestore-rest.ts), or the emulators when FIRESTORE_EMULATOR_HOST
+ * is set.
  */
 import { parseArgs } from 'node:util'
-import { validateBranchId } from '../shared/src/slug'
-import { seedBranch } from './lib/seedBranch'
+import { ACADEMY_ID } from '../shared/src/academy'
+import { seedAcademy } from './lib/seedAcademy'
 
 const { values } = parseArgs({
   options: {
-    branch: { type: 'string', default: 'demo-academy' },
-    name: { type: 'string', default: 'Demo Academy' },
+    name: { type: 'string', default: 'Sky Arc Sports Academy' },
+    'short-name': { type: 'string', default: 'Sky Arc' },
     tz: { type: 'string', default: 'America/New_York' },
-    'super-admin': { type: 'string', default: 'goochoi913@gmail.com' },
-    'no-sample': { type: 'boolean', default: false },
+    owner: { type: 'string', default: 'goochoi913@gmail.com' },
+    'owner-name': { type: 'string', default: 'Goo Choi' },
   },
 })
 
-const idError = validateBranchId(values.branch!)
-if (idError) {
-  console.error(`Invalid branch ID “${values.branch}”: ${idError}`)
-  process.exit(1)
-}
-
-seedBranch({
-  branchId: values.branch!,
+seedAcademy({
+  academyId: ACADEMY_ID,
   name: values.name!,
+  shortName: values['short-name']!,
   timezone: values.tz!,
-  superAdmin: values['super-admin']!,
-  sample: !values['no-sample'],
+  owner: values.owner!,
+  ownerName: values['owner-name']!,
 }).catch((e) => {
   console.error(e)
   process.exit(1)

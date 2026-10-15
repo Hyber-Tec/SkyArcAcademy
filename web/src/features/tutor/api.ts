@@ -36,7 +36,7 @@ export async function saveMyDetails(branchId: string, actor: Actor, staff: WithI
 export const NOTIFICATION_SWITCHES: { key: keyof NotificationPrefs; label: string; description: string }[] = [
   { key: 'announcements', label: 'Announcements', description: 'New posts from the center, and posts sent to you again.' },
   { key: 'sessionCreated', label: 'New sessions', description: 'A session booked for you.' },
-  { key: 'sessionChanged', label: 'Session changes', description: 'A new day, time or subject, a no-show, or a session moved to or from you.' },
+  { key: 'sessionChanged', label: 'Session changes', description: 'A new day or time, a no-show, or a session moved to or from you.' },
   { key: 'sessionCanceled', label: 'Cancellations', description: 'A confirmed session canceled, removed or put back.' },
 ]
 

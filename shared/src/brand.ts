@@ -6,14 +6,14 @@ export const APP_DOMAIN = 'hybercrm.com'
 export const APP_URL = `https://${APP_DOMAIN}`
 export const SENDER_EMAIL = 'hybertecofficial@gmail.com'
 
-/** The sign-in link for a branch; `email` pre-selects that Google account. */
-export function branchSignInUrl(branchId: string, email?: string | null, base = APP_URL): string {
-  const hint = email ? `&email=${encodeURIComponent(email)}` : ''
-  return `${base}/login?next=${encodeURIComponent(`/${branchId}`)}${hint}`
+/** The sign-in link; `email` pre-selects that Google account and fills in the email field. */
+export function signInUrl(email?: string | null, base = APP_URL): string {
+  return email ? `${base}/login?email=${encodeURIComponent(email)}` : `${base}/login`
 }
 
-export function branchSignupUrl(branchId: string, base = APP_URL): string {
-  return `${base}/${branchId}/signup`
+/** The page where a signed-in coach or parent asks the academy for access. */
+export function joinUrl(base = APP_URL): string {
+  return `${base}/join`
 }
 
 /** Addresses that never get email (tests, examples, and Demo Academy's logins on demo.hybercrm.com). */

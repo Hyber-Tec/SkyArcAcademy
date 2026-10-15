@@ -42,7 +42,6 @@ export interface ConflictSession {
   startMin: number
   endMin: number
   status: SessionStatus
-  logStatus?: string | null
   isDeleted?: boolean | null
 }
 
@@ -68,9 +67,9 @@ export interface ConflictContext {
 const CHECKED: ReadonlySet<SessionStatus> = new Set<SessionStatus>(['pending', 'confirmed'])
 const STUDENT_AWAY: ReadonlySet<StudentStatus> = new Set<StudentStatus>(['paused', 'finished', 'no_answer', 'not_interested'])
 
-/** Pending or confirmed, not deleted and not logged: the kind of session that can be in conflict. */
-export function isCheckable(s: Pick<ConflictSession, 'status' | 'logStatus' | 'isDeleted'>): boolean {
-  return !s.isDeleted && CHECKED.has(s.status) && s.logStatus !== 'submitted'
+/** Pending or confirmed and not deleted: the kind of session that can be in conflict. */
+export function isCheckable(s: Pick<ConflictSession, 'status' | 'isDeleted'>): boolean {
+  return !s.isDeleted && CHECKED.has(s.status)
 }
 
 /** Still ahead: later today or on a later date. */

@@ -149,112 +149,6 @@
       ]
     },
     {
-      "collectionGroup": "sessionLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "sessionLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "tutorId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "sessionLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "sessionLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sharedWithParents",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "sessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "logStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
@@ -269,24 +163,6 @@
       ]
     },
     {
-      "collectionGroup": "sessionLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "tutorId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dateKey",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "auditLog",
       "queryScope": "COLLECTION",
       "fields": [
@@ -296,66 +172,6 @@
         },
         {
           "fieldPath": "at",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "sharedWithParents",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "generatedBy.staffId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "progressReports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "generatedAt",
           "order": "DESCENDING"
         }
       ]
@@ -378,20 +194,6 @@
   "fieldOverrides": [
     {
       "collectionGroup": "members",
-      "fieldPath": "email",
-      "indexes": [
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION_GROUP"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "signupRequests",
       "fieldPath": "email",
       "indexes": [
         {

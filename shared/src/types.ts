@@ -23,14 +23,7 @@ export interface AuditStamp {
   updatedBy?: string | null
 }
 
-// ------------------------------------------------------------------ platform
-
-export interface PlatformAdmin {
-  email: string
-  name?: string
-  addedAt?: TimestampLike | null
-  addedBy?: string | null
-}
+// ------------------------------------------------------------------- academy
 
 export interface UserProfile {
   uid: string
@@ -69,9 +62,8 @@ export interface Branch extends AuditStamp {
   branding: BranchBranding
   contact: BranchContact
   settings: SettingsOverrides
-  /** Core rules the Super Admin sets at creation; admins can't change them (`resolveBusinessRules`). */
+  /** Core rules only the owner changes (`resolveBusinessRules`). */
   businessRules?: Partial<BusinessRules>
-  extensions: string[]
 }
 
 /** `branches/{b}/public/profile`: world-readable, used by the sign-up page and pickers. */
@@ -166,7 +158,6 @@ export interface Staff extends AuditStamp {
   phone: string
   role: StaffRole
   status: StaffStatus
-  subjectIds: string[]
   /** Calendar color for the schedule and Employee Calendar. */
   color: string
   startDate: DateKey | null
@@ -210,47 +201,12 @@ export interface Student extends AuditStamp {
   school: string
   status: StudentStatus
   statusSource: 'auto' | 'manual'
-  subjectIds: string[]
-  /** Visible to tutors: learning needs, focus areas. */
-  learningNote: string
   signUpDate: DateKey | null
   firstSessionDate: DateKey | null
   lastSessionDate: DateKey | null
   nextSessionDate: DateKey | null
-  totalSessionHours: number
-  conference: StudentConference
-  schoolRecord: StudentSchool
   /** Set when an admin first opens a new student (Home "new students to follow up"). */
   followUpReviewedAt: TimestampLike | null
-}
-
-export interface StudentConference {
-  /** Student hours when the last conference was held or the cycle was restarted. */
-  baselineHours: number
-  /** Date of the latest conference note. */
-  lastNoteDate: DateKey | null
-  lastResetAt: TimestampLike | null
-}
-
-export interface StudentSchool {
-  /** Grade column ("1"…"12") → course names, one per row. */
-  courses: Record<string, string[]>
-  /** Dated report-card snapshots: course name → grade. */
-  gradeSnapshots: { date: DateKey; grades: Record<string, string> }[]
-  plan: string
-}
-
-/** `students/{id}/conferenceNotes/{noteId}`: admin-only. */
-export interface ConferenceNote extends AuditStamp {
-  date: DateKey
-  text: string
-  categoryId: string | null
-  authorName: string
-}
-
-export interface ConferenceCategory {
-  name: string
-  color: string
 }
 
 export interface ParentContact {
@@ -267,36 +223,19 @@ export interface StudentPrivateProfile {
   dob: DateKey | null
   address: string
   parents: ParentContact[]
-  schoolLogin: string
   adminNote: string
   customFields: Record<string, string>
 }
 
-// ------------------------------------------------------------------ catalogs
-
-export interface SubjectCategory {
-  name: string
-  order: number
-}
-
-export interface Subject extends AuditStamp {
-  name: string
-  categoryId: string
-  order: number
-}
-
 // --------------------------------------------------------------- scheduling
 
-export type LogStatus = 'none' | 'draft' | 'submitted'
-
+/** `branches/{b}/sessions/{id}`: one student in one class (called a Class everywhere people see it). */
 export interface Session extends AuditStamp {
   tutorId: string
   tutorName: string
   studentId: string
   studentName: string
   studentGrade: string
-  subjectId: string | null
-  subject: string
   note: string
   status: SessionStatus
   dateKey: DateKey
@@ -308,9 +247,6 @@ export interface Session extends AuditStamp {
   /** Start of the next local day; rules refuse client edits once it has passed. */
   dayEndAt: TimestampLike
   visualOrder: number
-  logStatus: LogStatus
-  logSubmittedAt: TimestampLike | null
-  noShowAppliedHours: number | null
   confirmedAt: TimestampLike | null
   confirmedBy: string | null
   source: 'manual' | 'paste' | 'duplicate_week' | 'master' | 'student_calendar' | 'seed'
@@ -369,7 +305,7 @@ export interface ClockShift {
 
 // -------------------------------------------------------------------- audit
 
-export type AuditCategory = 'schedule' | 'event' | 'availability' | 'people' | 'pay' | 'sessions' | 'announcements' | 'settings' | 'access'
+export type AuditCategory = 'schedule' | 'event' | 'availability' | 'people' | 'pay' | 'announcements' | 'settings' | 'access'
 
 export interface AuditChange {
   field: string
@@ -384,7 +320,7 @@ export interface AuditEntry {
   actorUid: string
   actorEmail: string
   actorName: string
-  actorRole: Role | 'super_admin' | 'system'
+  actorRole: Role | 'system'
   action: string
   category: AuditCategory
   entityType: string

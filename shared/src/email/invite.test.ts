@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { branchSignInUrl, isReservedEmail } from '../brand'
+import { isReservedEmail, signInUrl } from '../brand'
 import { inviteEmail } from './invite'
 
 const base = {
@@ -8,7 +8,7 @@ const base = {
   role: 'tutor' as const,
   branchName: 'Demo Academy',
   inviterName: 'Grace Liu',
-  signInUrl: branchSignInUrl('demo-academy', 'maya@school.org'),
+  signInUrl: signInUrl('maya@school.org'),
 }
 
 describe('invite emails', () => {
@@ -18,14 +18,14 @@ describe('invite emails', () => {
     expect(e.text).toContain('Hi Maya,')
     expect(e.text).toContain('Grace Liu added you to Demo Academy on Hyber CRM as a tutor.')
     expect(e.text).toContain('a password for maya@school.org')
-    expect(e.html).toContain('href="https://hybercrm.com/login?next=%2Fdemo-academy&amp;email=maya%40school.org"')
+    expect(e.html).toContain('href="https://hybercrm.com/login?email=maya%40school.org"')
     expect(e.text).toContain('Hyber CRM is software by HyberTec LLC.')
   })
 
-  it('invites owners on behalf of HyberTec', () => {
-    const e = inviteEmail({ ...base, role: 'owner', inviterName: null, byHyberTec: true, kind: 'owner' })
-    expect(e.subject).toBe('Set up Demo Academy on Hyber CRM')
-    expect(e.text).toContain('HyberTec set up Demo Academy on Hyber CRM and made you its owner.')
+  it('tells new owners who made them an owner', () => {
+    const e = inviteEmail({ ...base, role: 'owner', kind: 'owner' })
+    expect(e.subject).toBe('You’re now an owner of Demo Academy')
+    expect(e.text).toContain('Grace Liu made you an owner of Demo Academy on Hyber CRM.')
   })
 
   it('tells approved sign-ups they are in', () => {

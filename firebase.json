@@ -3,11 +3,13 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "database": {
+    "rules": "database.rules.json"
+  },
   "storage": {
     "rules": "storage.rules"
   },
   "hosting": {
-    "target": "app",
     "public": "web/dist",
     "cleanUrls": true,
     "ignore": [
@@ -17,46 +19,17 @@
     ],
     "rewrites": [
       {
-        "source": "/api/inquiry",
-        "function": {
-          "functionId": "submitInquiry",
-          "region": "us-central1"
-        }
-      },
-      {
-        "source": "/demo/**",
-        "destination": "/demo.html"
-      },
-      {
         "source": "**",
         "destination": "/app.html"
       }
     ],
     "headers": [
       {
-        "source": "/.well-known/apple-app-site-association",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ]
-      },
-      {
         "source": "/assets/**",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        "source": "/landing/**",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=86400"
           }
         ]
       },
@@ -81,11 +54,14 @@
     ]
   },
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
     "firestore": {
       "port": 8080
     },
-    "auth": {
-      "port": 9099
+    "database": {
+      "port": 9000
     },
     "functions": {
       "port": 5001

@@ -1,10 +1,7 @@
-/** Firestore collection names. All branch data lives under `branches/{branchId}`. */
+/** Firestore collection names. All academy data lives under `branches/{ACADEMY_ID}` (shared/src/academy.ts). */
 export const ROOT = {
-  platformAdmins: 'platformAdmins',
   branches: 'branches',
   users: 'users',
-  /** "Talk to us" requests from the landing page (Super Admin only; DECISIONS §3). */
-  inquiries: 'inquiries',
 } as const
 
 export const COL = {
@@ -13,8 +10,6 @@ export const COL = {
   signupRequests: 'signupRequests',
   staff: 'staff',
   students: 'students',
-  subjectCategories: 'subjectCategories',
-  subjects: 'subjects',
   sessions: 'sessions',
   availability: 'availability',
   dayConfigs: 'dayConfigs',
@@ -22,14 +17,10 @@ export const COL = {
   auditLog: 'auditLog',
   clockShifts: 'clockShifts',
   openShifts: 'openShifts',
-  clockEvents: 'clockEvents',
   kioskPins: 'kioskPins',
   payroll: 'payroll',
   payPeriods: 'payPeriods',
-  sessionLogs: 'sessionLogs',
-  progressReports: 'progressReports',
   announcements: 'announcements',
-  conferenceCategories: 'conferenceCategories',
   notifications: 'notifications',
 } as const
 

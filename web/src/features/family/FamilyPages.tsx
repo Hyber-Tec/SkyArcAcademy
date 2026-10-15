@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { LuCalendarDays, LuChartLine, LuClock, LuList } from 'react-icons/lu'
+import { LuCalendarDays, LuClock, LuList } from 'react-icons/lu'
 import { STUDENT_STATUS_LABELS } from '@shared/people'
 import { addDays, formatDateKey, formatInstant, formatTimeRange, todayKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
@@ -11,12 +11,11 @@ import { Card } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { useSubjects } from '@/features/data/hooks'
 import { StudentMonthCalendar } from '@/features/schedule/StudentMonthCalendar'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
-import { ContactCard, FamilyStatus, ReportList, SessionDetails, SessionList, dayTitle } from './FamilyWidgets'
-import { useFamilySessions, useLinkedStudentIds, useSharedReports, useStudentsById } from './data'
+import { ContactCard, FamilyStatus, SessionDetails, SessionList, dayTitle } from './FamilyWidgets'
+import { useFamilySessions, useLinkedStudentIds, useStudentsById } from './data'
 
 function NotLinked({ who }: { who: 'parent' | 'student' }) {
   const { branch } = useBranch()
@@ -120,38 +119,6 @@ export function ParentHomePage() {
   )
 }
 
-/** Parent → progress reports the branch shared. */
-export function ParentReportsPage() {
-  const { branch } = useBranch()
-  const ids = useLinkedStudentIds('parent')
-  const { map: students } = useStudentsById(ids)
-  const { data: reports, loading } = useSharedReports(ids)
-  if (!ids.length) return <NotLinked who="parent" />
-  const groups = ids.map((id) => ({ id, name: students.get(id)?.name ?? 'Student', items: reports.filter((r) => r.studentId === id) })).filter((g) => g.items.length)
-  return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <PageHeader title="Progress reports" description={`Reports ${branch.name} has shared with you.`} className="mb-2" />
-      {loading ? (
-        <Skeleton className="h-40 w-full rounded-xl" />
-      ) : groups.length === 0 ? (
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyTitle>No reports yet</EmptyTitle>
-            <EmptyDescription>When {branch.name} shares a progress report, it will appear here.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        groups.map((g) => (
-          <section key={g.id} className="space-y-2">
-            {ids.length > 1 ? <h2 className="text-sm font-semibold">{g.name}</h2> : null}
-            <ReportList reports={g.items} />
-          </section>
-        ))
-      )}
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- student
 
 function useMe() {
@@ -160,14 +127,13 @@ function useMe() {
   return { ids, me: ids[0] ? (map.get(ids[0]) ?? null) : null, loading }
 }
 
-/** Student → Home: the next session, what's coming up and shared reports. */
+/** Student → Home: the next class and what's coming up. */
 export function StudentHomePage() {
   const { timezone } = useBranch()
   const { ids, me } = useMe()
   const now = useNow(60_000)
   const today = todayKey(timezone, now)
   const { data, loading } = useFamilySessions(ids, today, addDays(today, 28))
-  const { data: reports } = useSharedReports(ids)
   const upcoming = useMemo(() => data.filter((s) => s.status !== 'canceled' && s.endAt.toMillis() >= now), [data, now])
   const next = upcoming[0]
   const [open, setOpen] = useState<WithId<Session> | null>(null)
@@ -190,7 +156,7 @@ export function StudentHomePage() {
               <div className="text-xl font-semibold">{dayTitle(next.dateKey, today)}</div>
               <div className="text-sm tabular-nums">{formatTimeRange(next.startMin, next.endMin)}</div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                {next.subject || 'Tutoring session'} · with {next.tutorName}
+                with {next.tutorName}
                 <FamilyStatus status={next.status} />
               </div>
             </>
@@ -199,23 +165,13 @@ export function StudentHomePage() {
           )}
         </Card>
         <Card className="gap-1 p-5">
-          <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Hours of tutoring</div>
-          <div className="text-3xl font-semibold tabular-nums">{(me?.totalSessionHours ?? 0).toFixed(1)}</div>
-          <div className="text-xs text-muted-foreground">
-            {me?.lastSessionDate ? `Last session ${formatDateKey(me.lastSessionDate, 'monthDay')}` : me?.totalSessionHours ? '' : 'No sessions yet'}
-          </div>
+          <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Last session</div>
+          <div className="text-xl font-semibold">{me?.lastSessionDate ? formatDateKey(me.lastSessionDate, 'monthDay') : '—'}</div>
+          <div className="text-xs text-muted-foreground">{me?.lastSessionDate ? '' : 'No sessions yet'}</div>
         </Card>
       </div>
       <h2 className="pt-2 text-sm font-semibold">Coming up</h2>
       {loading ? <Skeleton className="h-48 w-full rounded-xl" /> : <SessionList sessions={data.filter((s) => s.endAt.toMillis() >= now)} empty="Nothing scheduled in the next 4 weeks." />}
-      {reports.length ? (
-        <>
-          <h2 className="flex items-center gap-2 pt-2 text-sm font-semibold">
-            <LuChartLine className="size-4" /> Progress reports
-          </h2>
-          <ReportList reports={reports} />
-        </>
-      ) : null}
       <ContactCard />
       <SessionDetails session={open} onClose={() => setOpen(null)} />
     </div>
@@ -242,20 +198,16 @@ export function StudentPortalCalendarPage() {
 export function StudentInfoPage() {
   const { branch } = useBranch()
   const { ids, me, loading } = useMe()
-  const { data: subjects } = useSubjects()
   if (!ids.length) return <NotLinked who="student" />
   if (loading) return <Skeleton className="mx-auto h-72 w-full max-w-3xl rounded-xl" />
   if (!me) return <NotLinked who="student" />
-  const subjectNames = me.subjectIds.map((id) => subjects.find((s) => s.id === id)?.name).filter(Boolean)
   const rows: [string, React.ReactNode][] = [
     ['Name', me.name],
     ['Grade', me.grade || '—'],
     ['School', me.school || '—'],
     ['Status', <Badge key="s" variant="secondary">{STUDENT_STATUS_LABELS[me.status] ?? me.status}</Badge>],
-    ['Subjects', subjectNames.length ? subjectNames.join(', ') : '—'],
     ['Signed up', me.signUpDate ? formatDateKey(me.signUpDate, 'medium') : '—'],
     ['First session', me.firstSessionDate ? formatDateKey(me.firstSessionDate, 'medium') : '—'],
-    ['Hours of tutoring', (me.totalSessionHours ?? 0).toFixed(1)],
   ]
   return (
     <div className="mx-auto max-w-3xl space-y-4">

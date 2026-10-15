@@ -5,13 +5,10 @@ import {
   LuArrowUp,
   LuCalendarDays,
   LuCircleAlert,
-  LuCircleCheck,
   LuExternalLink,
   LuGraduationCap,
   LuListFilter,
-  LuMessageSquareText,
   LuNotebookPen,
-  LuRefreshCw,
   LuSearch,
   LuUserPlus,
 } from 'react-icons/lu'
@@ -21,7 +18,6 @@ import { COL } from '@shared/paths'
 import {
   STUDENT_STATUSES,
   STUDENT_STATUS_LABELS,
-  conferenceState,
   isInactiveStudent,
   nextGrade,
   relativeDayLabel,
@@ -51,11 +47,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useStudentList } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
-import { cn } from '@/lib/utils'
-import { advanceGrades, createStudent, restartConferenceCycle, setStudentStatus } from './api'
+import { advanceGrades, createStudent, setStudentStatus } from './api'
 
-type SortKey = 'name' | 'grade' | 'signUp' | 'hours'
-type ConferenceFilter = 'all' | 'needed' | 'ok'
+type SortKey = 'name' | 'grade' | 'signUp'
 
 /** Student IDs a tutor teaches: sessions in the last 90 days or upcoming. */
 function useTaughtStudentIds(enabled: boolean): Set<string> | null {
@@ -70,27 +64,22 @@ function useTaughtStudentIds(enabled: boolean): Set<string> | null {
 }
 
 export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tutor' }) {
-  const { branchId, actor, rules, timezone } = useBranch()
+  const { branchId, actor, timezone } = useBranch()
   const navigate = useNavigate()
   const { data: students, loading } = useStudentList()
   const taught = useTaughtStudentIds(mode === 'tutor')
   const today = todayKey(timezone)
   const isAdmin = mode === 'admin'
-  const base = `/${branchId}/${mode}/students`
+  const base = `/${mode}/students`
 
   const [search, setSearch] = useState('')
   const [statuses, setStatuses] = useState<StudentStatus[]>([])
-  const [conference, setConference] = useState<ConferenceFilter>('all')
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'signUp', dir: 'desc' })
   const [creating, setCreating] = useState(false)
   const [advancing, setAdvancing] = useState(false)
 
-  // Parent conferences are a branch rule; when off, nothing about them shows.
-  const conferencesOn = rules.conferences.enabled
-  const cycle = rules.conferences.everyHours
-
   /** A student row's actions: right-click, or the "⋯" button. */
-  const rowMenu = (s: WithId<Student>, conf: { needed: boolean }) =>
+  const rowMenu = (s: WithId<Student>) =>
     menu(
       { kind: 'label', label: s.name },
       { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`${base}/${s.id}`) },
@@ -110,14 +99,6 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
           },
         ],
       },
-      isAdmin && conferencesOn && { label: 'Conference notes', icon: LuMessageSquareText, onSelect: () => navigate(`${base}/${s.id}/conference`), separatorBefore: true },
-      isAdmin &&
-        conferencesOn && {
-          label: `Skip & restart ${cycle} hours`,
-          icon: LuRefreshCw,
-          disabled: !conf.needed,
-          onSelect: () => void restartConferenceCycle(branchId, actor, s).then(() => toast.success(`Restarted the ${cycle}-hour cycle`)),
-        },
     )
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -125,12 +106,6 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
       .filter((s) => !taught || taught.has(s.id))
       .filter((s) => !q || s.nameLower.includes(q))
       .filter((s) => statuses.length === 0 || statuses.includes(s.status))
-      .filter((s) => {
-        if (conference === 'all' || !conferencesOn) return true
-        if (isInactiveStudent(s.status)) return false
-        const c = conferenceState({ totalSessionHours: s.totalSessionHours, baselineHours: s.conference?.baselineHours ?? 0 }, cycle)
-        return conference === 'needed' ? c.needed : !c.needed
-      })
     const dir = sort.dir === 'asc' ? 1 : -1
     return [...list].sort((a, b) => {
       switch (sort.key) {
@@ -138,8 +113,6 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
           return a.nameLower.localeCompare(b.nameLower) * dir
         case 'grade':
           return ((Number(a.grade) || 0) - (Number(b.grade) || 0)) * dir
-        case 'hours':
-          return ((a.totalSessionHours ?? 0) - (b.totalSessionHours ?? 0)) * dir
         case 'signUp': {
           const av = a.signUpDate ?? ''
           const bv = b.signUpDate ?? ''
@@ -149,14 +122,14 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
         }
       }
     })
-  }, [students, taught, search, statuses, conference, sort, cycle, conferencesOn])
+  }, [students, taught, search, statuses, sort])
 
   const header = (key: SortKey, label: string, className?: string) => (
     <TableHead className={className}>
       <button
         type="button"
         className="inline-flex items-center gap-1 hover:text-foreground"
-        onClick={() => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 'asc' ? 'desc' : 'asc') : key === 'hours' || key === 'signUp' ? 'desc' : 'asc' }))}
+        onClick={() => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 'asc' ? 'desc' : 'asc') : key === 'signUp' ? 'desc' : 'asc' }))}
       >
         {label}
         {sort.key === key ? sort.dir === 'asc' ? <LuArrowUp className="size-3" /> : <LuArrowDown className="size-3" /> : null}
@@ -213,18 +186,6 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        {conferencesOn ? (
-          <Select value={conference} onValueChange={(v) => setConference(v as ConferenceFilter)}>
-            <SelectTrigger className="sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Conference: All</SelectItem>
-              <SelectItem value="needed">Conference: Needed</SelectItem>
-              <SelectItem value="ok">Conference: Not needed</SelectItem>
-            </SelectContent>
-          </Select>
-        ) : null}
       </div>
       <Card className="py-0">
         <Table>
@@ -236,17 +197,13 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
               {header('signUp', 'Sign up', 'hidden lg:table-cell')}
               <TableHead className="hidden md:table-cell">Last session</TableHead>
               <TableHead className="hidden md:table-cell">Next session</TableHead>
-              {header('hours', 'Hours', 'hidden sm:table-cell')}
-              {conferencesOn ? <TableHead className="hidden xl:table-cell">Conference</TableHead> : null}
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((s) => {
-              const conf = conferenceState({ totalSessionHours: s.totalSessionHours, baselineHours: s.conference?.baselineHours ?? 0 }, cycle)
-              const showConf = !isInactiveStudent(s.status) && !!s.lastSessionDate
               return (
-                <ContextMenuFor key={s.id} entries={rowMenu(s, conf)}>
+                <ContextMenuFor key={s.id} entries={rowMenu(s)}>
                   <TableRow className="cursor-pointer" onClick={() => navigate(`${base}/${s.id}`)}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>{s.grade || '—'}</TableCell>
@@ -282,28 +239,8 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'tut
                     <TableCell className="hidden text-sm md:table-cell">
                       <DateWithRelative date={s.nextSessionDate && s.nextSessionDate >= today ? s.nextSessionDate : null} today={today} />
                     </TableCell>
-                    <TableCell className="hidden text-sm tabular-nums sm:table-cell">
-                      {s.lastSessionDate ? `${Math.round((s.totalSessionHours ?? 0) * 10) / 10}h` : '—'}
-                    </TableCell>
-                    {conferencesOn ? (
-                    <TableCell className="hidden xl:table-cell">
-                      {showConf ? (
-                        <span
-                          className={cn(
-                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums',
-                            conf.needed ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                          )}
-                        >
-                          {conf.needed ? <LuCircleAlert className="size-3" /> : <LuCircleCheck className="size-3" />}
-                          {conf.needed ? 'Conference due' : 'On track'} · {conf.hoursSince.toFixed(1)}/{cycle}h
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    ) : null}
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <ItemMenuButton entries={rowMenu(s, conf)} label="Actions" />
+                      <ItemMenuButton entries={rowMenu(s)} label="Actions" />
                     </TableCell>
                   </TableRow>
                 </ContextMenuFor>

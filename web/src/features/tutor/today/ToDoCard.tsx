@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowUpRight, LuCalendarClock, LuCalendarX2, LuCircleCheck, LuMegaphone, LuNotebookPen } from 'react-icons/lu'
+import { LuArrowUpRight, LuCalendarClock, LuCalendarX2, LuCircleCheck, LuMegaphone } from 'react-icons/lu'
 import { Link, useNavigate } from 'react-router'
 import { tutorConflictText } from '@shared/schedule/conflicts'
 import { addDays, dateKeyOf, formatDateKey, formatMinutes } from '@shared/time'
@@ -8,7 +8,6 @@ import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { plural } from '@/features/home/parts'
 import { cn } from '@/lib/utils'
-import { openInNewTab } from '../sessionUi'
 import type { TutorDay } from './useTutorDay'
 
 /** Items shown per kind before "Show N more". */
@@ -30,15 +29,14 @@ interface Item {
 }
 
 /**
- * What the tutor still has to do: logs to write (last two weeks), sessions
- * waiting for the admin, open days that still need availability, and posts
- * not read yet. Each line opens the place to do it.
+ * What the tutor still has to do: classes waiting for the admin, open days that still need availability, and posts not
+ * read yet. Each line opens the place to do it.
  */
 export function ToDoCard({ t }: { t: TutorDay }) {
-  const { branchId, settings, timezone } = useBranch()
+  const { settings, timezone } = useBranch()
   const navigate = useNavigate()
-  const tutor = `/${branchId}/tutor`
-  const { logs, waiting, gaps, unread, total } = t.todo
+  const tutor = `/tutor`
+  const { waiting, gaps, unread, total } = t.todo
   const day = (d: string) => (d === t.today ? 'Today' : d === addDays(t.today, -1) ? 'Yesterday' : d === addDays(t.today, 1) ? 'Tomorrow' : formatDateKey(d, 'weekdayMedium'))
 
   return (
@@ -54,7 +52,7 @@ export function ToDoCard({ t }: { t: TutorDay }) {
           <LuCircleCheck className="mt-0.5 size-5 shrink-0 text-emerald-600" />
           <div className="text-sm">
             <p className="font-medium">You’re all caught up.</p>
-            <p className="mt-0.5 text-muted-foreground">Logs are written, your availability is set and you’ve read every post.</p>
+            <p className="mt-0.5 text-muted-foreground">Your availability is set and you’ve read every post.</p>
           </div>
         </div>
       ) : (
@@ -67,24 +65,9 @@ export function ToDoCard({ t }: { t: TutorDay }) {
               subtitle="Something changed since booking. Don’t count on them until the admin moves, reassigns or cancels them."
               items={waiting.map((s) => ({
                 key: s.id,
-                title: `${s.studentName} · ${s.subject || 'No subject'}`,
+                title: s.studentName,
                 detail: `${day(s.dateKey)}, ${formatMinutes(s.startMin)} · ${(tutorConflictText(t.conflictsOf(s.id)) ?? '').replace(/ Waiting for the admin.*$/, '')}`,
                 onOpen: () => navigate(`${tutor}/schedule?date=${s.dateKey}`),
-              }))}
-            />
-          ) : null}
-          {logs.length ? (
-            <Group
-              icon={LuNotebookPen}
-              tone="amber"
-              title={`Write ${plural(logs.length, 'session log')}`}
-              subtitle={logs.length > 1 ? (logs[logs.length - 1].dateKey === t.today ? 'All from today' : `Oldest from ${day(logs[logs.length - 1].dateKey).replace(/^Yesterday$/, 'yesterday')}`) : undefined}
-              items={logs.map((s) => ({
-                key: s.id,
-                title: `${s.studentName} · ${s.subject || 'No subject'}`,
-                detail: `${day(s.dateKey)}, ${formatMinutes(s.startMin)}${s.logStatus === 'draft' ? ' · draft saved' : ''}`,
-                onOpen: () => openInNewTab(`/${branchId}/session-log/${s.id}`),
-                action: { label: s.logStatus === 'draft' ? 'Finish' : 'Write', external: true, onClick: () => openInNewTab(`/${branchId}/session-log/${s.id}`) },
               }))}
             />
           ) : null}

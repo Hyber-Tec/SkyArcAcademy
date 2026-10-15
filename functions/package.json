@@ -1,5 +1,5 @@
 {
-  "name": "hyber-crm-functions",
+  "name": "skyarc-functions",
   "private": true,
   "type": "module",
   "main": "lib/index.js",

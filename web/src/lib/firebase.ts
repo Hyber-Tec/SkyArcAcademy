@@ -4,17 +4,27 @@ import { connectFirestoreEmulator, initializeFirestore } from 'firebase/firestor
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions'
 import { connectStorageEmulator, getStorage } from 'firebase/storage'
 
+/** Local end-to-end mode: everything talks to the Firebase emulators (`npm run emulators`). */
+export const usingEmulators = import.meta.env.VITE_USE_EMULATORS === '1'
+
+/** The emulators run as a demo project, so nothing local can reach the real one. */
+const EMULATOR_PROJECT = 'demo-skyarc'
+
 // Google only accepts sign-in return addresses registered on the project's OAuth
 // client, which by default is just `https://{project}.firebaseapp.com/__/auth/handler`.
 // Register another domain's `/__/auth/handler` there before pointing authDomain at it.
-export const firebaseApp = initializeApp({
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-})
+export const firebaseApp = initializeApp(
+  usingEmulators
+    ? { apiKey: 'demo-key', authDomain: `${EMULATOR_PROJECT}.firebaseapp.com`, projectId: EMULATOR_PROJECT, storageBucket: `${EMULATOR_PROJECT}.appspot.com`, appId: 'demo-app' }
+    : {
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      },
+)
 
 export const auth = getAuth(firebaseApp)
 export const db = initializeFirestore(firebaseApp, { ignoreUndefinedProperties: true })
@@ -23,9 +33,6 @@ export const functions = getFunctions(firebaseApp, 'us-central1')
 
 export const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
-
-/** Local end-to-end mode: everything talks to the Firebase emulators. */
-export const usingEmulators = import.meta.env.VITE_USE_EMULATORS === '1'
 
 if (usingEmulators) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })

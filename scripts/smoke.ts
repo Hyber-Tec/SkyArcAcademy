@@ -1,6 +1,6 @@
 /**
  * Visits pages in headless Chrome and reports console errors and visible text.
- *   npx tsx scripts/smoke.ts /login /demo-academy/signup
+ *   npx tsx scripts/smoke.ts /login /join
  * Requires the dev server (npm run dev) and Google Chrome.
  */
 import { chromium } from 'playwright-core'

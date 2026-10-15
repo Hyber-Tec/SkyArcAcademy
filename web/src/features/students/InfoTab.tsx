@@ -17,7 +17,7 @@ import { EMPTY_PRIVATE, resumeAutoStatus, saveStudentInfo } from './api'
 import { Avatar } from './profile/IdentityColumn'
 import { ageOn } from './profile/model'
 
-type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'school' | 'status' | 'learningNote' | 'signUpDate'>
+type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'school' | 'status' | 'signUpDate'>
 
 const pickPublic = (s: Student): PublicForm => ({
   firstName: s.firstName ?? '',
@@ -25,7 +25,6 @@ const pickPublic = (s: Student): PublicForm => ({
   grade: s.grade ?? '',
   school: s.school ?? '',
   status: s.status,
-  learningNote: s.learningNote ?? '',
   signUpDate: s.signUpDate ?? null,
 })
 
@@ -143,10 +142,6 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
               </>
             ) : null}
           </dl>
-          <div className="mt-5 rounded-lg border-l-2 border-indigo-300 bg-indigo-50/40 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/20">
-            <div className="text-xs font-medium text-muted-foreground">Learning notes</div>
-            <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap">{student.learningNote || 'No learning notes yet.'}</p>
-          </div>
         </section>
 
         {!readOnly ? (
@@ -210,9 +205,6 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
                   <p className="mt-2 text-sm text-muted-foreground">No parents or guardians yet.</p>
                 )}
                 <dl className="mt-5 grid gap-x-6 gap-y-4 md:grid-cols-3">
-                  <Item label="School login information">
-                    <span className="whitespace-pre-wrap">{priv?.schoolLogin || '—'}</span>
-                  </Item>
                   <Item label="Internal notes">
                     <span className="whitespace-pre-wrap">{priv?.adminNote || '—'}</span>
                   </Item>
@@ -298,10 +290,6 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
               <Input id="sp-phone" type="tel" value={pform.phone} onChange={(e) => setP('phone', e.target.value)} />
             </Field>
           </div>
-          <Field>
-            <FieldLabel htmlFor="si-learning">Learning notes</FieldLabel>
-            <Textarea id="si-learning" rows={3} value={form.learningNote} onChange={(e) => set('learningNote', e.target.value)} placeholder="Goals, strengths, what works with this student…" />
-          </Field>
           <p className="-mt-2 text-xs text-muted-foreground">The student’s email and phone are for admins only; tutors see the rest of this section.</p>
         </FieldGroup>
       </section>
@@ -340,10 +328,6 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
             ))}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="sp-login">School login information</FieldLabel>
-              <Textarea id="sp-login" rows={2} value={pform.schoolLogin} onChange={(e) => setP('schoolLogin', e.target.value)} />
-            </Field>
             <Field>
               <FieldLabel htmlFor="sp-note">Internal notes</FieldLabel>
               <Textarea id="sp-note" rows={2} value={pform.adminNote} onChange={(e) => setP('adminNote', e.target.value)} />

@@ -4,10 +4,10 @@ import { DEFAULT_BUSINESS_RULES, earliestPayModelChange, payModelOn, resolveBusi
 describe('business rules', () => {
   it('fills gaps with the defaults and clamps nonsense', () => {
     expect(resolveBusinessRules(undefined)).toEqual(DEFAULT_BUSINESS_RULES)
-    const r = resolveBusinessRules({ maxStudentsPerTutor: 0, conferences: { enabled: true, everyHours: -3 } })
-    expect(r.maxStudentsPerTutor).toBe(1)
-    expect(r.conferences).toEqual({ enabled: true, everyHours: 25 })
+    expect(resolveBusinessRules({ maxStudentsPerTutor: 0 }).maxStudentsPerTutor).toBe(6)
     expect(resolveBusinessRules({ maxStudentsPerTutor: 99 }).maxStudentsPerTutor).toBe(6)
+    expect(resolveBusinessRules({ maxStudentsPerTutor: 2 }).maxStudentsPerTutor).toBe(2)
+    expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('hourly')
   })
 
   it('finds the pay model in force on a date', () => {

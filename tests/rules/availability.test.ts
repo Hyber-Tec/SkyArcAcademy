@@ -27,7 +27,7 @@ function block(staffId: string, dateKey: string) {
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: 'demo-hyber',
+    projectId: 'demo-skyarc',
     firestore: { rules: readFileSync(resolve(__dirname, '../../firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 },
   })
 })

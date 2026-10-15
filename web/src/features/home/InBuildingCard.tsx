@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { type DateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
-import { useBranch } from '@/branch/BranchProvider'
 import type { ClockShift } from '@/features/timeclock/api'
 import { cn } from '@/lib/utils'
 import { dayLabel } from './NeedsYouCard'
@@ -25,7 +24,6 @@ export function InBuildingCard({
   nowMin: number
   colorOf: (staffId: string) => string | null
 }) {
-  const { branchId } = useBranch()
   const navigate = useNavigate()
   const model = useMemo(() => {
     const open = shifts.filter((s) => s.status === 'open').sort((a, b) => a.clockInAt.toMillis() - b.clockInAt.toMillis())
@@ -52,7 +50,7 @@ export function InBuildingCard({
     return { open, expected, tutorsIn, scheduled: tutors.size }
   }, [shifts, sessions, nowMin])
 
-  const employee = (id: string) => navigate(`/${branchId}/admin/employees/directory/${id}`)
+  const employee = (id: string) => navigate(`/admin/employees/directory/${id}`)
 
   return (
     <section className="rounded-xl border bg-card p-4" data-testid="home-in-building">

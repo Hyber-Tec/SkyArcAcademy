@@ -14,7 +14,7 @@ describe('settings resolver', () => {
     })
     expect(s.schedule.snapMinutes).toBe(10)
     expect(s.schedule.autoConfirm).toEqual({ enabled: true, hoursBefore: 48 })
-    expect(s.schedule.defaultSessionMinutes).toBe(110)
+    expect(s.schedule.defaultSessionMinutes).toBe(60)
     expect(s.signup.roles).toEqual(['tutor'])
   })
 
