@@ -6,8 +6,9 @@ reports (SIUS target PDFs and paper-target photos) that parents can follow over 
 languages come once every feature works.
 
 It's forked from HyberTec's **HyberCRM** and runs on Firebase: Auth, Firestore, Storage, Cloud Functions and Hosting.
-Today it has HyberCRM's schedule, availability, employees, kiosk, payroll, announcements and access for one academy;
-the Sky Arc features (class slots, makeups, trials, reports) come next, in the order of
+Today it has HyberCRM's schedule, availability, employees, kiosk, payroll, announcements and access for one academy,
+plus Sky Arc's Drive (SIUS PDFs read and filed per student on upload) and progress reports for families; the other
+Sky Arc features (class slots, makeups, trials) come next, in the order of
 [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) §13, with the changes in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 - **Start here:** [`CLAUDE.md`](CLAUDE.md) (the rules, layout and commands) →

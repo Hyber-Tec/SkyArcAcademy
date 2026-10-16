@@ -85,12 +85,12 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 | Path | What |
 |---|---|
-| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code, `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
-| `shared/` | Pure TypeScript used by the website and the functions: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates. Unit tests sit next to the code. |
-| `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, nightly jobs. |
+| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports), `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
+| `shared/` | Pure TypeScript used by the website and the functions: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
+| `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
-| `tests/rules/` | Firestore rules tests (emulator). |
-| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
+| `tests/rules/` | Firestore and Storage rules tests (emulators). |
+| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
 | `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
@@ -99,7 +99,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - Install once: `npm ci && npm ci --prefix web && npm ci --prefix functions`.
 - Local, against the emulators (Java 21): `npm run emulators`, then `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed -- --owner you@example.test --owner-name "You"`, then `npm run dev:emulators` → http://127.0.0.1:5174. The emulators run as the `demo-skyarc` project, so nothing reaches production. Sign in from the browser console with `__skyarcSignIn('you@example.test')` (emulators only).
 - `npm run dev` → http://localhost:5173 against **production** Firebase (needs `web/.env.local`: copy `web/.env.example`; values in the Firebase console, Project settings → Your apps → Sky Arc). Real data: prefer the emulators.
-- Checks, as CI runs them: `bash scripts/check-repo.sh`, `npm run typecheck`, `npm test` (unit), `npm run lint`, `npm run build` (website → `web/dist`), `npm --prefix functions run build`, `npm run test:rules` (rules, emulator).
+- Checks, as CI runs them: `bash scripts/check-repo.sh`, `npm run typecheck`, `npm test` (unit: `shared/` and `scripts/`), `npm run lint`, `npm run build` (website → `web/dist`), `npm --prefix functions run build`, `npm run test:rules` (rules, emulator).
 - `npm run seed -- --owner <email> --owner-name "<name>"` → creates the academy and its first owner (production already has them; safe to run again; uses your gcloud login).
 - `npm run seed:sample` → adds the sample data (fictional people and ten weeks of classes) to production, or to the emulators with `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`; `npm run seed:sample -- --remove` deletes it.
 - `npx tsx scripts/smoke.ts /login /trial` → opens pages in headless Chrome and reports console errors (dev server running).

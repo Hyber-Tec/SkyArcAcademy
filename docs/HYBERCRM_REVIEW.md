@@ -704,7 +704,7 @@ type and scope.
 | 4 | `feat(schedule): …` | Class slots and enrollments with the generator, capacity, coach patterns and the Sunday rotation, derived shifts, attendance, importing the academy's schedule sheets |
 | 5 | `feat(schedule): …` | Parent cancellations under the academy's rule, notifications, makeup and trial labels |
 | 6 | `feat(kiosk): …` / `feat(payroll): …` | Kiosk device registration with the setup PIN, PIN hashing and limits, rate history (pay for classes taught is in) |
-| 7 | `feat(drive): …`, `feat(reports): …` | The Drive (a folder per student, drag-and-drop), the SIUS parser and fixtures, reports at the level of HyberCRM's progress report, trend, compare, parent notifications |
+| 7 | `feat(drive): …`, `feat(reports): …` | The Drive (a folder per student, drag-and-drop), the SIUS parser and fixtures, reports at the level of HyberCRM's progress report, trend, compare, parent notifications. *Built 2026-10-16 (DECISIONS §8).* |
 | 8 | Coach, student and parent portals | Their own pass, after the admin side |
 | 9 | Announcements, dashboard, settings and access clean-up | |
 | 10 | `feat(i18n): …` | Korean and other languages in one pass, once everything works |

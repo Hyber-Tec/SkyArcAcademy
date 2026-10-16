@@ -165,3 +165,37 @@ Goo's review of the questions for the academy, and the plan for the Drive, the r
   (the schedule and the rest), then students and parents.
 - **The web's coach, student and parent portals** are still close to HyberCRM's and get their own pass after the
   admin side.
+
+## 8. Built: the Drive and progress reports (2026-10-16)
+
+Calls made while building §7, within Goo's direction. Goo can overrule any of them.
+
+- **Who uses the Drive:** admins add, rename, move and trash; coaches can open and download (they see every student's
+  reports too, §6 Q11); families never see it. The Trash keeps items for Settings → Trash's days (14), then they're
+  deleted for good every night; "Delete forever" works any time.
+- **A folder per student, always:** every current student has a folder at the top from the start, named after the
+  student (it follows a rename and can't be trashed or moved). Other folders can be made anywhere, also inside a
+  student's.
+- **SIUS PDFs are read the moment they're dropped**, anywhere in the Drive: the time (moved into the academy's time
+  zone when the SIUS computer is set to another one, so A7 no longer causes wrong times), the program, the shots
+  with their directions, the totals. The admin confirms whose result it is (suggested from the file name, or fixed
+  when dropped into a student's folder) and the position (from the file name when it says). Each result is filed in
+  the student's folder as `YYYY-MM-DD Position Total.pdf` (the original name stays in its details), and its scores
+  are saved for the reports. The same result dropped twice is skipped. Any other file is stored as it is.
+- **Until the academy answers A6–A9:** a sighters-only result is kept as a file without scores; 21 or 22 match shots
+  all count, as SIUS's own total does; a `0.0` without an arrow isn't a shot; and the checks the samples passed
+  (series add up, inner tens, the printed MPI) flag anything odd for a look, without blocking the save.
+- **Paper cards:** their photos go in the Drive like any file; their scores are typed in (each bull, or the total)
+  from the photo's menu or the student's Scores tab, until the phone app reads them from the photo (§7).
+- **Comparing results:** every result is shown per 10 shots, in whole numbers out of 100 (every source) and in
+  decimals for SIUS results (§7: both).
+- **Reports** are made from a student's results and classes over a period (since the last report, last month, this
+  month, the last 30 or 90 days, or chosen dates). The words start as standard text built only from the figures; no AI
+  writes them. Admins edit them; admins and coaches share; a shared report is locked until an admin stops sharing it.
+  Families get an inbox item, and an email with a sign-in link when whoever shares asks for one.
+- **The trend** on a report is calculated: the second half of the period against the first, per position, weighted by
+  how many results each has. A point or more per 10 shots up is "Improving", a point and a half down "Dipping"
+  (families read "Building back up"), anything between "Steady".
+- **Sample data** now includes the sample students' shooting: about 100 results (most as synthetic SIUS PDFs in
+  their Drive folders, a few paper cards) and two reports, one shared with a family that has a sign-in. `npm run
+  seed:sample -- --remove` deletes them, files included.
