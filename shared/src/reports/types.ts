@@ -156,7 +156,7 @@ export interface ProgressReportDoc {
   notify: { status: 'sent' | 'not_configured' | 'failed' | 'skipped'; at: unknown; recipients: string[]; error: string | null } | null
   /** What it was built from; a different fingerprint now means the evaluations changed since. */
   source: { evaluationIds: string[]; fingerprint: string }
-  snapshot: { academyName: string; logoUrl: string | null; contact: { phone: string; email: string; website: string; address: string } }
+  snapshot: { academyName: string; contact: { phone: string; email: string; website: string; address: string } }
   facts: ReportFacts
   series: EvaluationPoint[]
   narrative: ReportNarrative

@@ -1,6 +1,7 @@
 /**
- * Rebuilds the app icons and the email logo from Sky Arc's mark (web/public/favicon.svg: the reticle and red dot of
- * the academy's logo, on black). Run it after changing the mark:
+ * Rebuilds the PNG copies of Sky Arc's official logos (CLAUDE.md, "Brand"): the app icons and the small email mark
+ * from the square icon (`brand/skyarc-icon-black.svg`), and the email logo and the link preview from the full logo
+ * (`brand/skyarc-logo.svg`). Email apps and link previews don't show SVG. Run it after the official files change:
  *   npx tsx scripts/brand-icons.ts
  * Requires Google Chrome.
  */
@@ -8,44 +9,58 @@ import { readFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
 const PUBLIC = new URL('../web/public/', import.meta.url).pathname
-const favicon = readFileSync(`${PUBLIC}favicon.svg`, 'utf8')
-// The drawing on the favicon's 64×64 tile, without the tile itself.
-const drawing = favicon.replace(/^[\s\S]*?<rect[^>]*\/>/, '').replace(/<\/svg>\s*$/, '')
-if (!drawing.includes('#FB0202')) throw new Error('Expected the favicon to be the 64×64 tile with the red dot')
+const icon = readFileSync(`${PUBLIC}brand/skyarc-icon-black.svg`, 'utf8')
+const logo = readFileSync(`${PUBLIC}brand/skyarc-logo.svg`, 'utf8')
+if (!icon.includes('#FB0202') || !logo.includes('#FB0202')) throw new Error('Expected the official Sky Arc files, with the red dot')
 
-interface Tile {
-  /** Corner radius, as a share of the size. */
-  radius: number
-  /** The drawing's size, as a share of the favicon's. */
-  scale: number
+const [, , logoW, logoH] = (/viewBox="([\d.\s]+)"/.exec(logo)?.[1] ?? '').split(/\s+/).map(Number)
+if (!logoW || !logoH) throw new Error('The full logo has no viewBox')
+
+/** The SVG drawn at a size: its own width and height replaced. */
+function sized(svg: string, width: number, height: number) {
+  return svg.replace(/<svg\b[^>]*>/, (tag) => tag.replace(/\swidth="[^"]*"/, ` width="${width}"`).replace(/\sheight="[^"]*"/, ` height="${height}"`))
 }
 
-function tile(size: number, { radius, scale }: Tile) {
-  const s = (size / 64) * scale
-  const offset = (size - 64 * s) / 2
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-<rect width="${size}" height="${size}" rx="${size * radius}" fill="#000"/>
-<g transform="translate(${offset} ${offset}) scale(${s})">${drawing}</g>
-</svg>`
+interface Job {
+  file: string
+  width: number
+  height: number
+  html: string
 }
 
-const JOBS: [file: string, size: number, tile: Tile][] = [
-  // Installed app: the favicon's rounded tile.
-  ['icons/icon-192.png', 192, { radius: 14 / 64, scale: 1 }],
-  ['icons/icon-512.png', 512, { radius: 14 / 64, scale: 1 }],
-  // Android masks this to the phone's shape, so the reticle stays inside the safe circle.
-  ['icons/maskable-512.png', 512, { radius: 0, scale: 0.8 }],
+/** The square icon, full bleed or with rounded corners (a share of the size). */
+function square(file: string, size: number, radius = 0): Job {
+  return { file, width: size, height: size, html: `<div style="width:${size}px;height:${size}px;border-radius:${radius * size}px;overflow:hidden">${sized(icon, size, size)}</div>` }
+}
+
+/** The full logo centred on white, `logoWidth` wide. */
+function onWhite(file: string, width: number, height: number, logoWidth: number): Job {
+  const h = Math.round((logoWidth * logoH) / logoW)
+  return { file, width, height, html: `<div style="width:${width}px;height:${height}px;background:#fff;display:flex;align-items:center;justify-content:center">${sized(logo, logoWidth, h)}</div>` }
+}
+
+const emailLogoWidth = 168 * 3
+const JOBS: Job[] = [
+  // Installed app: the icon with rounded corners, as computers show it.
+  square('icons/icon-192.png', 192, 14 / 64),
+  square('icons/icon-512.png', 512, 14 / 64),
+  // Android masks it to the phone's shape; the reticle already sits inside the safe circle.
+  square('icons/maskable-512.png', 512),
   // iPhone rounds the icon itself.
-  ['icons/apple-touch-icon.png', 180, { radius: 0, scale: 0.9 }],
-  // Emails show it at 36 px and round its corners.
-  ['brand/skyarc-email.png', 144, { radius: 0, scale: 1 }],
+  square('icons/apple-touch-icon.png', 180),
+  // Older emails show this mark at 36 px with rounded corners.
+  square('brand/skyarc-email.png', 144),
+  // Emails show the full logo at 168 px wide on their white card (shared/src/email/logo.ts), drawn at 3×.
+  onWhite('brand/skyarc-logo-email.png', emailLogoWidth, Math.round((emailLogoWidth * logoH) / logoW), emailLogoWidth),
+  // The picture a shared link shows (og:image).
+  onWhite('brand/skyarc-og.png', 1200, 630, 760),
 ]
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
-for (const [file, size, t] of JOBS) {
-  const page = await browser.newPage({ viewport: { width: size, height: size } })
-  await page.setContent(`<body style="margin:0">${tile(size, t)}</body>`)
-  await page.locator('svg').first().screenshot({ path: `${PUBLIC}${file}`, omitBackground: true })
+for (const job of JOBS) {
+  const page = await browser.newPage({ viewport: { width: job.width, height: job.height } })
+  await page.setContent(`<body style="margin:0">${job.html}</body>`)
+  await page.locator('body > div').first().screenshot({ path: `${PUBLIC}${job.file}`, omitBackground: true })
   await page.close()
 }
 await browser.close()

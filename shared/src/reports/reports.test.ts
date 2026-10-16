@@ -83,7 +83,7 @@ describe('report figures', () => {
 
   it('writes standard text that uses only the figures', () => {
     const doc = composeReport({
-      academy: { name: 'Sky Arc Academy', logoUrl: null, contact: { phone: '', email: '', website: '', address: '' } },
+      academy: { name: 'Sky Arc Academy', contact: { phone: '', email: '', website: '', address: '' } },
       student: { id: 'mia', name: 'Mia Larkin', firstName: 'Mia', lastName: 'Larkin', level: 'Scout', program: null },
       period: { from: '2026-09-01', to: '2026-09-30', preset: 'last_month' },
       evaluations,

@@ -8,7 +8,7 @@ import { COL, ROOT } from '@shared/paths'
 import { ROLE_LABELS, type Role } from '@shared/roles'
 import type { BranchPublicProfile, SignupRequest } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
-import { BrandMark } from '@/components/app/BrandMark'
+import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
 import { FullPageMessage, FullPageSpinner } from '@/components/app/FullPage'
 import { UserMenu } from '@/components/app/UserMenu'
@@ -53,10 +53,7 @@ export function BranchSignupPage() {
   return (
     <div className="min-h-svh bg-muted/40">
       <header className="mx-auto flex max-w-xl items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-3">
-          <BrandMark name={profile.name} logoUrl={profile.logoUrl} accentColor={profile.accentColor} className="size-10" />
-          <div className="font-semibold leading-tight">{profile.name}</div>
-        </div>
+        <SkyArcLogo className="h-12" />
         {user ? <UserMenu /> : null}
       </header>
       <main className="mx-auto max-w-xl px-4 pb-16">

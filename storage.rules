@@ -30,17 +30,6 @@ service firebase.storage {
       return isMember(b) && member(b).get('role', '') in ['owner', 'admin'];
     }
 
-    function isImage(maxBytes) {
-      return request.resource.size < maxBytes
-        && request.resource.contentType.matches('image/.*');
-    }
-
-    // The academy's logo is public: the homepage, sign-in and sign-up pages show it.
-    match /branches/{b}/branding/{file} {
-      allow read: if true;
-      allow write: if isAdmin(b) && (request.resource == null || isImage(2 * 1024 * 1024));
-    }
-
     match /branches/{b}/announcements/{rest=**} {
       allow read: if isMember(b);
       allow write: if isAdmin(b) && (request.resource == null || request.resource.size < 20 * 1024 * 1024);

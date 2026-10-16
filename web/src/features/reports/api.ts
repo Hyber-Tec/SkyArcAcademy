@@ -43,7 +43,6 @@ export async function createReport(opts: {
   const composed = composeReport({
     academy: {
       name: branch.name,
-      logoUrl: branch.branding?.logoUrl ?? null,
       contact: { phone: branch.contact?.phone ?? '', email: branch.contact?.email ?? '', website: branch.contact?.website ?? '', address: branch.contact?.address ?? '' },
     },
     student: { id: student.id, name: student.name, ...firstLast(student), level: student.level ?? null, program: student.program ?? null },

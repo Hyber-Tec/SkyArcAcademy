@@ -20,6 +20,7 @@ describe('invite emails', () => {
     expect(e.text).toContain('a password for maya@school.org')
     expect(e.html).toContain('href="https://skyarcacademy.web.app/login?email=maya%40school.org"')
     expect(e.text).toContain('Sky Arc Sports Academy · https://skyarcacademy.web.app')
+    expect(e.html).toContain('<img src="https://skyarcacademy.web.app/brand/skyarc-logo-email.png" width="168" height="81" alt="Sky Arc Sports Academy"')
   })
 
   it('tells new owners who made them an owner', () => {

@@ -58,7 +58,7 @@ export function CoachReportEditorPage() {
 
 function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admin' | 'coach'; listPath: string }) {
   const navigate = useNavigate()
-  const { branchId, branch, timezone, isAdmin, actor } = useBranch()
+  const { branchId, timezone, isAdmin, actor } = useBranch()
   const [editing, setEditing] = useState<Editing | null>(null)
   const [busy, setBusy] = useState<'save' | 'refresh' | null>(null)
   const [sharing, setSharing] = useState(false)
@@ -230,7 +230,7 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
 
       <div className="grid gap-6 p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="report-canvas -mx-4 min-w-0 py-6 sm:mx-0 sm:rounded-xl sm:px-4 sm:py-8">
-          <ReportDocument report={r} audience="family" timezone={timezone} logoUrl={branch.branding?.logoUrl ?? null} edit={editApi} />
+          <ReportDocument report={r} audience="family" timezone={timezone} edit={editApi} />
         </div>
         <ReportRail report={r} portal={portal} mayEdit={mayEdit && !editing} stale={stale} problems={problems} onRefresh={() => void refresh()} />
       </div>

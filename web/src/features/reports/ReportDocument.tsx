@@ -3,7 +3,7 @@ import { LuArrowRight, LuCheck, LuCrosshair, LuFlag, LuGitCompareArrows, LuMessa
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
 import { formatDateKey, formatInstant } from '@shared/time'
-import { SkyArcMark } from '@/components/app/SkyArcMark'
+import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { DistributionBar, TrendChart } from './charts'
@@ -72,13 +72,11 @@ export function ReportDocument({
   report: r,
   audience,
   timezone,
-  logoUrl,
   edit,
 }: {
   report: ProgressReportDoc
   audience: 'family' | 'staff'
   timezone: string
-  logoUrl?: string | null
   edit?: EditApi | null
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
@@ -88,7 +86,6 @@ export function ReportDocument({
   const o = r.options
   const editing = !!edit
   const brand = r.snapshot?.academyName ?? ''
-  const logo = logoUrl || r.snapshot?.logoUrl || null
   const prepared = toDate(r.sharedAt) ?? toDate(r.generatedAt)
   const preparedText = prepared ? formatInstant(prepared, timezone, { month: 'long', day: 'numeric', year: 'numeric' }) : formatDateKey(r.period.to, 'long')
   const contact = [brand, r.snapshot?.contact?.phone, r.snapshot?.contact?.email, r.snapshot?.contact?.website].filter(Boolean).join(' · ')
@@ -160,17 +157,10 @@ export function ReportDocument({
         <div className="relative px-6 pt-8 pb-7 sm:px-12" style={{ background: `linear-gradient(180deg, ${ACCENT}0d, transparent)` }}>
           <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: ACCENT }} />
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              {logo ? (
-                <img src={logo} alt="" className="size-11 shrink-0 rounded-xl border bg-white object-contain p-1" style={{ borderColor: INK.hairline }} />
-              ) : (
-                <SkyArcMark className="size-11" />
-              )}
-              <div className="min-w-0 leading-tight">
-                <div className="truncate text-[15px] font-semibold">{brand}</div>
-                <div className="text-[11px]" style={{ color: INK.muted }}>
-                  Progress report · {r.period.label}
-                </div>
+            <div className="min-w-0">
+              <SkyArcLogo tone="black" className="h-16" />
+              <div className="mt-2 text-[11px]" style={{ color: INK.muted }}>
+                Progress report · {r.period.label}
               </div>
             </div>
             <div className="hidden shrink-0 text-right text-[11px] sm:block" style={{ color: INK.muted }}>
@@ -281,7 +271,7 @@ export function ReportDocument({
             <span>
               {r.student.name} · {r.period.label}
             </span>
-            <span>{brand}</span>
+            <SkyArcLogo tone="black" className="h-9" />
           </div>
 
           <div className="mt-6 break-inside-avoid">

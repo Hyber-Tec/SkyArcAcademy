@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuButton } from '@/components/ui/sidebar'
-import { initials } from './BrandMark'
+import { initials } from '@shared/people'
 import { SignInSecurityDialog } from './SignInSecurity'
 import { ThemeSubmenu } from './ThemeToggle'
 

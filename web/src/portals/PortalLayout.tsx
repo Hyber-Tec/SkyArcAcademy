@@ -7,7 +7,7 @@ import { ActivityToasts } from '@/features/audit/ActivityToasts'
 import { useAttention } from '@/features/home/attention'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useBranch } from '@/branch/BranchProvider'
-import { BrandMark } from '@/components/app/BrandMark'
+import { SkyArcLogo, SkyArcMark } from '@/components/app/SkyArcMark'
 import { UserMenu } from '@/components/app/UserMenu'
 import { ViewAsControl } from '@/components/app/ViewAs'
 import { Button } from '@/components/ui/button'
@@ -156,12 +156,9 @@ function PortalSidebar({ portal }: { portal: Portal }) {
 
 const TOGGLE_KEYS = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘B' : 'Ctrl+B'
 
-/** Branch logo and name, with the sidebar's own open/close button (True Education's collapse arrow). */
+/** The official logo (it carries the academy's name) and the portal, with the sidebar's own open/close button. */
 function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
-  const { branch } = useBranch()
   const { state, isMobile, toggleSidebar } = useSidebar()
-  const mark = <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} />
-  const bigMark = <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} className="size-11 rounded-xl text-sm" />
 
   // Collapsed to icons: the logo opens the sidebar and shows the open icon on hover.
   if (state === 'collapsed' && !isMobile) {
@@ -170,7 +167,9 @@ function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" tooltip={`Open sidebar (${TOGGLE_KEYS})`} onClick={toggleSidebar} aria-label="Open sidebar" className="group/brand">
             <span className="relative flex size-8 shrink-0 items-center justify-center">
-              <span className="transition-opacity group-hover/brand:opacity-0">{mark}</span>
+              <span className="transition-opacity group-hover/brand:opacity-0">
+                <SkyArcMark />
+              </span>
               <LuPanelLeftOpen className="absolute size-4! opacity-0 transition-opacity group-hover/brand:opacity-100" />
             </span>
           </SidebarMenuButton>
@@ -179,20 +178,14 @@ function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
     )
   }
   return (
-    <div className="flex items-center gap-1">
-      <SidebarMenu className="min-w-0 flex-1">
-        <SidebarMenuItem>
-          <SidebarMenuButton size="lg" asChild className="h-15 gap-3 px-2">
-            <Link to={homeTo}>
-              {bigMark}
-              <div className="grid flex-1 gap-0.5 text-left leading-tight">
-                <span className="truncate text-base font-semibold tracking-tight">{branch.branding?.sidebarTitle || branch.name}</span>
-                <span className="truncate text-xs text-muted-foreground">{PORTAL_LABELS[portal]}</span>
-              </div>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+    <div className="flex items-start gap-1">
+      <Link
+        to={homeTo}
+        className="flex min-w-0 flex-1 flex-col items-start gap-1.5 rounded-md px-2 pt-2 pb-1.5 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      >
+        <SkyArcLogo className="h-auto w-40" />
+        <span className="truncate text-xs text-muted-foreground">{PORTAL_LABELS[portal]}</span>
+      </Link>
       {isMobile ? (
         <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label="Close menu">
           <LuPanelLeftClose />
@@ -213,15 +206,14 @@ function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
 
 /** Phones only: the sidebar is off-screen, so a slim bar opens it. */
 function MobileTopBar({ portal }: { portal: Portal }) {
-  const { branch } = useBranch()
   const { toggleSidebar } = useSidebar()
   return (
     <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
       <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu">
         <LuMenu />
       </Button>
-      <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} className="size-6" />
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{branch.branding?.sidebarTitle || branch.name}</span>
+      <SkyArcLogo className="h-9" />
+      <span className="flex-1" />
       {portal === 'coach' ? <NotificationBell /> : null}
       <UserMenu />
     </header>

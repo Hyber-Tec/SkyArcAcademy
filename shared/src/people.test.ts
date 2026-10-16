@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { autoStudentStatus } from './people'
+import { autoStudentStatus, initials } from './people'
 
 const on = { enabled: true, inactivityPauseDays: 20, respectManual: true }
 const today = '2026-10-01'
@@ -23,5 +23,14 @@ describe('student lifecycle', () => {
     expect(autoStudentStatus({ status: 'paused', statusSource: 'manual', lastSessionDate: null, hasUpcoming: true }, today, { ...on, respectManual: false })).toBe('enrolled')
     expect(autoStudentStatus({ status: 'finished', statusSource: 'auto', lastSessionDate: null, hasUpcoming: true }, today, on)).toBeNull()
     expect(autoStudentStatus({ status: 'signed_up', statusSource: 'auto', lastSessionDate: null, hasUpcoming: true }, today, { ...on, enabled: false })).toBeNull()
+  })
+})
+
+describe('initials', () => {
+  it('takes the first letters of the first two words', () => {
+    expect(initials('jiwoo hwang')).toBe('JH')
+    expect(initials('  Paige   Ann Sutton ')).toBe('PA')
+    expect(initials('Paige Ann Sutton', 3)).toBe('PAS')
+    expect(initials('')).toBe('?')
   })
 })
