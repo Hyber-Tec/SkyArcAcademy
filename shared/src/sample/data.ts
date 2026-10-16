@@ -162,6 +162,8 @@ const SCHOOLS = ['North Ridge Middle School', 'Lakeview High School', 'Maple Cre
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const sampleEmail = (first: string, last: string) => `${slug(first)}.${slug(last)}@${SAMPLE_EMAIL_DOMAIN}`
 export const sampleStaffId = (key: string) => `${SAMPLE_PREFIX}${key}`
+/** The sample manager (an admin), who files the sample results and prepares the sample reports. */
+export const SAMPLE_MANAGER = { name: `${MANAGER.first} ${MANAGER.last}`, email: sampleEmail(MANAGER.first, MANAGER.last) }
 export const sampleStudentId = (key: string) => `${SAMPLE_PREFIX}${key}`
 /** Phone numbers in 555-0100…0199, which exist nowhere. */
 const phone = (n: number) => `(678) 555-01${String(n % 100).padStart(2, '0')}`

@@ -15,7 +15,7 @@ const BASE = EMULATOR
 
 let cachedToken: { value: string; at: number } | null = null
 
-function token(): string {
+export function token(): string {
   if (EMULATOR) return 'owner'
   if (!cachedToken || Date.now() - cachedToken.at > 30 * 60 * 1000) {
     const account = process.env.SKYARC_GCLOUD_ACCOUNT ? ` --account ${process.env.SKYARC_GCLOUD_ACCOUNT}` : ''
