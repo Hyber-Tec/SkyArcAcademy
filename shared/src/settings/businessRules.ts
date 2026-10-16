@@ -52,10 +52,10 @@ export const PAY_MODEL_SINCE_START: DateKey = '2000-01-01'
 
 export const MAX_STUDENTS_PER_COACH_LIMIT = 6
 
-/** Until the owner sets them: pay for classes taught, and up to 6 students at once (a class block has 6 seats). */
+/** Until the owner changes them: pay for classes taught, and up to 5 students at once, as on the class sheets. */
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
   payModels: [{ model: 'classes', from: PAY_MODEL_SINCE_START }],
-  maxStudentsPerCoach: 6,
+  maxStudentsPerCoach: 5,
 }
 
 /** Stored rules with every gap filled from the defaults. */

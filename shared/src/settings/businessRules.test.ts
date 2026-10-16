@@ -4,7 +4,7 @@ import { DEFAULT_BUSINESS_RULES, earliestPayModelChange, payModelOn, resolveBusi
 describe('business rules', () => {
   it('fills gaps with the defaults and clamps nonsense', () => {
     expect(resolveBusinessRules(undefined)).toEqual(DEFAULT_BUSINESS_RULES)
-    expect(resolveBusinessRules({ maxStudentsPerCoach: 0 }).maxStudentsPerCoach).toBe(6)
+    expect(resolveBusinessRules({ maxStudentsPerCoach: 0 }).maxStudentsPerCoach).toBe(5)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 99 }).maxStudentsPerCoach).toBe(6)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 2 }).maxStudentsPerCoach).toBe(2)
     expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('classes')
