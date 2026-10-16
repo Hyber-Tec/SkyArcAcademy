@@ -42,3 +42,6 @@ service-account*.json
 .claude/*.local.json
 # each developer's own instructions for Claude Code: accounts, local paths (see CLAUDE.md)
 CLAUDE.local.md
+
+# Claude Code worktrees (parallel sessions), never committed.
+.claude/worktrees/

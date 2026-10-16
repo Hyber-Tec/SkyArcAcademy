@@ -22,6 +22,11 @@ export const COL = {
   payPeriods: 'payPeriods',
   announcements: 'announcements',
   notifications: 'notifications',
+  /** The Drive's folders and files (shared/src/drive/types.ts). */
+  driveFolders: 'driveFolders',
+  driveFiles: 'driveFiles',
+  /** Scored targets: SIUS results and paper cards (shared/src/shooting/evaluation.ts). */
+  evaluations: 'evaluations',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]

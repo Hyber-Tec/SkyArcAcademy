@@ -399,6 +399,84 @@ service cloud.firestore {
         allow create: if false;
       }
 
+      // ------------------------------------------------------ drive
+
+      // The Drive (shared/src/drive/types.ts): one folder per student at the top, plus any folders admins make.
+      // Staff open it; admins add, rename, move and trash. Nothing is deleted from the browser unless it's in the
+      // Trash (or a failed upload); families never see it.
+      function byMe(actor) {
+        return actor is map && actor.email == emailKey();
+      }
+
+      function validFolder(folderId, d) {
+        return d.keys().hasOnly(['name', 'parentId', 'studentId', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+                                 'trashed', 'trashedAt', 'trashedBy'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && (d.parentId == null || (d.parentId is string && d.parentId != folderId))
+          // A student's folder is named after the student, sits at the top and can't be trashed.
+          && (d.studentId == null
+              || (d.studentId is string && folderId == 'student-' + d.studentId && d.parentId == null
+                  && d.get('trashed', false) == false));
+      }
+
+      match /driveFolders/{folderId} {
+        allow read: if isStaff(b);
+        allow create: if isAdmin(b) && validFolder(folderId, request.resource.data)
+          && request.resource.data.get('trashed', false) == false
+          && byMe(request.resource.data.createdBy);
+        allow update: if isAdmin(b) && validFolder(folderId, request.resource.data)
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if isAdmin(b) && resource.data.get('trashed', false) == true;
+      }
+
+      function validFile(d) {
+        return d.keys().hasOnly(['name', 'size', 'kind', 'mime', 'status', 'error', 'folderId', 'studentId', 'evaluationId',
+                                 'originalName', 'uploadedAt', 'uploadedBy', 'updatedAt', 'updatedBy', 'trashed', 'trashedAt',
+                                 'trashedBy'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+          && d.size is int && d.size > 0 && d.size <= 100 * 1024 * 1024
+          && d.kind is string && d.mime is string
+          && d.status in ['uploading', 'ready', 'error']
+          && (d.folderId == null || d.folderId is string)
+          && (d.studentId == null || d.studentId is string);
+      }
+
+      match /driveFiles/{fileId} {
+        allow read: if isStaff(b);
+        // The record comes first (status uploading), then the bytes (storage.rules checks the record).
+        allow create: if isAdmin(b) && validFile(request.resource.data)
+          && request.resource.data.status == 'uploading'
+          && request.resource.data.get('trashed', false) == false
+          && byMe(request.resource.data.uploadedBy);
+        allow update: if isAdmin(b) && validFile(request.resource.data)
+          && request.resource.data.size == resource.data.size
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.mime == resource.data.mime
+          && request.resource.data.uploadedBy == resource.data.uploadedBy;
+        allow delete: if isAdmin(b) && (resource.data.get('trashed', false) == true || resource.data.status == 'error');
+      }
+
+      // ------------------------------------------------------ scores and reports
+
+      // Evaluations: one scored target each (a SIUS result or a paper card). Staff read them; admins keep them.
+      match /evaluations/{evaluationId} {
+        function validEvaluation(d) {
+          return d.studentId is string && d.studentName is string
+            && d.source in ['sius', 'paper']
+            && d.position in ['standing', 'kneeling', 'prone']
+            && d.dateKey is string && d.dateKey.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            && d.shots is int && d.shots >= 0 && d.shots <= 200
+            && d.total is number && d.wholeTotal is number
+            && d.series is list && d.series.size() <= 20
+            && d.note is string && d.note.size() <= 2000;
+        }
+
+        allow read: if isStaff(b);
+        allow create, update: if isAdmin(b) && validEvaluation(request.resource.data);
+        allow delete: if isAdmin(b);
+      }
+
       // ------------------------------------------------------ audit log
 
       match /auditLog/{entryId} {

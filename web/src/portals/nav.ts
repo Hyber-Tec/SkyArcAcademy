@@ -4,6 +4,7 @@ import {
   LuCalendarDays,
   LuCircleUserRound,
   LuGraduationCap,
+  LuHardDrive,
   LuHouse,
   LuMegaphone,
   LuSettings,
@@ -53,6 +54,7 @@ export const ADMIN_NAV: PortalNav = {
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
     {
       key: 'employees',
       label: 'Employees',
@@ -84,6 +86,7 @@ export const COACH_NAV: PortalNav = {
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
     { key: 'payroll', label: 'Payroll', to: 'payroll', icon: LuWallet },
   ],
   secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],

@@ -21,6 +21,8 @@ const adminRoutes: RouteObject[] = [
   { path: 'schedule/*', lazy: page(() => import('@/features/schedule/SchedulePage'), 'SchedulePage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'StudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },
+  { path: 'drive/trash', lazy: page(() => import('@/features/drive/DriveTrashPage'), 'DriveTrashPage') },
+  { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
   { path: 'employees', element: <Navigate to="directory" replace /> },
   { path: 'employees/directory', lazy: page(() => import('@/features/employees/EmployeeDirectoryPage'), 'EmployeeDirectoryPage') },
   { path: 'employees/directory/:staffId', lazy: page(() => import('@/features/employees/EmployeeDetailPage'), 'EmployeeDetailPage') },
@@ -75,6 +77,7 @@ const coachRoutes: RouteObject[] = [
   { path: 'availability', lazy: page(() => import('@/features/availability/CoachAvailabilityPage'), 'CoachAvailabilityPage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'CoachStudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'CoachStudentProfilePage') },
+  { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
   { path: 'payroll', lazy: page(() => import('@/features/timeclock/CoachPayrollPage'), 'CoachPayrollPage') },
   {
     path: 'profile',
