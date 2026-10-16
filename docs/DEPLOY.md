@@ -21,7 +21,7 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 
 | Target | From | Notes |
 |---|---|---|
-| Hosting | `web/dist` (built in CI) | |
+| Hosting | `web/dist` (built in CI) | Every address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
 | Storage rules | `storage.rules` | The academy's logo and announcement files. Report files get their own rules with the reports. See "Storage" below. |
@@ -204,7 +204,7 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
    it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
    `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
 5. **Sample data:** removed (see above).
-6. **Privacy policy:** approved by the academy (A17 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
+6. **Privacy policy:** approved by the academy (A10 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
    `web/src/pages/public/PrivacyPage.tsx` to the date it takes effect, and check the academy's contact details in
    Settings → Academy (the policy shows them). Families are invited and trial booking opens only after this.
 

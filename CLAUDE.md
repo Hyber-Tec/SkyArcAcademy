@@ -60,10 +60,13 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 ## Project Rules
 
 - **Single academy.** No multi-branch or super-admin UI (see the brief for how to handle HyberCRM's branch model).
-- **Web first.** Don't start the mobile app. Keep data and APIs mobile-ready.
+- **Web first.** Don't start the phone app; it comes after the web (Expo, iOS first). Keep data and APIs ready for it.
 - **Don't design the landing page.** Homepage is a minimal placeholder (logo, Login, Book a Trial).
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
-- **Configurable, not hard-coded:** operating hours, cancellation/makeup/trial rules, capacity, pay rates, pay period.
+- **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
+- **Few rules.** Add a rule only when the academy needs one: makeups and trials are labels on a class, and levels
+  change by hand (`docs/DECISIONS.md` §7). Ask the academy only what the app can't know; what it can set in Settings
+  isn't a question.
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
 - **Language:** English only while the features are built. Korean and other languages come in one pass once

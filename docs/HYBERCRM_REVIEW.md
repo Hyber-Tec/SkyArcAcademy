@@ -319,8 +319,8 @@ All paths are under `branches/skyarc/` unless marked root.
 |---|---|
 | Classes | class length, capacity per class (5, the sheets' usual cap) and per coach, coach lead time before class (30 min), rotation anchor week, levels (names, order, colors) |
 | Cancellations | parents may cancel, cutoff hours (24), late-cancel policy, whether a cancellation earns a makeup, who is notified |
-| Makeups | self-booking on, per-month limit, expires after (days), book-ahead window, minimum notice, which classes allow makeups |
-| Trials | on, visit length (30 min), visits (2), per-class limit, book-ahead window, minimum notice, page text in Korean and English |
+| Makeups | *Dropped: a makeup is a labeled class, without rules (DECISIONS §7).* |
+| Trials | *Dropped: a trial is a labeled class, without rules (DECISIONS §7).* |
 | Reports | publish on upload, notify parents (in-app and email), coaches may upload, coaches see all students |
 | Language | default language for new families |
 
@@ -380,6 +380,10 @@ conferences, the missing-log Home settings.
 
 ### The Sky Arc model
 
+*Changed by `docs/DECISIONS.md` §7 (2026-10-16): makeups and trials are labels on a class, without credits, limits or
+booking rules (items 7 and 8 shrink to that); opening hours are wider than the classes (item 12); and the academy's
+schedule sheets, past and current, are imported.*
+
 1. **`classSlots`** hold the weekly timetable (weekday, start, end, capacity, coaches on duty, whether makeups and
    trials may use it). **`enrollments`** put a student in a slot from a date (a Mon/Wed student has two).
 2. **A generator** (nightly, and on demand after a timetable change) creates each student's class records a few
@@ -411,7 +415,8 @@ conferences, the missing-log Home settings.
 11. **Attendance** (`markAttendance` callable): present / absent / late, allowed after the day ends (the rules'
     past-day lock otherwise blocks it). Absences can create makeup credits.
 12. **Opening hours** are seeded from the sheets: Mon 4:30–8, Tue and Wed 5–8, Thu 5–8:30, Sun 2–5:30, Fri and
-    Sat closed. All editable, per weekday and per date.
+    Sat closed. All editable, per weekday and per date. *Changed: 4–9 PM Monday to Thursday and 1–6 PM on Sunday, so
+    early clock-ins show too (DECISIONS §7).*
 
 ---
 
@@ -452,6 +457,11 @@ lets anyone with the password sign in elsewhere.
 ---
 
 ## 8. Progress reports and the SIUS PDFs
+
+*Changed by `docs/DECISIONS.md` §7 (2026-10-16): files come in through a Drive with a folder per student (drag in
+the SIUS PDFs; the app asks for the student and the position). Parents never see the PDFs or photos, only the app's
+own report, built at the level of HyberCRM's progress report (§8.2 to §8.4 change accordingly). Paper targets are
+photographed and scored by the phone app, later.*
 
 ### What HyberCRM's progress report is
 
@@ -691,13 +701,14 @@ type and scope.
 | 1 | #1 `chore: set up the Sky Arc repository, CI and deploys`, #2 `fix(deploy): make the deploy from main succeed` | Rules and brief, placeholder homepage, CI, deploys from `main`, Firebase config, deny-all rules |
 | 2 | `docs: review HyberCRM and plan the Sky Arc fork` | This document |
 | 3 | `refactor!: fork HyberCRM as the Sky Arc academy app` | Commits: the verbatim import of HyberCRM `d659d34` (`web` minus landing and demo, `shared` minus demo, `functions` minus platform/demo/inquiries, rules, indexes, tests, the useful scripts; no `mobile`, docs or env files); one academy without the tutoring features (flattened URLs, removals from §2, academy seed script); `tutor` → `coach` and the Class and Academy wording; Sky Arc branding; full CI and the Functions deploy; these docs |
-| 4 | `feat(schedule): …` | Opening hours, class slots and enrollments with the generator, capacity, coach patterns and the Sunday rotation, derived shifts, attendance |
-| 5 | `feat(schedule): parent cancellations, makeups and trial booking` | Callables, rules, notifications, `/trial` (Korean + English) |
-| 6 | `feat(kiosk): …` / `feat(payroll): …` | Kiosk identity, PIN hashing and limits, hourly pay, rate history |
-| 7 | `feat(reports): …` | SIUS parser and fixtures, bulk upload review, paper photos, viewer, trend, compare, parent notifications |
-| 8 | `feat(parents): …` + `feat(i18n): …` | Parent portal in Korean + English |
+| 4 | `feat(schedule): …` | Class slots and enrollments with the generator, capacity, coach patterns and the Sunday rotation, derived shifts, attendance, importing the academy's schedule sheets |
+| 5 | `feat(schedule): …` | Parent cancellations under the academy's rule, notifications, makeup and trial labels |
+| 6 | `feat(kiosk): …` / `feat(payroll): …` | Kiosk device registration with the setup PIN, PIN hashing and limits, rate history (pay for classes taught is in) |
+| 7 | `feat(drive): …`, `feat(reports): …` | The Drive (a folder per student, drag-and-drop), the SIUS parser and fixtures, reports at the level of HyberCRM's progress report, trend, compare, parent notifications |
+| 8 | Coach, student and parent portals | Their own pass, after the admin side |
 | 9 | Announcements, dashboard, settings and access clean-up | |
-| 10 | Then stop | The phone app is Phase 2 |
+| 10 | `feat(i18n): …` | Korean and other languages in one pass, once everything works |
+| 11 | Then the phone app | Expo, iOS first: admin (reports from paper-target photos), then coaches, then students and parents |
 
 ---
 

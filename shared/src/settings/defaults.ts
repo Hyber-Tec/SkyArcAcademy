@@ -107,13 +107,14 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     timeFormat: '12h',
   },
   schedule: {
-    // Sky Arc's class hours: Sun 2–5:30, Mon 4:30–8, Tue and Wed 5–8, Thu 5–8:30; Fri and Sat by arrangement only.
+    // Open hours, wider than the classes (Sun 2–5:30; Mon to Thu between 4:30 and 8:30) so the schedule also shows
+    // coaches arriving early and leaving late (docs/DECISIONS.md §7). Fri and Sat by arrangement only.
     defaultWeek: {
-      sunday: open(840, 1050),
-      monday: open(990, 1200),
-      tuesday: open(1020, 1200),
-      wednesday: open(1020, 1200),
-      thursday: open(1020, 1230),
+      sunday: open(780, 1080),
+      monday: open(960, 1260),
+      tuesday: open(960, 1260),
+      wednesday: open(960, 1260),
+      thursday: open(960, 1260),
       friday: closed(),
       saturday: closed(),
     },
