@@ -204,7 +204,7 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
    it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
    `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
 5. **Sample data:** removed (see above).
-6. **Privacy policy:** approved by the academy (A17 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
+6. **Privacy policy:** approved by the academy (A10 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
    `web/src/pages/public/PrivacyPage.tsx` to the date it takes effect, and check the academy's contact details in
    Settings → Academy (the policy shows them). Families are invited and trial booking opens only after this.
 
