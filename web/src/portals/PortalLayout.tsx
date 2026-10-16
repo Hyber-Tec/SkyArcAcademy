@@ -7,7 +7,7 @@ import { ActivityToasts } from '@/features/audit/ActivityToasts'
 import { useAttention } from '@/features/home/attention'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useBranch } from '@/branch/BranchProvider'
-import { SkyArcLogo, SkyArcMark } from '@/components/app/SkyArcMark'
+import { SkyArcLockup, SkyArcMark } from '@/components/app/SkyArcMark'
 import { UserMenu } from '@/components/app/UserMenu'
 import { ViewAsControl } from '@/components/app/ViewAs'
 import { Button } from '@/components/ui/button'
@@ -114,7 +114,7 @@ function PortalSidebar({ portal }: { portal: Portal }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarBrand portal={portal} homeTo={`${base}/${nav.main[0] && !isGroup(nav.main[0]) ? nav.main[0].to : ''}`} />
+        <SidebarBrand homeTo={`${base}/${nav.main[0] && !isGroup(nav.main[0]) ? nav.main[0].to : ''}`} />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -156,8 +156,8 @@ function PortalSidebar({ portal }: { portal: Portal }) {
 
 const TOGGLE_KEYS = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘B' : 'Ctrl+B'
 
-/** The official logo (it carries the academy's name) and the portal, with the sidebar's own open/close button. */
-function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
+/** The square icon and the wordmark (the academy's name), with the sidebar's own open/close button. */
+function SidebarBrand({ homeTo }: { homeTo: string }) {
   const { state, isMobile, toggleSidebar } = useSidebar()
 
   // Collapsed to icons: the logo opens the sidebar and shows the open icon on hover.
@@ -178,13 +178,9 @@ function SidebarBrand({ portal, homeTo }: { portal: Portal; homeTo: string }) {
     )
   }
   return (
-    <div className="flex items-start gap-1">
-      <Link
-        to={homeTo}
-        className="flex min-w-0 flex-1 flex-col items-start gap-1.5 rounded-md px-2 pt-2 pb-1.5 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-      >
-        <SkyArcLogo className="h-auto w-40" />
-        <span className="truncate text-xs text-muted-foreground">{PORTAL_LABELS[portal]}</span>
+    <div className="flex items-center gap-1">
+      <Link to={homeTo} className="flex min-w-0 flex-1 items-center rounded-lg p-1.5 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+        <SkyArcLockup />
       </Link>
       {isMobile ? (
         <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label="Close menu">
@@ -212,7 +208,7 @@ function MobileTopBar({ portal }: { portal: Portal }) {
       <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu">
         <LuMenu />
       </Button>
-      <SkyArcLogo className="h-9" />
+      <SkyArcLockup size="sm" />
       <span className="flex-1" />
       {portal === 'coach' ? <NotificationBell /> : null}
       <UserMenu />

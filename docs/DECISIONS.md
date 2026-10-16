@@ -205,10 +205,12 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
 ## 9. The official logos, and email switched on (2026-10-16)
 
 - **The academy's official logo files** arrived: the full logo (the name and the reticle) and three square versions.
-  The full logo now opens the sidebar, in place of the temporary square mark and the academy's name typed beside it,
-  and it's used wherever there's room: sign-in and sign-up pages, the phone's top bar, the kiosk, progress reports,
-  the top of every email and the picture a shared link shows. The square icon is the favicon, the app icons and the
-  closed sidebar. Which file goes where is in `CLAUDE.md`, "Brand and logos", for every developer and session, and
+  The full logo is used wherever there's room: sign-in and sign-up pages (centered on the card), the kiosk, progress
+  reports, the top of every email and the picture a shared link shows. The square icon is the favicon, the app icons
+  and the closed sidebar.
+- **The top of the navigation** is the owner's layout from Figma: the square icon with the wordmark beside it
+  (`Group 112.svg`, "SKY ARC" over "SPORTS ACADEMY"), in place of the temporary square mark and the academy's name
+  typed beside it, and without the portal's name. The phone's top bar shows the same, smaller. Which file goes where is in `CLAUDE.md`, "Brand and logos", for every developer and session, and
   for the phone app later.
 - **Settings → Branding is gone.** It came from HyberCRM (an uploaded logo, a brand color, a sidebar title) and could
   replace the official logo; the brand is fixed in the code now. Production had nothing set there, and reports no
