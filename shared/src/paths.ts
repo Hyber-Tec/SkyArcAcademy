@@ -27,6 +27,7 @@ export const COL = {
   driveFiles: 'driveFiles',
   /** Scored targets: SIUS results and paper cards (shared/src/shooting/evaluation.ts). */
   evaluations: 'evaluations',
+  progressReports: 'progressReports',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]

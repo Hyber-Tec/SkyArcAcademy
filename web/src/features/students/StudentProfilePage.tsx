@@ -1,7 +1,7 @@
 import { serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useEffect, useMemo, useRef } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowLeft, LuCalendarDays, LuNotebookPen, LuUserRound } from 'react-icons/lu'
+import { LuArrowLeft, LuCalendarDays, LuNotebookPen, LuTarget, LuUserRound } from 'react-icons/lu'
 import { Link, useNavigate, useParams } from 'react-router'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
@@ -16,6 +16,7 @@ import { branchDocRef, useDoc } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { studentPrivateRef } from './api'
 import { InfoTab } from './InfoTab'
+import { ScoresTab } from './ScoresTab'
 import { IdentityColumn, type ProfileTab } from './profile/IdentityColumn'
 import { useStudentActivity } from './profile/useStudentActivity'
 import { SessionsTab } from './SessionsTab'
@@ -23,6 +24,7 @@ import { StudentCalendarView } from './StudentCalendarView'
 
 const TABS: { key: ProfileTab; label: string; icon: IconType; adminOnly: boolean }[] = [
   { key: 'sessions', label: 'Classes', icon: LuNotebookPen, adminOnly: false },
+  { key: 'scores', label: 'Scores', icon: LuTarget, adminOnly: false },
   { key: 'info', label: 'Info', icon: LuUserRound, adminOnly: false },
   { key: 'calendar', label: 'Calendar', icon: LuCalendarDays, adminOnly: false },
 ]
@@ -134,6 +136,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
             {active === 'sessions' ? (
               <SessionsTab mode={mode} activity={activity} onOpenSession={openSession} />
             ) : null}
+            {active === 'scores' ? <ScoresTab student={student} mode={mode} /> : null}
             {active === 'info' ? <InfoTab key={student.id} student={student} readOnly={!isAdmin} priv={priv ?? null} privLoading={privLoading} /> : null}
             {active === 'calendar' ? (
               <StudentCalendarView studentId={student.id} readOnly={!isAdmin} onCreate={(d) => newSession(d)} onOpen={(s) => sessionDialog.openEdit(s)} />

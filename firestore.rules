@@ -477,6 +477,66 @@ service cloud.firestore {
         allow delete: if isAdmin(b);
       }
 
+      // Progress reports: admins make and edit drafts; admins and coaches share them (docs/DECISIONS.md §6, Q11:
+      // coaches read every report and may share one, never change or delete it); families read their own children's
+      // shared reports. Who was told, and the first view, are written by Cloud Functions.
+      match /progressReports/{reportId} {
+        function shared() {
+          return resource.data.sharedWithParents == true;
+        }
+
+        function sharingOnly() {
+          return changed().hasOnly(['status', 'sharedWithParents', 'sharedAt', 'sharedBy', 'updatedAt', 'updatedBy']);
+        }
+
+        allow read: if isStaff(b)
+          || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b) && shared())
+          || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b) && shared());
+        allow create: if isAdmin(b)
+          && request.resource.data.schemaVersion == 1
+          && request.resource.data.status == 'draft'
+          && request.resource.data.sharedWithParents == false
+          && request.resource.data.studentId is string
+          && byMe(request.resource.data.generatedBy)
+          && request.resource.data.notify == null
+          && request.resource.data.firstViewedAt == null;
+        allow update: if (
+            // A draft: admins edit anything but whose report it is and what the server writes.
+            isAdmin(b) && resource.data.status == 'draft'
+            && request.resource.data.status == 'draft' && request.resource.data.sharedWithParents == false
+            && request.resource.data.studentId == resource.data.studentId
+            && !changed().hasAny(['schemaVersion', 'notify', 'firstViewedAt', 'generatedAt', 'generatedBy'])
+            && stampedNow()
+          ) || (
+            // Sharing a draft with the family: admins and coaches.
+            isStaff(b) && sharingOnly() && resource.data.status == 'draft'
+            && request.resource.data.status == 'shared' && request.resource.data.sharedWithParents == true
+            && request.resource.data.sharedAt == request.time && byMe(request.resource.data.sharedBy)
+          ) || (
+            // Stopping sharing (back to a draft): admins.
+            isAdmin(b) && sharingOnly() && resource.data.status == 'shared'
+            && request.resource.data.status == 'draft' && request.resource.data.sharedWithParents == false
+          ) || (
+            isAdmin(b) && changed().hasOnly(['customName', 'updatedAt', 'updatedBy'])
+          );
+        allow delete: if isAdmin(b);
+
+        // A family member's first opening of a shared report (written once).
+        match /views/{viewerKey} {
+          function report() {
+            return get(/databases/$(database)/documents/branches/$(b)/progressReports/$(reportId)).data;
+          }
+
+          allow read: if isStaff(b);
+          allow create: if viewerKey == emailKey()
+            && request.resource.data.viewedAt == request.time
+            && report().sharedWithParents == true
+            && ((hasRole(b, 'parent') && report().studentId in myStudentIds(b))
+              || (hasRole(b, 'student') && report().studentId == myStudentId(b)));
+          allow update, delete: if false;
+        }
+      }
+
       // ------------------------------------------------------ audit log
 
       match /auditLog/{entryId} {

@@ -23,6 +23,8 @@ const adminRoutes: RouteObject[] = [
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },
   { path: 'drive/trash', lazy: page(() => import('@/features/drive/DriveTrashPage'), 'DriveTrashPage') },
   { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
+  { path: 'reports', lazy: page(() => import('@/features/reports/ReportsPage'), 'ReportsPage') },
+  { path: 'reports/:reportId', lazy: page(() => import('@/features/reports/ReportEditorPage'), 'ReportEditorPage') },
   { path: 'employees', element: <Navigate to="directory" replace /> },
   { path: 'employees/directory', lazy: page(() => import('@/features/employees/EmployeeDirectoryPage'), 'EmployeeDirectoryPage') },
   { path: 'employees/directory/:staffId', lazy: page(() => import('@/features/employees/EmployeeDetailPage'), 'EmployeeDetailPage') },
@@ -78,6 +80,8 @@ const coachRoutes: RouteObject[] = [
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'CoachStudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'CoachStudentProfilePage') },
   { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
+  { path: 'reports', lazy: page(() => import('@/features/reports/ReportsPage'), 'CoachReportsPage') },
+  { path: 'reports/:reportId', lazy: page(() => import('@/features/reports/ReportEditorPage'), 'CoachReportEditorPage') },
   { path: 'payroll', lazy: page(() => import('@/features/timeclock/CoachPayrollPage'), 'CoachPayrollPage') },
   {
     path: 'profile',
@@ -97,6 +101,7 @@ const coachRoutes: RouteObject[] = [
 const parentRoutes: RouteObject[] = [
   { index: true, element: <Navigate to="home" replace /> },
   { path: 'home', lazy: page(() => import('@/features/family/FamilyPages'), 'ParentHomePage') },
+  { path: 'reports', lazy: page(() => import('@/features/family/ReportsPages'), 'ParentReportsPage') },
   { path: '*', element: <Navigate to="/parent/home" replace /> },
 ]
 
@@ -105,6 +110,7 @@ const studentRoutes: RouteObject[] = [
   { path: 'home', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentHomePage') },
   { path: 'calendar', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentPortalCalendarPage') },
   { path: 'profile', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentInfoPage') },
+  { path: 'reports', lazy: page(() => import('@/features/family/ReportsPages'), 'StudentReportsPage') },
   { path: '*', element: <Navigate to="/student/home" replace /> },
 ]
 
@@ -122,6 +128,8 @@ export const academyRoute: RouteObject = {
   ),
   children: [
     { path: '/app', element: <PortalHomeRedirect /> },
+    // A progress report as families see it, printable (staff open it too); the rules decide who may read it.
+    { path: '/report/:reportId', lazy: page(() => import('@/features/reports/ReportPage'), 'ReportPage') },
     {
       path: '/admin',
       element: (
