@@ -22,7 +22,8 @@ const BULLS = 10
 
 /**
  * A paper card's scores, typed in: the student, the position, the date written on the card, and either the ten
- * bulls or just the total. Scoring from a photo comes with the phone app (docs/DECISIONS.md §7).
+ * bulls or just the total. Cards scanned with the phone app open here too: one box per shot (two per bull on some
+ * cards), and a shot whose score stays keeps its place on the target.
  */
 export function PaperScoreDialog({
   open,
@@ -46,12 +47,14 @@ export function PaperScoreDialog({
   const { branchId, actor, timezone } = useBranch()
   const today = todayKey(timezone)
   const { data: students } = useStudentList(open)
-  const firstShots = existing?.series[0]?.shots.map((s) => String(s.v)) ?? []
+  const existingShots = existing?.series[0]?.shots ?? []
+  const slots = Math.max(BULLS, existingShots.length)
+  const firstShots = existingShots.map((s) => String(s.v))
   const [studentId, setStudentId] = useState<string | null>(existing?.studentId ?? fixedStudent)
   const [position, setPosition] = useState<Position | null>(existing?.position ?? suggestedPosition)
   const [dateKey, setDateKey] = useState<DateKey>(existing?.dateKey ?? today)
   const [mode, setMode] = useState<'bulls' | 'total'>(existing && !firstShots.length ? 'total' : 'bulls')
-  const [bulls, setBulls] = useState<string[]>(firstShots.length === BULLS ? firstShots : Array.from({ length: BULLS }, () => ''))
+  const [bulls, setBulls] = useState<string[]>(firstShots.length === slots ? firstShots : Array.from({ length: slots }, () => ''))
   const [total, setTotal] = useState(existing && !firstShots.length ? String(existing.total) : '')
   const [note, setNote] = useState(existing?.note ?? '')
   const [busy, setBusy] = useState(false)
@@ -74,7 +77,13 @@ export function PaperScoreDialog({
         studentName: student.name,
         position,
         dateKey,
-        shots: mode === 'bulls' ? (values as number[]) : null,
+        shots:
+          mode === 'bulls'
+            ? (values as number[]).map((v, i) => {
+                const was = existingShots[i]
+                return was && was.v === v && typeof was.x === 'number' && typeof was.y === 'number' ? { v, x: was.x, y: was.y } : v
+              })
+            : null,
         total: mode === 'total' ? totalNumber : null,
         fileId: existing?.fileId ?? fileId,
         note: note.trim(),
@@ -140,7 +149,7 @@ export function PaperScoreDialog({
                     <Input
                       key={i}
                       inputMode="numeric"
-                      aria-label={`Bull ${i + 1}`}
+                      aria-label={`${slots > BULLS ? 'Shot' : 'Bull'} ${i + 1}`}
                       placeholder={String(i + 1)}
                       value={b}
                       onChange={(e) => setBulls((all) => all.map((x, j) => (j === i ? e.target.value.replace(/[^0-9]/g, '').slice(0, 2) : x)))}
@@ -149,7 +158,7 @@ export function PaperScoreDialog({
                   ))}
                 </div>
                 <FieldDescription>
-                  Whole numbers, 0 to 10, one per bull. {bullsOk ? `Total ${bullsTotal} out of 100.` : 'Fill in all ten.'}
+                  Whole numbers, 0 to 10, one per {slots > BULLS ? 'shot' : 'bull'}. {bullsOk ? `Total ${bullsTotal} out of ${slots * 10}.` : `Fill in all ${slots === BULLS ? 'ten' : slots}.`}
                 </FieldDescription>
               </>
             ) : (

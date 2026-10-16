@@ -38,8 +38,11 @@ export interface EvaluationPoint {
   innerTens: number | null
   groupMm: number | null
   mpi: ShotPoint | null
-  /** The counted shots: SIUS ones with their directions (for the target pictures), a paper card's whole scores. */
-  marks: { v: number; a: number | null }[]
+  /**
+   * The counted shots: SIUS ones with their directions (for the target pictures), a paper card's whole scores, and a
+   * scanned card's with their place on the target (mm, x right, y up).
+   */
+  marks: { v: number; a: number | null; x?: number; y?: number }[]
 }
 
 export interface PositionFacts {
