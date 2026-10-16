@@ -19,7 +19,7 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "regex": "^/(?:[^a].*|a(?:[^s].*)?|as(?:[^s].*)?|ass(?:[^e].*)?|asse(?:[^t].*)?|asset(?:[^s].*)?|assets(?:[^/].*)?)?$",
         "destination": "/app.html"
       }
     ],

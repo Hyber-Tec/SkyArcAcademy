@@ -21,7 +21,7 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 
 | Target | From | Notes |
 |---|---|---|
-| Hosting | `web/dist` (built in CI) | |
+| Hosting | `web/dist` (built in CI) | Every address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
 | Storage rules | `storage.rules` | The academy's logo and announcement files. Report files get their own rules with the reports. See "Storage" below. |

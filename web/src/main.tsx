@@ -6,7 +6,14 @@ import { ThemeProvider } from '@/components/app/theme'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { router } from './app/router'
+import { reloadForNewBuild } from './app/staleBuild'
 import './index.css'
+
+// A tab opened before a deploy asks for files that no longer exist: reload once to pick up the new build. A page that
+// fails while opening is left to the route's error page, which reloads at the address being opened.
+window.addEventListener('vite:preloadError', (event) => {
+  if (router.state.navigation.state === 'idle') reloadForNewBuild((event as Event & { payload?: unknown }).payload)
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
