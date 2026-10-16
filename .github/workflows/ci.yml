@@ -88,6 +88,27 @@ jobs:
       - name: Firestore rules tests
         run: bash scripts/test-rules.sh
 
+  phone:
+    name: Phone app typecheck and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      # The phone app is only typechecked and linted here, so none of its packages' install scripts are needed.
+      - name: Install
+        run: npm ci --prefix mobile --ignore-scripts
+
+      # It compiles shared/ too, so a change there that breaks the phone app is caught here.
+      - name: Typecheck and lint
+        run: npm --prefix mobile run typecheck && npm --prefix mobile run lint
+
   deploy:
     name: Deploy main to production
     needs: [check, rules]

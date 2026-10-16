@@ -49,3 +49,4 @@ setting it can change later. Numbered as in the email Goo sends the academy, so 
 | **A12** | **The kiosk:** a tablet or computer at the front desk where coaches clock in? Any device with a web browser works. | The kiosk | The kiosk page, opened by an admin on any computer |
 | **A13** | **Website content:** programs, tuition, about, gallery photos, news. | The landing page | — |
 | **A14** | **The domain:** access to skyarcacademy.com, and an email address on it for the app to send from. | Launch ([`DEPLOY.md`](DEPLOY.md)) | HyberTec's Gmail sends |
+| **A15** | **Paper cards:** when a hole touches a ring's line, do coaches give the higher ring as a 4.5 mm gauge would (ISSF's rule, as SIUS scores), or judge by the hole as it looks? The sample cards look like the second. | Scores read from photos | ISSF's rule |

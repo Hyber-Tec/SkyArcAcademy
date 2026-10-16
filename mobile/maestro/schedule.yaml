@@ -1,0 +1,57 @@
+# The Schedule tab: the week strip, another week and back, a day's classes by coach and a class's sheet.
+# Run after sign-in.yaml (the practice owner; the sample academy's weeks have classes):
+#   maestro test maestro/schedule.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      visible:
+        id: "class-sheet"
+    commands:
+      - tapOn:
+          id: "class-close"
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: schedule
+      LABEL: Schedule
+- extendedWaitUntil:
+    visible:
+      id: "schedule-screen"
+    timeout: 30000
+- waitForAnimationToEnd
+- assertVisible:
+    id: "schedule-week-caption"
+    text: "This week"
+# Next week: the "Today" pill appears; it brings back this week.
+- tapOn:
+    id: "schedule-next"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "schedule-week-caption"
+    text: "Next week"
+- tapOn:
+    id: "schedule-today"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "schedule-week-caption"
+    text: "This week"
+- assertVisible:
+    id: "schedule-day-hours"
+# A class, when the chosen day has one.
+- runFlow:
+    when:
+      visible:
+        id: "schedule-class-.*"
+    commands:
+      - tapOn:
+          id: "schedule-class-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "class-students"
+          timeout: 15000
+      - tapOn:
+          id: "class-close"

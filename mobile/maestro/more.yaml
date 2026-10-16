@@ -1,0 +1,43 @@
+# The More tab: the account, the coaches (a coach's sheet), the appearance, and the version.
+# Run after sign-in.yaml (the practice owner):
+#   maestro test maestro/more.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- extendedWaitUntil:
+    visible:
+      id: "more-screen"
+    timeout: 30000
+- assertVisible:
+    id: "more-account"
+- tapOn:
+    id: "more-coaches"
+- extendedWaitUntil:
+    visible:
+      id: "coaches-screen"
+    timeout: 15000
+- tapOn:
+    id: "coach-row-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "coach-sheet"
+    timeout: 15000
+- tapOn:
+    id: "coach-close"
+- runFlow:
+    file: steps/back.yaml
+- tapOn:
+    id: "more-appearance-dark"
+- tapOn:
+    id: "more-appearance-system"
+- scrollUntilVisible:
+    element:
+      id: "more-version"
+    direction: DOWN

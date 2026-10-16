@@ -1,0 +1,55 @@
+# The Today tab: the greeting and date, today's numbers, the way to Scan, and a class's sheet when the day has one.
+# Run after sign-in.yaml (the practice owner):
+#   maestro test maestro/today.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      visible:
+        id: "class-sheet"
+    commands:
+      - tapOn:
+          id: "class-close"
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: today
+      LABEL: Today
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 30000
+- assertVisible:
+    id: "today-greeting"
+- assertVisible:
+    id: "today-date"
+- assertVisible:
+    id: "today-stats"
+# The day's first class opens its sheet (the practice copy's sample academy has classes on most days).
+- runFlow:
+    when:
+      visible:
+        id: "today-classes"
+    commands:
+      - tapOn:
+          id: "today-class-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "class-students"
+          timeout: 15000
+      - tapOn:
+          id: "class-close"
+# The scan card opens the Scan tab.
+- scrollUntilVisible:
+    element:
+      id: "today-scan"
+    direction: UP
+- tapOn:
+    id: "today-scan"
+- extendedWaitUntil:
+    visible:
+      id: "scan-screen"
+    timeout: 15000

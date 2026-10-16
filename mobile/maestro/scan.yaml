@@ -1,0 +1,79 @@
+# The Scan tab: a made-up paper card (all tens) chosen from Photos, read, checked bull by bull and saved for a sample
+# student. npm run phone:test adds the card to the iPhone Simulator's Photos first (scripts/practice-card.ts); it then
+# saves a paper result and the card's copy in that student's Drive, on the practice copy. iPhone only for now.
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: scan
+      LABEL: Scan
+- extendedWaitUntil:
+    visible:
+      id: "scan-screen"
+    timeout: 30000
+- tapOn:
+    id: "scan-choose-photos"
+# The phone's own photo picker: the newest photo is the first one, then the check mark.
+- extendedWaitUntil:
+    visible: "Select up to 20 photos."
+    timeout: 20000
+- tapOn:
+    point: 16%, 27%
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    point: 90%, 15%
+- extendedWaitUntil:
+    visible:
+      id: "scan-total"
+    timeout: 90000
+- assertVisible:
+    id: "scan-tile-10"
+    text: ".*10.*"
+# A bull up close, then back.
+- tapOn:
+    id: "scan-bull-1"
+- extendedWaitUntil:
+    visible:
+      id: "bull-zoom"
+    timeout: 15000
+- tapOn:
+    id: "bull-done"
+- scrollUntilVisible:
+    element:
+      id: "scan-student"
+    direction: DOWN
+- tapOn:
+    id: "scan-student"
+- extendedWaitUntil:
+    visible:
+      id: "student-search"
+    timeout: 15000
+- tapOn:
+    id: "student-search"
+- inputText: "Arin"
+- tapOn:
+    id: "pick-sample-.*"
+    index: 0
+- scrollUntilVisible:
+    element:
+      id: "scan-note"
+    direction: DOWN
+- tapOn: "Prone"
+- tapOn:
+    id: "scan-save"
+# Saved: back on the Scan tab, the card first among the latest ones.
+- extendedWaitUntil:
+    visible:
+      id: "scan-screen"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: "scan-recent-.*"
+    direction: DOWN
+- assertVisible:
+    id: "scan-recent-.*"
+    text: ".*Arin Tak.*100/100.*"
