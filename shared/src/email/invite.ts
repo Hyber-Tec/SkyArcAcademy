@@ -1,5 +1,6 @@
 import { ACADEMY_NAME, APP_URL } from '../brand'
 import { ROLE_LABELS, type Role } from '../roles'
+import { emailLogo } from './logo'
 
 /**
  * Why someone gets a sign-in email:
@@ -125,13 +126,8 @@ export function inviteEmail(i: InviteEmailInput): EmailContent {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;">
 <tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<tr><td style="padding:0 4px 20px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;"><img src="${esc(appUrl)}/brand/skyarc-email.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;"></td>
-<td style="vertical-align:middle;padding-left:10px;font-size:16px;font-weight:600;color:#18181b;">${esc(ACADEMY_NAME)}</td>
-</tr></table>
-</td></tr>
 <tr><td style="background:#ffffff;border:1px solid #e4e4e7;border-radius:16px;padding:32px;">
+${emailLogo(appUrl)}
 <h1 style="margin:0 0 20px;font-size:22px;line-height:30px;font-weight:600;color:#18181b;">${esc(c.title)}</h1>
 <p style="${p}">${esc(c.greeting)}</p>
 <p style="${p}">${esc(c.intro)}</p>

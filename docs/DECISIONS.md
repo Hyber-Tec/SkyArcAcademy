@@ -68,9 +68,11 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
 - **Opening hours** start from the schedule sheets (Sunday and Monday to Thursday; Friday and Saturday closed), as
   settings the academy can change. *Changed: wider than the classes (§7).*
 - **Brand:** HyberCRM's black-and-white theme with Sky Arc red as the brand color; the academy's logo on sign-in
-  pages, the reticle mark in the app and the icons. No "Powered by" line.
+  pages, the reticle mark in the app and the icons. No "Powered by" line. *Changed: the official logos everywhere
+  (§9).*
 - **Email:** from HyberTec's Gmail under the academy's name (Q5, §5). Until its app password is set, no email goes
-  out: invites show a sign-in link to copy, and account emails fall back to Firebase's own.
+  out: invites show a sign-in link to copy, and account emails fall back to Firebase's own. *The app password was
+  set on 2026-10-16 (§9).*
 - **Cloud Functions** run as their own service account with only the roles they use. Callable functions are opened by
   turning off Cloud Run's invoker check, because HyberTec's organization doesn't allow `allUsers` in IAM policies
   (`docs/DEPLOY.md`).
@@ -199,3 +201,20 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
 - **Sample data** now includes the sample students' shooting: about 100 results (most as synthetic SIUS PDFs in
   their Drive folders, a few paper cards) and two reports, one shared with a family that has a sign-in. `npm run
   seed:sample -- --remove` deletes them, files included.
+
+## 9. The official logos, and email switched on (2026-10-16)
+
+- **The academy's official logo files** arrived: the full logo (the name and the reticle) and three square versions.
+  The full logo now opens the sidebar, in place of the temporary square mark and the academy's name typed beside it,
+  and it's used wherever there's room: sign-in and sign-up pages, the phone's top bar, the kiosk, progress reports,
+  the top of every email and the picture a shared link shows. The square icon is the favicon, the app icons and the
+  closed sidebar. Which file goes where is in `CLAUDE.md`, "Brand and logos", for every developer and session, and
+  for the phone app later.
+- **Settings → Branding is gone.** It came from HyberCRM (an uploaded logo, a brand color, a sidebar title) and could
+  replace the official logo; the brand is fixed in the code now. Production had nothing set there, and reports no
+  longer keep a copy of a logo address.
+- **Email is on:** HyberTec's Gmail app password was saved as `GMAIL_APP_PASSWORD` (Firebase manages the secret since
+  then). The deploy after it sends invites, account emails and shared reports. A sender on the academy's own domain
+  stays a launch step (A14). Mail sent by Gmail from a Gmail address passes the spam checks that matter (SPF, DKIM,
+  DMARC); the website's address doesn't have to match the sender's.
+

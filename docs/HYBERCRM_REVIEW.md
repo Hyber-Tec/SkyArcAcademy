@@ -649,9 +649,9 @@ and comments hold emails.
   - `--sidebar-primary` becomes brand red in both modes (today the dark one is blue);
   - `--destructive` stays as is. Making the primary red would clash with the ~150 places that use red for
     conflicts and errors.
-- **Logo files:** `web/public/brand/skyarc-logo.svg` (on light) and `skyarc-logo-white.svg` (on dark), cropped to
-  the artwork. A `SkyArcMark` component draws the lockup in `currentColor` with the dot in `--brand`; the 44 px
-  sidebar mark and the app icons use the reticle alone (as the favicon already does).
+- **Logo files:** the academy's official files since 2026-10-16, in `web/public/brand/`: the full logo (black, and
+  white for dark backgrounds) and the square icons. `SkyArcLogo` and `SkyArcMark` show them in the app; which goes
+  where is in `CLAUDE.md`, "Brand and logos".
 - **Replace:** `HyberMark`, `CompanyFooter`, the manifest, icons, `og.png`, `privacy.html`, the Apple app-site
   association file, email logos and footers, `hyber:*` storage keys, the `hyber-kiosk:` prefix (replaced by HMAC),
   and the `__hyberSignIn` test hook. `scripts/brand-icons.ts` is reused, minus its rule that turns every path black

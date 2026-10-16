@@ -21,6 +21,7 @@ describe('report emails', () => {
     expect(e.text).toContain('Sky Arc Academy shared Mia’s progress report for September 2026. It covers 4 scored evaluations, averaging 94.8 per 10 shots.')
     expect(e.text).toContain('Sign in to read it: https://skyarcacademy.web.app/login?next=%2Freport%2Fr1&email=maya.larkin%40example.test')
     expect(e.html).toContain('href="https://skyarcacademy.web.app/login?next=%2Freport%2Fr1&amp;email=maya.larkin%40example.test"')
+    expect(e.html).toContain('<img src="https://skyarcacademy.web.app/brand/skyarc-logo-email.png" width="168" height="81" alt="Sky Arc Sports Academy"')
   })
 
   it('speaks to the student on their own account', () => {

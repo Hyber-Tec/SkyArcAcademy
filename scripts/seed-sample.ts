@@ -153,7 +153,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
       .map((d) => ({ dateKey: String(d.data.dateKey), status: d.data.status as SessionStatus, past: (d.data.endAt as Date).getTime() <= now.getTime() }))
     const by = { email: manager.email, name: manager.name, role: 'admin' }
     const doc = composeReport({
-      academy: { name: String(academy.name ?? 'Sky Arc Academy'), logoUrl: ((academy.branding as Record<string, string> | undefined)?.logoUrl) ?? null, contact: { phone: contact.phone ?? '', email: contact.email ?? '', website: contact.website ?? '', address: contact.address ?? '' } },
+      academy: { name: String(academy.name ?? 'Sky Arc Academy'), contact: { phone: contact.phone ?? '', email: contact.email ?? '', website: contact.website ?? '', address: contact.address ?? '' } },
       student: { id: studentId, name: String(st.name), firstName: String(st.firstName), lastName: String(st.lastName), level: (st.level as string | null) ?? null, program: (st.program as string | null) ?? null },
       period: { ...period, preset: 'last_30' },
       evaluations,

@@ -1,4 +1,4 @@
-import { initials } from '@/components/app/BrandMark'
+import { initials } from '@shared/people'
 import { cn } from '@/lib/utils'
 
 /** A person's initials in their calendar color (or a neutral tint). */

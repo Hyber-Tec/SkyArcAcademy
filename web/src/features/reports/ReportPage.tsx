@@ -19,7 +19,7 @@ import { ReportDocument } from './ReportDocument'
 export function ReportPage() {
   const { reportId = '' } = useParams()
   const navigate = useNavigate()
-  const { branchId, branch, timezone, role, portal, actor } = useBranch()
+  const { branchId, timezone, role, portal, actor } = useBranch()
   const ref = useMemo(() => branchDocRef(branchId, COL.progressReports, reportId), [branchId, reportId])
   const { data: r, loading, error } = useDoc<ProgressReportDoc>(ref)
   const family = role === 'parent' || role === 'student'
@@ -83,7 +83,7 @@ export function ReportPage() {
         </div>
       ) : null}
       <main className="mt-4 sm:mt-8 sm:px-4 print:m-0 print:p-0">
-        <ReportDocument report={r} audience="family" timezone={timezone} logoUrl={branch.branding?.logoUrl ?? null} />
+        <ReportDocument report={r} audience="family" timezone={timezone} />
       </main>
     </div>
   )

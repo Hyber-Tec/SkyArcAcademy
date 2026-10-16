@@ -1,7 +1,5 @@
-import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
-import { LuImageUp, LuTrash2 } from 'react-icons/lu'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { publicProfileFor } from '@shared/branchFactory'
@@ -10,9 +8,8 @@ import { PAY_MODEL_HELP, PAY_MODEL_LABELS, payModelOn } from '@shared/settings/b
 import { DEFAULT_SETTINGS, type BranchSettings } from '@shared/settings/defaults'
 import { formatDateKey, todayKey } from '@shared/time'
 import { type SettingsOverrides, getPath, setPath, unsetPath } from '@shared/settings/resolve'
-import type { Branch, BranchBranding, BranchContact } from '@shared/types'
+import type { Branch, BranchContact } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import { BrandMark } from '@/components/app/BrandMark'
 import { PageHeader } from '@/components/app/PageHeader'
 import { TimeZonePicker } from '@/components/app/TimeZonePicker'
 import { Button } from '@/components/ui/button'
@@ -24,7 +21,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { SignupShareCard } from '@/features/access/SignupShare'
 import { AuditLogSection } from '@/features/audit/AuditLogSection'
 import { type AuditInput, addAudit } from '@/lib/audit'
-import { db, storage } from '@/lib/firebase'
+import { db } from '@/lib/firebase'
 import { cn } from '@/lib/utils'
 import { AcademyRulesCard } from './AcademyRulesCard'
 import { DateHoursCard } from './DateHoursCard'
@@ -33,7 +30,6 @@ import { SETTINGS_SECTIONS, type FieldDef } from './schema'
 
 const SECTIONS = [
   { key: 'academy', title: 'Academy' },
-  { key: 'branding', title: 'Branding' },
   ...SETTINGS_SECTIONS.map((s) => ({ key: s.key, title: s.title })),
   { key: 'audit-log', title: 'Audit Log' },
 ]
@@ -46,7 +42,7 @@ export function SettingsPage() {
   const setActive = (key: string) => navigate(`/admin/settings/${key}`)
   return (
     <div>
-      <PageHeader title="Settings" description="The academy’s profile, branding and day-to-day settings. Anything you don’t change keeps the standard setup." />
+      <PageHeader title="Settings" description="The academy’s profile and day-to-day settings. Anything you don’t change keeps the standard setup." />
       <div className="flex flex-col gap-6 lg:flex-row">
         <nav className="lg:sticky lg:top-4 lg:w-52 lg:shrink-0 lg:self-start">
           <div className="lg:hidden">
@@ -86,8 +82,6 @@ export function SettingsPage() {
               <BranchProfileCard />
               {isOwner ? <AcademyRulesCard /> : <BusinessRulesCard />}
             </div>
-          ) : active === 'branding' ? (
-            <BrandingCard />
           ) : active === 'audit-log' ? (
             <AuditLogSection />
           ) : active === 'schedule' ? (
@@ -246,137 +240,6 @@ function BranchProfileCard() {
           {busy ? <Spinner /> : null} Save
         </Button>
       </CardFooter>
-    </Card>
-  )
-}
-
-const ACCENTS = ['#171717', '#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2']
-
-function BrandingCard() {
-  const { branch, branchId } = useBranch()
-  const write = useBranchWriter()
-  const [branding, setBranding] = useState<BranchBranding>(branch.branding)
-  const [busy, setBusy] = useState<string | null>(null)
-
-  useEffect(() => setBranding(branch.branding), [branch.branding])
-
-  async function save(next: BranchBranding, summary: string) {
-    await write({ branding: next }, { action: 'settings.branding', category: 'settings', entityType: 'branch', entityId: branchId, summary })
-  }
-
-  async function upload(file: File) {
-    if (!file.type.startsWith('image/')) return toast.error('Choose an image file.')
-    if (file.size > 2 * 1024 * 1024) return toast.error('The logo must be smaller than 2 MB.')
-    setBusy('Uploading…')
-    try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
-      const path = `branches/${branchId}/branding/logo-${Date.now()}.${ext}`
-      const r = storageRef(storage, path)
-      await uploadBytes(r, file, { contentType: file.type, cacheControl: 'public, max-age=31536000' })
-      const url = await getDownloadURL(r)
-      const old = branding.logoPath
-      const next = { ...branding, logoUrl: url, logoPath: path }
-      await save(next, 'Uploaded a new logo')
-      if (old) await deleteObject(storageRef(storage, old)).catch(() => undefined)
-      toast.success('Logo updated')
-    } catch (e) {
-      toast.error('Upload failed', { description: (e as Error).message })
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function removeLogo() {
-    const old = branding.logoPath
-    await save({ ...branding, logoUrl: null, logoPath: null }, 'Removed the logo')
-    if (old) await deleteObject(storageRef(storage, old)).catch(() => undefined)
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Branding</CardTitle>
-        <CardDescription>Your logo and color appear in every portal and on your sign-up page.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <FieldLabel>Logo</FieldLabel>
-            <div className="flex items-center gap-4">
-              <BrandMark name={branch.name} logoUrl={branding.logoUrl} accentColor={branding.accentColor} className="size-16 rounded-xl text-lg" />
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" asChild disabled={!!busy}>
-                  <label className="cursor-pointer">
-                    {busy ? <Spinner /> : <LuImageUp />}
-                    {busy ?? 'Upload logo'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        e.target.value = ''
-                        if (f) void upload(f)
-                      }}
-                    />
-                  </label>
-                </Button>
-                {branding.logoUrl ? (
-                  <Button variant="ghost" onClick={() => void removeLogo()}>
-                    <LuTrash2 /> Remove
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            <FieldDescription>Square images work best (PNG or SVG, under 2 MB). Without a logo, initials are shown.</FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel>Brand color</FieldLabel>
-            <div className="flex flex-wrap items-center gap-2">
-              {ACCENTS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`Use ${c}`}
-                  onClick={() => void save({ ...branding, accentColor: c }, `Changed the brand color to ${c}`)}
-                  className={cn(
-                    'size-8 rounded-full border-2 transition-transform hover:scale-105',
-                    branding.accentColor === c ? 'border-foreground' : 'border-transparent',
-                  )}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-              <Input
-                type="color"
-                className="h-8 w-14 cursor-pointer p-1"
-                value={branding.accentColor ?? '#171717'}
-                onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
-                onBlur={() => void save(branding, `Changed the brand color to ${branding.accentColor}`)}
-              />
-              {branding.accentColor ? (
-                <Button variant="ghost" size="sm" onClick={() => void save({ ...branding, accentColor: null }, 'Reset the brand color')}>
-                  Reset
-                </Button>
-              ) : null}
-            </div>
-            <FieldDescription>Used for your logo mark; the app itself keeps a neutral theme.</FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="br-title">Sidebar title</FieldLabel>
-            <div className="flex gap-2">
-              <Input
-                id="br-title"
-                placeholder={branch.name}
-                value={branding.sidebarTitle ?? ''}
-                onChange={(e) => setBranding({ ...branding, sidebarTitle: e.target.value })}
-              />
-              <Button variant="outline" onClick={() => void save({ ...branding, sidebarTitle: branding.sidebarTitle?.trim() || null }, 'Changed the sidebar title')}>
-                Save
-              </Button>
-            </div>
-          </Field>
-        </FieldGroup>
-      </CardContent>
     </Card>
   )
 }

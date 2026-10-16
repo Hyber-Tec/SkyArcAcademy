@@ -6,7 +6,7 @@ import { templateNarrative } from './template'
 import { DEFAULT_REPORT_OPTIONS, type ProgressReportDoc, type ReportPerson, type ReportPreset } from './types'
 
 export interface ComposeInput {
-  academy: { name: string; logoUrl: string | null; contact: { phone: string; email: string; website: string; address: string } }
+  academy: { name: string; contact: { phone: string; email: string; website: string; address: string } }
   student: { id: string; name: string; firstName: string; lastName: string; level: string | null; program: string | null }
   period: { from: DateKey; to: DateKey; preset: ReportPreset }
   /** The student's evaluations inside the period. */
@@ -46,7 +46,7 @@ export function composeReport(input: ComposeInput): ComposedReport {
     sharedBy: null,
     notify: null,
     source: { evaluationIds: series.map((s) => s.id), fingerprint: evaluationsFingerprint(input.evaluations) },
-    snapshot: { academyName: input.academy.name, logoUrl: input.academy.logoUrl, contact: input.academy.contact },
+    snapshot: { academyName: input.academy.name, contact: input.academy.contact },
     facts,
     series,
     narrative,

@@ -1,5 +1,5 @@
 import { doc } from 'firebase/firestore'
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ACADEMY_ID } from '@shared/academy'
 import { COL, ROOT } from '@shared/paths'
 import { type Portal, type RestrictablePage, type Role, isAdminRole, portalOf } from '@shared/roles'
@@ -122,17 +122,6 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     }
     return { value: ctx, blocked: role !== null ? null : memberState.data ? 'paused' : 'none' }
   }, [branchState.data, memberState.data, user, email, branchId, preview, setViewAs])
-
-  // The academy's accent color as a CSS variable for brand marks.
-  const accent = value?.branch.branding?.accentColor ?? null
-  useEffect(() => {
-    const root = document.documentElement
-    if (accent) root.style.setProperty('--brand', accent)
-    else root.style.removeProperty('--brand')
-    return () => {
-      root.style.removeProperty('--brand')
-    }
-  }, [accent])
 
   // Until the account check is done, nothing here is known: never guess.
   if (!ready || branchState.loading || memberState.loading) return <FullPageSpinner />

@@ -4,7 +4,7 @@ import { LuCircleCheck, LuDelete, LuLogOut } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { formatDuration, formatInstant, formatInstantTime } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
-import { BrandMark } from '@/components/app/BrandMark'
+import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { functions } from '@/lib/firebase'
@@ -136,11 +136,8 @@ export function KioskPage() {
   return (
     <div className="flex h-svh flex-col bg-gradient-to-b from-neutral-50 to-neutral-200 select-none dark:from-neutral-900 dark:to-neutral-950" onPointerDown={bump}>
       <header className="flex items-center gap-3 bg-neutral-900 px-5 py-3 text-white">
-        <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} className="size-10" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-lg font-bold">{branch.name}</div>
-          <div className="text-xs text-neutral-300">Time clock</div>
-        </div>
+        <SkyArcLogo tone="white" className="h-11" />
+        <div className="min-w-0 flex-1 border-l border-white/20 pl-3 text-sm font-medium text-neutral-300">Time clock</div>
         <div className="text-right">
           <div className="text-sm font-medium">{formatInstant(now, timezone, { weekday: 'long', month: 'numeric', day: 'numeric', year: 'numeric' })}</div>
           <div className="text-lg font-semibold tabular-nums">{formatInstant(now, timezone, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</div>
@@ -159,8 +156,7 @@ export function KioskPage() {
       <main className="flex flex-1 items-center justify-center p-6">
         {screen === 'welcome' ? (
           <button type="button" className="flex flex-col items-center gap-6" onClick={() => setScreen('pin')}>
-            <BrandMark name={branch.name} logoUrl={branch.branding?.logoUrl} accentColor={branch.branding?.accentColor} className="size-40 rounded-3xl text-5xl" />
-            <div className="text-4xl font-bold tracking-tight">{branch.name}</div>
+            <SkyArcLogo className="h-40" />
             <div className="animate-pulse text-lg text-muted-foreground">Tap anywhere to begin</div>
           </button>
         ) : null}

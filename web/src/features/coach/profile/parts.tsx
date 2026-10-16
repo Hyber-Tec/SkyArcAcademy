@@ -1,7 +1,7 @@
 import type { Staff, WithId } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { useBranch } from '@/branch/BranchProvider'
-import { initials } from '@/components/app/BrandMark'
+import { initials } from '@shared/people'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useIsMobile } from '@/hooks/use-mobile'
 

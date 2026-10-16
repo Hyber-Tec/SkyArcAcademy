@@ -8,7 +8,7 @@ import { isAdminRole, ROLE_LABELS, ROLE_LABELS_PLURAL, ROLES, type Role } from '
 import { formatInstant } from '@shared/time'
 import type { Member, SignupRequest, Staff, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import { initials } from '@/components/app/BrandMark'
+import { initials } from '@shared/people'
 import { ContextMenuFor, ItemMenuButton, menu } from '@/components/app/ItemMenu'
 import { PageHeader } from '@/components/app/PageHeader'
 import {
