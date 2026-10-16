@@ -35,10 +35,10 @@ setting it can change later. Numbered as in the email Goo sends the academy, so 
 
 | | Question | Needed for | Until answered |
 |---|---|---|---|
-| **A6** | Can the shooter's name be set on the SIUS lane, so it prints on the report? (Today it doesn't.) Fine if not: the app asks whose report it is. | Reports | The app asks |
-| **A7** | Check the time zone on both SIUS computers: one looks set to Pacific (4 of the 10 sample PDFs show times 3 hours early). Both should be on Eastern. | Reports | Those times are 3 hours early |
-| **A8** | Do sighter-only sessions (Total 0) count? With 21 or 22 match shots, use all of them or the first 20? | Reports | — |
-| **A9** | What do the `0.0` shots without a direction arrow mean? | Reports | — |
+| **A6** | Can the shooter's name be set on the SIUS lane, so it prints on the report? (Today it doesn't.) Fine if not: the app asks whose report it is. | Reports | The app asks, suggesting the student from the file name |
+| **A7** | Check the time zone on both SIUS computers: one looks set to Pacific (4 of the 10 sample PDFs show times 3 hours early). Both should be on Eastern. | Reports | The app corrects the time from the PDF (§8), but the printed time stays wrong |
+| **A8** | Do sighter-only sessions (Total 0) count? With 21 or 22 match shots, use all of them or the first 20? | Reports | Sighters only: kept as a file, no scores; every match shot counts |
+| **A9** | What do the `0.0` shots without a direction arrow mean? | Reports | Not counted as shots |
 
 ### Later: before launch (a second email)
 

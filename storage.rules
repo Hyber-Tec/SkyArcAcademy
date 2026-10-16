@@ -45,5 +45,27 @@ service firebase.storage {
       allow read: if isMember(b);
       allow write: if isAdmin(b) && (request.resource == null || request.resource.size < 20 * 1024 * 1024);
     }
+
+    // The Drive's files (shared/src/drive): results and target photos of minors, so staff only, read through these
+    // rules (getBlob), never through download links. Each file's Firestore record is written first; the bytes must
+    // match it, never replace a file, and are deleted only once the record is in the Trash (or the upload failed).
+    function isStaff(b) {
+      return isMember(b) && member(b).get('role', '') in ['owner', 'admin', 'coach'];
+    }
+
+    match /branches/{b}/drive/{fileId} {
+      function record() {
+        return firestore.get(/databases/(default)/documents/branches/$(b)/driveFiles/$(fileId)).data;
+      }
+
+      allow read: if isStaff(b);
+      allow create: if isAdmin(b)
+        && request.resource.size <= 100 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/(jpeg|png|heic|heif|webp|gif)|text/(plain|csv)|application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint|vnd[.]openxmlformats-officedocument[.][a-z.]+)|video/(mp4|quicktime)')
+        && record().status == 'uploading'
+        && record().size == request.resource.size;
+      allow update: if false;
+      allow delete: if isAdmin(b) && (record().get('trashed', false) == true || record().status == 'error');
+    }
   }
 }

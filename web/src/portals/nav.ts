@@ -2,8 +2,10 @@ import type { IconType } from 'react-icons'
 import {
   LuCalendarClock,
   LuCalendarDays,
+  LuChartLine,
   LuCircleUserRound,
   LuGraduationCap,
+  LuHardDrive,
   LuHouse,
   LuMegaphone,
   LuSettings,
@@ -53,6 +55,8 @@ export const ADMIN_NAV: PortalNav = {
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     {
       key: 'employees',
       label: 'Employees',
@@ -84,6 +88,8 @@ export const COACH_NAV: PortalNav = {
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'payroll', label: 'Payroll', to: 'payroll', icon: LuWallet },
   ],
   secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
@@ -97,7 +103,10 @@ export const COACH_NAV: PortalNav = {
 }
 
 export const PARENT_NAV: PortalNav = {
-  main: [{ key: 'home', label: 'Upcoming Classes', to: 'home', icon: LuCalendarDays }],
+  main: [
+    { key: 'home', label: 'Upcoming Classes', to: 'home', icon: LuCalendarDays },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
+  ],
   secondary: [],
 }
 
@@ -105,12 +114,14 @@ export const STUDENT_NAV: PortalNav = {
   main: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'calendar', label: 'Calendar', to: 'calendar', icon: LuCalendarDays },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'profile', label: 'My Info', to: 'profile', icon: LuUser },
   ],
   secondary: [],
   mobileTabs: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'calendar', label: 'Calendar', to: 'calendar', icon: LuCalendarDays },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'profile', label: 'My Info', to: 'profile', icon: LuUser },
   ],
 }

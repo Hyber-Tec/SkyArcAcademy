@@ -24,7 +24,7 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 | Hosting | `web/dist` (built in CI) | Every address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
-| Storage rules | `storage.rules` | The academy's logo and announcement files. Report files get their own rules with the reports. See "Storage" below. |
+| Storage rules | `storage.rules` | The academy's logo, announcement files and the Drive's files (staff only, read through the rules). See "Storage" below. |
 | Cloud Functions | `functions/` (built by the predeploy step) | Gen 2, `us-central1`, running as `functions@`. See "Cloud Functions" below. |
 
 ## How GitHub signs in to Google Cloud (no keys)
@@ -176,6 +176,8 @@ Until the academy's real data arrives (A1–A4 in `docs/QUESTIONS.md`), producti
 tried with real-looking weeks. `npm run seed:sample` adds:
 
 - a manager and four coaches with pay rates, availability and four weeks of time entries;
+- the students' shooting: about 100 results, most as synthetic SIUS PDFs in their Drive folders (uploaded to
+  Storage), a few paper cards, and two progress reports (one shared with a family that has a sign-in);
 - 35 students with levels, programs and families (seven parents with a sign-in);
 - ten weeks of classes in the academy's blocks, with makeups, trial visits, one coach's sick day and Thanksgiving;
 - announcements and events.
@@ -186,7 +188,8 @@ eye icon by your name). To try the kiosk, set a sample coach's PIN on their Empl
 
 **Before the real data is imported, remove it all:** `npm run seed:sample -- --remove`. It also deletes what the app
 made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and
-never touches anyone else. Running `npm run seed:sample` again refreshes the classes around the new date.
+never touches anyone else; the Drive files' bytes go with their records. Running `npm run seed:sample` again
+refreshes the classes around the new date.
 
 ## Moving to skyarcacademy.com (launch)
 

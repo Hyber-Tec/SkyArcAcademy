@@ -47,7 +47,7 @@ export function useStudentsById(ids: string[]) {
 }
 
 /** Several live queries merged into one list (de-duplicated by ID). */
-function useMergedQueries<T>(queries: Query<DocumentData>[], key: string) {
+export function useMergedQueries<T>(queries: Query<DocumentData>[], key: string) {
   const [state, setState] = useState<{ key: string; data: WithId<T>[]; loading: boolean }>({ key: '', data: [], loading: true })
   useEffect(() => {
     if (!queries.length) return

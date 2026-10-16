@@ -12,7 +12,7 @@ export interface Outgoing {
   body: string
   /** In-app path below the branch. */
   link: string
-  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null }
+  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; reportId?: string | null }
 }
 
 export interface Recipient {
