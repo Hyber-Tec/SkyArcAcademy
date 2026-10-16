@@ -47,23 +47,49 @@ export function SkyArcMark({ tone = 'black', className }: { tone?: 'black' | 'wh
 }
 
 const LOGO = { black: '/brand/skyarc-logo.svg', white: '/brand/skyarc-logo-white.svg' }
+const WORDMARK = { black: '/brand/skyarc-wordmark.svg', white: '/brand/skyarc-wordmark-white.svg' }
+
+type Tone = 'auto' | 'black' | 'white'
+
+/** One of the official files in a box of its proportions, black or white or following the theme. */
+function BrandImage({ files, tone, className }: { files: { black: string; white: string }; tone: Tone; className: string }) {
+  return (
+    <span className={className}>
+      {tone === 'auto' ? (
+        <>
+          <img src={files.black} alt={ACADEMY_NAME} className="block size-full dark:hidden" />
+          <img src={files.white} alt={ACADEMY_NAME} className="hidden size-full dark:block" />
+        </>
+      ) : (
+        <img src={files[tone]} alt={ACADEMY_NAME} className="block size-full" />
+      )}
+    </span>
+  )
+}
 
 /**
  * The full official logo, name included. `auto` is black in light mode and white in dark mode; `black` is for white
  * paper whatever the theme (reports, printouts); `white` is for dark backgrounds. It keeps the logo's proportions:
  * size it by height (the default, `h-12`) or by width (`h-auto w-40`).
  */
-export function SkyArcLogo({ tone = 'auto', className }: { tone?: 'auto' | 'black' | 'white'; className?: string }) {
+export function SkyArcLogo({ tone = 'auto', className }: { tone?: Tone; className?: string }) {
+  return <BrandImage files={LOGO} tone={tone} className={cn('inline-block aspect-[1128/541] h-12 shrink-0', className)} />
+}
+
+/** The official wordmark alone: "SKY ARC" over "SPORTS ACADEMY", without the reticle. Size it by height. */
+export function SkyArcWordmark({ tone = 'auto', className }: { tone?: Tone; className?: string }) {
+  return <BrandImage files={WORDMARK} tone={tone} className={cn('inline-block aspect-[360/83] h-7 shrink-0', className)} />
+}
+
+/**
+ * The square icon and the wordmark side by side, for the top of the navigation: `md` in the sidebar, `sm` in the
+ * phone's top bar.
+ */
+export function SkyArcLockup({ size = 'md', className }: { size?: 'md' | 'sm'; className?: string }) {
   return (
-    <span className={cn('inline-block aspect-[1128/541] h-12 shrink-0', className)}>
-      {tone === 'auto' ? (
-        <>
-          <img src={LOGO.black} alt={ACADEMY_NAME} className="block size-full dark:hidden" />
-          <img src={LOGO.white} alt={ACADEMY_NAME} className="hidden size-full dark:block" />
-        </>
-      ) : (
-        <img src={LOGO[tone]} alt={ACADEMY_NAME} className="block size-full" />
-      )}
+    <span className={cn('inline-flex shrink-0 items-center', size === 'md' ? 'gap-3' : 'gap-2', className)}>
+      <SkyArcMark className={size === 'md' ? 'size-11' : 'size-7'} />
+      <SkyArcWordmark className={size === 'md' ? 'h-7' : 'h-[18px]'} />
     </span>
   )
 }

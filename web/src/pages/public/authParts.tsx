@@ -47,7 +47,9 @@ export function AuthShell({
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted/40 px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-sm">
-        <SkyArcLogo className="mb-8 h-16" />
+        <div className="mb-8 flex justify-center">
+          <SkyArcLogo className="h-16" />
+        </div>
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {description ? <div className="mt-1 text-sm text-muted-foreground">{description}</div> : null}
         <div className="mt-6">{children}</div>

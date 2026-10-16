@@ -132,27 +132,36 @@ don't redraw, recolor, stretch, crop or rebuild them from other images.
 
 | File | What it is | Where it goes |
 |---|---|---|
-| `skyarc-logo.svg` | **The full logo**: "SKY ARC", "SPORTS ACADEMY" and the reticle, black with the red dot, on transparent (1128 × 541, about 2.1 : 1) | Every light background: the top of the sidebar, sign-in and sign-up pages, reports and printouts. **The first choice wherever there's room.** |
+| `skyarc-logo.svg` | **The full logo**: "SKY ARC", "SPORTS ACADEMY" and the reticle, black with the red dot, on transparent (1128 × 541, about 2.1 : 1) | Light backgrounds with room: sign-in, sign-up and message cards (centered), reports and printouts, the kiosk's welcome. **The first choice wherever there's room.** |
 | `skyarc-logo-white.svg` | The full logo in white with the red dot (made from the file above) | Dark backgrounds and dark mode: the homepage, the kiosk's header |
-| `skyarc-icon-black.svg` | **The square icon**: the white reticle and red dot on a black square (512 × 512) | Square places: the favicon, app icons (and the phone app's icon), the closed sidebar |
+| `skyarc-wordmark.svg` | **The wordmark**: "SKY ARC" over "SPORTS ACADEMY", black, without the reticle (360 × 83) | Only beside the square icon, in the lockup below |
+| `skyarc-wordmark-white.svg` | The wordmark in white (made from the file above) | The lockup in dark mode |
+| `skyarc-icon-black.svg` | **The square icon**: the white reticle and red dot on a black square (512 × 512) | Square places: the favicon, app icons (and the phone app's icon), the closed sidebar, the lockup |
 | `skyarc-icon-white.svg` | The square icon on white: the black reticle and red dot | A square icon where black would be too heavy (on white paper, next to other light icons) |
 | `skyarc-mark-white.svg` | The reticle alone, white with the red dot, on transparent (512 × 512) | Over dark colors or photos: a splash screen, a banner, a watermark |
 
+- **The lockup** is the top of the navigation: the square icon with the wordmark beside it (the owner's layout,
+  2026-10-16). The sidebar's top shows it with the open/close button on the right, and nothing else (no academy name
+  in text, no portal name); the closed sidebar shows the icon alone; the phone's top bar shows a small lockup.
 - **In the website**, use the components in `web/src/components/app/SkyArcMark.tsx`, not the files directly:
   `SkyArcLogo` for the full logo (`tone="auto"` follows dark mode; `tone="black"` on white paper whatever the theme,
-  as reports are; `tone="white"` on dark) and `SkyArcMark` for the square icon (`tone="black"` or `"white"`).
-- **Sizes:** the full logo needs room to read ("SPORTS ACADEMY" is small): about 36 px tall at the least (the phone's
-  top bar), 64 px on sign-in pages and reports, 160 px wide in the sidebar. Smaller than that, use the square icon.
+  as reports are; `tone="white"` on dark), `SkyArcLockup` for the icon and wordmark (`size="md"` in the sidebar,
+  `"sm"` in a top bar), and `SkyArcMark` for the square icon (`tone="black"` or `"white"`).
+- **Placement:** on a card that opens with the logo (sign-in, sign-up, messages), the logo is centered above the
+  card's content; in headers and on report pages it sits on the left.
+- **Sizes:** the full logo needs room to read ("SPORTS ACADEMY" is small): 36 px tall at the least, 64 px on sign-in
+  cards and reports. Where there's less room, use the lockup (the icon 44 px and the wordmark 28 px tall in the
+  sidebar) or the square icon alone.
 - **PNG copies** for places that can't show SVG are built by `scripts/brand-icons.ts` (`npx tsx scripts/brand-icons.ts`,
   rerun it when the files change): the app icons in `icons/`, `brand/skyarc-logo-email.png` (the top of every email,
   through `shared/src/email/logo.ts`), `brand/skyarc-email.png` (the small mark older emails show) and
   `brand/skyarc-og.png` (the picture a shared link shows).
 - **The phone app** (Expo, later): the app icon from `skyarc-icon-black.svg`; the full logo on the splash and sign-in
-  screens (white on black, or black on white).
+  screens (white on black, or black on white); the lockup at the top of its navigation.
 - **Colors** from the logo: black `#0A0A0A`, white, and red `#FB0202` for the dot (the `brand` tokens).
-- The designer's file names, for when new versions arrive: `Group 92.svg` is the full logo, `Group 96.svg` the white
-  reticle, `Group 97.svg` the black icon, `Group 98.svg` the white icon. The originals are kept, git-ignored, in
-  `logo/official/` on the owner's machine.
+- The designer's file names, for when new versions arrive: `Group 92.svg` is the full logo, `Group 112.svg` the
+  wordmark, `Group 96.svg` the white reticle, `Group 97.svg` the black icon, `Group 98.svg` the white icon. The
+  originals are kept, git-ignored, in `logo/official/` on the owner's machine.
 
 ## Git and commits
 
