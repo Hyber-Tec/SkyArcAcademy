@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { paperEvaluation, per10, shotGroup, shotTotals } from './evaluation'
+import { evaluationPoints, paperEvaluation, per10, shotGroup, shotTotals } from './evaluation'
 import { groupSizeMm, meanPoint, offsetWords, radiusFromScore, ringRadiusMm, shotPoint, wholeScore } from './target'
 
 describe('the 10 m air rifle target', () => {
@@ -50,4 +50,14 @@ describe('evaluations', () => {
     const totalOnly = paperEvaluation({ studentId: 's', studentName: 'S', position: 'standing', dateKey: '2026-10-01', shots: null, total: 76, fileId: null, note: '' })
     expect(totalOnly).toMatchObject({ shots: 10, total: 76, series: [] })
   })
+
+  it('keeps a scanned card’s shot places, with their direction, MPI and group', () => {
+    const card = paperEvaluation({ studentId: 's', studentName: 'S', position: 'prone', dateKey: '2026-10-01', shots: [{ v: 10, x: 1, y: 0 }, { v: 9, x: -1, y: 3 }, 8], total: null, fileId: null, note: '' })
+    expect(card.total).toBe(27)
+    expect(card.series[0].shots).toEqual([{ v: 10, a: 0, x: 1, y: 0 }, { v: 9, a: 108.4, x: -1, y: 3 }, { v: 8, a: null }])
+    expect(card.mpi).toEqual({ x: 0, y: 1.5 })
+    expect(card.groupMm).toBe(8.1)
+    expect(evaluationPoints(card)).toEqual([{ x: 1, y: 0 }, { x: -1, y: 3 }])
+  })
 })
+

@@ -28,7 +28,7 @@ export function toPoint(e: Evaluation & { id: string }): EvaluationPoint {
     innerTens: e.innerTens,
     groupMm: e.groupMm,
     mpi: e.mpi,
-    marks: e.series.flatMap((s) => s.shots.map((t) => ({ v: t.v, a: t.a }))),
+    marks: e.series.flatMap((s) => s.shots.map((t) => (typeof t.x === 'number' && typeof t.y === 'number' ? { v: t.v, a: t.a, x: t.x, y: t.y } : { v: t.v, a: t.a }))),
   }
 }
 

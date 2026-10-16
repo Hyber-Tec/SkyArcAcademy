@@ -1,0 +1,50 @@
+# The Students tab: the list, the filter, a search, and a student's page with their family, classes, scores and files.
+# Run after sign-in.yaml (the practice owner; the sample academy has students with scores and SIUS PDFs):
+#   maestro test maestro/students.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: students
+      LABEL: Students
+- extendedWaitUntil:
+    visible:
+      id: "students-screen"
+    timeout: 30000
+- tapOn:
+    id: "students-filter-all"
+- tapOn:
+    id: "students-filter-active"
+- tapOn:
+    id: "student-row-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "student-screen"
+    timeout: 15000
+- assertVisible:
+    id: "student-family"
+- scrollUntilVisible:
+    element:
+      id: "student-files"
+    direction: DOWN
+# A file opens full screen, when the student has one.
+- runFlow:
+    when:
+      visible:
+        id: "student-file-.*"
+    commands:
+      - tapOn:
+          id: "student-file-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "file-screen"
+          timeout: 20000
+      - tapOn:
+          id: "file-close"
+- runFlow:
+    file: steps/back.yaml

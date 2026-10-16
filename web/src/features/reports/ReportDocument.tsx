@@ -124,9 +124,10 @@ export function ReportDocument({
 
   const trend = trendSeries(series)
   const main = mainPosition(r)
-  // The target shows the position with the most SIUS shots.
-  const targetPosition = POSITIONS.map((pos) => ({ pos, shots: sius.filter((p) => p.position === pos).flatMap((p) => p.marks) }))
-    .filter((t) => t.shots.some((m) => m.a !== null))
+  // The target shows the position with the most shots that have a place (SIUS, and paper cards scanned with the app).
+  const placed = series.filter((p) => p.marks.some((m) => m.a !== null))
+  const targetPosition = POSITIONS.map((pos) => ({ pos, shots: placed.filter((p) => p.position === pos).flatMap((p) => p.marks.filter((m) => m.a !== null)) }))
+    .filter((t) => t.shots.length > 0)
     .sort((a, b) => b.shots.length - a.shots.length)[0]
   const compare = main ? series.filter((p) => p.position === main) : []
   const showTargets = o.showTargets && (!!targetPosition || f.distribution.tens + f.distribution.nines + f.distribution.eights + f.distribution.lower > 0)
@@ -249,7 +250,7 @@ export function ReportDocument({
                     <div className="mt-3 flex flex-col items-center gap-1">
                       <TargetPlot shots={targetPosition.shots} size={170} color={POSITION_COLORS[targetPosition.pos]} title={`${POSITION_LABELS[targetPosition.pos]}: ${targetPosition.shots.length} shots`} />
                       <div className="text-[11px]" style={{ color: INK.muted }}>
-                        {POSITION_LABELS[targetPosition.pos]} · {targetPosition.shots.length} SIUS shots · the cross marks the average
+                        {POSITION_LABELS[targetPosition.pos]} · {targetPosition.shots.length} shots · the cross marks the average
                       </div>
                     </div>
                   ) : null}

@@ -1,10 +1,11 @@
 import { useId } from 'react'
-import { type ShotPoint, BLACK_RADIUS_MM, PELLET_MM, meanPoint, ringRadiusMm, shotPoint } from '@shared/shooting/target'
+import { type EvalShot, pointOf } from '@shared/shooting/evaluation'
+import { type ShotPoint, BLACK_RADIUS_MM, PELLET_MM, meanPoint, ringRadiusMm } from '@shared/shooting/target'
 
 /**
- * A 10 m air rifle target drawn from the scores: each shot sits where its score and direction put it (SIUS results;
- * paper cards have no directions). It zooms to the shots, so a tight group is still easy to read, and it stays on
- * light "paper" in dark mode, like the reports.
+ * A 10 m air rifle target drawn from the scores: each shot sits where its score and direction put it (SIUS results),
+ * or where it was measured (paper cards scanned with the phone app; typed-in cards have no places). It zooms to the
+ * shots, so a tight group is still easy to read, and it stays on light "paper" in dark mode, like the reports.
  */
 export function TargetPlot({
   shots,
@@ -16,7 +17,7 @@ export function TargetPlot({
   title,
   className,
 }: {
-  shots: readonly { v: number; a: number | null }[]
+  shots: readonly Pick<EvalShot, 'v' | 'a' | 'x' | 'y'>[]
   size?: number
   color?: string
   /** The last shot in another color, as SIUS draws it. */
@@ -28,7 +29,7 @@ export function TargetPlot({
   className?: string
 }) {
   const clip = useId()
-  const points = shots.map((s) => shotPoint(s.v, s.a)).filter((p): p is ShotPoint => p !== null)
+  const points = shots.map(pointOf).filter((p): p is ShotPoint => p !== null)
   const farthest = points.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.y)), 0) + PELLET_MM / 2 + 0.8
   const full = ringRadiusMm(1) + 1.5
   const view = zoom === 'full' || size < 120 ? full : Math.min(full, Math.max(ringRadiusMm(5) + 1, farthest))

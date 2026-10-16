@@ -24,7 +24,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 ### UI
 - **shadcn/ui** components.
-- Icons from **react-icons**.
+- Icons from **react-icons** (the phone app: `lucide-react-native`, the same set, as `mobile/AGENTS.md` says).
 - Follow HyberCRM's design system, themed with Sky Arc brand colors (red / black / white).
 - **Logos:** only the academy's official files, as "Brand and logos" below says. Never draw, recolor or retype the
   logo, and never put the academy's name in text next to the full logo (the logo already says it).
@@ -62,13 +62,18 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 ## Project Rules
 
 - **Single academy.** No multi-branch or super-admin UI (see the brief for how to handle HyberCRM's branch model).
-- **Web first.** Don't start the phone app; it comes after the web (Expo, iOS first). Keep data and APIs ready for it.
+- **Web first.** The website is the main thing; the phone app (`mobile/`, Expo, iOS first) helps the office see things
+  and do a few things (owner, 2026-10-16). Its part for owners and admins comes first, then coaches, then families.
 - **Don't design the landing page.** Homepage is a minimal placeholder (logo, Login, Book a Trial).
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
 - **Few rules.** Add a rule only when the academy needs one: makeups and trials are labels on a class, and levels
   change by hand (`docs/DECISIONS.md` §7). Ask the academy only what the app can't know; what it can set in Settings
   isn't a question.
+- **Samples teach, they never answer** (owner, 2026-10-16, permanent): the academy's sample photos and PDFs are for
+  learning how its cards and results look and for measuring how well a reader does. Never hard-code anything from them
+  (their scores, file names, positions, or a rule that only makes them come out right): the readers must get better
+  for every card, not perfect on the samples. Tests use made-up cards and results.
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
 - **Language:** English only while the features are built. Korean and other languages come in one pass once
@@ -88,12 +93,13 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 | Path | What |
 |---|---|
 | `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports), `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
-| `shared/` | Pure TypeScript used by the website and the functions: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
+| `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the office's tabs (Today, Schedule, Scan, Students, More). How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
+| `shared/` | Pure TypeScript used by the website, the functions and the phone app: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `targets/` (reading a photo of the academy's paper card: its bulls, the holes and their scores, and the review before saving; tested on made-up photos of the card), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
 | `tests/rules/` | Firestore and Storage rules tests (emulators). |
-| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (PNG copies of the official logos), `smoke.ts` (pages in headless Chrome). |
-| `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
+| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (PNG copies of the official logos, the phone app's icons and its logo files), `smoke.ts` (pages in headless Chrome), `phone.mjs` (the phone app's commands: simulators, a phone over the cable, tests, setup) and `publish.mjs` (the stores' builds). |
+| `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook), `running-the-apps.md` (the phone app on simulators and phones), `publishing.md` and `store/` (the App Store and Google Play, later). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
 ## Commands
@@ -105,6 +111,10 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - `npm run seed -- --owner <email> --owner-name "<name>"` → creates the academy and its first owner (production already has them; safe to run again; uses your gcloud login).
 - `npm run seed:sample` → adds the sample data (fictional people and ten weeks of classes) to production, or to the emulators with `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`; `npm run seed:sample -- --remove` deletes it.
 - `npx tsx scripts/smoke.ts /login /trial` → opens pages in headless Chrome and reports console errors (dev server running).
+- The phone app ([`docs/running-the-apps.md`](docs/running-the-apps.md)): `npm run iphone:sim` → the iPhone Simulator on
+  the practice copy (the emulators, the sample data, made-up logins with a password kept in `mobile/.expo`);
+  `npm run iphone` → the iPhone plugged into the Mac, on production; `npm --prefix mobile run typecheck` and `lint`
+  (CI runs both). Nothing goes to TestFlight or the stores until the owner says so ([`docs/publishing.md`](docs/publishing.md)).
 
 ## Conventions
 

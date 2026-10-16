@@ -1,0 +1,418 @@
+import { ringRadiusMm } from '../shooting/target'
+import type { Vec } from './geometry'
+import { type Plane, type RgbaImage, boxBlur, medianOf, plane, sampleRgb } from './image'
+import { MISS_BEYOND_MM } from './score'
+
+/**
+ * Pellet holes in one bull. The bull is resampled flat (millimetres, from its measured centre and axes); what the
+ * printed bull looks like at each distance from its centre is learnt from the bull itself (the median around each
+ * ring), and a hole is a 4 mm patch that differs from it: brighter than the black (the wall or torn white fibres
+ * showing), or bluer or darker than the paper. The printed ring lines and the centre dot are left out, and so is red
+ * ink (coaches write the scores in red). Each mark's centre is then fitted with the shape of a hole: a rim of about
+ * 2 mm radius, often only partly visible as torn fibres, and sometimes a bright inside.
+ */
+
+/** Millimetres around the centre that are read, and the spacing of the samples. */
+const HALF = 27
+const STEP = 0.2
+const N = Math.round((2 * HALF) / STEP) + 1
+const BLACK_EDGE = ringRadiusMm(4)
+/**
+ * The printed lines, ring 9 to ring 1 (the black's edge is one): a ring's size is to the outside of its line, so the
+ * line's middle is a tenth of a millimetre inside (measured on the academy's cards).
+ */
+const LINES = [9, 8, 7, 6, 5, 3, 2, 1].map((ring) => ringRadiusMm(ring) - 0.1)
+/** A hole as paper shows it: a little smaller than the 4.5 mm pellet. */
+const RIM = 2.05
+/** Hole centres further out than this are misses or marks beside the bull (its printed number sits beyond). */
+const SEARCH = MISS_BEYOND_MM + 0.5
+
+export interface HoleMark {
+  /** Millimetres from the bull's centre on the card: x right, y down. */
+  x: number
+  y: number
+  /** The mean difference over a hole-sized square at its centre: about 1 for faint fibres, 5 and more for a clear hole. */
+  strength: number
+  /** The spread of the mark along its long and short axis (mm²), and the long axis' direction (two holes that touch). */
+  l1: number
+  l2: number
+  dir: Vec
+  /** Share of the difference nearby that lies within the hole's rim: near 1 for a hole, low for an edge or a stroke. */
+  contained: number
+  /** Share of the difference within 7.5 mm that lies within 5 mm: near 1 for holes (two touching ones too), low for an edge. */
+  bounded: number
+  /** How well the hole's shape fits the mark (the fit's score per mm² of rim). */
+  fit: number
+}
+
+const toIndex = (mm: number) => Math.round((mm + HALF) / STEP)
+const toMm = (g: number) => -HALF + g * STEP
+
+/** Reads one bull. `axes`: photo pixels per millimetre along the card's x and y (down), as ScannedBull's. */
+export function findHoles(img: RgbaImage, center: Vec, axes: [number, number, number, number]): HoleMark[] {
+  return readBull(img, center, axes).marks
+}
+
+/** The bull read flat: the differences (`A`), their hole-sized means (`S`, both N × N at STEP mm) and the marks. */
+export function readBull(img: RgbaImage, center: Vec, axes: [number, number, number, number]): { A: Plane; S: Plane; marks: HoleMark[] } {
+  const count = N * N
+  const Y = new Float32Array(count)
+  const C = new Float32Array(count)
+  const RG = new Float32Array(count)
+  const red = new Uint8Array(count)
+  const valid = new Uint8Array(count)
+  const masked = new Uint8Array(count)
+  /** For a sample on a printed line: the line's radius (0 for the centre dot). */
+  const band = new Float32Array(count)
+  const radius = new Float32Array(count)
+  const rgb = new Float32Array(3)
+  const [ax, ay, bx, by] = axes
+  for (let gy = 0; gy < N; gy++) {
+    const ym = toMm(gy)
+    for (let gx = 0; gx < N; gx++) {
+      const xm = toMm(gx)
+      const r = Math.sqrt(xm * xm + ym * ym)
+      if (r > HALF) continue
+      const i = gy * N + gx
+      if (!sampleRgb(img, center.x + xm * ax + ym * bx, center.y + xm * ay + ym * by, rgb)) continue
+      valid[i] = 1
+      radius[i] = r
+      const y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+      Y[i] = y
+      C[i] = rgb[2] - rgb[0]
+      const rg = rgb[0] - rgb[1]
+      RG[i] = rg
+      if (rg > 40 && rg > 0.28 * y) red[i] = 1
+      if (r < 0.5) masked[i] = 1
+      else if (Math.abs(r - BLACK_EDGE) < 0.4) {
+        masked[i] = 1
+        band[i] = BLACK_EDGE
+      } else {
+        for (const line of LINES) {
+          if (Math.abs(r - line) < 0.32) {
+            masked[i] = 1
+            band[i] = line
+          }
+        }
+      }
+    }
+  }
+
+  // How the bull looks at each distance, from the samples off the printed lines; near the centre a hole may cover
+  // most of a ring, so there the black's own level stands in.
+  // (Samples are grouped by distance in typed arrays, counted first: no growing lists in the phone's hot loops.)
+  const BIN = 0.25
+  const BINS = Math.ceil(HALF / BIN) + 2
+  const binOf = new Int16Array(count).fill(-1)
+  const inBin = new Int32Array(BINS + 1)
+  for (let i = 0; i < count; i++) {
+    if (!valid[i] || masked[i] || red[i]) continue
+    const b = Math.min(BINS - 1, Math.floor(radius[i] / BIN))
+    binOf[i] = b
+    inBin[b + 1]++
+  }
+  for (let b = 0; b < BINS; b++) inBin[b + 1] += inBin[b]
+  const next = inBin.slice(0, BINS)
+  const byY = new Float32Array(inBin[BINS])
+  const byC = new Float32Array(inBin[BINS])
+  const byR = new Float32Array(inBin[BINS])
+  for (let i = 0; i < count; i++) {
+    const b = binOf[i]
+    if (b < 0) continue
+    const k = next[b]++
+    byY[k] = Y[i]
+    byC[k] = C[i]
+    byR[k] = RG[i]
+  }
+  const profY = new Float32Array(BINS)
+  const profC = new Float32Array(BINS)
+  const profR = new Float32Array(BINS)
+  let lastY = 0
+  let lastC = 0
+  let lastR = 0
+  for (let b = 0; b < BINS; b++) {
+    const from = inBin[b]
+    const to = inBin[b + 1]
+    if (to - from >= 8) {
+      lastY = medianOf(byY.subarray(from, to))
+      lastC = medianOf(byC.subarray(from, to))
+      lastR = medianOf(byR.subarray(from, to))
+    }
+    profY[b] = lastY
+    profC[b] = lastC
+    profR[b] = lastR
+  }
+  const inner = Math.floor(4.5 / BIN)
+  const blackY = medianOf(Array.from(profY.subarray(inner, Math.floor(9 / BIN))))
+  const blackC = medianOf(Array.from(profC.subarray(inner, Math.floor(9 / BIN))))
+  for (let b = 0; b < inner; b++) {
+    profY[b] = blackY
+    profC[b] = blackC
+  }
+  const expected = (prof: Float32Array, r: number) => {
+    const f = Math.min(BINS - 1.001, Math.max(0, r / BIN - 0.5))
+    const b = Math.floor(f)
+    const t = f - b
+    return prof[b] * (1 - t) + prof[b + 1] * t
+  }
+
+  // Ink: redder than the paper there (even a faint stroke), and just around it (its soft edge).
+  for (let i = 0; i < count; i++) if (valid[i] && RG[i] - expected(profR, radius[i]) > 14) red[i] = 1
+  const ink = dilate(red, 2)
+
+  // Differences, in units of this photo's own noise on the black and on the paper.
+  const dY = new Float32Array(count)
+  const dC = new Float32Array(count)
+  const onBlack = new Float32Array(Math.ceil(count / 3) + 1)
+  const onPaper = new Float32Array(onBlack.length)
+  const bluer = new Float32Array(onBlack.length)
+  let nBlack = 0
+  let nPaper = 0
+  for (let i = 0; i < count; i++) {
+    if (!valid[i]) continue
+    const r = radius[i]
+    dY[i] = Y[i] - expected(profY, r)
+    dC[i] = C[i] - expected(profC, r)
+    if (masked[i] || ink[i] || i % 3) continue
+    if (r < BLACK_EDGE - 1) onBlack[nBlack++] = Math.abs(dY[i])
+    else if (r > BLACK_EDGE + 1) {
+      onPaper[nPaper] = Math.abs(dY[i])
+      bluer[nPaper++] = Math.abs(dC[i])
+    }
+  }
+  const sBlack = Math.max(2, 1.4826 * medianOf(onBlack, nBlack))
+  const sPaper = Math.max(2, 1.4826 * medianOf(onPaper, nPaper))
+  const sBlue = Math.max(2, 1.4826 * medianOf(bluer, nPaper))
+  const T = 3
+  const A = plane(N, N)
+  for (let i = 0; i < count; i++) {
+    if (!valid[i] || masked[i]) continue
+    const r = radius[i]
+    if (r < BLACK_EDGE) {
+      // On the black only brighter counts: the wall or torn fibres showing through.
+      A.data[i] = ink[i] ? 0 : Math.max(0, dY[i] / sBlack - T)
+    } else {
+      // On the paper: darker or lighter (not the coaches' red ink), or bluer (the wall behind).
+      A.data[i] = ink[i] ? 0 : Math.max(0, Math.abs(dY[i]) / sPaper - T) + Math.max(0, dC[i] / sBlue - T)
+    }
+  }
+  // Across the printed lines a hole carries on: a line's samples are blended from just inside and just outside it.
+  const at = (xm: number, ym: number) => {
+    const gx = toIndex(xm)
+    const gy = toIndex(ym)
+    return gx >= 0 && gy >= 0 && gx < N && gy < N ? A.data[gy * N + gx] : 0
+  }
+  const filled = new Float32Array(count)
+  for (let gy = 0; gy < N; gy++) {
+    for (let gx = 0; gx < N; gx++) {
+      const i = gy * N + gx
+      if (!valid[i] || !masked[i]) continue
+      const xm = toMm(gx)
+      const ym = toMm(gy)
+      const r = radius[i]
+      if (band[i] > 0) {
+        const inner = (band[i] - 0.5) / r
+        const outer = (band[i] + 0.5) / r
+        const t = Math.max(0, Math.min(1, r - (band[i] - 0.5)))
+        filled[i] = at(xm * inner, ym * inner) * (1 - t) + at(xm * outer, ym * outer) * t
+      } else {
+        // The centre dot: what surrounds it, all round.
+        let low = Infinity
+        for (let k = 0; k < 8; k++) low = Math.min(low, at(0.7 * Math.cos((k * Math.PI) / 4), 0.7 * Math.sin((k * Math.PI) / 4)))
+        filled[i] = low
+      }
+    }
+  }
+  for (let i = 0; i < count; i++) if (masked[i]) A.data[i] = filled[i]
+
+  // Candidates: where the mean difference over a hole-sized square peaks.
+  const S = boxBlur(boxBlur(A, Math.round(2.0 / STEP)), 1)
+  const reach = Math.round(1.6 / STEP)
+  const peaks: { gx: number; gy: number; v: number }[] = []
+  const lim = toIndex(SEARCH) - toIndex(0)
+  const c0 = toIndex(0)
+  for (let gy = Math.max(reach, c0 - lim); gy <= Math.min(N - 1 - reach, c0 + lim); gy++) {
+    for (let gx = Math.max(reach, c0 - lim); gx <= Math.min(N - 1 - reach, c0 + lim); gx++) {
+      const xm = toMm(gx)
+      const ym = toMm(gy)
+      if (xm * xm + ym * ym > SEARCH * SEARCH) continue
+      const v = S.data[gy * N + gx]
+      if (v < 0.25) continue
+      let top = true
+      for (let dy = -reach; dy <= reach && top; dy++) {
+        const row = (gy + dy) * N + gx
+        for (let dx = -reach; dx <= reach; dx++) {
+          if (!dx && !dy) continue
+          const w = S.data[row + dx]
+          if (w > v || (w === v && (dy < 0 || (dy === 0 && dx < 0)))) {
+            top = false
+            break
+          }
+        }
+      }
+      if (top) peaks.push({ gx, gy, v })
+    }
+  }
+  peaks.sort((p, q) => q.v - p.v)
+  const marks: HoleMark[] = []
+  for (const p of peaks.slice(0, 6)) {
+    const m = fitHole(A, S, toMm(p.gx), toMm(p.gy))
+    if (m.x * m.x + m.y * m.y > SEARCH * SEARCH) continue
+    if (marks.some((o) => (o.x - m.x) ** 2 + (o.y - m.y) ** 2 < 1.8 * 1.8)) continue
+    marks.push(m)
+  }
+  return { A, S, marks: marks.sort((p, q) => q.strength - p.strength) }
+}
+
+/** The flat bull's size and spacing, for anything drawing its maps. */
+export const BULL_GRID = { size: N, step: STEP, half: HALF }
+
+function dilate(mask: Uint8Array, r: number): Uint8Array {
+  const out = new Uint8Array(mask.length)
+  for (let gy = 0; gy < N; gy++) {
+    for (let gx = 0; gx < N; gx++) {
+      if (!mask[gy * N + gx]) continue
+      for (let dy = -r; dy <= r; dy++) {
+        const y = gy + dy
+        if (y < 0 || y >= N) continue
+        for (let dx = -r; dx <= r; dx++) {
+          const x = gx + dx
+          if (x >= 0 && x < N) out[y * N + x] = 1
+        }
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * The two shapes a hole is fitted with, as tables by squared distance from its centre: a disc (the wall showing
+ * through: bright inside and at the rim) and a ring (the card behind showing dark, with torn fibres at the rim only).
+ * Both ask for nothing just outside the rim.
+ */
+const KERNEL_REACH = RIM + 1.4
+const KERNEL_STEPS = 400
+function kernel(inside: (d: number) => number): Float32Array {
+  const table = new Float32Array(KERNEL_STEPS + 1)
+  for (let k = 0; k <= KERNEL_STEPS; k++) {
+    const d = Math.sqrt((k / KERNEL_STEPS) * KERNEL_REACH * KERNEL_REACH)
+    const rim = Math.exp(-((d - RIM) ** 2) / (2 * 0.3 * 0.3))
+    const beyond = 0.35 * Math.exp(-((d - RIM - 1.0) ** 2) / (2 * 0.3 * 0.3))
+    table[k] = inside(d) + rim - beyond
+  }
+  return table
+}
+const DISC = kernel((d) => 0.6 / (1 + Math.exp((d - (RIM - 0.45)) / 0.12)))
+const RING = kernel((d) => -0.3 / (1 + Math.exp((d - (RIM - 0.6)) / 0.12)))
+
+/** Where a hole's centre best explains the differences around a peak: a coarse then a fine search with the hole's shape. */
+function fitHole(A: Plane, S: Plane, x0: number, y0: number): HoleMark {
+  // The differences near the peak, as a short list (most samples are 0).
+  const gather = 7.5
+  const px: number[] = []
+  const py: number[] = []
+  const pw: number[] = []
+  const g0x = Math.max(0, toIndex(x0 - gather))
+  const g1x = Math.min(N - 1, toIndex(x0 + gather))
+  const g0y = Math.max(0, toIndex(y0 - gather))
+  const g1y = Math.min(N - 1, toIndex(y0 + gather))
+  for (let gy = g0y; gy <= g1y; gy++) {
+    for (let gx = g0x; gx <= g1x; gx++) {
+      const w = A.data[gy * N + gx]
+      if (w > 0) {
+        px.push(toMm(gx))
+        py.push(toMm(gy))
+        pw.push(w)
+      }
+    }
+  }
+  const reach2 = KERNEL_REACH * KERNEL_REACH
+  const search = (table: Float32Array) => {
+    const score = (cx: number, cy: number) => {
+      let s = 0
+      for (let k = 0; k < pw.length; k++) {
+        const dx = px[k] - cx
+        const dy = py[k] - cy
+        const d2 = dx * dx + dy * dy
+        if (d2 >= reach2) continue
+        s += pw[k] * table[Math.round((d2 / reach2) * KERNEL_STEPS)]
+      }
+      return s
+    }
+    let best = { x: x0, y: y0, s: score(x0, y0) }
+    for (const [span, step] of [
+      [2.4, 0.4],
+      [0.4, 0.1],
+      [0.1, 0.025],
+    ]) {
+      const cx = best.x
+      const cy = best.y
+      for (let oy = -span; oy <= span + 1e-9; oy += step) {
+        for (let ox = -span; ox <= span + 1e-9; ox += step) {
+          const s = score(cx + ox, cy + oy)
+          if (s > best.s) best = { x: cx + ox, y: cy + oy, s }
+        }
+      }
+    }
+    return best
+  }
+  // A bright inside means the wall shows through (the disc); otherwise only the rim's fibres do (the ring).
+  const disc = search(DISC)
+  let inside = 0
+  let lit = 0
+  const r2 = (RIM - 0.5) * (RIM - 0.5)
+  for (let gy = toIndex(disc.y - RIM); gy <= toIndex(disc.y + RIM); gy++) {
+    for (let gx = toIndex(disc.x - RIM); gx <= toIndex(disc.x + RIM); gx++) {
+      if (gx < 0 || gy < 0 || gx >= N || gy >= N || (toMm(gx) - disc.x) ** 2 + (toMm(gy) - disc.y) ** 2 > r2) continue
+      inside++
+      if (A.data[gy * N + gx] > 0) lit++
+    }
+  }
+  const best = inside && lit / inside >= 0.5 ? disc : search(RING)
+  // The mark's spread around that centre (two touching holes make a long one), and how much of what's around lies
+  // within the hole's rim.
+  let sw = 0
+  let sxx = 0
+  let syy = 0
+  let sxy = 0
+  let within = 0
+  for (let k = 0; k < pw.length; k++) {
+    const dx = px[k] - best.x
+    const dy = py[k] - best.y
+    const d2 = dx * dx + dy * dy
+    if (d2 > 4.5 * 4.5) continue
+    if (d2 <= (RIM + 0.8) * (RIM + 0.8)) within += pw[k]
+    if (d2 > 4.2 * 4.2) continue
+    sw += pw[k]
+    sxx += pw[k] * dx * dx
+    syy += pw[k] * dy * dy
+    sxy += pw[k] * dx * dy
+  }
+  let around = 0
+  let near = 0
+  let far = 0
+  for (let k = 0; k < pw.length; k++) {
+    const d2 = (px[k] - best.x) ** 2 + (py[k] - best.y) ** 2
+    if (d2 <= 4.5 * 4.5) around += pw[k]
+    if (d2 <= 5 * 5) near += pw[k]
+    if (d2 <= 7.5 * 7.5) far += pw[k]
+  }
+  let l1 = 0
+  let l2 = 0
+  let dir = { x: 1, y: 0 }
+  if (sw > 0) {
+    const mxx = sxx / sw
+    const myy = syy / sw
+    const mxy = sxy / sw
+    const tr = mxx + myy
+    const root = Math.sqrt(Math.max(0, ((mxx - myy) * (mxx - myy)) / 4 + mxy * mxy))
+    l1 = tr / 2 + root
+    l2 = tr / 2 - root
+    const ang = 0.5 * Math.atan2(2 * mxy, mxx - myy)
+    dir = { x: Math.cos(ang), y: Math.sin(ang) }
+  }
+  const gx = Math.min(N - 1, Math.max(0, toIndex(best.x)))
+  const gy = Math.min(N - 1, Math.max(0, toIndex(best.y)))
+  const rimArea = 2 * Math.PI * RIM * 0.8
+  return { x: best.x, y: best.y, strength: S.data[gy * N + gx], l1, l2, dir, contained: around > 0 ? within / around : 0, bounded: far > 0 ? near / far : 0, fit: (best.s * STEP * STEP) / rimArea }
+}

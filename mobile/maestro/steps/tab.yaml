@@ -1,0 +1,22 @@
+# A step the flows run (not a test of its own): opens one tab of the office's app. TAB is today, schedule, scan,
+# students or more, and LABEL its name on the tab bar.
+#   - runFlow:
+#       file: steps/tab.yaml
+#       env: { TAB: students, LABEL: Students }
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "tab-${TAB}"
+# On Android Maestro can't see a tab's test id, and screens show the same words ("Today" heads a list): there the tab
+# is its name on the tab bar, Material's label view (every tab shows its name: (tabs)/_layout.tsx).
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "${LABEL}"
+          id: ".*navigation_bar_item_(large|small)_label_view"

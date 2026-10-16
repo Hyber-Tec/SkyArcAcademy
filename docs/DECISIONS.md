@@ -220,3 +220,34 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   stays a launch step (A14). Mail sent by Gmail from a Gmail address passes the spam checks that matter (SPF, DKIM,
   DMARC); the website's address doesn't have to match the sender's.
 
+
+## 10. The phone app: the office's app, and paper targets scored from a photo (2026-10-16)
+
+- **Goo's direction:** the phone app starts now, with Expo for iPhone and Android, iPhone first. The office's part
+  first (owners and admins); nothing for coaches, parents or students yet. The website stays the main thing: the app
+  helps the office see and do a few things, with a very simple look and feel. Its main job is scoring paper targets:
+  take a photo (or choose one from Photos), the app reads it, and the card goes to the student's Drive with its scores
+  for the reports. No TestFlight: Goo installs it on their own iPhone over the cable. Public or unlisted: Claude
+  recommends (below).
+- **Built from HyberCRM's phone app** (Expo SDK 57, React Native Firebase, its scripts): `npm run iphone` puts it on
+  the iPhone plugged into the Mac, `npm run iphone:sim` opens it in the iPhone Simulator on the practice copy
+  ([docs/running-the-apps.md](running-the-apps.md)). Tabs: Today · Schedule · Scan · Students · More. It only reads,
+  except the Scan tab; coaches, parents and students who sign in see that their part comes later.
+- **Reading a card** happens on the phone, in `shared/src/targets` (the same code the tests run): it finds the card's
+  twelve bulls by their black discs, works out which is which from the 3 × 4 grid and the header (whichever way up the
+  photo is), measures each bull's black edge for its centre, size and slant, and finds the holes: bright where the wall
+  shows through, or dark with torn white fibres when another card is behind. Shots are scored by ISSF's rule (the 4.5
+  mm pellet touching a ring's line counts that ring), the geometry SIUS uses, with the decimal beside it.
+- **A person checks every card before it's saved:** each bull's score on the flattened card, and any bull worth a look
+  (the scan unsure, a second mark, no hole) up close, where a shot is moved, added, removed or swapped for another mark,
+  or its score typed. A bull without a shot counts as a miss (0). One or two shots per bull (found by itself).
+- **Checked on the academy's ten sample photos** (on Goo's Mac only, never in git): every card and every bull found,
+  photos taken sideways too. The scores match the coaches' pen 68% of the time exactly and 95% within one ring. Most
+  differences are close calls the coaches score lower: they judge the hole as it looks (about 4 mm) rather than with
+  a 4.5 mm gauge (A15). Two bulls had two holes where the coach counted one: the app shows both and the person picks.
+- **Saved as:** the card itself, flattened and cropped like a scan, in the student's Drive folder
+  (`YYYY-MM-DD Position paper card.jpg`), and its scores as a paper result with each shot's place on the target. The
+  reports and the website's target pictures draw scanned shots and measure their group, as for SIUS results.
+- **Publishing (Claude's recommendation):** a public listing, from the academy's own Apple developer account; unlisted
+  only if Apple asks for it, since a public app can become unlisted but never the other way round. Why, and the steps:
+  [docs/publishing.md](publishing.md#public-or-unlisted).

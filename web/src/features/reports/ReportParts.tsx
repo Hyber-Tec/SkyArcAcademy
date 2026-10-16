@@ -138,9 +138,9 @@ const pct = (p: EvaluationPoint) => (p.innerTens !== null && p.shots ? Math.roun
  * Two evaluations of one position side by side: the scores, the change between them and both targets (SIUS). Used
  * by the report ("First vs latest") and the student's Scores tab (any two).
  */
-/** A result's target, or a note for a paper card (shot positions come with photo scoring in the phone app). */
+/** A result's target (SIUS, or a paper card scanned with the phone app), or a note for a card typed in by hand. */
 function picture(p: EvaluationPoint, label: string, color: string) {
-  if (p.source === 'sius') return <TargetPlot shots={p.marks} size={150} color={color} title={`${label}: ${p.marks.length} shots`} />
+  if (p.marks.some((m) => m.a !== null)) return <TargetPlot shots={p.marks} size={150} color={color} title={`${label}: ${p.marks.length} shots`} />
   return (
     <div className="flex size-[150px] items-center justify-center rounded-full border border-dashed p-6 text-center text-[11px] leading-snug" style={{ borderColor: INK.hairline, color: INK.muted }}>
       Paper card: where the shots landed isn’t recorded
