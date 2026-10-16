@@ -24,7 +24,7 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 | Hosting | `web/dist` (built in CI) | Every address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
-| Storage rules | `storage.rules` | The academy's logo, announcement files and the Drive's files (staff only, read through the rules). See "Storage" below. |
+| Storage rules | `storage.rules` | Announcement files and the Drive's files (staff only, read through the rules). See "Storage" below. |
 | Cloud Functions | `functions/` (built by the predeploy step) | Gen 2, `us-central1`, running as `functions@`. See "Cloud Functions" below. |
 
 ## How GitHub signs in to Google Cloud (no keys)
@@ -123,14 +123,20 @@ Set up on 2026-10-15. HyberTec's organization shapes three things here:
   reports "set invoker" for it; `scripts/deploy.sh` then opens the callables and deploys once more, and that run
   succeeds.
 
-The email app password is the Secret Manager secret **`GMAIL_APP_PASSWORD`**. It holds the placeholder `unset`, so
-the functions send nothing and the app says email isn't set up (an invite then shows its sign-in link to copy). Once
-the sender is decided (docs/DECISIONS.md), set the sender's Google app password and deploy again:
+The email app password is the Secret Manager secret **`GMAIL_APP_PASSWORD`**: the Google app password of the sending
+Gmail account (`SENDER_EMAIL` in `shared/src/brand.ts`). It was set on 2026-10-16, and Firebase manages the secret since
+then. While it holds anything but a 16-letter app password, the functions send nothing and the app says email isn't set
+up (an invite then shows its sign-in link to copy). The functions read the version that was current when they were
+deployed, so after changing it, deploy `main` again:
 
 ```bash
 firebase functions:secrets:set GMAIL_APP_PASSWORD --project skyarcacademy   # paste the 16-letter app password
 gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy
 ```
+
+When the command offers to re-deploy the functions itself, answer **No**: production gets its functions from `main`.
+An app password is made at https://myaccount.google.com/apppasswords, signed in as the sending account, once its
+2-Step Verification is on.
 
 How it was set up, to recreate or audit it:
 
@@ -200,8 +206,8 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
 2. **Sign-in:** add `skyarcacademy.com` to Authentication → Settings → Authorized domains. Keep `authDomain` on
    `skyarcacademy.firebaseapp.com` unless the domain's `/__/auth/handler` is registered on the Google OAuth client.
 3. **The app's own address:** `APP_DOMAIN` in `shared/src/brand.ts` (links in emails), the origins in
-   `storage.cors.json` (apply it again, see "Storage"), `og:image` in `web/app.html`, and the address in `CLAUDE.md`
-   and `README.md`.
+   `storage.cors.json` (apply it again, see "Storage"), `og:image` in `web/app.html` and `web/index.html`, and the
+   address in `CLAUDE.md` and `README.md`.
 4. **The email sender (decided 2026-10-15):** emails go from HyberTec's Gmail until now. Ask the owner for an address on the
    academy's domain (e.g. a Google Workspace mailbox) so mail stops landing in spam; publish SPF, DKIM and DMARC for
    it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with

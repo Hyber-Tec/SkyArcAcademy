@@ -26,6 +26,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - **shadcn/ui** components.
 - Icons from **react-icons**.
 - Follow HyberCRM's design system, themed with Sky Arc brand colors (red / black / white).
+- **Logos:** only the academy's official files, as "Brand and logos" below says. Never draw, recolor or retype the
+  logo, and never put the academy's name in text next to the full logo (the logo already says it).
 
 ### Secrets
 - **Never commit** API keys, service-account files, tokens, passwords, or PINs.
@@ -90,7 +92,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
 | `tests/rules/` | Firestore and Storage rules tests (emulators). |
-| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (app icons from the mark), `smoke.ts` (pages in headless Chrome). |
+| `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (PNG copies of the official logos), `smoke.ts` (pages in headless Chrome). |
 | `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
@@ -119,9 +121,38 @@ Carried over from HyberCRM, adapted to one academy:
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
 - **Language:** English for now. Keep text in the code, never in images, so the translation pass (several languages, not
   only Korean) can come later.
-- **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logo is `SkyArcLogo` (full) or `SkyArcMark` (the reticle); `scripts/brand-icons.ts` rebuilds the icons from the favicon.
+- **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logos are fixed in the code ("Brand and logos" below); Settings can't change them.
 - **Cloud Functions** run as `functions@skyarcacademy.iam.gserviceaccount.com` with only the roles they use (`docs/DEPLOY.md`). A function that needs another Google service needs that role added there first.
 - **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy. The email app password is the Secret Manager secret `GMAIL_APP_PASSWORD`.
+
+## Brand and logos
+
+The academy's official logo files (sent by the owner on 2026-10-16) live in `web/public/brand/`. Use them as they are:
+don't redraw, recolor, stretch, crop or rebuild them from other images.
+
+| File | What it is | Where it goes |
+|---|---|---|
+| `skyarc-logo.svg` | **The full logo**: "SKY ARC", "SPORTS ACADEMY" and the reticle, black with the red dot, on transparent (1128 × 541, about 2.1 : 1) | Every light background: the top of the sidebar, sign-in and sign-up pages, reports and printouts. **The first choice wherever there's room.** |
+| `skyarc-logo-white.svg` | The full logo in white with the red dot (made from the file above) | Dark backgrounds and dark mode: the homepage, the kiosk's header |
+| `skyarc-icon-black.svg` | **The square icon**: the white reticle and red dot on a black square (512 × 512) | Square places: the favicon, app icons (and the phone app's icon), the closed sidebar |
+| `skyarc-icon-white.svg` | The square icon on white: the black reticle and red dot | A square icon where black would be too heavy (on white paper, next to other light icons) |
+| `skyarc-mark-white.svg` | The reticle alone, white with the red dot, on transparent (512 × 512) | Over dark colors or photos: a splash screen, a banner, a watermark |
+
+- **In the website**, use the components in `web/src/components/app/SkyArcMark.tsx`, not the files directly:
+  `SkyArcLogo` for the full logo (`tone="auto"` follows dark mode; `tone="black"` on white paper whatever the theme,
+  as reports are; `tone="white"` on dark) and `SkyArcMark` for the square icon (`tone="black"` or `"white"`).
+- **Sizes:** the full logo needs room to read ("SPORTS ACADEMY" is small): about 36 px tall at the least (the phone's
+  top bar), 64 px on sign-in pages and reports, 160 px wide in the sidebar. Smaller than that, use the square icon.
+- **PNG copies** for places that can't show SVG are built by `scripts/brand-icons.ts` (`npx tsx scripts/brand-icons.ts`,
+  rerun it when the files change): the app icons in `icons/`, `brand/skyarc-logo-email.png` (the top of every email,
+  through `shared/src/email/logo.ts`), `brand/skyarc-email.png` (the small mark older emails show) and
+  `brand/skyarc-og.png` (the picture a shared link shows).
+- **The phone app** (Expo, later): the app icon from `skyarc-icon-black.svg`; the full logo on the splash and sign-in
+  screens (white on black, or black on white).
+- **Colors** from the logo: black `#0A0A0A`, white, and red `#FB0202` for the dot (the `brand` tokens).
+- The designer's file names, for when new versions arrive: `Group 92.svg` is the full logo, `Group 96.svg` the white
+  reticle, `Group 97.svg` the black icon, `Group 98.svg` the white icon. The originals are kept, git-ignored, in
+  `logo/official/` on the owner's machine.
 
 ## Git and commits
 
