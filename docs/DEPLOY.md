@@ -183,7 +183,8 @@ tried with real-looking weeks. `npm run seed:sample` adds:
 
 - a manager and four coaches with pay rates, availability and four weeks of time entries;
 - the students' shooting: about 100 results, most as synthetic SIUS PDFs in their Drive folders (uploaded to
-  Storage), a few paper cards, and two progress reports (one shared with a family that has a sign-in);
+  Storage), a few typed paper cards, a few scanned ones with a made-up picture of the card (to try correcting a card on
+  the website), and two progress reports (one shared with a family that has a sign-in);
 - 35 students with levels, programs and families (seven parents with a sign-in);
 - ten weeks of classes in the academy's blocks, with makeups, trial visits, one coach's sick day and Thanksgiving;
 - announcements and events.
@@ -191,6 +192,11 @@ tried with real-looking weeks. `npm run seed:sample` adds:
 Everything is fictional (`shared/src/sample/data.ts`): document IDs start with `sample-`, and emails end in
 `@skyarc-sample.test`, a reserved domain that never gets mail. Preview a coach's or a parent's view with View as (the
 eye icon by your name). To try the kiosk, set a sample coach's PIN on their Employees page.
+
+**To be a coach for real** (the website and the phone app, with a coach's access as the rules give it), give an email
+you read the sample coach Daniel Reed's access: `npm run seed:sample -- --coach-login you+coach@gmail.com` (Gmail
+delivers `you+anything@gmail.com` to `you@gmail.com`). The academy's sign-in email goes to it; sign in there with a
+password made for it (Create an account, with that email). `--remove` takes this access away with the sample data.
 
 **Before the real data is imported, remove it all:** `npm run seed:sample -- --remove`. It also deletes what the app
 made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and

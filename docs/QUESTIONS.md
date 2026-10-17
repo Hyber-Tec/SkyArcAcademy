@@ -44,8 +44,7 @@ setting it can change later. Numbered as in the email Goo sends the academy, so 
 
 | | Question | Needed for | Until answered |
 |---|---|---|---|
-| **A10** | **Privacy policy:** review the draft at `/privacy`. Also the academy's legal name, mailing address, and the email and phone for privacy questions (they go in Settings → Academy). | Inviting families | Marked as a draft |
-| **A11** | **The name:** "Sky Arc Academy" or "Sky Arc Sports Academy" in the app, the emails and the page footers? | Launch | Settings say Sky Arc Academy; the logo and footers say Sky Arc Sports Academy |
+| **A10** | **Privacy policy:** review the draft at `/privacy` (it covers the phone app too since 2026-10-17; the App Store needs it in effect). Also the academy's legal name, mailing address, and the email and phone for privacy questions and for the Help page (they go in Settings → Academy). | Inviting families, publishing the app | Marked as a draft |
 | **A12** | **The kiosk:** a tablet or computer at the front desk where coaches clock in? Any device with a web browser works. | The kiosk | The kiosk page, opened by an admin on any computer |
 | **A13** | **Website content:** programs, tuition, about, gallery photos, news. | The landing page | — |
 | **A14** | **The domain:** access to skyarcacademy.com, and an email address on it for the app to send from. | Launch ([`DEPLOY.md`](DEPLOY.md)) | HyberTec's Gmail sends |

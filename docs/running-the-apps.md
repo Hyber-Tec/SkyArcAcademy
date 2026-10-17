@@ -26,9 +26,10 @@ for later.
 
 ## Who is who in the app
 
-The app is the **academy office's** for now: an **owner** or an **admin** who signs in gets five tabs (Today, Schedule,
-Scan, Students, More). A **coach**, a **parent** or a **student** who signs in sees "Coming to the app" with a button to
-the website: their part comes later. An email the academy hasn't added sees "No access yet".
+The app is the **academy staff's** for now: an **owner**, an **admin** or a **coach** who signs in gets five tabs (Today,
+Schedule, Scan, Students, More); a coach sees their own classes, every student without the family's contacts, and can
+scan cards and change scores. A **parent** or a **student** who signs in sees "Coming to the app" with a button to the
+website: their part comes later. An email the academy hasn't added sees "No access yet".
 
 On the **real Sky Arc**, sign in as yourself: with **Google** (the account you use on the website), or the email and
 password you use there.
@@ -39,8 +40,8 @@ when the app opens.
 
 | Login | Who | What the app shows |
 | --- | --- | --- |
-| `owner@example.test` | The academy's owner | The office's tabs |
-| `daniel.reed@skyarc-sample.test` | A sample coach | "Coming to the app" |
+| `owner@example.test` | The academy's owner | The staff's tabs, everything |
+| `daniel.reed@skyarc-sample.test` | A sample coach | The staff's tabs, a coach's view |
 | `jiyeon.hwang@skyarc-sample.test` | A sample parent | "Coming to the app" |
 
 ## The commands
