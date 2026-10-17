@@ -76,9 +76,10 @@ export function typedReview(shotsPerBull = 1): CardReview {
 
 /**
  * A close call: a hole that only just touches its ring's line (by less than this), so ISSF's 4.5 mm rule counts the
- * ring while the hole, which looks about 4 mm across, may seem not to touch it. Worth a person's look.
+ * ring while the hole, which looks about 4 mm across, may seem not to touch it. Worth a person's look: a hole's place
+ * read from a photo can be off by up to about 0.3 mm, so closer than this the photo alone can't settle it.
  */
-export const CLOSE_MM = 0.35
+export const CLOSE_MM = 0.4
 
 /** The close call a placed shot is, if any: the ring whose line its hole only just touches, and by how much (mm). */
 export function closeCall(s: Pick<ReviewShot, 'x' | 'y' | 'value'>): { ring: number; byMm: number } | null {

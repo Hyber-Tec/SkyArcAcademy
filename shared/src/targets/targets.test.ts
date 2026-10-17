@@ -190,6 +190,7 @@ describe('close calls and saved cards', () => {
   it('flags a hole that only just touches its ring’s line', () => {
     // Ring 8's line is touched with the hole's centre up to 7.5 mm out.
     expect(closeCall(placedShot(0, 7.3))).toEqual({ ring: 8, byMm: 0.2 })
+    expect(closeCall(placedShot(0, 7.15))).toEqual({ ring: 8, byMm: 0.35 })
     expect(closeCall(placedShot(0, 6.9))).toBeNull()
     expect(closeCall({ x: null, y: null, value: 8 })).toBeNull()
   })
