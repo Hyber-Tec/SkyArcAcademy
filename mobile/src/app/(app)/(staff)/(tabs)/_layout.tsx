@@ -2,8 +2,8 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useColors } from "@/theme";
 
 /**
- * The office's five tabs (owner, 2026-10-16: the website is the main thing; the app helps the office see things and do
- * a few things): Today, Schedule, Scan, Students and More. Android shows every tab's name and the same pictures as the
+ * The staff's five tabs (owner, 2026-10-16: the website is the main thing; the app helps the office see things and do
+ * a few things; coaches got the same tabs on 2026-10-17): Today, Schedule, Scan, Students and More. Android shows every tab's name and the same pictures as the
  * iPhone: a sun, a calendar, a camera, two people and three dots.
  */
 export default function AdminTabs() {

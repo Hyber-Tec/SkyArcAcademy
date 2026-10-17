@@ -23,13 +23,13 @@ import { radius, space, useColors, useStatusColors } from "@/theme";
 
 /**
  * A class, over the screen it was opened from (a sheet; loaded from its id, so a link opens it too): when, the coach
- * with a call or a text away, and each student with their status, the class's note and their page. Changes are made on
- * the website.
+ * with a call or a text away (for the office; a coach's classes are their own), and each student with their status, the
+ * class's note and their page. Changes are made on the website.
  */
 export default function ClassSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const parsed = parseClassId(id ?? "");
-  const { settings } = useBranch();
+  const { settings, isCoach } = useBranch();
   const colors = useColors();
   const statusColors = useStatusColors();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -85,17 +85,19 @@ export default function ClassSheet() {
         <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} filled testID="class-close" />
       </View>
 
-      <ListSection title="Coach">
-        <ListRow
-          icon={<Avatar name={coachName} size={38} color={coach.data?.color} />}
-          title={coachName}
-          subtitle={coach.data?.phone ? formatPhone(coach.data.phone) : (coach.data?.email ?? undefined)}
-          right={<ContactButtons phone={coach.data?.phone} email={coach.data?.email} name={coachName} />}
-          chevron={false}
-          onPress={() => router.push({ pathname: "/coach/[id]", params: { id: group.coachId } })}
-          testID="class-coach"
-        />
-      </ListSection>
+      {isCoach ? null : (
+        <ListSection title="Coach">
+          <ListRow
+            icon={<Avatar name={coachName} size={38} color={coach.data?.color} />}
+            title={coachName}
+            subtitle={coach.data?.phone ? formatPhone(coach.data.phone) : (coach.data?.email ?? undefined)}
+            right={<ContactButtons phone={coach.data?.phone} email={coach.data?.email} name={coachName} />}
+            chevron={false}
+            onPress={() => router.push({ pathname: "/coach/[id]", params: { id: group.coachId } })}
+            testID="class-coach"
+          />
+        </ListSection>
+      )}
 
       <ListSection title="Students" detail={plural(group.active.length, "student")} testID="class-students">
         {group.sessions.map((s) => {
@@ -123,7 +125,7 @@ export default function ClassSheet() {
       <Button
         variant="outline"
         icon={<ExternalLink size={18} color={colors.foreground} />}
-        onPress={() => void openWebsite(`/admin/schedule/day/${group.dateKey}`)}
+        onPress={() => void openWebsite(isCoach ? "/coach/schedule" : `/admin/schedule/day/${group.dateKey}`)}
         testID="class-open-website"
       >
         Open the day on the website

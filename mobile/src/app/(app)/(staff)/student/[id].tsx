@@ -35,12 +35,13 @@ const FILES_SHOWN = 8;
 
 /**
  * A student at a glance (loaded by ID, so it opens from anywhere): who they are, their parents a call, a text or an
- * email away, their next and last classes, their latest scores (each opens its own screen, and swipes away to be
- * deleted) and the files in their Drive folder. Other changes are made on the website.
+ * email away (the office's only, as on the website), their next and last classes (a coach's own with them), their
+ * latest scores (each opens its own screen, and swipes away to be deleted) and the files in their Drive folder. Other
+ * changes are made on the website.
  */
 export default function StudentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { settings, timezone, branchId, actor } = useBranch();
+  const { settings, timezone, branchId, actor, isAdmin, portal } = useBranch();
   const colors = useColors();
   const hour12 = settings.general.timeFormat !== "24h";
   const { today } = useAcademyNow();
@@ -97,29 +98,31 @@ export default function StudentScreen() {
           <Badge tone={s.status === "enrolled" ? "success" : "secondary"}>{STUDENT_STATUS_LABELS[s.status]}</Badge>
         </Card>
 
-        <ListSection title="Family" testID="student-family">
-          {parents.map((x, i) => (
-            <ListRow
-              key={`${x.name}-${i}`}
-              icon={<Avatar name={x.name || "?"} size={38} />}
-              title={x.name || "Parent"}
-              subtitle={[x.relation, x.phone ? formatPhone(x.phone) : x.email].filter(Boolean).join(" · ")}
-              right={<ContactButtons phone={x.phone} email={x.email} name={x.name || "the parent"} />}
-              testID={`student-parent-${i}`}
-            />
-          ))}
-          {p && (p.phone || p.email) ? (
-            <ListRow
-              icon={<Avatar name={s.name} size={38} />}
-              title={`${s.firstName || s.name} (student)`}
-              subtitle={p.phone ? formatPhone(p.phone) : p.email}
-              right={<ContactButtons phone={p.phone} email={p.email} name={s.name} />}
-              testID="student-own-contact"
-            />
-          ) : null}
-          {!profile.loading && !parents.length && !(p?.phone || p?.email) ? <ListRow title="No contacts yet" subtitle="Add the family’s phone and email on the website." /> : null}
-          {profile.loading ? <ListRow title="Loading contacts…" /> : null}
-        </ListSection>
+        {isAdmin ? (
+          <ListSection title="Family" testID="student-family">
+            {parents.map((x, i) => (
+              <ListRow
+                key={`${x.name}-${i}`}
+                icon={<Avatar name={x.name || "?"} size={38} />}
+                title={x.name || "Parent"}
+                subtitle={[x.relation, x.phone ? formatPhone(x.phone) : x.email].filter(Boolean).join(" · ")}
+                right={<ContactButtons phone={x.phone} email={x.email} name={x.name || "the parent"} />}
+                testID={`student-parent-${i}`}
+              />
+            ))}
+            {p && (p.phone || p.email) ? (
+              <ListRow
+                icon={<Avatar name={s.name} size={38} />}
+                title={`${s.firstName || s.name} (student)`}
+                subtitle={p.phone ? formatPhone(p.phone) : p.email}
+                right={<ContactButtons phone={p.phone} email={p.email} name={s.name} />}
+                testID="student-own-contact"
+              />
+            ) : null}
+            {!profile.loading && !parents.length && !(p?.phone || p?.email) ? <ListRow title="No contacts yet" subtitle="Add the family’s phone and email on the website." /> : null}
+            {profile.loading ? <ListRow title="Loading contacts…" /> : null}
+          </ListSection>
+        ) : null}
 
         <ListSection title="Classes" testID="student-classes">
           {next.map((c) => (
@@ -130,7 +133,7 @@ export default function StudentScreen() {
               onPress={() => router.push({ pathname: "/class/[id]", params: { id: classIdOf(c) } })}
             />
           ))}
-          {!classes.loading && !next.length ? <ListRow title="No classes ahead" subtitle="Nothing is booked from today on." /> : null}
+          {!classes.loading && !next.length ? <ListRow title="No classes ahead" subtitle={isAdmin ? "Nothing is booked from today on." : "None with you from today on."} /> : null}
           {last.map((c) => (
             <ListRow
               key={c.id}
@@ -207,7 +210,7 @@ export default function StudentScreen() {
           {!files.loading && !files.data.length ? <ListRow title="No files yet" subtitle="Scanned targets and SIUS results are filed here." /> : null}
         </ListSection>
 
-        <Button variant="outline" icon={<ExternalLink size={18} color={colors.foreground} />} onPress={() => void openWebsite(`/admin/students/${s.id}`)} testID="student-open-website">
+        <Button variant="outline" icon={<ExternalLink size={18} color={colors.foreground} />} onPress={() => void openWebsite(`/${portal}/students/${s.id}`)} testID="student-open-website">
           Open on the website
         </Button>
       </Screen>

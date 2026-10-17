@@ -1,10 +1,10 @@
 # Sky Arc phone app
 
 The iPhone and Android app for Sky Arc, built with [Expo](https://expo.dev) (SDK 57) and React Native, forked from
-HyberCRM's phone app. For now it is the **academy office's app** (owners and admins): five tabs, **Today, Schedule,
-Scan, Students and More**. The website stays the main thing; the app helps the office see the day and do a few things
-on the go, above all scanning paper targets. Coaches, parents and students who sign in see a screen saying their part
-comes to the app later, with a button to the website. It uses the same Firebase project (`skyarcacademy`), the same
+HyberCRM's phone app. For now it is the **academy staff's app** (owners, admins and coaches): five tabs, **Today,
+Schedule, Scan, Students and More**, each showing what the person's role may see. The website stays the main thing; the
+app helps the staff see the day and do a few things on the go, above all scanning paper targets. Parents and students
+who sign in see a screen saying their part comes to the app later, with a button to the website. It uses the same Firebase project (`skyarcacademy`), the same
 Cloud Functions and the same security rules as the website, and the business logic in `../shared`.
 
 How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-the-apps.md); publishing to the stores is
@@ -16,21 +16,26 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
   password. A password account reaches nothing until its email is confirmed, because the rules trust confirmed emails
   only. There is no "create an account": the academy invites people on the website.
 - **Access** follows the academy's member doc for the email (`branches/skyarc/members/{email}`), live: an owner or an
-  admin gets the office's tabs; a coach, a parent or a student gets "Coming to the app"; an email the academy hasn't
+  admin gets the staff's tabs with everything; a coach gets the same tabs with what the rules give a coach (their own
+  classes, every student without the family's contacts, scanning and changing scores); a parent or a student gets
+  "Coming to the app"; an email the academy hasn't
   added gets "No access yet", which opens the app by itself once an admin adds it; paused access says so. The first
   sign-in links the account to the member doc, as the website does.
-- **Today:** the date in the academy's zone with its open hours, today's numbers (classes, students, coaches), the way
-  to Scan, and today's classes in time order. A class (one coach's students at one time) opens a sheet with the coach a
+- **Each tab's title** sits at the very top of its page, as Today's greeting does, without the empty bar of a large
+  header above it (`TabHeader`, with a strip under the status bar so what scrolls up doesn't show through the clock).
+- **Today:** the date in the academy's zone with its open hours, today's numbers (classes, students, coaches; a coach
+  sees their classes, students and hours), the way to Scan, and today's classes in time order. A class (one coach's students at one time) opens a sheet with the coach a
   call or a text away and each student with their status and the class's note.
-- **Schedule:** the week's days, then the chosen day's classes by coach (coaches as rows, as on the website), with the
-  day's open hours; any date through a month calendar that scrolls like the iPhone's. Read-only: changes are made on
-  the website.
+- **Schedule:** the week's days, then the chosen day's classes in time order, earliest first, each with its coach (a
+  coach sees their own), with the day's open hours; any date through a month calendar that scrolls like the iPhone's.
+  Read-only: changes are made on the website, whose schedule keeps coaches as rows.
 - **Scan:** a paper card from the camera (a frame the card's shape to fill) or from Photos (several at once, read one
   after the other). The phone reads it (`src/features/scan/photo.ts`, with the engine in `../shared/src/targets`): it
   finds the card's twelve bulls whichever way up the photo is, measures each bull, finds the holes and scores them by
   ISSF's rule, one or two shots per bull. The check screen shows it as a score's screen does: the total, the shots
   played back one by one as soon as the card is read, and the card flattened with every bull's score (two fingers
-  pinch to zoom, and the page holds still meanwhile). A bull worth a look (unsure, a second mark, no hole, or a hole
+  pinch to zoom; a finger landing late or lifting first never makes it jump; a button in the corner zooms back out).
+  A bull worth a look (unsure, a second mark, no hole, or a hole
   that only just touches a ring's line) opens up close, where a finger dragged anywhere on the picture moves the
   shot nearest it (the finger never hides it; zoomed in, finer), and a shot is added, removed, swapped for another
   mark or typed.
@@ -86,8 +91,8 @@ each Mac (kept in `mobile/.expo/practice-login.json`, never in git; the commands
 
 | Login | Who | What the app shows |
 | --- | --- | --- |
-| `owner@example.test` | The academy's owner (made by `npm run seed`) | The office's tabs |
-| `daniel.reed@skyarc-sample.test` | A sample coach | "Coming to the app" |
+| `owner@example.test` | The academy's owner (made by `npm run seed`) | The staff's tabs, everything |
+| `daniel.reed@skyarc-sample.test` | A sample coach | The staff's tabs, a coach's view |
 | `jiyeon.hwang@skyarc-sample.test` | A sample parent | "Coming to the app" |
 
 There is no Google sign-in on the practice copy.
@@ -180,7 +185,7 @@ app.config.ts          native configuration: ids, version and build (release.jso
                        Play's upload key, plain HTTP to the emulators in Release builds)
 metro.config.js        builds ../shared into the app (imported as @shared/...)
 firebase/emulator/     keyless Firebase files for builds that only talk to the emulators (project demo-skyarc)
-src/app/               screens (Expo Router): sign-in, forgot-password, verify-email; (app)/ with the office's tabs and
+src/app/               screens (Expo Router): sign-in, forgot-password, verify-email; (app)/ with the staff's tabs and
                        the screens over them, coming-soon, no-access
 src/state/             Auth, Branch (the academy) and Appearance providers
 src/features/<area>/   each area's data hooks and components

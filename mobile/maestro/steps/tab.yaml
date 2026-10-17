@@ -1,4 +1,4 @@
-# A step the flows run (not a test of its own): opens one tab of the office's app. TAB is today, schedule, scan,
+# A step the flows run (not a test of its own): opens one tab of the staff's app. TAB is today, schedule, scan,
 # students or more, and LABEL its name on the tab bar.
 #   - runFlow:
 #       file: steps/tab.yaml

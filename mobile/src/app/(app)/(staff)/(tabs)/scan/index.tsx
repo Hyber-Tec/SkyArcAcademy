@@ -48,7 +48,7 @@ export default function ScanScreen() {
   };
 
   return (
-    <Screen testID="scan-screen">
+    <Screen title="Scan" testID="scan-screen">
       <Card style={styles.hero}>
         <T variant="heading">Score a paper target</T>
         <T tone="muted">

@@ -5,9 +5,9 @@ import { resumeUploads } from "@/features/scan/uploads";
 import { useColors } from "@/theme";
 
 /**
- * The office's part of the app (owners and admins): five tabs, and the screens that open over them (a class, a
- * student, a score, a file, a coach; the Scan screens add their own). Every screen loads its record by ID, so links and the
- * back gesture always work.
+ * The staff's part of the app (owners, admins and coaches, each seeing what the rules give their role): five tabs, and
+ * the screens that open over them (a class, a student, a score, a file, a coach; the Scan screens add their own). Every
+ * screen loads its record by ID, so links and the back gesture always work.
  */
 export default function AdminLayout() {
   const colors = useColors();

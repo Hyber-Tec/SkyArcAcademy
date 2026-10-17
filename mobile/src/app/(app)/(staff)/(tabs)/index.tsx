@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
 import { Card } from "@/components/Card";
 import { SkeletonCards } from "@/components/Skeleton";
+import { StatusBarScrim } from "@/components/TabHeader";
 import { T } from "@/components/Text";
 import { useAcademyNow, useHoursOf, useSessionsBetween, useStaffList } from "@/features/data/hooks";
 import { ClassRow } from "@/features/schedule/ClassRow";
@@ -21,11 +22,12 @@ function greeting(nowMin: number): string {
 }
 
 /**
- * The office's day at a glance (the app opens here): the lockup, a greeting with the date, today's numbers, the way to
- * scan targets, and today's classes in time order. Everything is live and in the academy's time zone.
+ * The day at a glance (the app opens here): the lockup, a greeting with the date, today's numbers, the way to scan
+ * targets, and today's classes in time order (a coach's own, for a coach). Everything is live and in the academy's time
+ * zone.
  */
 export default function TodayScreen() {
-  const { actor, staff, settings } = useBranch();
+  const { actor, staff, settings, isCoach } = useBranch();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -40,6 +42,8 @@ export default function TodayScreen() {
   const active = classes.filter((c) => c.active.length > 0);
   const students = new Set(active.flatMap((c) => c.active.map((s) => s.studentId))).size;
   const coaches = new Set(active.map((c) => c.coachId)).size;
+  // A coach's own day: how long they teach (an hour and a half reads 1.5).
+  const teaching = Math.round(active.reduce((m, c) => m + (c.endMin - c.startMin), 0) / 6) / 10;
   const first = (staff?.firstName || actor.name.split(/\s+/)[0] || "").trim();
 
   const contentStyle = Platform.OS === "android" ? { paddingTop: insets.top + space.lg } : undefined;
@@ -63,7 +67,7 @@ export default function TodayScreen() {
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
         <Stat value={students} label={students === 1 ? "student" : "students"} />
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
-        <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />
+        {isCoach ? <Stat value={teaching} label={teaching === 1 ? "hour" : "hours"} /> : <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />}
       </Card>
 
       <Pressable
@@ -152,30 +156,34 @@ function Stat({ value, label }: { value: number; label: string }) {
 
 /**
  * Today's scrolling page, on the grouped background, with pull to refresh (everything is live; pulling just shows it's
- * current). It is the screen's root view, so tapping the Today tab again scrolls back to the top, as the phone's own
- * apps do (the native tabs look for a scroll view at the root; Today has no header around it).
+ * current). It is the first view of the screen, so tapping the Today tab again scrolls back to the top, as the phone's
+ * own apps do (the native tabs follow the first views down to a scroll view; Today has no header around it), with the
+ * status bar's strip over it.
  */
 function TodayScroll({ children, contentStyle }: { children: ReactNode; contentStyle?: { paddingTop: number } }) {
   const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
   return (
-    <ScrollView
-      testID="today-screen"
-      style={[styles.fill, { backgroundColor: colors.grouped }]}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={[styles.content, contentStyle]}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            setTimeout(() => setRefreshing(false), 600);
-          }}
-        />
-      }
-    >
-      {children}
-    </ScrollView>
+    <View style={styles.fill}>
+      <ScrollView
+        testID="today-screen"
+        style={[styles.fill, { backgroundColor: colors.grouped }]}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[styles.content, contentStyle]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              setTimeout(() => setRefreshing(false), 600);
+            }}
+          />
+        }
+      >
+        {children}
+      </ScrollView>
+      <StatusBarScrim color={colors.grouped} />
+    </View>
   );
 }
 

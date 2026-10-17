@@ -2,7 +2,8 @@ import { useImage } from "@shopify/react-native-skia";
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from "@shared/shooting/evaluation";
 import { canReplay } from "@shared/shooting/replay";
 import { offsetWords } from "@shared/shooting/target";
-import { type CardReview, reviewFromShots, reviewTotals } from "@shared/targets/review";
+import { type EditMode, FLAT_SIZE, cardEvaluation, editModeOf, savedReview, wasScanned } from "@shared/targets/flat";
+import { type CardReview, reviewTotals } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { Stack, router, useLocalSearchParams, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
@@ -26,8 +27,6 @@ import { useLocalCopy } from "@/features/drive/download";
 import { BullEditor } from "@/features/scan/BullEditor";
 import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
-import { FLAT_SIZE, flatBull } from "@/features/scan/photo";
-import { cardEvaluation } from "@/features/scan/save";
 import { waitingCopy } from "@/features/scan/uploads";
 import { clock } from "@/features/schedule/format";
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from "@/features/scores/api";
@@ -38,13 +37,6 @@ import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
-/**
- * How a score's shots can be changed here: a paper card bull by bull (on the card itself when it was scanned), a card
- * kept as a total only, or not at all (a SIUS result's scores come from its PDF, as on the website; so do a paper
- * card's whose shots don't fit its ten bulls, which the website edits).
- */
-type Mode = "card" | "total" | "fixed";
-
 interface Draft {
   position: Position;
   dateKey: DateKey;
@@ -54,27 +46,17 @@ interface Draft {
 }
 
 const shotsOf = (e: EvaluationDoc) => e.series.flatMap((s) => s.shots);
-const isPlaced = (t: { x?: number | null; y?: number | null }) => typeof t.x === "number" && typeof t.y === "number";
 
-function modeOf(e: EvaluationDoc): Mode {
-  if (e.source !== "paper") return "fixed";
-  const n = shotsOf(e).length;
-  if (!n) return "total";
-  return n === 10 || (n >= 20 && n % 10 === 0) ? "card" : "fixed";
-}
-
+/** A scanned card's shots go back on its bulls where the Drive's flattened copy has them (shared/src/targets/flat.ts). */
 function draftOf(e: EvaluationDoc): Draft {
-  const shots = shotsOf(e);
-  // A scanned card's shots go back on its bulls where the Drive's flattened copy has them.
-  const review = modeOf(e) === "card" ? reviewFromShots(shots, shots.some(isPlaced) ? flatBull : () => null) : null;
-  return { position: e.position, dateKey: e.dateKey, note: e.note ?? "", review, total: e.total };
+  return { position: e.position, dateKey: e.dateKey, note: e.note ?? "", review: savedReview(e), total: e.total };
 }
 
 const STAMPS = new Set(["id", "createdAt", "createdBy", "updatedAt", "updatedBy"]);
 
 /** The score as it will be saved: its scores rebuilt from the draft, or kept as they are where they can't change. */
 function changed(e: EvaluationDoc, d: Draft): NewEvaluation {
-  const mode = modeOf(e);
+  const mode = editModeOf(e);
   if (mode === "fixed") {
     const kept = Object.fromEntries(Object.entries(e).filter(([k]) => !STAMPS.has(k))) as NewEvaluation;
     return { ...kept, position: d.position, dateKey: e.source === "paper" ? d.dateKey : e.dateKey, note: d.note.trim() };
@@ -115,8 +97,8 @@ export default function ScoreScreen() {
   const { today } = useAcademyNow();
   const score = useEvaluation(id ?? null);
   const e = score.data;
-  const mode: Mode = e ? modeOf(e) : "fixed";
-  const scanned = !!e && mode === "card" && shotsOf(e).some(isPlaced);
+  const mode: EditMode = e ? editModeOf(e) : "fixed";
+  const scanned = !!e && wasScanned(e);
   const fileId = e?.fileId ?? null;
   const file = useDriveFile(fileId);
   const f = file.data;
@@ -131,8 +113,6 @@ export default function ScoreScreen() {
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [choosingDate, setChoosingDate] = useState(false);
-  // The page holds still while a finger zooms or pans the card.
-  const [locked, setLocked] = useState(false);
   // The shot the replay is showing (the darts follow it), and the one opened large.
   const [current, setCurrent] = useState<number | null>(null);
   const [openShot, setOpenShot] = useState<number | null>(null);
@@ -149,7 +129,7 @@ export default function ScoreScreen() {
     setDraft((d) => (d ? { ...d, ...patch } : d));
     setDirty(true);
   };
-  const preview = useMemo(() => (e && draft ? (modeOf(e) === "fixed" ? e : changed(e, draft)) : null), [e, draft]);
+  const preview = useMemo(() => (e && draft ? (editModeOf(e) === "fixed" ? e : changed(e, draft)) : null), [e, draft]);
 
   usePreventRemove(dirty, ({ data }) => {
     if (leaving.current) return navigation.dispatch(data.action);
@@ -220,7 +200,7 @@ export default function ScoreScreen() {
       <Stack.Screen options={{ title: scoreTitle({ position: draft.position, source: e.source }) }} />
       <Screen
         testID="score-screen"
-        scrollEnabled={!locked}
+        zoomable
         footer={
           dirty ? (
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.grouped, paddingBottom: insets.bottom + space.sm }]}>
@@ -281,7 +261,7 @@ export default function ScoreScreen() {
             <View style={styles.inset}>
               {scanned ? (
                 flat ? (
-                  <CardView image={flat} width={flat.width()} height={flat.height()} review={draft.review} viewWidth={inner} onBull={setEditing} onLock={setLocked} testID="score-card" />
+                  <CardView image={flat} width={flat.width()} height={flat.height()} review={draft.review} viewWidth={inner} onBull={setEditing} testID="score-card" />
                 ) : note ? (
                   <T variant="small" tone="muted" style={styles.note}>
                     {note}

@@ -1,0 +1,68 @@
+# A coach's app: the same five tabs as the office's, with what a coach may see. Today counts their hours, Students
+# starts with their own students, a student's page has no family contacts, and More has no list of coaches. Signs in
+# as the sample coach (same practice password), then back in as the owner the other flows expect.
+# Run after sign-in.yaml (the practice owner):
+#   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/coach.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- scrollUntilVisible:
+    element:
+      id: "more-sign-out"
+    direction: DOWN
+- tapOn:
+    id: "more-sign-out"
+- runFlow:
+    file: sign-in.yaml
+    env:
+      EMAIL: daniel.reed@skyarc-sample.test
+# Today: a coach's numbers are their classes, students and hours.
+- extendedWaitUntil:
+    visible:
+      id: "today-stats"
+    timeout: 30000
+- assertVisible: "hours?"
+# Students: their own first.
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: students
+      LABEL: Students
+- extendedWaitUntil:
+    visible:
+      id: "students-filter-mine"
+    timeout: 30000
+- tapOn:
+    id: "student-row-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "student-classes"
+    timeout: 15000
+- assertNotVisible:
+    id: "student-family"
+- runFlow:
+    file: steps/back.yaml
+# More: no coaches' list (the office's), then signing out.
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- assertNotVisible:
+    id: "more-coaches"
+- scrollUntilVisible:
+    element:
+      id: "more-sign-out"
+    direction: DOWN
+- tapOn:
+    id: "more-sign-out"
+# Back to the owner, for the flows after this one.
+- runFlow:
+    file: sign-in.yaml

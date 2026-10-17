@@ -6,7 +6,7 @@ import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Calendar, Camera, ImageIcon, UserRound, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -17,6 +17,7 @@ import { IconButton } from "@/components/IconButton";
 import { ListRow, ListSection } from "@/components/List";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
+import { ZoomScrollView } from "@/components/ZoomScrollView";
 import { useAcademyNow } from "@/features/data/hooks";
 import { BullEditor } from "@/features/scan/BullEditor";
 import { BullTiles } from "@/features/scan/BullTiles";
@@ -71,8 +72,6 @@ export default function ScanReviewScreen() {
   const [editing, setEditing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [choosingDate, setChoosingDate] = useState(false);
-  // The page holds still while a finger zooms or pans the card.
-  const [locked, setLocked] = useState(false);
   const uri = photos[index] ?? null;
   /** The card's copy for the Drive, made while the person checks the card (so Save doesn't wait for it). */
   const fileRef = useRef<{ read: ReadPhoto; file: CardFile } | null>(null);
@@ -191,13 +190,12 @@ export default function ScanReviewScreen() {
           ),
         }}
       />
-      <ScrollView
+      <ZoomScrollView
         contentContainerStyle={styles.body}
         keyboardShouldPersistTaps="handled"
         // The note being typed stays above the keyboard; dragging the page down puts the keyboard away.
         automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive"
-        scrollEnabled={!locked}
       >
         {phase.kind === "reading" || !uri ? (
           <Reading uri={uri} width={viewWidth} />
@@ -257,7 +255,7 @@ export default function ScanReviewScreen() {
             <ListSection title="The card" footer="Tap a bull to check it and move its shots. Pinch the card with two fingers to zoom in.">
               <View style={styles.insetGap}>
                 {flat ? (
-                  <CardView image={flat.image} width={flat.width} height={flat.height} review={review} viewWidth={viewWidth - space.sm * 2} onBull={setEditing} onLock={setLocked} testID="scan-card" />
+                  <CardView image={flat.image} width={flat.width} height={flat.height} review={review} viewWidth={viewWidth - space.sm * 2} onBull={setEditing} testID="scan-card" />
                 ) : (
                   <Image
                     source={{ uri: read.uri }}
@@ -321,7 +319,7 @@ export default function ScanReviewScreen() {
             />
           </>
         ) : null}
-      </ScrollView>
+      </ZoomScrollView>
       {phase.kind === "review" || phase.kind === "saving" ? (
         <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.grouped }]}>
           {!student || !position ? (

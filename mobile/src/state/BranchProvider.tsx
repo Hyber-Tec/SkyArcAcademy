@@ -6,7 +6,7 @@ import { type BusinessRules, resolveBusinessRules } from "@shared/settings/busin
 import type { BranchSettings } from "@shared/settings/defaults";
 import { resolveSettings } from "@shared/settings/resolve";
 import type { Branch, Member, Staff } from "@shared/types";
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { db } from "@/lib/firebase";
 import { useDoc } from "@/lib/firestore";
 import { useAuth } from "./AuthProvider";
@@ -32,8 +32,12 @@ export interface BranchState {
   member: Member & { id: string };
   role: Role;
   portal: Portal;
-  /** Owners and admins: the app's office portal. */
+  /** Owners and admins. */
   isAdmin: boolean;
+  /** Coaches: what the rules let them see (their own classes, no family contacts). */
+  isCoach: boolean;
+  /** Owners, admins and coaches: the app's tabs (parents and students come later). */
+  isStaff: boolean;
   /** Employees: their staff record. */
   staffId: string | null;
   staff: (Staff & { id: string }) | null;
@@ -47,6 +51,8 @@ const BranchContext = createContext<BranchState | null>(null);
 
 /** How often the member doc's last sign-in is refreshed, as the website does. */
 const RELINK_AFTER_MS = 6 * 60 * 60 * 1000;
+/** Opening the academy taking longer than this says so, with a way out (no connection, or a sign-in the server forgot). */
+const SLOW_MS = 15_000;
 
 /**
  * The academy as the signed-in person sees it, kept live: its settings and rules, their member doc (keyed by their
@@ -105,6 +111,8 @@ export function BranchProvider({
       role,
       portal: portalOf(role),
       isAdmin: isAdminRole(role),
+      isCoach: role === "coach",
+      isStaff: isAdminRole(role) || role === "coach",
       staffId: member.staffId ?? null,
       staff: staffState.data,
       studentId: member.studentId ?? null,
@@ -113,12 +121,22 @@ export function BranchProvider({
     };
   }, [branchState.data, member, staffState.data, user, email, branchId]);
 
-  if (memberState.loading) return fallback;
+  // Still opening after a while: say so, with a way to sign out (the screen opens the app by itself if it gets through).
+  const opening = memberState.loading || (member?.status === "active" && (!branchState.data || (!!staffId && staffState.loading)) && !branchState.error);
+  const [slowFor, setSlowFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!opening) return;
+    const t = setTimeout(() => setSlowFor(email ?? ""), SLOW_MS);
+    return () => clearTimeout(t);
+  }, [opening, email]);
+  const waiting = opening && slowFor === (email ?? "") ? paused("unavailable") : fallback;
+
+  if (memberState.loading) return waiting;
   // The server says there's no member doc for this email (or the rules refused it): the academy hasn't added it.
   if (!member) return memberState.error && !/permission-denied/.test(String((memberState.error as { code?: string }).code ?? "")) ? paused("unavailable") : noAccess;
   if (member.status !== "active") return paused("paused");
   if (branchState.error) return paused("unavailable");
-  if (!value || (staffId && staffState.loading)) return fallback;
+  if (!value || (staffId && staffState.loading)) return waiting;
   return <BranchContext.Provider value={value}>{children}</BranchContext.Provider>;
 }
 

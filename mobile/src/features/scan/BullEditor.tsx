@@ -4,7 +4,7 @@ import { type CardReview, type ReviewBull, bullState, closeCall, placeShot, remo
 import { scoreAt } from "@shared/targets/score";
 import { Minus, Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Modal, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Modal, StyleSheet, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { type SharedValue, useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,7 +14,8 @@ import { IconButton } from "@/components/IconButton";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
-import { type Drag, ZoomCanvas } from "./ZoomCanvas";
+import { type Drag, ZoomCanvas } from "@/components/ZoomCanvas";
+import { ZoomScrollView } from "@/components/ZoomScrollView";
 
 /** How much of the bull the close-up shows around its centre, in millimetres: ring 1 and a little beyond. */
 const VIEW_MM = 26;
@@ -66,8 +67,6 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
   const lastTenth = useSharedValue(-1);
-  // The page stays still while a finger is on the picture.
-  const [locked, setLocked] = useState(false);
 
   const showMove = (i: number, x: number, y: number) => setMoving({ i, x, y });
   const clearMove = () => setMoving(null);
@@ -148,11 +147,11 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
           Done
         </Button>
       </View>
-      <ScrollView contentContainerStyle={styles.body} scrollEnabled={!locked}>
+      <ZoomScrollView contentContainerStyle={styles.body}>
         <T tone={state === "ok" || (!pictured && bull.shots.length) ? "muted" : "warning"}>{text}</T>
         {pictured ? (
           <View style={[styles.zoom, { width: size, height: size, borderColor: colors.border }]} accessibilityLabel={`Bull ${bull.n}, up close. Drag anywhere to move the shot; pinch to zoom.`}>
-            <ZoomCanvas width={size} height={size} contentWidth={VIEW_MM * 2} contentHeight={VIEW_MM * 2} onTap={tapped} drag={drag} onLock={setLocked} testID="bull-zoom">
+            <ZoomCanvas width={size} height={size} contentWidth={VIEW_MM * 2} contentHeight={VIEW_MM * 2} onTap={tapped} drag={drag} testID="bull-zoom">
               <Photo image={image} bull={bull} />
               <Group transform={[{ translateX: VIEW_MM }, { translateY: VIEW_MM }]}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((ring) => (
@@ -221,7 +220,7 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
           </ListSection>
         ) : null}
         <Typed bull={bull} shots={review.shotsPerBull} open={!pictured} onType={(values) => onChange(typeScores(review, bull.n, values))} />
-      </ScrollView>
+      </ZoomScrollView>
     </>
   );
 }

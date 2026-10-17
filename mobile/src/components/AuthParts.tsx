@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { T } from "@/components/Text";
+import { openWebsite } from "@/lib/links";
 import { radius, space, useColors } from "@/theme";
 
 /** The top of every sign-in screen: the full logo, centred as on the website's cards, a title and a line under it. */
@@ -61,6 +62,26 @@ export function StrengthMeter({ password }: { password: string }) {
   );
 }
 
+/**
+ * Help and the privacy policy, before anyone signs in (the stores ask that both be reachable from the app): the
+ * website's pages, in the phone's in-app browser.
+ */
+export function HelpLinks() {
+  return (
+    <View style={styles.links}>
+      <T variant="small" tone="muted" style={styles.link} onPress={() => void openWebsite("/help")} accessibilityRole="link" testID="help-link">
+        Help
+      </T>
+      <T variant="small" tone="muted">
+        ·
+      </T>
+      <T variant="small" tone="muted" style={styles.link} onPress={() => void openWebsite("/privacy")} accessibilityRole="link" testID="privacy-link">
+        Privacy policy
+      </T>
+    </View>
+  );
+}
+
 /** A tinted box with an error in words. */
 export function ErrorBox({ children }: { children: ReactNode }) {
   const colors = useColors();
@@ -76,6 +97,8 @@ export function ErrorBox({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   head: { alignItems: "center", gap: space.sm, marginBottom: space.md },
   center: { textAlign: "center" },
+  links: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space.sm },
+  link: { textDecorationLine: "underline", paddingVertical: space.xs },
   divider: { flexDirection: "row", alignItems: "center", gap: space.md, marginVertical: space.xs },
   line: { flex: 1, height: StyleSheet.hairlineWidth },
   meter: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: -space.xs },

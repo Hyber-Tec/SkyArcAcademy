@@ -1,7 +1,7 @@
 import { ROLE_LABELS } from "@shared/roles";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Globe, LogOut, ShieldCheck, Users } from "lucide-react-native";
+import { Globe, LifeBuoy, LogOut, ShieldCheck, Users } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
@@ -23,11 +23,11 @@ function builtWhen(iso: string): string {
 }
 
 /**
- * Everything else, kept short: the account signed in, the coaches with their contacts, the appearance, the website
- * (where the rest of the office's work is), the privacy policy, which version this is, and signing out.
+ * Everything else, kept short: the account signed in, the coaches with their contacts (for the office), the appearance,
+ * the website (where the rest of the work is), help, the privacy policy, which version this is, and signing out.
  */
 export default function MoreScreen() {
-  const { actor, member, name } = useBranch();
+  const { actor, member, name, isCoach, portal } = useBranch();
   const { email, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const colors = useColors();
@@ -35,7 +35,7 @@ export default function MoreScreen() {
   const built = [env.buildCommit, env.builtAt ? builtWhen(env.builtAt) : ""].filter(Boolean).join(", ");
 
   return (
-    <Screen testID="more-screen">
+    <Screen title="More" testID="more-screen">
       <ListSection title="Signed in">
         <ListRow
           icon={<Avatar name={actor.name} url={member.photoURL} size={40} />}
@@ -46,17 +46,19 @@ export default function MoreScreen() {
       </ListSection>
 
       <ListSection title="The academy">
-        <ListRow
-          icon={
-            <RowIcon>
-              <Users size={17} color={colors.foreground} />
-            </RowIcon>
-          }
-          title="Coaches"
-          subtitle="Who teaches, with their phone and email"
-          onPress={() => router.push("/more/coaches")}
-          testID="more-coaches"
-        />
+        {isCoach ? null : (
+          <ListRow
+            icon={
+              <RowIcon>
+                <Users size={17} color={colors.foreground} />
+              </RowIcon>
+            }
+            title="Coaches"
+            subtitle="Who teaches, with their phone and email"
+            onPress={() => router.push("/more/coaches")}
+            testID="more-coaches"
+          />
+        )}
         <ListRow
           icon={
             <RowIcon>
@@ -64,8 +66,8 @@ export default function MoreScreen() {
             </RowIcon>
           }
           title="Open the website"
-          subtitle="Everything else: changes to the schedule, people, the Drive, reports"
-          onPress={() => void openWebsite("/admin/home")}
+          subtitle={isCoach ? "Everything else: your availability, the Drive, reports, pay" : "Everything else: changes to the schedule, people, the Drive, reports"}
+          onPress={() => void openWebsite(`/${portal}`)}
           testID="more-website"
         />
       </ListSection>
@@ -86,6 +88,17 @@ export default function MoreScreen() {
       </ListSection>
 
       <ListSection title="About">
+        <ListRow
+          icon={
+            <RowIcon>
+              <LifeBuoy size={17} color={colors.foreground} />
+            </RowIcon>
+          }
+          title="Help"
+          subtitle="Whom to ask, signing in, and reporting a problem with the app"
+          onPress={() => void openWebsite("/help")}
+          testID="more-help"
+        />
         <ListRow
           icon={
             <RowIcon>

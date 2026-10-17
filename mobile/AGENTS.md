@@ -33,21 +33,22 @@ app.config.ts          native configuration: ids, Firebase files, permissions, p
 src/app/               screens (Expo Router). Root gates: signed out → sign-in screens; a password account with an
                        unconfirmed email → verify-email; otherwise (app)/, which reads the academy's member doc for the
                        person's email (BranchProvider) and opens the part of their one role.
-  (app)/(admin)/       owners and admins: (tabs) Today · Schedule · Scan · Students · More, and the screens that open
-                       over them (class/[id] and coach/[id] sheets, student/[id], score/[id], file/[id], and the Scan
-                       screens)
-  (app)/coming-soon    coaches, parents and students: their part comes to the app later; the website meanwhile
+  (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Today · Schedule ·
+                       Scan · Students · More, and the screens that open over them (class/[id] and coach/[id] sheets,
+                       student/[id], score/[id], file/[id], and the Scan screens)
+  (app)/coming-soon    parents and students: their part comes to the app later; the website meanwhile
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
                        rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
-src/features/<area>/   each area's data and components: data (live Firestore hooks), schedule (classes, the week strip,
-                       class cards), students, drive (downloading a Drive file through the Storage rules), scan (reading
-                       a card, the zoomable card and bull views, saving), scores (a score's changes, its shots played
+src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
+                       may read), schedule (classes, the week strip, class cards), students, drive (downloading a Drive
+                       file through the Storage rules), scan (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
                        back), access, account (deleting an account)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
-                       EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, Dialog, IconButton, DatePickerDialog,
-                       MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost) and brand/ (the official
-                       logos)
+                       EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SearchField, Dialog,
+                       IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
+                       ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
+                       official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
                        call/text/email), toast, Google sign-in, env
 src/theme/             the website's neutral palette in light and dark with Sky Arc's red, status colors, spacing, type
@@ -92,5 +93,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   `accessibilityLabel` when it has no text, and screens and key controls a `testID` (the Maestro flows use them).
 - **No new accounts in the app:** the academy invites people on the website. Signing in is Google or an email and
   password, with Forgot password.
+- **Zoomable pictures** use `ZoomCanvas` (in a page: `ZoomScrollView`, or `Screen zoomable`): it follows each finger,
+  so a hand's late second finger or first-lifted one never makes the picture jump, and the page waits for it natively.
+  Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.
+- **A coach's queries ask for what the rules give a coach** (their classes by `coachId`, their own staff record, never
+  `students/{id}/private`): a query the rules would refuse fails whole (`src/features/data/hooks.ts`).
 - **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). A new
   permission means new questions from both stores (docs/publishing.md).

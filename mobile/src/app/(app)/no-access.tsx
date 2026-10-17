@@ -2,6 +2,7 @@ import { Mail, UserRound } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { Button } from "@/components/Button";
+import { HelpLinks } from "@/components/AuthParts";
 import { CenteredCard } from "@/components/CenteredCard";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
@@ -37,6 +38,7 @@ export default function NoAccessScreen() {
         </Button>
       </View>
       <DeleteAccountLink />
+      <HelpLinks />
     </CenteredCard>
   );
 }

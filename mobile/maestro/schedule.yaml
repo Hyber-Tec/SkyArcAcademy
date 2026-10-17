@@ -1,4 +1,4 @@
-# The Schedule tab: the week strip, another week and back, a day's classes by coach and a class's sheet.
+# The Schedule tab: the week strip, another week and back, a day's classes in time order and a class's sheet.
 # Run after sign-in.yaml (the practice owner; the sample academy's weeks have classes):
 #   maestro test maestro/schedule.yaml
 appId: com.skyarcacademy.app

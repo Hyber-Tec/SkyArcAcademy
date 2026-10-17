@@ -1,4 +1,4 @@
-import { Stack, router } from "expo-router";
+import { router } from "expo-router";
 import { CalendarDays, CalendarX2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -12,18 +12,19 @@ import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { useAcademyNow, useHoursOf, useSessionsBetween, useStaffList } from "@/features/data/hooks";
 import { ClassRow } from "@/features/schedule/ClassRow";
-import { byCoach, groupClasses } from "@/features/schedule/classes";
+import { groupClasses } from "@/features/schedule/classes";
 import { longDay, plural, timeRange, weekRange } from "@/features/schedule/format";
 import { type StripDay, WeekStrip } from "@/features/schedule/WeekStrip";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
 /**
- * The academy's schedule, a day at a time: the week's days on top, then the chosen day's classes by coach (coaches as
- * rows, as on the website), with that day's open hours. Read-only: changes are made on the website.
+ * The schedule, a day at a time: the week's days on top, then the chosen day's classes in time order (earliest first),
+ * each with its coach, and that day's open hours. A coach sees their own classes. Read-only: changes are made on the
+ * website, whose schedule keeps coaches as rows.
  */
 export default function ScheduleScreen() {
-  const { settings } = useBranch();
+  const { settings, isCoach } = useBranch();
   const colors = useColors();
   const hour12 = settings.general.timeFormat !== "24h";
   const weekStartsOn = settings.general.weekStartsOn;
@@ -39,23 +40,21 @@ export default function ScheduleScreen() {
   const classes = useMemo(() => groupClasses(sessions.data), [sessions.data]);
 
   const days: StripDay[] = week.map((d) => ({ dateKey: d, isOpen: hoursOf(d).isOpen, classes: classes.filter((c) => c.dateKey === d && c.active.length > 0).length }));
-  const rows = byCoach(
-    classes.filter((c) => c.dateKey === selected),
-    staffById,
-    settings.schedule.coachOrder,
-  );
+  // In time order, as the day goes (groupClasses sorts by start, then end, then coach).
+  const day = classes.filter((c) => c.dateKey === selected);
+  const teaching = day.filter((c) => c.active.length > 0);
+  const coachCount = new Set(teaching.map((c) => c.coachId)).size;
   const hours = hoursOf(selected);
   const weeksAway = Math.round(diffDays(startOfWeek(today, weekStartsOn), week[0]) / 7);
   const caption = weeksAway === 0 ? "This week" : weeksAway === 1 ? "Next week" : weeksAway === -1 ? "Last week" : weeksAway > 0 ? `In ${weeksAway} weeks` : `${-weeksAway} weeks ago`;
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerRight: () => <IconButton testID="schedule-pick-date" icon={<CalendarDays size={21} color={colors.foreground} />} accessibilityLabel="Go to a date" onPress={() => setPicking(true)} size={36} />,
-        }}
-      />
-      <Screen testID="schedule-screen">
+      <Screen
+        title="Schedule"
+        titleRight={<IconButton testID="schedule-pick-date" icon={<CalendarDays size={21} color={colors.foreground} />} accessibilityLabel="Go to a date" onPress={() => setPicking(true)} size={40} filled />}
+        testID="schedule-screen"
+      >
         <WeekStrip
           days={days}
           selected={selected}
@@ -73,7 +72,13 @@ export default function ScheduleScreen() {
             {longDay(selected)}
           </T>
           <T variant="small" tone="muted" testID="schedule-day-hours">
-            {hours.isOpen ? `Open ${timeRange(hours.openMin, hours.closeMin, hour12)}` : "Closed"}
+            {[
+              hours.isOpen ? `Open ${timeRange(hours.openMin, hours.closeMin, hour12)}` : "Closed",
+              teaching.length ? plural(teaching.length, "class", "classes") : null,
+              teaching.length && !isCoach ? plural(coachCount, "coach", "coaches") : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </T>
         </View>
         {sessions.loading ? (
@@ -85,32 +90,21 @@ export default function ScheduleScreen() {
               Check your connection and try again.
             </T>
           </Card>
-        ) : rows.length ? (
-          rows.map((row) => (
-            <View key={row.coachId} style={styles.coach} testID={`schedule-coach-${row.coachId}`}>
-              <View style={styles.coachHead}>
-                <View style={[styles.swatch, { backgroundColor: row.color ?? colors.mutedForeground }]} />
-                <T variant="label" style={styles.grow} numberOfLines={1}>
-                  {row.coachName}
-                </T>
-                <T variant="small" tone="muted">
-                  {plural(row.classes.filter((c) => c.active.length > 0).length, "class", "classes")}
-                </T>
-              </View>
-              {row.classes.map((c) => (
-                <ClassRow
-                  key={c.id}
-                  group={c}
-                  color={row.color}
-                  hour12={hour12}
-                  showCoach={false}
-                  live={c.dateKey === today && c.active.length > 0 && c.startMin <= nowMin && nowMin < c.endMin}
-                  onPress={() => router.push({ pathname: "/class/[id]", params: { id: c.id } })}
-                  testID={`schedule-class-${c.id}`}
-                />
-              ))}
-            </View>
-          ))
+        ) : day.length ? (
+          <View style={styles.list} testID="schedule-classes">
+            {day.map((c) => (
+              <ClassRow
+                key={c.id}
+                group={c}
+                color={staffById.get(c.coachId)?.color ?? null}
+                hour12={hour12}
+                showCoach={!isCoach}
+                live={c.dateKey === today && c.active.length > 0 && c.startMin <= nowMin && nowMin < c.endMin}
+                onPress={() => router.push({ pathname: "/class/[id]", params: { id: c.id } })}
+                testID={`schedule-class-${c.id}`}
+              />
+            ))}
+          </View>
         ) : (
           <EmptyState
             testID="schedule-empty"
@@ -139,8 +133,5 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   dayHead: { gap: 2, marginTop: space.xs },
-  coach: { gap: space.sm },
-  coachHead: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.xs },
-  swatch: { width: 10, height: 10, borderRadius: 5 },
-  grow: { flex: 1 },
+  list: { gap: space.md },
 });
