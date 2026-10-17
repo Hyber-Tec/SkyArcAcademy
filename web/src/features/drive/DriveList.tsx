@@ -53,9 +53,11 @@ export interface ListApi {
 function ScoreChip({ e }: { e: Evaluation }) {
   const p10 = per10(e.total, e.shots)
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums" style={{ borderColor: `${POSITION_COLORS[e.position]}55`, color: POSITION_COLORS[e.position] }}>
-      {POSITION_LABELS[e.position]} · {e.source === 'sius' ? e.total.toFixed(1) : e.total}
-      {e.shots !== 10 && p10 !== null ? <span className="text-muted-foreground">· {p10} per 10</span> : null}
+    <span className="inline-flex max-w-full min-w-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums" style={{ borderColor: `${POSITION_COLORS[e.position]}55`, color: POSITION_COLORS[e.position] }}>
+      <span className="truncate">
+        {POSITION_LABELS[e.position]} · {e.source === 'sius' ? e.total.toFixed(1) : e.total}
+        {e.shots !== 10 && p10 !== null ? <span className="text-muted-foreground"> · {p10} per 10</span> : null}
+      </span>
     </span>
   )
 }
@@ -156,8 +158,9 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
       <span className="flex min-w-0 items-center gap-3">
         {isFolder ? <FolderGlyph student={!!it.folder.studentId} /> : <FileGlyph kind={file!.kind} />}
         <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-sm font-semibold" title={isFolder ? it.folder.name : file!.name}>
+          {/* The score goes under the name when both don't fit on one line. */}
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="max-w-full truncate text-sm font-semibold" title={isFolder ? it.folder.name : file!.name}>
               {isFolder ? it.folder.name : file!.name}
             </span>
             {score ? <ScoreChip e={score} /> : null}
