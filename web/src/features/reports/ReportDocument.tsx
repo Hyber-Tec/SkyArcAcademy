@@ -4,11 +4,10 @@ import type { ProgressReportDoc } from '@shared/reports/types'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
 import { formatDateKey, formatInstant } from '@shared/time'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
-import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { DistributionBar, TrendChart } from './charts'
 import { EditableGoals, EditableList, EditableText, type EditApi } from './ReportEditors'
-import { Comparison, Heading, KpiTile, PositionTable, type Tile, TrendChip } from './ReportParts'
+import { Comparison, Heading, KpiTile, PositionTable, ReportTarget, type Tile, TrendChip } from './ReportParts'
 import { one, signed, toDate, trendSeries } from './model'
 import { ACCENT, INK } from './paper'
 
@@ -124,9 +123,13 @@ export function ReportDocument({
 
   const trend = trendSeries(series)
   const main = mainPosition(r)
-  // The target shows the position with the most shots that have a place (SIUS, and paper cards scanned with the app).
+  // The target shows the position with the most shots that have a place (SIUS, and paper cards scanned with the app),
+  // its results played back one after another on screen.
   const placed = series.filter((p) => p.marks.some((m) => m.a !== null))
-  const targetPosition = POSITIONS.map((pos) => ({ pos, shots: placed.filter((p) => p.position === pos).flatMap((p) => p.marks.filter((m) => m.a !== null)) }))
+  const targetPosition = POSITIONS.map((pos) => {
+    const points = placed.filter((p) => p.position === pos)
+    return { pos, points, shots: points.flatMap((p) => p.marks.filter((m) => m.a !== null)) }
+  })
     .filter((t) => t.shots.length > 0)
     .sort((a, b) => b.shots.length - a.shots.length)[0]
   const compare = main ? series.filter((p) => p.position === main) : []
@@ -248,10 +251,13 @@ export function ReportDocument({
                   <h3 className="text-[13px] font-semibold">Where the shots went</h3>
                   {targetPosition ? (
                     <div className="mt-3 flex flex-col items-center gap-1">
-                      <TargetPlot shots={targetPosition.shots} size={170} color={POSITION_COLORS[targetPosition.pos]} title={`${POSITION_LABELS[targetPosition.pos]}: ${targetPosition.shots.length} shots`} />
-                      <div className="text-[11px]" style={{ color: INK.muted }}>
-                        {POSITION_LABELS[targetPosition.pos]} · {targetPosition.shots.length} shots · the cross marks the average
-                      </div>
+                      <ReportTarget
+                        points={targetPosition.points}
+                        size={170}
+                        color={POSITION_COLORS[targetPosition.pos]}
+                        title={`${POSITION_LABELS[targetPosition.pos]}: ${targetPosition.shots.length} shots`}
+                        caption={`${POSITION_LABELS[targetPosition.pos]} · ${targetPosition.shots.length} shots · the cross marks the average`}
+                      />
                     </div>
                   ) : null}
                   <div className="mt-4">
