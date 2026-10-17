@@ -277,3 +277,24 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   amber with its number, earlier ones in the position's colour), with the shot, its score and the running total under
   it; play, pause, step and play again. On the phone's score screen and the website's score details, and later in the
   reports that compare results.
+
+## 12. The phone app and the website, after Goo's second try (2026-10-16)
+
+- **Moving a shot:** a finger dragged anywhere on the bull's picture moves the shot nearest it, by the same amount, so
+  the finger never covers the circle (Goo: "hold anywhere and drag"); zoomed in, the same move is finer. Two fingers
+  zoom; a tap places a missing shot.
+- **Zoom stays where it's left:** a pinch no longer zooms back out or jumps (its fingers counted as taps, and the pinch
+  and the one-finger pan shared one starting point), and the page doesn't scroll while two fingers are on the card.
+- **Typing a note:** the field moves above the keyboard as it's typed in, a Done bar closes the keyboard, and dragging
+  the page down does too. Messages ("Saved") show under the header, so Back is never covered.
+- **Right after a scan** the check screen looks like a score's screen: the total, then the shots played back at once,
+  then the card to zoom into and correct bull by bull; every change shows in the replay. Closing it with a card not
+  saved asks first.
+- **A SIUS result's shots as darts:** each series shows one small target per shot with where it hit and its score,
+  following the replay as it plays; tapping one shows it large (how far from the centre and which way) with the shots
+  before and after a tap away. On the phone and on the website.
+- **The replay everywhere the website draws a result:** a student's Scores (shown without opening a row), the reports
+  on screen (a still picture when printed), the Drive's details panel.
+- **Testing:** every change is tried as the owner uses it, on the iPhone Simulator (taps, drags, two-finger pinches,
+  the keyboard, light and dark) and on the website (desktop and phone widths, light and dark), with screenshots looked
+  at, before it's called done.
