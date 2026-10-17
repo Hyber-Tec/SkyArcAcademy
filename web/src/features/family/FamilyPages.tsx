@@ -59,14 +59,16 @@ export function ParentHomePage() {
   const { data, loading } = useFamilySessions(ids, today, addDays(today, weeks * 7))
   const sessions = data.filter((s) => child === 'all' || s.studentId === child)
   const name = (id: string) => students.get(id)?.firstName || students.get(id)?.name || 'Student'
-  const monthChild = child === 'all' ? ids[0] : child
+  // Children A to Z, whatever order they were linked in.
+  const kids = [...ids].sort((a, b) => name(a).localeCompare(name(b)))
+  const monthChild = child === 'all' ? kids[0] : child
 
   if (!ids.length) return <NotLinked who="parent" />
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
         title="Upcoming classes"
-        description={ids.length > 1 ? `For ${ids.map(name).join(', ')}` : students.get(ids[0])?.name}
+        description={ids.length > 1 ? `For ${kids.map(name).join(', ')}` : students.get(ids[0])?.name}
         actions={
           <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && setView(v as 'list' | 'month')}>
             <ToggleGroupItem value="list" aria-label="List">
@@ -86,7 +88,7 @@ export function ParentHomePage() {
               Everyone
             </Chip>
           ) : null}
-          {ids.map((id) => (
+          {kids.map((id) => (
             <Chip key={id} active={(view === 'month' ? monthChild : child) === id} onClick={() => setChild(id)}>
               {name(id)}
             </Chip>

@@ -88,7 +88,8 @@ export function useFamilySessions(ids: string[], from: DateKey, to: DateKey) {
   )
   const res = useMergedQueries<Session>(queries, `family-sessions-${branchId}-${ids.join(',')}-${from}-${to}`)
   const data = useMemo(
-    () => res.data.filter((s) => !s.isDeleted).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin),
+    // In time order; brothers and sisters at the same time, A to Z.
+    () => res.data.filter((s) => !s.isDeleted).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)),
     [res.data],
   )
   return { data, loading: res.loading }

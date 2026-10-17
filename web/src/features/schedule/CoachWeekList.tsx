@@ -58,7 +58,8 @@ export function CoachWeekList({
   const withSessions = days.filter((d) => byDay.has(d))
   const earlier = isThisWeek ? withSessions.filter((d) => d < today) : []
   const shown = withSessions.filter((d) => showEarlier || !earlier.includes(d))
-  const earlierCount = earlier.reduce((n, d) => n + (byDay.get(d)?.length ?? 0), 0)
+  // Canceled ones don't count, as the days' dots and Today don't count them.
+  const earlierCount = earlier.reduce((n, d) => n + (byDay.get(d) ?? []).filter((s) => s.status !== 'canceled').length, 0)
 
   const scrollTo = (d: DateKey) => {
     if (earlier.includes(d)) setShowEarlier(true)

@@ -82,8 +82,13 @@ export function FilePreview({ file, siblings, onOpen, onClose, where }: { file: 
   const kind = categoryOf(file.kind)
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false} className="flex h-[92svh] max-w-[min(1100px,96vw)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(1100px,96vw)]">
-        <div className="flex items-center gap-3 border-b px-4 py-2.5">
+      <DialogContent
+        showCloseButton={false}
+        // No focus ring on ← as it opens; the arrow keys and Escape work from the start.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="flex h-[92svh] max-w-[min(1100px,96vw)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(1100px,96vw)]"
+      >
+        <div className="flex items-center gap-1.5 border-b px-3 py-2.5 sm:gap-3 sm:px-4">
           <FileGlyph kind={file.kind} className="size-6" />
           <div className="min-w-0 flex-1 leading-tight">
             <DialogTitle className="truncate text-sm font-semibold">{file.name}</DialogTitle>
@@ -95,8 +100,10 @@ export function FilePreview({ file, siblings, onOpen, onClose, where }: { file: 
           <Button variant="ghost" size="icon" aria-label="Next file" disabled={!next} onClick={() => next && onOpen(next)}>
             <LuChevronRight />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void downloadFile(branchId, file)}>
-            <LuDownload /> Download
+          {/* Phones: the icon alone, so the name keeps its room. */}
+          <Button variant="outline" size="sm" aria-label="Download" onClick={() => void downloadFile(branchId, file)}>
+            <LuDownload />
+            <span className="hidden sm:inline">Download</span>
           </Button>
           <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose}>
             <LuX />

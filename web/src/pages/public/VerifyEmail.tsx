@@ -3,7 +3,7 @@ import { LuMailCheck } from 'react-icons/lu'
 import { Navigate, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { authErrorMessage } from '@shared/auth'
-import { PRODUCT_NAME, SENDER_EMAIL } from '@shared/brand'
+import { ACADEMY_NAME, SENDER_EMAIL } from '@shared/brand'
 import { useAuth } from '@/auth/AuthProvider'
 import { FullPageSpinner } from '@/components/app/FullPage'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export function VerifyEmail() {
   const busy = useRef(false)
 
   useEffect(() => {
-    document.title = `Confirm your email | ${PRODUCT_NAME}`
+    document.title = `Confirm your email | ${ACADEMY_NAME}`
   }, [])
 
   const check = useCallback(
@@ -88,7 +88,7 @@ export function VerifyEmail() {
       footer={
         <>
           <p>
-            The email comes from {PRODUCT_NAME} ({SENDER_EMAIL}). Not there after a minute? Check your spam folder, or send it again.
+            The email comes from {ACADEMY_NAME} ({SENDER_EMAIL}). Not there after a minute? Check your spam folder, or send it again.
           </p>
           <p>
             Wrong email?{' '}

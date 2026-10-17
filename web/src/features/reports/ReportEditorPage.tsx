@@ -152,10 +152,13 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
     <div className="-m-4 min-h-[calc(100svh-3rem)] sm:-m-6">
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur print:hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 sm:px-6">
-          <Button variant="ghost" size="sm" onClick={() => void back()}>
-            <LuArrowLeft /> Reports
+          <Button variant="ghost" size="sm" aria-label="Reports" onClick={() => void back()}>
+            <LuArrowLeft />
+            <span className="hidden sm:inline">Reports</span>
           </Button>
-          <div className="min-w-0 flex-1 leading-tight">
+          {/* Phones: the back arrow and the buttons on the first line, whose report it is on its own line below. */}
+          <span className="flex-1 sm:hidden" />
+          <div className="order-last min-w-0 basis-full px-1 leading-tight sm:order-none sm:flex-1 sm:basis-auto sm:px-0">
             <div className="truncate text-sm font-semibold">{r.student.name}</div>
             <div className="truncate text-xs text-muted-foreground">{reportName(r)}</div>
           </div>
@@ -180,15 +183,18 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
               ) : null}
               {draft ? (
                 <Button size="sm" onClick={() => setSharing(true)}>
-                  <LuSend /> Share with family
+                  <LuSend />
+                  <span className="sm:hidden">Share</span>
+                  <span className="hidden sm:inline">Share with family</span>
                 </Button>
               ) : isAdmin ? (
                 <Button variant="outline" size="sm" onClick={() => void unshare()}>
                   <LuUndo2 /> Stop sharing
                 </Button>
               ) : null}
-              <Button variant="outline" size="sm" onClick={() => window.open(`/report/${r.id}`, '_blank', 'noopener')}>
-                <LuExternalLink /> Print / PDF
+              <Button variant="outline" size="sm" aria-label="Print / PDF" title="Print / PDF" onClick={() => window.open(`/report/${r.id}`, '_blank', 'noopener')}>
+                <LuExternalLink />
+                <span className="hidden sm:inline">Print / PDF</span>
               </Button>
               {isAdmin ? (
                 <DropdownMenu>

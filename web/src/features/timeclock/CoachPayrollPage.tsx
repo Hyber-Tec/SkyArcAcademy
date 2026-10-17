@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { branchCol, branchDocRef, useDoc } from '@/lib/firestore'
+import { cn } from '@/lib/utils'
 import { doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { effectiveRates, priceShifts, useSessionsRange, useShifts } from './api'
@@ -69,9 +70,9 @@ export function CoachPayrollPage() {
       <div className="mb-4">
         <PeriodPicker value={range} onChange={setRange} />
       </div>
-      <div className={t.admin.hours > 0 ? 'mb-4 grid gap-3 sm:grid-cols-3' : 'mb-4 grid gap-3 sm:grid-cols-2'}>
-        {[...(t.admin.hours > 0 ? [{ label: 'Admin', v: t.admin }] : []), { label: 'Teaching', v: t.teaching }, { label: 'Total pay', v: t.total }].map((x) => (
-          <Card key={x.label} className="gap-1 px-4 py-3">
+      <div className={t.admin.hours > 0 ? 'mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3' : 'mb-4 grid grid-cols-2 gap-3'}>
+        {[...(t.admin.hours > 0 ? [{ label: 'Admin', v: t.admin }] : []), { label: 'Teaching', v: t.teaching }, { label: 'Total pay', v: t.total }].map((x, i, all) => (
+          <Card key={x.label} className={cn('gap-1 px-4 py-3', all.length === 3 && i === 2 && 'col-span-2 sm:col-span-1')}>
             <div className="text-xs font-semibold text-muted-foreground uppercase">{x.label}</div>
             <div className="text-2xl font-semibold tabular-nums">{money(x.v.pay)}</div>
             <div className="text-sm text-muted-foreground tabular-nums">{x.v.hours.toFixed(2)}h</div>
@@ -84,10 +85,11 @@ export function CoachPayrollPage() {
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Start</TableHead>
-              <TableHead>End</TableHead>
+              {/* Phones: the time goes under the type, and the rate (the same on every line) is left out. */}
+              <TableHead className="hidden sm:table-cell">Start</TableHead>
+              <TableHead className="hidden sm:table-cell">End</TableHead>
               <TableHead className="text-right">Hrs</TableHead>
-              <TableHead className="text-right">Rate</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">Rate</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -113,11 +115,14 @@ export function CoachPayrollPage() {
                         {l.students} student{l.students === 1 ? '' : 's'}
                       </div>
                     ) : null}
+                    <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums sm:hidden">
+                      {formatInstantTime(l.seg.startMs, timezone)} – {formatInstantTime(l.seg.endMs, timezone)}
+                    </div>
                   </TableCell>
-                  <TableCell className="tabular-nums">{formatInstantTime(l.seg.startMs, timezone)}</TableCell>
-                  <TableCell className="tabular-nums">{formatInstantTime(l.seg.endMs, timezone)}</TableCell>
+                  <TableCell className="hidden tabular-nums sm:table-cell">{formatInstantTime(l.seg.startMs, timezone)}</TableCell>
+                  <TableCell className="hidden tabular-nums sm:table-cell">{formatInstantTime(l.seg.endMs, timezone)}</TableCell>
                   <TableCell className="text-right tabular-nums">{l.seg.hours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{money(l.seg.rate)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">{money(l.seg.rate)}</TableCell>
                   <TableCell className="text-right tabular-nums">{money(l.seg.pay)}</TableCell>
                 </TableRow>
               )

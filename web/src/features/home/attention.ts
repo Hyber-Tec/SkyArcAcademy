@@ -83,7 +83,7 @@ export function useAttention(enabled = true) {
     })
     return live
       .filter((s) => byId.has(s.id))
-      .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin)
+      .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName))
       .map((session) => ({ session, conflicts: byId.get(session.id) ?? [] }))
   }, [enabled, ahead.data, avail.data, dayConfigs, settings, staff.data, members.data, studentList.data, rules.maxStudentsPerCoach, today, timezone, now])
 

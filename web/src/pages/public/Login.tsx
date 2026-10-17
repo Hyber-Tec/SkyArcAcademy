@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { authErrorMessage, isGoogleMailbox, looksLikeEmail } from '@shared/auth'
-import { PRODUCT_NAME } from '@shared/brand'
+import { ACADEMY_NAME } from '@shared/brand'
 import { useAuth } from '@/auth/AuthProvider'
 import { FullPageSpinner } from '@/components/app/FullPage'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -23,14 +23,16 @@ export function Login() {
   const target = useNext()
   const hint = params.get('email')?.trim().toLowerCase() || null
   const { profile, loading } = useAuthBranch()
+  // The academy's full name, as on its logo ("Sky Arc Sports Academy"), never the short one.
+  const academy = profile?.name?.trim() || ACADEMY_NAME
   const [email, setEmail] = useState(hint ?? '')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = profile ? `Sign in to ${profile.name} | ${PRODUCT_NAME}` : `Sign in | ${PRODUCT_NAME}`
-  }, [profile])
+    document.title = `Sign in | ${academy}`
+  }, [academy])
 
   if (status === 'loading' || loading) return <FullPageSpinner />
   if (status === 'signedIn') return <Navigate to={needsVerification ? withQuery('/verify-email', { next: target }) : target} replace />
@@ -55,7 +57,7 @@ export function Login() {
 
   return (
     <AuthShell
-      title={profile ? `Sign in to ${profile.shortName || profile.name}` : 'Sign in'}
+      title={`Sign in to ${academy}`}
       description={
         hint ? (
           <>
@@ -68,7 +70,7 @@ export function Login() {
       footer={
         <>
           <p>
-            New to {PRODUCT_NAME}?{' '}
+            New here?{' '}
             <Link to={withQuery('/signup', query)} className="font-medium text-foreground underline underline-offset-2">
               Create an account
             </Link>
@@ -76,7 +78,7 @@ export function Login() {
               <>
                 {' '}or{' '}
                 <Link to="/join" className="font-medium text-foreground underline underline-offset-2">
-                  request access to {profile.shortName || profile.name}
+                  request access to {academy}
                 </Link>
               </>
             ) : null}

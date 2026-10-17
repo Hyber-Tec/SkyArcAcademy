@@ -244,7 +244,8 @@ export function MonthScroller({
       <div
         ref={header}
         className={cn(
-          'sticky top-0 z-10 grid border-b bg-background/95 text-center font-semibold text-muted-foreground backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          // Opaque, the color of the card it sits on: a see-through header showed the month above as colored smudges.
+          'sticky top-0 z-10 grid border-b bg-card text-center font-semibold text-muted-foreground',
           compact ? 'py-1 text-[10px]' : 'py-1.5 text-xs',
         )}
         style={{ gridTemplateColumns: columns }}

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { LuCircleAlert, LuCircleCheck } from 'react-icons/lu'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { authErrorMessage, passwordProblem } from '@shared/auth'
-import { PRODUCT_NAME } from '@shared/brand'
+import { ACADEMY_NAME } from '@shared/brand'
 import { useAuth } from '@/auth/AuthProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -39,7 +39,7 @@ export function AuthAction() {
   const started = useRef(false)
 
   useEffect(() => {
-    document.title = `${mode === 'resetPassword' ? 'Choose a new password' : 'Confirm your email'} | ${PRODUCT_NAME}`
+    document.title = `${mode === 'resetPassword' ? 'Choose a new password' : 'Confirm your email'} | ${ACADEMY_NAME}`
   }, [mode])
 
   useEffect(() => {

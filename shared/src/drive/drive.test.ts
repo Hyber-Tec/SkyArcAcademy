@@ -74,9 +74,12 @@ describe('the Drive index', () => {
     expect(idx.nameTaken(null, ' plans ')).toBe(true)
   })
 
-  it('sorts folders above files, newest first by default', () => {
-    const idx = buildDriveIndex([folder('a', null), folder('b', null, { createdAt: at(5000) })], [file('new', null, { uploadedAt: at(8000) }), file('old', null, { uploadedAt: at(3000) })])
-    expect(sortDriveItems(levelItems(idx, null), DRIVE_DEFAULT_SORT, idx).map((i) => i.id)).toEqual(['b', 'a', 'new', 'old'])
+  it('opens with folders A to Z above the newest files, and a picked column sorts both', () => {
+    const idx = buildDriveIndex([folder('b', null, { createdAt: at(5000) }), folder('a', null)], [file('old', null, { uploadedAt: at(3000) }), file('new', null, { uploadedAt: at(8000) })])
+    expect(sortDriveItems(levelItems(idx, null), DRIVE_DEFAULT_SORT, idx).map((i) => i.id)).toEqual(['a', 'b', 'new', 'old'])
+    const byUpdated = cycleDriveSort(DRIVE_DEFAULT_SORT, 'updated')
+    expect(byUpdated).toEqual({ col: 'updated', dir: 'desc' })
+    expect(sortDriveItems(levelItems(idx, null), byUpdated, idx).map((i) => i.id)).toEqual(['b', 'a', 'new', 'old'])
     expect(cycleDriveSort(DRIVE_DEFAULT_SORT, 'name')).toEqual({ col: 'name', dir: 'asc' })
     expect(cycleDriveSort({ col: 'name', dir: 'asc' }, 'name')).toEqual({ col: 'name', dir: 'desc' })
   })

@@ -106,7 +106,7 @@ export function AccountPage() {
     if (m.staffId) parts.push(staffById.get(m.staffId)?.name ?? 'Employee record')
     if (m.studentId) parts.push(studentById.get(m.studentId)?.name ?? 'Student record')
     if (m.studentIds?.length) {
-      parts.push(`Parent of ${m.studentIds.map((id) => studentById.get(id)?.firstName ?? '…').join(', ')}`)
+      parts.push(`Parent of ${m.studentIds.map((id) => studentById.get(id)?.firstName ?? '…').sort((a, b) => a.localeCompare(b)).join(', ')}`)
     }
     return parts.join(' · ')
   }

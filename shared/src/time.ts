@@ -276,7 +276,7 @@ export function formatMinutesShort(minutes: number): string {
 }
 
 export function formatTimeRange(startMin: number, endMin: number): string {
-  return `${formatMinutes(startMin)} - ${formatMinutes(endMin)}`
+  return `${formatMinutes(startMin)} – ${formatMinutes(endMin)}`
 }
 
 /** "16:30" → 990. Returns NaN for malformed input. */

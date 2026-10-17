@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { authErrorMessage, isGoogleMailbox, looksLikeEmail, passwordProblem } from '@shared/auth'
-import { PRODUCT_NAME } from '@shared/brand'
+import { ACADEMY_NAME } from '@shared/brand'
 import { useAuth } from '@/auth/AuthProvider'
 import { FullPageSpinner } from '@/components/app/FullPage'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -23,6 +23,7 @@ export function SignUp() {
   const target = useNext()
   const hint = params.get('email')?.trim().toLowerCase() || null
   const { profile, loading } = useAuthBranch()
+  const academy = profile?.name?.trim() || ACADEMY_NAME
   const [name, setName] = useState('')
   const [email, setEmail] = useState(hint ?? '')
   const [password, setPassword] = useState('')
@@ -30,8 +31,8 @@ export function SignUp() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = `Create an account | ${PRODUCT_NAME}`
-  }, [])
+    document.title = `Create an account | ${academy}`
+  }, [academy])
 
   if (status === 'loading' || loading) return <FullPageSpinner />
   if (status === 'signedIn') return <Navigate to={needsVerification ? withQuery('/verify-email', { next: target }) : target} replace />
@@ -59,7 +60,7 @@ export function SignUp() {
   return (
     <AuthShell
       title="Create your account"
-      description={profile ? `Use the email ${profile.shortName || profile.name} has for you.` : 'Use the email the academy has for you.'}
+      description={`Use the email ${academy} has for you.`}
       footer={
         <p>
           Already have an account?{' '}
@@ -98,7 +99,7 @@ export function SignUp() {
             {busy ? <Spinner /> : null}
             Create account
           </Button>
-          <p className="text-xs text-muted-foreground">We’ll email you a link to confirm the address before you can sign in to an academy.</p>
+          <p className="text-xs text-muted-foreground">We’ll email you a link to confirm the address before you sign in.</p>
         </FieldGroup>
       </form>
     </AuthShell>

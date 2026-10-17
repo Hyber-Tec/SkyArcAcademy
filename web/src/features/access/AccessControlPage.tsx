@@ -24,7 +24,8 @@ export function AccessControlPage() {
     `admins-${branchId}`,
   )
   const isOwnerRow = (m: WithId<Member>) => m.role === 'owner'
-  const rows = [...admins.data].sort((a, b) => Number(isOwnerRow(b)) - Number(isOwnerRow(a)) || a.email.localeCompare(b.email))
+  // Owners first, then everyone by name (as the cards show it).
+  const rows = [...admins.data].sort((a, b) => Number(isOwnerRow(b)) - Number(isOwnerRow(a)) || (a.displayName || a.email).localeCompare(b.displayName || b.email))
   const ownerCount = rows.filter(isOwnerRow).length
 
   async function update(member: WithId<Member>, patch: Partial<Member>, summary: string) {

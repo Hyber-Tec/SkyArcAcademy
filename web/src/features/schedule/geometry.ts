@@ -1,5 +1,9 @@
 /** Timeline geometry (the redesign's proportions, at 100% zoom). */
 export const NAME_COL = 176
+/** A narrow schedule (a phone, or a tablet with the side rail open): each coach is an avatar and a first name. */
+export const NAME_COL_COMPACT = 64
+/** The schedule's width under which the coach column turns compact, so the classes keep most of the screen. */
+export const COMPACT_BELOW = 640
 export const PX_PER_MIN = 1.85
 export const MIN_TIMELINE = 720
 export const CARD_H = 52
