@@ -328,3 +328,24 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   rule in CLAUDE.md), on the website and the phone, and the other sign-in pages and tab titles use it.
 - **The website's schedule on a phone** gives the classes the width: the coach column is a narrow strip (colour,
   initials, first name) instead of almost half the screen.
+
+## 14. Parents and students, Home instead of Today, every student for coaches (2026-10-17)
+
+- **Parents and students get their part, on the website and in the phone app**, alike ("what they're seeing will be
+  very similar"): Home, Classes, Reports and Profile (More on the phone). A parent sees their children, with a child
+  switcher; a student sees themself. What families see follows the rules: their children's classes and the progress
+  reports the academy shares; not every score as it's saved (a question for the owner, `docs/TODO.md`).
+- **A report is "New" for each person until they open it**: every family member gets their own "report ready" notice,
+  read when they open the report (on the website or the phone), so a parent opening it doesn't clear it for the
+  student.
+- **"Home", not "Today"**, for the first page on the website and the phone, for every role ("realistically we don't
+  need to name 'Today' for the page"). The page still shows the day.
+- **Coaches see every student** ("no need to filter for the coaches"): the Students list is the whole academy on the
+  website and the phone, with "All" first; a coach still sees only their own classes (a question for the owner).
+- **The owner's to-do list and what we agreed to do later** live in `docs/TODO.md` (a web app for phones comes later:
+  people on phones use the phone app, and the website is used from laptops).
+- **A keyboard jumping back to letters after each digit in a password field** (the owner, signing in) didn't happen in
+  the app or on the website in the iPhone Simulator, typed key by key on the on-screen keyboard, with the English and
+  the Korean keyboards. The app doesn't change the keyboard; iPhone users report the same in other apps' password
+  fields, where iOS picks the keyboard itself (Apple's English one; never a third-party one). Which keyboard the owner
+  uses is a question for them; meanwhile the eye that shows the password lets their usual keyboard type it.

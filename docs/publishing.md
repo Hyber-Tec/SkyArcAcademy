@@ -15,10 +15,10 @@ and [What Apple and Google will check](#what-apple-and-google-will-check).
 ## Where things stand (2026-10-17)
 
 **Done:**
-- **Who uses the app**: the academy's owners, admins and coaches, with the same five tabs (Today, Schedule, Scan,
+- **Who uses the app**: the academy's owners, admins and coaches, with the same five tabs (Home, Schedule, Scan,
   Students, More). A coach sees their own classes and every student without the families' contact details, scans cards,
-  and corrects or deletes scores. Parents and students who sign in see "Coming to the app", which points them to the
-  website.
+  and corrects or deletes scores. Parents and students who sign in get the family's four tabs (Home, Classes, Reports,
+  More): their children's or their own classes, and the progress reports the academy shared.
 - **Firebase**: the iPhone app (`1:1025403274020:ios:e9806988e82e53cb6ae9b1`) and the Android app
   (`1:1025403274020:android:bbcc3273a22750b66ae9b1`) are registered in the skyarcacademy project, the Android one with
   the standard debug key's SHA-1 and SHA-256, so Google sign-in works in builds made on a Mac. Their files go in
@@ -32,7 +32,7 @@ and [What Apple and Google will check](#what-apple-and-google-will-check).
   in `mobile/app.config.ts`. No location, contacts, microphone, notifications or tracking.
 - **In the app, what the stores look for**: **More → Delete my account** (it asks for the password, or Google, then the
   server function `deleteMyAccount` deletes the account), also on every screen an account can be stuck on (No access
-  yet, Coming to the app, paused access, Confirm your email); **More → Privacy policy**; **More → Version**.
+  yet, paused access, Confirm your email); **More → Privacy policy**; **More → Version**.
 - **The commands**: `npm run publish:iphone`, `npm run publish:android`, `npm run publish:screenshots` (never run yet),
   and every text the stores ask for, in [docs/store/](store/).
 
@@ -70,8 +70,8 @@ https://developer.apple.com/app-store/review/guidelines/, and if it is newer, as
   an email the academy added (4.0; for 4.8 see [Sign in with Apple](#sign-in-with-apple-guideline-48)).
 - **Delete my account** in More and on every screen an account can be stuck on, with what the academy keeps said on
   screen (5.1.1(v)).
-- **The privacy policy linked in More and before signing in** (sign-in, "No access yet", "Coming to the app", paused
-  access) (5.1.1(i); the policy is written but not yet in effect, below).
+- **The privacy policy linked in More and before signing in** (sign-in, "No access yet", paused access) (5.1.1(i); the
+  policy is written but not yet in effect, below).
 - **Help** in More and before signing in: the website's Help page (https://skyarcacademy.web.app/help), with the
   academy's contact details from Settings → Academy and HyberTec's email for problems with the app (1.5). It's also the
   Support URL.
@@ -91,8 +91,7 @@ https://developer.apple.com/app-store/review/guidelines/, and if it is newer, as
 1. **The privacy policy in effect** (5.1.1(i), 2.1): it now says everything in
    [The privacy policy](#the-privacy-policy-inside-the-app-too) (2026-10-17); once the academy approves it, Claude Code
    sets its date in effect, which takes the "Draft" banner away.
-2. **Optional:** reword "Coming to the app … comes later" for parents and students so it doesn't read like an unfinished
-   feature (2.1); keep the developer client's local network text out of store builds (5.1.1(ii)); disconnect Google too
+2. **Optional:** keep the developer client's local network text out of store builds (5.1.1(ii)); disconnect Google too
    when someone deletes their account.
 
 ### Your part, step by step

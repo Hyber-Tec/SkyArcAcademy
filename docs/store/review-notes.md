@@ -34,7 +34,7 @@ On "Sign in to Sky Arc Sports Academy", sign in with the email and password (no 
   Coach: COACH REVIEW LOGIN EMAIL / COACH REVIEW LOGIN PASSWORD
 
 WHAT TO TRY
-- Today: the day's classes (a coach sees their own). Tap one to see its students and its coach.
+- Home: the day's classes (a coach sees their own). Tap one to see its students and its coach.
 - Schedule: another day or week; tap a class.
 - Scan: take a photo of a paper target, or choose one from Photos. The app scores it; check the shots, choose the student and save, and it's filed in the student's folder with the scores.
 - Students: search for a student and open them: their classes, scores and files (open a file, or a score to correct or delete it). The admin also sees the family's contact details.
@@ -99,7 +99,7 @@ Play Console → **App content → App access** → "All or some functionality i
 `Review login`, the admin's email and password, and:
 
 ```
-Every part of the app requires an account that Sky Arc Sports Academy has created. Sign in with the email and password (no Google needed). This is an admin of the academy who sees sample data only (made-up people; New York time). Today, Schedule (tap a class), Scan (photograph or choose a paper target, then save it for a student), Students (open a student and a file) and More are all open to it. More → Delete my account deletes the account.
+Every part of the app requires an account that Sky Arc Sports Academy has created. Sign in with the email and password (no Google needed). This is an admin of the academy who sees sample data only (made-up people; New York time). Home, Schedule (tap a class), Scan (photograph or choose a paper target, then save it for a student), Students (open a student and a file) and More are all open to it. More → Delete my account deletes the account.
 ```
 
 **Add instructions** again for the coach: name `Coach login`, the coach's email and password, and:

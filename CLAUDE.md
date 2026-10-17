@@ -4,7 +4,7 @@ Project context lives in **`SKYARC_PROJECT_BRIEF.md`**. Read it first.
 
 This project is forked/refactored from **HyberCRM**, HyberTec's CRM (a separate repository; its path on your machine goes in your `CLAUDE.local.md`). **Merge in every rule and convention from HyberCRM's `CLAUDE.md`** that still applies (architecture, folder conventions, Firebase patterns, testing, design system). The rules below are **strict** and apply to every developer and every AI session. If HyberCRM's `CLAUDE.md` conflicts with these, **these win.** The HyberCRM rules that apply are already merged into this file (sections "Conventions" and "Git and commits").
 
-Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they win over the brief and the review) → [`docs/QUESTIONS.md`](docs/QUESTIONS.md) (what's still open, with the defaults used meanwhile) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) (the fork plan) → [`docs/DEPLOY.md`](docs/DEPLOY.md) (how `main` reaches production).
+Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they win over the brief and the review) → [`docs/QUESTIONS.md`](docs/QUESTIONS.md) (what's still open, with the defaults used meanwhile) → [`docs/TODO.md`](docs/TODO.md) (the owner's to-do list and what we agreed to do later: bring up what's due) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md) (the fork plan) → [`docs/DEPLOY.md`](docs/DEPLOY.md) (how `main` reaches production).
 
 ---
 
@@ -65,7 +65,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - **Single academy.** No multi-branch or super-admin UI (see the brief for how to handle HyberCRM's branch model).
 - **Web first.** The website is the main thing; the phone app (`mobile/`, Expo, iOS first) helps the office see things
   and do a few things (owner, 2026-10-16). Its part for owners and admins came first; coaches have it too since
-  2026-10-17 (the same tabs, with what a coach may see); families come later.
+  2026-10-17 (the same tabs, with what a coach may see), and parents and students have theirs since then too (Home,
+  Classes, Reports, More).
 - **Don't design the landing page.** Homepage is a minimal placeholder (logo, Login, Book a Trial).
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
@@ -95,13 +96,13 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 | Path | What |
 |---|---|
 | `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports), `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
-| `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Today, Schedule, Scan, Students, More) for owners, admins and coaches. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
+| `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Home, Schedule, Scan, Students, More) for owners, admins and coaches, and the family's (Home, Classes, Reports, More) for parents and students. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
 | `shared/` | Pure TypeScript used by the website, the functions and the phone app: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `targets/` (reading a photo of the academy's paper card: its bulls, the holes and their scores, and the review before saving; tested on made-up photos of the card), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
 | `tests/rules/` | Firestore and Storage rules tests (emulators). |
 | `scripts/` | `check-repo.sh` (CI's guard), `seed.ts` (the academy and its first owner), `seed-sample.ts` (sample data, and its removal), `lib/sius-pdf.ts` (synthetic SIUS PDFs for the sample data and tests, never real ones), `test-rules.sh`, `deploy.sh` and `open-callables.sh` (CI's deploy), `brand-icons.ts` (PNG copies of the official logos, the phone app's icons and its logo files), `smoke.ts` (pages in headless Chrome), `phone.mjs` (the phone app's commands: simulators, a phone over the cable, tests, setup) and `publish.mjs` (the stores' builds). |
-| `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook), `running-the-apps.md` (the phone app on simulators and phones), `publishing.md` and `store/` (the App Store and Google Play, later). |
+| `docs/` | `DECISIONS.md` (the owner's answers), `QUESTIONS.md` (open questions), `TODO.md` (the owner's to-do and what's agreed for later), `HYBERCRM_REVIEW.md` (fork plan), `DEPLOY.md` (deploy runbook), `running-the-apps.md` (the phone app on simulators and phones), `publishing.md` and `store/` (the App Store and Google Play, later). |
 | `.github/` | `workflows/ci.yml` (checks every pull request and `main`, then deploys `main`), `CODEOWNERS` (the shared files). |
 
 ## Commands
@@ -111,7 +112,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - `npm run dev` → http://localhost:5173 against **production** Firebase (needs `web/.env.local`: copy `web/.env.example`; values in the Firebase console, Project settings → Your apps → Sky Arc). Real data: prefer the emulators.
 - Checks, as CI runs them: `bash scripts/check-repo.sh`, `npm run typecheck`, `npm test` (unit: `shared/` and `scripts/`), `npm run lint`, `npm run build` (website → `web/dist`), `npm --prefix functions run build`, `npm run test:rules` (rules, emulator).
 - `npm run seed -- --owner <email> --owner-name "<name>"` → creates the academy and its first owner (production already has them; safe to run again; uses your gcloud login).
-- `npm run seed:sample` → adds the sample data (fictional people and ten weeks of classes) to production, or to the emulators with `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`; `npm run seed:sample -- --remove` deletes it; `npm run seed:sample -- --coach-login <email>` gives an email the sample coach's access, to see the app as a coach.
+- `npm run seed:sample` → adds the sample data (fictional people and ten weeks of classes) to production, or to the emulators with `SKYARC_PROJECT=demo-skyarc FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`; `npm run seed:sample -- --remove` deletes it; `npm run seed:sample -- --login coach=<email>` (or `parent=`, `student=`) gives an email a sample person's access, to see the app as they do.
 - `npx tsx scripts/smoke.ts /login /trial` → opens pages in headless Chrome and reports console errors (dev server running).
 - The phone app ([`docs/running-the-apps.md`](docs/running-the-apps.md)): `npm run iphone:sim` → the iPhone Simulator on
   the practice copy (the emulators, the sample data, made-up logins with a password kept in `mobile/.expo`);
