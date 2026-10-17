@@ -1,6 +1,6 @@
 import { Canvas } from "@shopify/react-native-skia";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type ReplayShot, replayShots, replayStepMs } from "@shared/shooting/replay";
+import { replayStepMs } from "@shared/shooting/replay";
 import { PELLET_MM, type ShotPoint, meanPoint, targetViewMm } from "@shared/shooting/target";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react-native";
@@ -10,9 +10,10 @@ import { useReducedMotion } from "react-native-reanimated";
 import { IconButton } from "@/components/IconButton";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
+import { type PlayShot, evaluationShots } from "./playback";
 import { ChosenShot, MpiMark, RingNumbers, ShotDot, TargetFace, toPoints, useTargetFont } from "./Target";
 
-type Placed = ReplayShot & { point: ShotPoint };
+type Placed = PlayShot & { point: ShotPoint };
 
 /**
  * A result's shots played back on one target, one by one in the order they were fired: the newest drops onto its
@@ -22,30 +23,37 @@ type Placed = ReplayShot & { point: ShotPoint };
  * The same playback as the website's (web/src/features/scores/ShotReplay.tsx).
  *
  * `autoPlay` plays it once as it opens (a card just scanned); `onStep` hears which shot is showing (null: all of them),
- * for what follows along (the darts of a result's shots).
+ * for what follows along (the darts of a result's shots). In place of one result, `shots` plays a report's results one
+ * after another (`playPoints`), each shot under its result's date.
  */
 export function ShotReplay({
   evaluation,
+  shots: given,
   color,
   size,
   autoPlay = false,
   onStep,
+  caption,
 }: {
-  evaluation: Pick<Evaluation, "source" | "series">;
+  /** The result to play… */
+  evaluation?: Pick<Evaluation, "source" | "series">;
+  /** …or shots ready to play (a report's: `playPoints`). */
+  shots?: readonly PlayShot[];
   color: string;
   size: number;
   autoPlay?: boolean;
   onStep?: (n: number | null) => void;
+  /** In place of "20 shots · total 185.0" while it isn't playing. */
+  caption?: string;
 }) {
   const colors = useColors();
   const reduced = useReducedMotion();
-  const shots = useMemo(() => replayShots(evaluation), [evaluation]);
+  const shots = useMemo(() => given ?? (evaluation ? evaluationShots(evaluation) : []), [given, evaluation]);
   const placed = useMemo(() => shots.filter((s): s is Placed => s.point !== null), [shots]);
   const count = shots.length;
   /** The shot shown as the newest (1…n); null shows them all. */
   const [step, setStep] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
-  const sius = evaluation.source === "sius";
   const labelFont = useTargetFont(15);
   const view = targetViewMm(
     placed.map((s) => s.point),
@@ -86,8 +94,8 @@ export function ShotReplay({
 
   if (!placed.length) return null;
 
-  const fmt = (v: number) => (sius ? v.toFixed(1) : String(Math.round(v)));
-  const total = count ? shots[count - 1].running : 0;
+  const fmt = (s: PlayShot, v: number) => (s.decimal ? v.toFixed(1) : String(Math.round(v)));
+  const last = shots[count - 1];
   const current = at !== null ? shots[at - 1] : null;
   const mpi = at === null && placed.length >= 2 ? meanPoint(placed.map((s) => s.point)) : null;
   const earlier = at === null ? placed : placed.filter((s) => s.n < at);
@@ -111,14 +119,20 @@ export function ShotReplay({
   };
 
   const readout = current
-    ? [current.series !== null ? `Series ${current.series}` : null, `Shot ${current.n} of ${count}`, `${fmt(current.value)}${current.point ? "" : " (no place on the target)"}`, `total ${fmt(current.running)}`]
+    ? [
+        current.context,
+        `Shot ${current.number} of ${current.of}`,
+        `${fmt(current, current.value)}${current.point ? "" : " (no place on the target)"}`,
+        current.running !== null ? `total ${fmt(current, current.running)}` : null,
+      ]
         .filter(Boolean)
         .join(" · ")
-    : [`${count} shots`, `total ${fmt(total)}`, placed.length < count ? `${count - placed.length} without a place` : null].filter(Boolean).join(" · ");
+    : (caption ??
+      [`${count} shots`, last.running !== null ? `total ${fmt(last, last.running)}` : null, placed.length < count ? `${count - placed.length} without a place` : null].filter(Boolean).join(" · "));
 
   return (
     <View style={styles.wrap} testID="replay">
-      <Canvas style={{ width: size, height: size }} accessibilityLabel={current ? `Shot ${current.n} of ${count}: ${fmt(current.value)}` : `${placed.length} shots on the target`} accessible>
+      <Canvas style={{ width: size, height: size }} accessibilityLabel={current ? [current.context, `Shot ${current.number} of ${current.of}: ${fmt(current, current.value)}`].filter(Boolean).join(", ") : `${placed.length} shots on the target`} accessible>
         <TargetFace view={view} size={size}>
           {earlier.map((s) => (
             <ShotDot key={s.n} point={s.point} color={color} view={view} size={size} />
@@ -129,7 +143,7 @@ export function ShotReplay({
         <ChosenShot
           at={current?.point ? toPoints(current.point, view, size) : { x: size / 2, y: size / 2 }}
           r={(PELLET_MM / 2) * (size / (2 * view))}
-          n={current?.point ? current.n : null}
+          n={current?.point ? current.number : null}
           font={labelFont}
           size={size}
           pop={!reduced}

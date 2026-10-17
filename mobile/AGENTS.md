@@ -33,20 +33,24 @@ app.config.ts          native configuration: ids, Firebase files, permissions, p
 src/app/               screens (Expo Router). Root gates: signed out → sign-in screens; a password account with an
                        unconfirmed email → verify-email; otherwise (app)/, which reads the academy's member doc for the
                        person's email (BranchProvider) and opens the part of their one role.
-  (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Today · Schedule ·
+  (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Home · Schedule ·
                        Scan · Students · More, and the screens that open over them (class/[id] and coach/[id] sheets,
                        student/[id], score/[id], file/[id], and the Scan screens)
-  (app)/coming-soon    parents and students: their part comes to the app later; the website meanwhile
+  (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
+                       Reports · More, and what opens over them (session/[id] a class's sheet, report/[id] a progress
+                       report); FamilyProvider holds whose they are and the child a parent chose
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
                        rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
                        may read), schedule (classes, the week strip, class cards), students, drive (downloading a Drive
                        file through the Storage rules), scan (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
-                       back), access, account (deleting an account)
+                       back; playback.ts), access, account (deleting an account), family (what a family reads: their
+                       students, classes and shared reports; the child switcher; the class cards), reports (a progress
+                       report's figures and charts)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
-                       EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SearchField, Dialog,
-                       IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
+                       EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SectionTitle,
+                       SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
@@ -98,5 +102,7 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.
 - **A coach's queries ask for what the rules give a coach** (their classes by `coachId`, their own staff record, never
   `students/{id}/private`): a query the rules would refuse fails whole (`src/features/data/hooks.ts`).
+- **A family's queries ask for one student at a time** (`where("studentId", "==", id)`, for each linked student), never
+  staff records, evaluations or the Drive: the coach's name comes from the class itself (`src/features/family/data.ts`).
 - **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). A new
   permission means new questions from both stores (docs/publishing.md).

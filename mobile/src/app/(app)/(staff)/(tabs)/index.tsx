@@ -155,9 +155,9 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 /**
- * Today's scrolling page, on the grouped background, with pull to refresh (everything is live; pulling just shows it's
- * current). It is the first view of the screen, so tapping the Today tab again scrolls back to the top, as the phone's
- * own apps do (the native tabs follow the first views down to a scroll view; Today has no header around it), with the
+ * Home's scrolling page, on the grouped background, with pull to refresh (everything is live; pulling just shows it's
+ * current). It is the first view of the screen, so tapping the Home tab again scrolls back to the top, as the phone's
+ * own apps do (the native tabs follow the first views down to a scroll view; Home has no header around it), with the
  * status bar's strip over it.
  */
 function TodayScroll({ children, contentStyle }: { children: ReactNode; contentStyle?: { paddingTop: number } }) {

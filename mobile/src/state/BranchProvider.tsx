@@ -36,7 +36,7 @@ export interface BranchState {
   isAdmin: boolean;
   /** Coaches: what the rules let them see (their own classes, no family contacts). */
   isCoach: boolean;
-  /** Owners, admins and coaches: the app's tabs (parents and students come later). */
+  /** Owners, admins and coaches: the staff's tabs (parents and students get the family's). */
   isStaff: boolean;
   /** Employees: their staff record. */
   staffId: string | null;

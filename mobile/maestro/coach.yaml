@@ -1,6 +1,6 @@
-# A coach's app: the same five tabs as the office's, with what a coach may see. Today counts their hours, Students
-# starts with their own students, a student's page has no family contacts, and More has no list of coaches. Signs in
-# as the sample coach (same practice password), then back in as the owner the other flows expect.
+# A coach's app: the same five tabs as the office's, with what a coach may see. Home counts their hours, Students lists
+# every student, a student's page has no family contacts, and More has no list of coaches. Signs in as the sample coach
+# (same practice password), then back in as the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
 #   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/coach.yaml
 appId: com.skyarcacademy.app
@@ -22,13 +22,13 @@ appId: com.skyarcacademy.app
     file: sign-in.yaml
     env:
       EMAIL: daniel.reed@skyarc-sample.test
-# Today: a coach's numbers are their classes, students and hours.
+# Home: a coach's numbers are their classes, students and hours.
 - extendedWaitUntil:
     visible:
       id: "today-stats"
     timeout: 30000
 - assertVisible: "hours?"
-# Students: their own first.
+# Students: everyone, as for the office.
 - runFlow:
     file: steps/tab.yaml
     env:
@@ -36,7 +36,7 @@ appId: com.skyarcacademy.app
       LABEL: Students
 - extendedWaitUntil:
     visible:
-      id: "students-filter-mine"
+      id: "students-filter-all"
     timeout: 30000
 - tapOn:
     id: "student-row-.*"

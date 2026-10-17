@@ -1,4 +1,4 @@
-# The Today tab: the greeting and date, today's numbers, the way to Scan, and a class's sheet when the day has one.
+# The Home tab (the staff's): the greeting and date, today's numbers, the way to Scan, and a class's sheet when the day has one.
 # Run after sign-in.yaml (the practice owner):
 #   maestro test maestro/today.yaml
 appId: com.skyarcacademy.app
@@ -16,7 +16,7 @@ appId: com.skyarcacademy.app
     file: steps/tab.yaml
     env:
       TAB: today
-      LABEL: Today
+      LABEL: Home
 - extendedWaitUntil:
     visible:
       id: "today-screen"

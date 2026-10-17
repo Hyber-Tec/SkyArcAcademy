@@ -3,7 +3,7 @@ import { dayHours } from "@shared/availability";
 import type { DriveFile } from "@shared/drive/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
+import { type DateKey, nowMinutes, todayKey } from "@shared/time";
 import type { DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
 import { useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
@@ -94,24 +94,6 @@ export function useStudent(id: string | null) {
 export function useStudentPrivate(id: string | null) {
   const { branchId, isAdmin } = useBranch();
   return useDoc<StudentPrivateProfile>(id && isAdmin ? `${ROOT.branches}/${branchId}/${COL.students}/${id}/private/${DOC.privateProfile}` : null);
-}
-
-/**
- * The students a coach teaches (classes in the last 90 days or coming), as the website's coach directory has them;
- * null while it loads, and for the office (everyone's theirs).
- */
-export function useTaughtStudentIds(): Set<string> | null {
-  const { branchId, isCoach, staffId } = useBranch();
-  const { today } = useAcademyNow();
-  const from = addDays(today, -90);
-  const state = useQuery<Session>(isCoach && staffId ? `taught-${branchId}-${staffId}-${from}` : null, () =>
-    query(col(branchId, COL.sessions), where("coachId", "==", staffId), where("dateKey", ">=", from)),
-  );
-  return useMemo(() => {
-    if (!isCoach) return null;
-    if (!staffId) return new Set<string>();
-    return state.loading ? null : new Set(state.data.filter((s) => !s.isDeleted).map((s) => s.studentId));
-  }, [isCoach, staffId, state.loading, state.data]);
 }
 
 /**
