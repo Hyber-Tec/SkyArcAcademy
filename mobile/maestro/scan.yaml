@@ -30,6 +30,13 @@ appId: com.skyarcacademy.app
     visible:
       id: "scan-total"
     timeout: 90000
+# The shots play back at the top; the card and its bulls are below.
+- assertVisible:
+    id: "replay"
+- scrollUntilVisible:
+    element:
+      id: "scan-tile-10"
+    direction: DOWN
 - assertVisible:
     id: "scan-tile-10"
     text: ".*10.*"

@@ -4,7 +4,8 @@ import { space, useColors } from "@/theme";
 
 /**
  * A tab's or a page's scrolling body, under the native header (which blurs what scrolls beneath it). On the grouped
- * background by default, as the phone's own list screens. `onRefresh`: pull to refresh.
+ * background by default, as the phone's own list screens. `onRefresh`: pull to refresh. A field being typed in is kept
+ * above the keyboard, and dragging the page down puts the keyboard away.
  */
 export function Screen({
   children,
@@ -13,6 +14,7 @@ export function Screen({
   contentStyle,
   testID,
   footer,
+  scrollEnabled = true,
 }: {
   children: ReactNode;
   grouped?: boolean;
@@ -21,6 +23,8 @@ export function Screen({
   testID?: string;
   /** Pinned under the scrolling content (a form's buttons). */
   footer?: ReactNode;
+  /** False while a gesture inside needs the finger (a pinch, a drag): the page stops scrolling meanwhile. */
+  scrollEnabled?: boolean;
 }) {
   const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
@@ -30,6 +34,10 @@ export function Screen({
         style={styles.fill}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
+        // The field being typed in stays above the keyboard, and dragging the page down puts the keyboard away.
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive"
+        scrollEnabled={scrollEnabled}
         contentContainerStyle={[styles.content, contentStyle]}
         testID={testID}
         refreshControl={
