@@ -6,7 +6,7 @@ import { slotAt } from '@shared/schedule/dayModel'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, formatDateKey, formatMinutes, formatMinutesShort, formatTimeRange } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
-import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
+import { ContextMenuFor, MenuOnTap, menu } from '@/components/app/ItemMenu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ import {
   EVENT_H,
   LANE_GAP,
   NAME_COL,
+  NAME_COL_COMPACT,
   ROW_PAD_TOP,
   eventsRowHeight,
   dragStartMinute,
@@ -32,6 +33,9 @@ import { SESSION_DRAG_TYPE, SessionCard } from './SessionCard'
 import type { EventDoc } from './useScheduleData'
 
 export const EVENT_DRAG_TYPE = 'application/x-skyarc-event'
+
+/** Classes in time order, then by student. */
+const byTime = (a: WithId<Session>, b: WithId<Session>) => a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)
 
 /** Unavailable time on a coach's row: a faint hatch under the white availability bands. */
 const OFF_HATCH = 'bg-[repeating-linear-gradient(135deg,rgba(161,161,170,0.10)_0,rgba(161,161,170,0.10)_1px,transparent_1px,transparent_6px)]'
@@ -54,6 +58,7 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
   const ui = useScheduleUi()
   const locked = ui.isLocked(dateKey)
   const isToday = dateKey === ui.today
+  const nameCol = ui.compact ? NAME_COL_COMPACT : NAME_COL
   // Sessions outside the opening hours (the day was closed or shortened after booking) stay on screen.
   let lo = hours.isOpen ? hours.openMin : Infinity
   let hi = hours.isOpen ? hours.closeMin : -Infinity
@@ -89,7 +94,7 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
     for (const el of [line, label]) {
       if (!el) continue
       el.style.display = m === null ? 'none' : 'block'
-      if (m !== null) el.style.left = `${NAME_COL + x(m)}px`
+      if (m !== null) el.style.left = `${nameCol + x(m)}px`
     }
     if (label && m !== null) label.textContent = text ?? formatMinutes(m)
   }
@@ -178,11 +183,11 @@ export function DaySection({ dateKey, hours, rows, events, showHeader = false, s
         onDragLeave={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node)) hideGuides()
         }}
-        style={{ width: NAME_COL + width }}
+        style={{ width: nameCol + width }}
       >
         {/* Time axis */}
         <div className={cn('z-20 flex border-b bg-card', stickyAxis && 'sticky top-0')} style={{ height: AXIS_H }}>
-          <div className="sticky left-0 z-10 shrink-0 border-r bg-card" style={{ width: NAME_COL }} />
+          <div className="sticky left-0 z-10 shrink-0 border-r bg-card" style={{ width: nameCol }} />
           <div className="relative" style={{ width }}>
             {hourMarks
               // Hour labels give way to the "now" pill (half its widest, "12:40 PM", plus half a label).
@@ -275,7 +280,10 @@ function EventsRow({
   const height = eventsRowHeight(laneCount)
   return (
     <div className="flex border-b" style={{ height }}>
-      <div className="sticky left-0 z-10 shrink-0 border-r bg-card px-3 py-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase" style={{ width: NAME_COL }}>
+      <div
+        className={cn('sticky left-0 z-10 shrink-0 border-r bg-card py-2 font-semibold tracking-wide text-muted-foreground uppercase', ui.compact ? 'px-1 text-center text-[10px]' : 'px-3 text-[11px]')}
+        style={{ width: ui.compact ? NAME_COL_COMPACT : NAME_COL }}
+      >
         Events
       </div>
       <div
@@ -449,78 +457,113 @@ function CoachRowView({
     .join('')
     .toUpperCase()
   const openClock = row.clocks.find((c) => c.open)
+  const clockedDot = openClock && isToday ? <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-card bg-emerald-500" aria-label="Clocked in" /> : null
+  const conflictText =
+    inConflict === 0
+      ? null
+      : ui.mode === 'coach'
+        ? `${inConflict} class${inConflict > 1 ? 'es' : ''} waiting for the admin`
+        : row.isGhost
+          ? `Unavailable · ${inConflict} class${inConflict > 1 ? 'es' : ''} to move`
+          : `${inConflict} in conflict`
+  const admin = ui.mode === 'admin'
+  const headEntries = menu(
+    { kind: 'label', label: row.coach.name },
+    // A compact row shows only how many: its menu says what's wrong.
+    ui.compact && conflictText ? { kind: 'label', label: conflictText, tone: 'danger' } : null,
+    admin && {
+      label: 'Open employee profile',
+      icon: LuUserRound,
+      onSelect: () => ui.openEmployee(row.coach.id),
+    },
+    admin && {
+      label: 'Open in new tab',
+      onSelect: () => ui.openEmployee(row.coach.id, true),
+    },
+    admin && {
+      label: `Show only ${first}`,
+      onSelect: () => ui.showOnlyCoach(row.coach.id),
+      separatorBefore: true,
+    },
+    admin && { label: 'Show all coaches', onSelect: () => ui.showOnlyCoach(null) },
+    admin &&
+      !locked && {
+        label: 'Edit availability and hours for this day…',
+        icon: LuCalendarCog,
+        onSelect: () => ui.editDay(dateKey),
+        separatorBefore: true,
+      },
+  )
   return (
     <div className="flex border-b last:border-b-0" style={{ height }}>
-      <ContextMenuFor
-        disabled={ui.mode !== 'admin'}
-        entries={menu(
-          { kind: 'label', label: row.coach.name },
-          {
-            label: 'Open employee profile',
-            icon: LuUserRound,
-            onSelect: () => ui.openEmployee(row.coach.id),
-          },
-          {
-            label: 'Open in new tab',
-            onSelect: () => ui.openEmployee(row.coach.id, true),
-          },
-          {
-            label: `Show only ${first}`,
-            onSelect: () => ui.showOnlyCoach(row.coach.id),
-            separatorBefore: true,
-          },
-          { label: 'Show all coaches', onSelect: () => ui.showOnlyCoach(null) },
-          !locked && {
-            label: 'Edit availability and hours for this day…',
-            icon: LuCalendarCog,
-            onSelect: () => ui.editDay(dateKey),
-            separatorBefore: true,
-          },
-        )}
-      >
-        <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1.5 border-r bg-card px-3 py-2" style={{ width: NAME_COL }} data-testid="coach-head">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: `${color}1f`, color }}>
-              {initials}
-              {openClock && isToday ? <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-card bg-emerald-500" aria-label="Clocked in" /> : null}
-            </span>
-            <span className="min-w-0 truncate text-sm font-semibold">{row.coach.name}</span>
-          </div>
-          {row.clocks.slice(0, 2).map((c) => (
-            <span
-              key={c.id}
-              className={cn(
-                'inline-flex w-fit items-center gap-1 rounded-full px-1.5 py-px text-[11px] font-medium whitespace-nowrap',
-                c.open
-                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
-                  : 'bg-muted text-muted-foreground',
-              )}
+      {ui.compact ? (
+        // A narrow screen: the coach's color down the edge, the avatar and the first name; a tap gives the full name
+        // and the row's actions.
+        <div className="sticky left-0 z-10 shrink-0 border-r bg-card py-1.5 pr-1 pl-1.5" style={{ width: NAME_COL_COMPACT, boxShadow: `inset 3px 0 0 ${color}` }}>
+          <MenuOnTap entries={headEntries}>
+            <button
+              type="button"
+              className="flex w-full flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 outline-none hover:bg-muted/60 focus-visible:bg-muted aria-expanded:bg-muted"
+              title={row.coach.name}
+              aria-label={conflictText ? `${row.coach.name}, ${conflictText}` : row.coach.name}
+              data-testid="coach-head"
             >
-              {c.open ? (
-                <>
-                  <span className="size-1.5 rounded-full bg-emerald-500" />
-                  In {formatMinutes(c.startMin)}
-                </>
-              ) : (
-                `${formatMinutes(c.startMin)} – ${formatMinutes(c.endMin)}`
-              )}
-            </span>
-          ))}
-          {row.clocks.length > 2 ? (
-            <span className="w-fit rounded-full bg-muted px-1.5 py-px text-[11px] font-medium text-muted-foreground">+{row.clocks.length - 2} more</span>
-          ) : null}
-          {inConflict > 0 ? (
-            <span className="flex items-start gap-1 text-[11px] leading-tight font-medium text-red-600" data-testid="row-conflicts">
-              <LuTriangleAlert className="mt-px size-3 shrink-0" />
-              {ui.mode === 'coach'
-                ? `${inConflict} class${inConflict > 1 ? 'es' : ''} waiting for the admin`
-                : row.isGhost
-                  ? `Unavailable · ${inConflict} class${inConflict > 1 ? 'es' : ''} to move`
-                  : `${inConflict} in conflict`}
-            </span>
-          ) : null}
+              <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: `${color}1f`, color }}>
+                {initials}
+                {clockedDot}
+              </span>
+              <span className="w-full truncate text-center text-[11px] leading-tight font-medium">{first}</span>
+              {conflictText ? (
+                <span className="flex items-center gap-0.5 text-[11px] leading-none font-semibold text-red-600" data-testid="row-conflicts">
+                  <LuTriangleAlert className="size-3 shrink-0" />
+                  {inConflict}
+                </span>
+              ) : null}
+            </button>
+          </MenuOnTap>
         </div>
-      </ContextMenuFor>
+      ) : (
+        <ContextMenuFor disabled={!admin} entries={headEntries}>
+          <div className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-1.5 border-r bg-card px-3 py-2" style={{ width: NAME_COL }} data-testid="coach-head">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: `${color}1f`, color }}>
+                {initials}
+                {clockedDot}
+              </span>
+              <span className="min-w-0 truncate text-sm font-semibold">{row.coach.name}</span>
+            </div>
+            {row.clocks.slice(0, 2).map((c) => (
+              <span
+                key={c.id}
+                className={cn(
+                  'inline-flex w-fit items-center gap-1 rounded-full px-1.5 py-px text-[11px] font-medium whitespace-nowrap',
+                  c.open
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {c.open ? (
+                  <>
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    In {formatMinutes(c.startMin)}
+                  </>
+                ) : (
+                  `${formatMinutes(c.startMin)} – ${formatMinutes(c.endMin)}`
+                )}
+              </span>
+            ))}
+            {row.clocks.length > 2 ? (
+              <span className="w-fit rounded-full bg-muted px-1.5 py-px text-[11px] font-medium text-muted-foreground">+{row.clocks.length - 2} more</span>
+            ) : null}
+            {conflictText ? (
+              <span className="flex items-start gap-1 text-[11px] leading-tight font-medium text-red-600" data-testid="row-conflicts">
+                <LuTriangleAlert className="mt-px size-3 shrink-0" />
+                {conflictText}
+              </span>
+            ) : null}
+          </div>
+        </ContextMenuFor>
+      )}
       <ContextMenuFor
         disabled={!editable}
         entries={menu(
@@ -672,7 +715,7 @@ function CoachRowView({
                   </PopoverTrigger>
                   <PopoverContent align="start" className="max-h-[420px] w-80 space-y-2 overflow-y-auto p-3">
                     <div className="text-sm font-semibold">Canceled classes ({row.canceled.length})</div>
-                    {row.canceled.map((s) => (
+                    {[...row.canceled].sort(byTime).map((s) => (
                       <SessionCard
                         key={s.id}
                         session={s}

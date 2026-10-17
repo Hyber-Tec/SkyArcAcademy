@@ -22,7 +22,7 @@ import { ResultsPanel } from './scores/ResultsPanel'
 /**
  * Student page → Scores: the latest result played back on the target with its series shot by shot, every result
  * (each with its target in small, and picking one shows it large), the scores over time, a comparison of any two,
- * and the student's progress reports. Coaches see it all; admins also add paper scores and make reports.
+ * and the student's progress reports. Admins and coaches add, correct and delete scores alike; admins make reports.
  */
 export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: 'admin' | 'coach' }) {
   const { timezone } = useBranch()
@@ -55,16 +55,16 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
                 {scored.length ? `${scored.length} scored ${scored.length === 1 ? 'evaluation' : 'evaluations'}, per 10 shots in whole numbers (decimals for SIUS).` : 'No scores yet.'}
               </p>
             </div>
-            {admin ? (
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-                  <LuPlus /> Add paper scores
-                </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+                <LuPlus /> Add paper scores
+              </Button>
+              {admin ? (
                 <Button size="sm" onClick={() => setCreating(true)} disabled={!scored.length}>
                   <LuFilePlus /> New report
                 </Button>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
           {summary.length ? (
             <div className="mt-4 flex flex-wrap gap-2">

@@ -1,8 +1,9 @@
 import { authErrorMessage, looksLikeEmail } from "@shared/auth";
+import { ACADEMY_NAME } from "@shared/brand";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { StyleSheet, View, type TextInput } from "react-native";
-import { AuthHeader, ErrorBox, OrDivider } from "@/components/AuthParts";
+import { AuthHeader, ErrorBox, HelpLinks, OrDivider } from "@/components/AuthParts";
 import { Button } from "@/components/Button";
 import { CenteredCard } from "@/components/CenteredCard";
 import { Field, PasswordField } from "@/components/Field";
@@ -53,7 +54,7 @@ export default function SignInScreen() {
 
   return (
     <CenteredCard testID="sign-in">
-      <AuthHeader title="Sign in" subtitle="Use the email the academy has for you." />
+      <AuthHeader title={`Sign in to ${ACADEMY_NAME}`} subtitle="Use the email the academy has for you." />
       {googleSignInConfigured && (
         <>
           <Button variant="outline" size="lg" icon={<GoogleMark />} onPress={() => void google()} busy={busy === "google"} disabled={busy !== null} testID="google-sign-in">
@@ -100,6 +101,7 @@ export default function SignInScreen() {
         The academy gives you access. If you can&apos;t sign in, ask an admin which email they added.
         {env.useEmulators ? "\n\nPractice copy: the local emulators on this Mac." : ""}
       </T>
+      <HelpLinks />
     </CenteredCard>
   );
 }

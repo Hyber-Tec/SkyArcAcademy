@@ -93,7 +93,7 @@ export function BranchSignupPage() {
               <h1 className="text-xl font-semibold">You already have access</h1>
               <p className="mt-2 text-sm text-muted-foreground">{email} is a member of {profile.name}.</p>
               <Button asChild className="mt-6">
-                <Link to="/app">Open {profile.shortName || profile.name}</Link>
+                <Link to="/app">Open {profile.name}</Link>
               </Button>
             </div>
           ) : requestLoading ? (

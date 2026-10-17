@@ -6,8 +6,9 @@ import { useColors } from "@/theme";
 
 /**
  * The signed-in app. The academy's member doc for the person's email decides (BranchProvider): none yet → No access;
- * paused → paused; otherwise the part of their one role. Owners and admins get the office's tabs; coaches, parents and
- * students are told their part comes to the app later, with a way to the website meanwhile.
+ * paused → paused; otherwise the part of their one role. Owners, admins and coaches get the staff's tabs (each sees what
+ * the rules give their role); parents and students are told their part comes to the app later, with a way to the
+ * website meanwhile.
  */
 export default function AppLayout() {
   const colors = useColors();
@@ -19,7 +20,7 @@ export default function AppLayout() {
           <Stack.Screen name="no-access" />
           {/* Without access to the academy, nothing else opens, a link included. */}
           <Stack.Protected guard={false}>
-            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="(staff)" />
             <Stack.Screen name="coming-soon" />
           </Stack.Protected>
         </Stack>
@@ -32,14 +33,14 @@ export default function AppLayout() {
 }
 
 function PortalStack() {
-  const { isAdmin } = useBranch();
+  const { isStaff } = useBranch();
   const colors = useColors();
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Protected guard={isAdmin}>
-        <Stack.Screen name="(admin)" />
+      <Stack.Protected guard={isStaff}>
+        <Stack.Screen name="(staff)" />
       </Stack.Protected>
-      <Stack.Protected guard={!isAdmin}>
+      <Stack.Protected guard={!isStaff}>
         <Stack.Screen name="coming-soon" />
       </Stack.Protected>
       <Stack.Protected guard={false}>

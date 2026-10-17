@@ -54,6 +54,8 @@ function ReportsList({ ids, who }: { ids: string[]; who: 'parent' | 'student' })
   const { data, loading } = useFamilyReports(ids)
   const shown = data.filter((r) => child === 'all' || r.studentId === child)
   const name = (id: string) => students.get(id)?.firstName || students.get(id)?.name || 'Student'
+  // Children A to Z, whatever order they were linked in.
+  const kids = [...ids].sort((a, b) => name(a).localeCompare(name(b)))
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -64,7 +66,7 @@ function ReportsList({ ids, who }: { ids: string[]; who: 'parent' | 'student' })
       />
       {ids.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
-          {['all', ...ids].map((id) => (
+          {['all', ...kids].map((id) => (
             <Button key={id} variant={child === id ? 'default' : 'outline'} size="sm" className="rounded-full" aria-pressed={child === id} onClick={() => setChild(id)}>
               {id === 'all' ? 'Everyone' : name(id)}
             </Button>

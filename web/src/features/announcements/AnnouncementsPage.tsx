@@ -336,14 +336,17 @@ function AnnouncementCard({
             </div>
           ) : null}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {/* Icons, as on the post itself, rather than dots that were left hanging at the end of a line when it wrapped. */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <Badge variant="secondary" className="font-normal">
             {a.category || 'General'}
           </Badge>
-          <span>{a.authorName || 'Admin'}</span>
-          <span aria-hidden>·</span>
-          <span>{postedAt(a, timezone)}</span>
-          <span aria-hidden>·</span>
+          <span className="inline-flex items-center gap-1">
+            <LuUser className="size-3.5" /> {a.authorName || 'Admin'}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <LuClock className="size-3.5" /> {postedAt(a, timezone)}
+          </span>
           <span className="inline-flex items-center gap-1">
             <LuUsers className="size-3.5" /> {audienceLabel(a)}
           </span>

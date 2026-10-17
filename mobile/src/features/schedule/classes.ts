@@ -1,5 +1,5 @@
 import type { DateKey } from "@shared/time";
-import type { SessionDoc, StaffDoc } from "@/features/data/hooks";
+import type { SessionDoc } from "@/features/data/hooks";
 
 /**
  * A class as people see it: the students one coach teaches together, at the same time on the same day. The data keeps
@@ -48,34 +48,4 @@ export function groupClasses(sessions: readonly SessionDoc[]): ClassGroup[] {
   const list = [...groups.values()];
   for (const g of list) g.sessions.sort((a, b) => a.studentName.localeCompare(b.studentName));
   return list.sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.coachName.localeCompare(b.coachName));
-}
-
-/** One coach's row on a day: their classes in time order. */
-export interface CoachDay {
-  coachId: string;
-  coachName: string;
-  color: string | null;
-  classes: ClassGroup[];
-}
-
-/**
- * A day's classes by coach, as the website's schedule rows: in the academy's coach order (Settings), then by name;
- * only coaches with classes that day.
- */
-export function byCoach(classes: readonly ClassGroup[], staff: ReadonlyMap<string, StaffDoc>, order: readonly string[]): CoachDay[] {
-  const rows = new Map<string, CoachDay>();
-  for (const c of classes) {
-    let row = rows.get(c.coachId);
-    if (!row) {
-      const person = staff.get(c.coachId);
-      row = { coachId: c.coachId, coachName: person?.name || c.coachName, color: person?.color ?? null, classes: [] };
-      rows.set(c.coachId, row);
-    }
-    row.classes.push(c);
-  }
-  const rank = (id: string) => {
-    const i = order.indexOf(id);
-    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-  };
-  return [...rows.values()].sort((a, b) => rank(a.coachId) - rank(b.coachId) || a.coachName.localeCompare(b.coachName));
 }

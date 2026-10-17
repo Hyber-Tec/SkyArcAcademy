@@ -191,6 +191,19 @@ export function ContextMenuFor({
   )
 }
 
+/** The same menu opened by a tap on `children` (a single element that takes a ref), where there's no right-click. */
+export function MenuOnTap({ entries, children, align = 'start' }: { entries: MenuEntry[]; children: React.ReactElement; align?: 'start' | 'end' }) {
+  if (entries.length === 0) return children
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-60">
+        <Entries entries={entries} p={DROPDOWN} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /** The same menu behind a "⋯" button. */
 export function ItemMenuButton({
   entries,

@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/app/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useDayConfigs, useStudentList } from '@/features/data/hooks'
+import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { useShifts } from '@/features/timeclock/api'
@@ -20,6 +21,7 @@ import { weekRange } from '@/features/coach/sessionUi'
 import { computeConflicts } from './conflicts'
 import { type ScheduleUi, ScheduleUiContext } from './context'
 import { DaySection } from './DaySection'
+import { COMPACT_BELOW } from './geometry'
 import { CoachWeekList } from './CoachWeekList'
 
 /**
@@ -29,6 +31,7 @@ import { CoachWeekList } from './CoachWeekList'
 export function CoachSchedulePage() {
   const { branchId, staffId, settings, rules, timezone } = useBranch()
   const isMobile = useIsMobile()
+  const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
   const [view, setView] = useState<'day' | 'week'>('week')
   const [today, setToday] = useState(() => todayKey(timezone))
   const [nowMin, setNowMin] = useState(() => nowMinutes(timezone))
@@ -120,6 +123,7 @@ export function CoachSchedulePage() {
   const ui: ScheduleUi = {
     coachColor: () => me?.color,
     mode: 'coach',
+    compact: areaWidth > 0 && areaWidth < COMPACT_BELOW,
     today,
     nowMin,
     maxLanes: rules.maxStudentsPerCoach,
@@ -230,7 +234,7 @@ export function CoachSchedulePage() {
           {view === 'week' && days.includes(today) ? <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-foreground">This week</span> : null}
           {view === 'day' && anchor === today ? <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-foreground">Today</span> : null}
         </div>
-        <div className="flex flex-col gap-6 overflow-x-auto pb-2">
+        <div ref={areaRef} className="flex flex-col gap-6 overflow-x-auto pb-2">
           {sections.map((s) => (
             <DaySection key={s.d} dateKey={s.d} hours={s.hours} rows={s.rows} events={[]} showHeader sectionId={`coach-day-${s.d}`} />
           ))}

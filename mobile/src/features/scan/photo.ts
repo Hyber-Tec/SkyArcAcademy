@@ -1,7 +1,7 @@
 import { AlphaType, ColorType, FilterMode, ImageFormat, MipmapMode, Skia, type SkImage } from "@shopify/react-native-skia";
-import { CARD_BULLS, CARD_EDGES_MM, bullCentreMm } from "@shared/targets/card";
-import { type Mat3, type Vec, invert3, multiply3 } from "@shared/targets/geometry";
-import { type CardScan, type ScannedBull, scanCard } from "@shared/targets/scan";
+import { FLAT, FLAT_SIZE, flatPoint } from "@shared/targets/flat";
+import { type Mat3, invert3, multiply3 } from "@shared/targets/geometry";
+import { type CardScan, scanCard } from "@shared/targets/scan";
 import { Directory, File, Paths } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 
@@ -49,33 +49,10 @@ export async function readPhoto(source: string, shotsPerBull: number | "auto" = 
   return { uri: saved.uri, width, height, image, scan };
 }
 
-/** The flattened card: a little paper beyond each edge, at six pixels per millimetre (about 1340 × 1720). */
-export const FLAT = { marginMm: 4, pxPerMm: 6 } as const;
-const FLAT_LEFT = CARD_EDGES_MM.left - FLAT.marginMm;
-const FLAT_TOP = CARD_EDGES_MM.top - FLAT.marginMm;
-/** The flattened card's size in pixels: the Drive's copy of a scanned card is exactly this. */
-export const FLAT_SIZE = {
-  width: Math.round((CARD_EDGES_MM.right - CARD_EDGES_MM.left + 2 * FLAT.marginMm) * FLAT.pxPerMm),
-  height: Math.round((CARD_EDGES_MM.bottom - CARD_EDGES_MM.top + 2 * FLAT.marginMm) * FLAT.pxPerMm),
-} as const;
-
 export interface FlatCard {
   image: SkImage;
   width: number;
   height: number;
-}
-
-/** Where a point of the card (millimetres from the top-left bull, x right, y down) is on the flattened card. */
-export function flatPoint(xMm: number, yMm: number): { x: number; y: number } {
-  return { x: (xMm - FLAT_LEFT) * FLAT.pxPerMm, y: (yMm - FLAT_TOP) * FLAT.pxPerMm };
-}
-
-/** Where record bull `n` is on the flattened card, as a review places it (its centre, and a millimetre's pixels). */
-export function flatBull(n: number): { center: Vec; axes: ScannedBull["axes"] } | null {
-  const cb = CARD_BULLS.find((b) => b.kind === "record" && b.n === n);
-  if (!cb) return null;
-  const c = bullCentreMm(cb);
-  return { center: flatPoint(c.x, c.y), axes: [FLAT.pxPerMm, 0, 0, FLAT.pxPerMm] };
 }
 
 /** The card flattened and cropped as a scanner would give it, through the scan's perspective; null without a card. */
@@ -86,7 +63,8 @@ export function flattenCard(read: ReadPhoto): FlatCard | null {
   const { width, height } = FLAT_SIZE;
   // Photo pixels → card millimetres → the flat card's pixels.
   const k = FLAT.pxPerMm;
-  const toFlat: Mat3 = [k, 0, -FLAT_LEFT * k, 0, k, -FLAT_TOP * k, 0, 0, 1];
+  const o = flatPoint(0, 0);
+  const toFlat: Mat3 = [k, 0, o.x, 0, k, o.y, 0, 0, 1];
   const surface = Skia.Surface.Make(width, height);
   if (!surface) return null;
   const canvas = surface.getCanvas();

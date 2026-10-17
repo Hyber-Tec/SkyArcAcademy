@@ -90,7 +90,9 @@ export function IdentityColumn({
             </div>
           ) : null}
         </div>
-        <dl className="grid grid-cols-2 border-t text-center">
+        {/* A coach sees only their own classes with the student, so the numbers say so. */}
+        {isAdmin ? null : <p className="border-t px-5 pt-3 text-xs font-medium text-muted-foreground">Your classes with {first}</p>}
+        <dl className={cn('grid grid-cols-2 text-center', isAdmin && 'border-t')}>
           <Stat label="Attended" value={String(attendance.attended)} className="border-r border-b" />
           <Stat label="Missed" value={String(attendance.missed)} className="border-b" />
           <Stat label="Attendance" value={attendance.percent !== null ? `${attendance.percent}%` : '—'} className="border-r" />
@@ -107,7 +109,7 @@ export function IdentityColumn({
         {next ? (
           <>
             <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-              <span className="font-medium tracking-wide uppercase">Next class</span>
+              <span className="font-medium tracking-wide uppercase">{isAdmin ? 'Next class' : 'Next class with you'}</span>
               <SessionStatusBadge status={next.status} />
             </div>
             <div className="mt-3 text-lg font-semibold">{formatDateKey(next.dateKey, 'weekdayLong').replace(/, \d{4}$/, '')}</div>
@@ -126,8 +128,8 @@ export function IdentityColumn({
           </>
         ) : (
           <>
-            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Next class</div>
-            <div className="mt-2 text-sm text-zinc-300">Nothing booked yet.</div>
+            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">{isAdmin ? 'Next class' : 'Next class with you'}</div>
+            <div className="mt-2 text-sm text-zinc-300">{isAdmin ? 'Nothing booked yet.' : 'Nothing booked with you.'}</div>
             {isAdmin ? (
               <Button size="sm" variant="secondary" className="mt-3" onClick={onNewSession}>
                 <LuCalendarPlus /> Book a class
@@ -168,7 +170,8 @@ export function IdentityColumn({
         </div>
       ) : null}
 
-      {activity.coaches.length ? (
+      {/* A coach sees only their own classes, so the list would only ever name them. */}
+      {isAdmin && activity.coaches.length ? (
         <div className="hidden rounded-xl border bg-card p-4 lg:block">
           <h2 className="mb-3 text-sm font-semibold">Coaches</h2>
           <ul className="space-y-3">

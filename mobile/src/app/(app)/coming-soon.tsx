@@ -2,6 +2,7 @@ import { ROLE_LABELS_PLURAL } from "@shared/roles";
 import { Sparkles } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
+import { HelpLinks } from "@/components/AuthParts";
 import { CenteredCard } from "@/components/CenteredCard";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
@@ -11,8 +12,8 @@ import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
 /**
- * Coaches, parents and students: the app is the academy office's for now (owner, 2026-10-16: the admin part first,
- * then coaches, then families). Until their part comes, the website works on the phone too.
+ * Parents and students: the app is the academy staff's for now (owner, 2026-10-16: the admin part first, then coaches,
+ * then families). Until their part comes, the website works on the phone too.
  */
 export default function ComingSoonScreen() {
   const { signOut, email } = useAuth();
@@ -29,7 +30,7 @@ export default function ComingSoonScreen() {
         Coming to the app
       </T>
       <T tone="muted" style={styles.center}>
-        The app is for the academy&apos;s office for now. The part for {ROLE_LABELS_PLURAL[role].toLowerCase()} comes later; until then, use {name} on this
+        The app is for the academy&apos;s staff for now. The part for {ROLE_LABELS_PLURAL[role].toLowerCase()} comes later; until then, use {name} on this
         phone&apos;s browser and sign in there with {email}.
       </T>
       <View style={styles.buttons}>
@@ -41,6 +42,7 @@ export default function ComingSoonScreen() {
         </Button>
       </View>
       <DeleteAccountLink academyName={name} />
+      <HelpLinks />
     </CenteredCard>
   );
 }

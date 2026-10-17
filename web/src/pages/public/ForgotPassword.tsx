@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LuMail } from 'react-icons/lu'
 import { Link, useSearchParams } from 'react-router'
 import { authErrorMessage, looksLikeEmail } from '@shared/auth'
-import { PRODUCT_NAME } from '@shared/brand'
+import { ACADEMY_NAME } from '@shared/brand'
 import { useAuth } from '@/auth/AuthProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ export function ForgotPassword() {
   const [cooldown, startCooldown] = useCooldown()
 
   useEffect(() => {
-    document.title = `Reset your password | ${PRODUCT_NAME}`
+    document.title = `Reset your password | ${ACADEMY_NAME}`
   }, [])
 
   const back = withQuery('/login', { next: target === '/app' ? null : target, email: email.trim() || null })
@@ -50,7 +50,7 @@ export function ForgotPassword() {
         title="Check your email"
         description={
           <>
-            If there’s a {PRODUCT_NAME} account for <span className="font-medium wrap-anywhere text-foreground">{sentTo}</span>, we sent it a link to
+            If there’s a {ACADEMY_NAME} account for <span className="font-medium wrap-anywhere text-foreground">{sentTo}</span>, we sent it a link to
             choose a new password. The link works once, for an hour.
           </>
         }

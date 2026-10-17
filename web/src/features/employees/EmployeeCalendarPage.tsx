@@ -137,7 +137,7 @@ function ScheduledHours({ staffId }: { staffId: string }) {
     for (const s of data) if (!s.isDeleted && s.status !== 'canceled') byDay.set(s.dateKey, [...(byDay.get(s.dateKey) ?? []), s])
     const m = new Map<string, DayCell>()
     for (const [d, list] of byDay) {
-      list.sort((a, b) => a.startMin - b.startMin)
+      list.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName))
       m.set(d, { minutes: unionMinutes(list), lines: list.map((s) => ({ label: timeRange(s.startMin, s.endMin), detail: s.studentName, tone: 'scheduled' as const })) })
     }
     return m

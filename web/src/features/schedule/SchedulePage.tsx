@@ -24,6 +24,7 @@ import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useMembers, useStaffList, useStudentList } from '@/features/data/hooks'
+import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useLoadWindow } from '@/lib/useLoadWindow'
 import { cn } from '@/lib/utils'
@@ -42,6 +43,7 @@ import { TrashDialog } from './dialogs/TrashDialog'
 import { CoachOrderDialog } from './dialogs/CoachOrderDialog'
 import { deleteEvent, moveEventTime } from './eventsApi'
 import { MonthView } from './MonthView'
+import { COMPACT_BELOW } from './geometry'
 import { useScheduleData } from './useScheduleData'
 import { useShifts } from '@/features/timeclock/api'
 import type { ClockInterval } from '@shared/schedule/dayModel'
@@ -71,6 +73,13 @@ function readClip(): Clip | null {
 
 const NO_CONFLICTS: Conflict[] = []
 
+/** "Oct 18 – 24", or "Oct 28 – Nov 3" across two months. */
+function shortWeek(days: DateKey[]): string {
+  const first = days[0]
+  const last = days[days.length - 1]
+  return `${formatDateKey(first, 'monthDay')} – ${first.slice(0, 7) === last.slice(0, 7) ? Number(last.slice(8)) : formatDateKey(last, 'monthDay')}`
+}
+
 const PANEL_KEY = 'skyarc:schedule-panel'
 
 function readPanelOpen(): boolean {
@@ -85,6 +94,9 @@ export function SchedulePage() {
   const branch = useBranch()
   const { branchId, settings, timezone, actor } = branch
   const isMobile = useIsMobile()
+  // A narrow schedule (a phone, or the side rail open on a tablet) gives the classes the room, not the names.
+  const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
+  const compact = areaWidth ? areaWidth < COMPACT_BELOW : isMobile
   const route = useScheduleRoute(`/admin/schedule`)
   const { view, date } = route
   const weekStartsOn = settings.general.weekStartsOn
@@ -552,6 +564,7 @@ export function SchedulePage() {
 
   const ui: ScheduleUi = {
     mode: 'admin',
+    compact,
     today,
     nowMin,
     maxLanes,
@@ -657,6 +670,8 @@ export function SchedulePage() {
       : view === 'week'
         ? `${formatDateKey(weekDays(date, weekStartsOn)[0], 'monthDay')} – ${formatDateKey(weekDays(date, weekStartsOn)[6], 'medium')}`
         : formatDateKey(monthShown, 'monthYear')
+  // Phones: the same, short enough to sit beside Day / Week / Month ("Thu, Oct 22", "Oct 18 – 24").
+  const phoneTitle = view === 'day' ? formatDateKey(date, 'weekdayMedium') : view === 'week' ? shortWeek(weekDays(date, weekStartsOn)) : headTitle
   const onView = (v: ScheduleView) => {
     if (v === 'day' && view !== 'day') {
       const inWeek = weekDays(date, weekStartsOn).includes(today)
@@ -726,14 +741,8 @@ export function SchedulePage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
-                  {view === 'day' ? (
-                    <>
-                      <span className="sm:hidden">{formatDateKey(date, 'weekdayMedium')}</span>
-                      <span className="hidden sm:inline">{headTitle}</span>
-                    </>
-                  ) : (
-                    headTitle
-                  )}
+                  <span className="sm:hidden">{phoneTitle}</span>
+                  <span className="hidden sm:inline">{headTitle}</span>
                 </h1>
                 {view === 'day' && date === today ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">TODAY</span> : null}
                 {view === 'day' && isClosed(date) ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
@@ -803,6 +812,7 @@ export function SchedulePage() {
                 </div>
               ) : null}
               <div
+                ref={areaRef}
                 className={cn('min-h-0 flex-1 overflow-auto', view === 'week' ? 'bg-muted/30' : 'bg-background')}
                 onMouseDown={(e) => e.target === e.currentTarget && setSelection(null)}
                 data-testid="schedule-area"

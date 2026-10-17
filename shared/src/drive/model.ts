@@ -381,12 +381,16 @@ export type DriveColumn = 'name' | 'owner' | 'updated' | 'size'
 export const DRIVE_COLUMNS: readonly DriveColumn[] = ['name', 'owner', 'updated', 'size']
 
 export interface DriveSort {
-  col: DriveColumn
+  /** null: the opening order, no column picked (see DRIVE_DEFAULT_SORT). */
+  col: DriveColumn | null
   dir: 'asc' | 'desc'
 }
 
-/** What changed last at the top, the way a shared drive opens. */
-export const DRIVE_DEFAULT_SORT: DriveSort = { col: 'updated', dir: 'desc' }
+/**
+ * How the Drive opens: folders A to Z (at the top they're the students' folders, found by name), then files newest
+ * first (the latest results on top). Picking a column sorts folders and files alike by it.
+ */
+export const DRIVE_DEFAULT_SORT: DriveSort = { col: null, dir: 'asc' }
 
 /** First click: names and owners A→Z, dates newest first, sizes largest first; a second click reverses. */
 export function cycleDriveSort(sort: DriveSort, col: DriveColumn): DriveSort {
@@ -442,6 +446,13 @@ export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: D
           : ''
   return [...items].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1
+    if (col === null) {
+      if (a.kind === 'folder') return compareNames(itemName(a), itemName(b)) || (a.id < b.id ? -1 : 1)
+      const am = itemUpdated(a, index).ms
+      const bm = itemUpdated(b, index).ms
+      if (!am !== !bm) return am ? -1 : 1
+      return bm - am || compareNames(itemName(a), itemName(b))
+    }
     if (col !== 'name') {
       const av = valueOf(a)
       const bv = valueOf(b)

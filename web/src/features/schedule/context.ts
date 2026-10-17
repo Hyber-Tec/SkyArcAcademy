@@ -19,6 +19,8 @@ export interface BellItem {
 
 export interface ScheduleUi {
   mode: 'admin' | 'coach'
+  /** A narrow screen: the coach column shows avatars and first names, and a tap shows the full name. */
+  compact?: boolean
   today: DateKey
   nowMin: number
   maxLanes: number

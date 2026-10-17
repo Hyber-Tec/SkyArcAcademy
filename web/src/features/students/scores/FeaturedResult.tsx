@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
-import { LuFileText, LuPencilLine } from 'react-icons/lu'
+import { LuFileText, LuPencilLine, LuScanSearch } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10 } from '@shared/shooting/evaluation'
 import { replayShots } from '@shared/shooting/replay'
 import { offsetWords } from '@shared/shooting/target'
+import { wasScanned } from '@shared/targets/flat'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { ItemMenuButton, type MenuEntry } from '@/components/app/ItemMenu'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { one } from '@/features/reports/model'
+import { cardPath } from '@/features/scores/card/parts'
 import { dartView, placedShots } from '@/features/scores/playback'
 import { SeriesDarts, ShotDialog } from '@/features/scores/ShotDarts'
 import { ShotReplay } from '@/features/scores/ShotReplay'
@@ -38,7 +40,8 @@ const AREAS = {
 /**
  * The result picked in the student's list (the newest at first), large: its shots played back on the target, what it
  * is and its figures, and each SIUS series with one "dart" per shot (the dart of the shot being played is ringed in
- * amber; a dart opens its shot). Paper cards list their bulls.
+ * amber; a dart opens its shot). Paper cards list their bulls; one scanned with the phone opens on its picture, to
+ * check and correct (Check the card).
  */
 export function FeaturedResult({
   e,
@@ -95,7 +98,14 @@ export function FeaturedResult({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {e.fileId ? (
+          {wasScanned(e) ? (
+            // A scanned card's picture opens here, with its shots on it (the menu still opens the file in the Drive).
+            <Button size="sm" asChild>
+              <Link to={cardPath(mode, e)} title="Check the card on its picture" data-testid="check-the-card">
+                <LuScanSearch /> Check the card
+              </Link>
+            </Button>
+          ) : e.fileId ? (
             <Button variant="outline" size="sm" asChild>
               <Link to={`/${mode}/drive/file/${e.fileId}`} aria-label="Open the file in the Drive" title="Open the file in the Drive">
                 <LuFileText /> <span className="hidden sm:inline">Open the file</span>

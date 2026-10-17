@@ -1,10 +1,10 @@
 import { collection, doc, getDoc, serverTimestamp, writeBatch } from "@react-native-firebase/firestore";
 import { type DriveActor, studentFolderId } from "@shared/drive/types";
 import { COL, ROOT } from "@shared/paths";
-import { type Evaluation, POSITION_LABELS, type Position, SOURCE_LABELS, paperEvaluation, per10 } from "@shared/shooting/evaluation";
-import { type CardReview, reviewShots } from "@shared/targets/review";
+import { type Evaluation, POSITION_LABELS, type Position, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
+import { cardEvaluation } from "@shared/targets/flat";
+import type { CardReview } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
-import type { AuditStamp } from "@shared/types";
 import { addAudit } from "@/lib/audit";
 import { db } from "@/lib/firebase";
 import { toast } from "@/lib/toast";
@@ -59,21 +59,6 @@ export function knowFolder(branchId: string, studentId: string): Promise<boolean
     folders.set(key, known);
   }
   return known;
-}
-
-/** One card's scores, as the evaluation keeps them. */
-export function cardEvaluation(c: Pick<SaveCard, "student" | "position" | "dateKey" | "note" | "review" | "total">, fileId: string | null): Omit<Evaluation, keyof AuditStamp> {
-  return paperEvaluation({
-    studentId: c.student.id,
-    studentName: c.student.name,
-    position: c.position,
-    dateKey: c.dateKey,
-    shots: c.review ? reviewShots(c.review) : null,
-    total: c.review ? null : c.total,
-    shotCount: c.review ? undefined : 10,
-    fileId,
-    note: c.note.trim(),
-  });
 }
 
 const describe = (e: Pick<Evaluation, "position" | "dateKey" | "total" | "shots">) =>

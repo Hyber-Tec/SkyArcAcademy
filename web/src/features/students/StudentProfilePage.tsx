@@ -112,25 +112,24 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
           onOpenSession={openSession}
         />
         <div className="min-w-0">
-          <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-            <div className="inline-flex gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Student">
-              {tabs.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active === t.key}
-                  onClick={() => go(t.key)}
-                  className={cn(
-                    'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3.5 text-sm font-medium whitespace-nowrap transition [&_svg]:size-4',
-                    active === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <t.icon />
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          {/* Phones: the four tabs share the width, without icons, so none is cut off. */}
+          <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-flex" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} role="tablist" aria-label="Student">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={active === t.key}
+                onClick={() => go(t.key)}
+                className={cn(
+                  'inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-lg px-1 text-sm font-medium whitespace-nowrap transition sm:shrink-0 sm:px-3.5 [&_svg]:size-4',
+                  active === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <t.icon className="hidden sm:block" />
+                {t.label}
+              </button>
+            ))}
           </div>
           <div className="mt-5">
             {active === 'sessions' ? (

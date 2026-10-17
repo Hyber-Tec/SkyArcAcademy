@@ -24,12 +24,16 @@ export const DRAG_TYPE = 'application/x-skyarc-drive'
 
 const COLUMNS: { col: DriveColumn; label: string; className: string }[] = [
   { col: 'name', label: 'Name', className: '' },
-  { col: 'owner', label: 'Owner', className: 'hidden md:flex' },
-  { col: 'updated', label: 'Updated', className: 'hidden sm:flex' },
-  { col: 'size', label: 'Size', className: 'hidden sm:flex justify-end' },
+  { col: 'owner', label: 'Owner', className: 'hidden @4xl:flex' },
+  { col: 'updated', label: 'Updated', className: 'hidden @xl:flex' },
+  { col: 'size', label: 'Size', className: 'hidden @xl:flex justify-end' },
 ]
 
-const GRID = 'grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem] sm:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] md:grid-cols-[1.5rem_minmax(0,1fr)_11rem_13rem_5rem_4.5rem] items-center gap-3'
+/**
+ * The columns follow the list's own width (it's an `@container`), not the window's: a tablet beside the sidebar, or the
+ * Details panel open, leaves the name its room. Narrow, the name takes what the row's menu doesn't need.
+ */
+const GRID = 'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_13rem_5rem_4.5rem] items-center gap-3'
 
 export interface ListApi {
   index: DriveIndex
@@ -94,7 +98,7 @@ function dragStart(id: string) {
 
 export function DriveListHead({ api, controls }: { api: ListApi; controls: React.ReactNode }) {
   return (
-    <div className={cn(GRID, 'sticky top-0 z-10 border-b bg-background px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase')} role="row">
+    <div className={cn(GRID, 'sticky top-0 z-10 rounded-t-xl border-b bg-background px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase')} role="row">
       <span />
       {COLUMNS.map(({ col, label, className }) => {
         const active = api.sort.col === col
@@ -158,9 +162,9 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
       <span className="flex min-w-0 items-center gap-3">
         {isFolder ? <FolderGlyph student={!!it.folder.studentId} /> : <FileGlyph kind={file!.kind} />}
         <span className="min-w-0 flex-1">
-          {/* The score goes under the name when both don't fit on one line. */}
+          {/* The score goes under the name when both don't fit on one line; on phones a long name takes two lines. */}
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="max-w-full truncate text-sm font-semibold" title={isFolder ? it.folder.name : file!.name}>
+            <span className="line-clamp-2 max-w-full text-sm font-semibold wrap-anywhere @xl:line-clamp-1" title={isFolder ? it.folder.name : file!.name}>
               {isFolder ? it.folder.name : file!.name}
             </span>
             {score ? <ScoreChip e={score} /> : null}
@@ -173,11 +177,11 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
           ) : null}
         </span>
       </span>
-      <span className="hidden min-w-0 text-[13px] text-muted-foreground md:block">
+      <span className="hidden min-w-0 text-[13px] text-muted-foreground @4xl:block">
         <PersonChip person={itemOwner(it)} />
       </span>
-      <span className="hidden truncate text-[13px] text-muted-foreground sm:block">{updatedCell}</span>
-      <span className="hidden text-right text-[13px] text-muted-foreground tabular-nums sm:block">{size ? formatBytes(size) : '—'}</span>
+      <span className="hidden truncate text-[13px] text-muted-foreground @xl:block">{updatedCell}</span>
+      <span className="hidden text-right text-[13px] text-muted-foreground tabular-nums @xl:block">{size ? formatBytes(size) : '—'}</span>
       <span className="flex justify-end" onClick={(e) => e.stopPropagation()}>
         <ItemMenuButton entries={menu} className="text-muted-foreground" />
       </span>

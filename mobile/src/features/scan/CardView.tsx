@@ -1,12 +1,12 @@
 import { Circle, Group, Image as SkiaImage, RoundedRect, type SkFont, type SkImage, Text as SkiaText, matchFont } from "@shopify/react-native-skia";
 import { CARD_BULLS, bullCentreMm } from "@shared/targets/card";
+import { FLAT, flatPoint } from "@shared/targets/flat";
 import { type BullState, type CardReview, bullState } from "@shared/targets/review";
 import { PELLET_MM, ringRadiusMm } from "@shared/shooting/target";
 import { useMemo } from "react";
 import { Platform } from "react-native";
 import { useDerivedValue } from "react-native-reanimated";
-import { FLAT, flatPoint } from "./photo";
-import { ZoomCanvas, type ZoomState, useZoomState } from "./ZoomCanvas";
+import { ZoomCanvas, type ZoomState, useZoomState } from "@/components/ZoomCanvas";
 
 /** The colours a bull's state shows in, on the photo (they sit on black and on buff paper alike). */
 export const STATE_COLORS: Record<BullState, string> = { ok: "#22C55E", check: "#F59E0B", missing: "#F59E0B", unseen: "#A3A3A3" };
@@ -31,7 +31,6 @@ export function CardView({
   review,
   viewWidth,
   onBull,
-  onLock,
   testID,
 }: {
   image: SkImage;
@@ -40,8 +39,6 @@ export function CardView({
   review: CardReview;
   viewWidth: number;
   onBull: (n: number) => void;
-  /** While a pinch or a zoomed pan is under way here, the screen's scrolling should stop. */
-  onLock?: (locked: boolean) => void;
   testID?: string;
 }) {
   const viewHeight = Math.round((imageHeight * viewWidth) / imageWidth);
@@ -71,7 +68,6 @@ export function CardView({
       contentHeight={imageHeight}
       state={zoom}
       onTap={tapped}
-      onLock={onLock}
       overlay={bulls.map(({ b, at, state }) => (
         <Badge key={b.n} zoom={zoom} x={at.x + ring1 * 0.72} y={at.y + ring1 * 0.72} text={`${b.n}: ${scoreLabel(b.shots.map((t) => t.value))}`} color={STATE_COLORS[state]} font={font} />
       ))}

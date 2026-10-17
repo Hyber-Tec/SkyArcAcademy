@@ -73,7 +73,9 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
   const [statuses, setStatuses] = useState<StudentStatus[]>([])
   const [levels, setLevels] = useState<string[]>([])
   const ladder = settings.students.levels
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'signUp', dir: 'desc' })
+  const grades = settings.students.gradeOptions
+  // People read A to Z (the Sign up column, on wide screens, sorts the newest first).
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' })
   const [creating, setCreating] = useState(false)
   const [advancing, setAdvancing] = useState(false)
 
@@ -109,12 +111,14 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
     const dir = sort.dir === 'asc' ? 1 : -1
     // Lowest level first, then levels no longer on the ladder, then no level.
     const levelRank = (level: string | null) => (level === null ? ladder.length + 1 : ladder.includes(level) ? ladder.indexOf(level) : ladder.length)
+    // Grades in the academy's order (3 … 12, College, Adult), then any other, then none.
+    const gradeRank = (grade: string) => (!grade.trim() ? grades.length + 1 : grades.includes(grade.trim()) ? grades.indexOf(grade.trim()) : grades.length)
     return [...list].sort((a, b) => {
       switch (sort.key) {
         case 'name':
           return a.nameLower.localeCompare(b.nameLower) * dir
         case 'grade':
-          return ((Number(a.grade) || 0) - (Number(b.grade) || 0)) * dir
+          return (gradeRank(a.grade ?? '') - gradeRank(b.grade ?? '')) * dir || a.nameLower.localeCompare(b.nameLower)
         case 'level':
           return (levelRank(a.level ?? null) - levelRank(b.level ?? null)) * dir || a.nameLower.localeCompare(b.nameLower)
         case 'signUp': {
@@ -126,7 +130,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
         }
       }
     })
-  }, [students, taught, search, statuses, levels, ladder, sort])
+  }, [students, taught, search, statuses, levels, ladder, grades, sort])
 
   const header = (key: SortKey, label: string, className?: string) => (
     <TableHead className={className}>

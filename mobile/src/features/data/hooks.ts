@@ -3,7 +3,7 @@ import { dayHours } from "@shared/availability";
 import type { DriveFile } from "@shared/drive/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type DateKey, nowMinutes, todayKey } from "@shared/time";
+import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
 import type { DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
 import { useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
@@ -13,8 +13,9 @@ import { useBranch } from "@/state/BranchProvider";
 
 /**
  * The app's live data, read as the website's hooks read it (web/src/features/data/hooks.ts): always the academy
- * (`branches/skyarc`), as an owner or admin sees it (the rules allow nothing else). Firestore de-duplicates identical
- * listeners, so several screens can use the same hook.
+ * (`branches/skyarc`). The office reads it all; a coach reads what the rules give them (their own classes and staff
+ * record, no family contacts), so their queries ask for exactly that (a query the rules would refuse fails whole).
+ * Firestore de-duplicates identical listeners, so several screens can use the same hook.
  */
 
 export type SessionDoc = Session & { id: string };
@@ -40,10 +41,19 @@ export function useAcademyNow(): { today: DateKey; nowMin: number; now: number }
   return useMemo(() => ({ today: todayKey(timezone, now), nowMin: nowMinutes(timezone, now), now }), [timezone, now]);
 }
 
-/** Every coach's classes between two dates (inclusive), deleted ones (Trash) left out, in time order. */
+/**
+ * The classes between two dates (inclusive), deleted ones (Trash) left out, in time order: every coach's for the office,
+ * a coach's own for a coach.
+ */
 export function useSessionsBetween(from: DateKey, to: DateKey) {
-  const { branchId } = useBranch();
-  const state = useQuery<Session>(`sessions-${branchId}-${from}-${to}`, () => query(col(branchId, COL.sessions), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const { branchId, isCoach, staffId } = useBranch();
+  const state = useQuery<Session>(
+    isCoach ? (staffId ? `sessions-${branchId}-${staffId}-${from}-${to}` : null) : `sessions-${branchId}-${from}-${to}`,
+    () =>
+      isCoach
+        ? query(col(branchId, COL.sessions), where("coachId", "==", staffId), where("dateKey", ">=", from), where("dateKey", "<=", to))
+        : query(col(branchId, COL.sessions), where("dateKey", ">=", from), where("dateKey", "<=", to)),
+  );
   const data = useMemo(
     () =>
       state.data
@@ -54,10 +64,12 @@ export function useSessionsBetween(from: DateKey, to: DateKey) {
   return { ...state, data };
 }
 
-/** Every employee (owners, admins and coaches), by name. */
+/** Every employee (owners, admins and coaches), by name; a coach has only their own record. */
 export function useStaffList() {
-  const { branchId } = useBranch();
-  return useQuery<Staff>(`staff-${branchId}`, () => query(col(branchId, COL.staff), orderBy("nameLower")));
+  const { branchId, isCoach, staff } = useBranch();
+  const all = useQuery<Staff>(isCoach ? null : `staff-${branchId}`, () => query(col(branchId, COL.staff), orderBy("nameLower")));
+  const own = useMemo(() => (staff ? [staff] : []), [staff]);
+  return isCoach ? { data: own, loading: false, error: null } : all;
 }
 
 /** One employee. */
@@ -78,10 +90,28 @@ export function useStudent(id: string | null) {
   return useDoc<Student>(id ? `${ROOT.branches}/${branchId}/${COL.students}/${id}` : null);
 }
 
-/** One student's contacts and parents (admin-only, as on the website). */
+/** One student's contacts and parents (the office's only, as on the website: a coach never asks). */
 export function useStudentPrivate(id: string | null) {
-  const { branchId } = useBranch();
-  return useDoc<StudentPrivateProfile>(id ? `${ROOT.branches}/${branchId}/${COL.students}/${id}/private/${DOC.privateProfile}` : null);
+  const { branchId, isAdmin } = useBranch();
+  return useDoc<StudentPrivateProfile>(id && isAdmin ? `${ROOT.branches}/${branchId}/${COL.students}/${id}/private/${DOC.privateProfile}` : null);
+}
+
+/**
+ * The students a coach teaches (classes in the last 90 days or coming), as the website's coach directory has them;
+ * null while it loads, and for the office (everyone's theirs).
+ */
+export function useTaughtStudentIds(): Set<string> | null {
+  const { branchId, isCoach, staffId } = useBranch();
+  const { today } = useAcademyNow();
+  const from = addDays(today, -90);
+  const state = useQuery<Session>(isCoach && staffId ? `taught-${branchId}-${staffId}-${from}` : null, () =>
+    query(col(branchId, COL.sessions), where("coachId", "==", staffId), where("dateKey", ">=", from)),
+  );
+  return useMemo(() => {
+    if (!isCoach) return null;
+    if (!staffId) return new Set<string>();
+    return state.loading ? null : new Set(state.data.filter((s) => !s.isDeleted).map((s) => s.studentId));
+  }, [isCoach, staffId, state.loading, state.data]);
 }
 
 /**
@@ -89,12 +119,16 @@ export function useStudentPrivate(id: string | null) {
  * website's indexes on `studentId` + `dateKey`.
  */
 export function useStudentClasses(studentId: string | null, today: DateKey) {
-  const { branchId } = useBranch();
-  const next = useQuery<Session>(studentId ? `student-next-${branchId}-${studentId}-${today}` : null, () =>
-    query(col(branchId, COL.sessions), where("studentId", "==", studentId), where("dateKey", ">=", today), orderBy("dateKey", "asc"), limit(8)),
+  const { branchId, isCoach, staffId } = useBranch();
+  // A coach sees their own classes with the student (the rules give them no one else's).
+  const mine = isCoach ? [where("coachId", "==", staffId)] : [];
+  const who = isCoach ? `${staffId}-` : "";
+  const ok = !!studentId && (!isCoach || !!staffId);
+  const next = useQuery<Session>(ok ? `student-next-${branchId}-${who}${studentId}-${today}` : null, () =>
+    query(col(branchId, COL.sessions), where("studentId", "==", studentId), ...mine, where("dateKey", ">=", today), orderBy("dateKey", "asc"), limit(8)),
   );
-  const last = useQuery<Session>(studentId ? `student-last-${branchId}-${studentId}-${today}` : null, () =>
-    query(col(branchId, COL.sessions), where("studentId", "==", studentId), where("dateKey", "<", today), orderBy("dateKey", "desc"), limit(8)),
+  const last = useQuery<Session>(ok ? `student-last-${branchId}-${who}${studentId}-${today}` : null, () =>
+    query(col(branchId, COL.sessions), where("studentId", "==", studentId), ...mine, where("dateKey", "<", today), orderBy("dateKey", "desc"), limit(8)),
   );
   return useMemo(() => {
     const live = (list: SessionDoc[]) => list.filter((s) => !s.isDeleted);

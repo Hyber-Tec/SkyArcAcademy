@@ -26,6 +26,7 @@ import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } fr
 import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, sortDriveItems } from '@shared/drive/model'
 import { type DriveFile, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
+import { isStaffRole } from '@shared/roles'
 import { type Evaluation, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
@@ -72,9 +73,10 @@ function resultName(dateKey: string, position: Position | null, total: number | 
 
 /**
  * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. SIUS
- * PDFs dragged in are read on the spot; the admin confirms whose result each is and its position, and each is filed
- * in the student's folder, named by its date, with its scores saved for the reports. Coaches can look and download;
- * admins can do everything. Families never see the Drive.
+ * PDFs dragged in are read on the spot; whoever adds them confirms whose result each is and its position, and each is
+ * filed in the student's folder, named by its date, with its scores saved for the reports. Admins and coaches add,
+ * rename, move and trash alike (the owner's call, 2026-10-17); only admins open the Trash, to restore or delete for
+ * good. Families never see the Drive.
  */
 export function DrivePage() {
   // The address: /drive, /drive/f/{folderId} or /drive/file/{fileId} (one route, so the page stays put between folders).
@@ -82,8 +84,8 @@ export function DrivePage() {
   const routeFolder = segment === 'f' ? routeId : null
   const routeFile = segment === 'file' ? routeId : null
   const navigate = useNavigate()
-  const { branchId, actor, isAdmin, portal, timezone } = useBranch()
-  const canWrite = isAdmin
+  const { branchId, actor, isAdmin, role, portal, timezone } = useBranch()
+  const canWrite = isStaffRole(role)
   const base = `/${portal}/drive`
   useWindowDropGuard()
   useUploadProgress()
@@ -167,7 +169,7 @@ export function DrivePage() {
   const selectedRows = rows.filter((r) => selected.has(r.id))
 
   // ------------------------------------------------------------ files in
-  const refuseDrop = () => toast.error('Only the academy’s admins can add files to the Drive.')
+  const refuseDrop = () => toast.error('Only the academy’s staff can add files to the Drive.')
 
   async function intake(raw: DroppedEntry[], baseId: string | null) {
     if (!canWrite) return refuseDrop()
@@ -321,7 +323,7 @@ export function DrivePage() {
     const count = folders.length + files.length
     const ok = await confirm({
       title: count === 1 ? `Move “${folders[0]?.name ?? files[0]?.name}” to the Trash?` : `Move ${count} items to the Trash?`,
-      description: `${inside ? `${countLabel(inside, 'file')} inside go${inside === 1 ? 'es' : ''} with ${folders.length === 1 ? 'it' : 'them'}. ` : ''}You can restore ${count === 1 ? 'it' : 'them'} from the Trash.`,
+      description: `${inside ? `${countLabel(inside, 'file')} inside go${inside === 1 ? 'es' : ''} with ${folders.length === 1 ? 'it' : 'them'}. ` : ''}${isAdmin ? 'You' : 'An admin'} can restore ${count === 1 ? 'it' : 'them'} from the Trash.`,
       confirmLabel: 'Move to Trash',
       destructive: true,
     })
@@ -430,7 +432,8 @@ export function DrivePage() {
   else if (!rows.length) state = <p className="p-10 text-center text-sm text-muted-foreground">Nothing in the Drive matches “{query_}”.</p>
 
   const title = folder ? folder.name : 'Drive'
-  const siblings = preview ? index.filesIn(preview.folderId) : []
+  // ← and → in the preview step through the folder in the list's order.
+  const siblings = preview ? sortDriveItems(index.filesIn(preview.folderId).map((file) => ({ kind: 'file' as const, id: file.id, file })), sort, index).map((it) => it.file) : []
   const dialogFolder = dialog?.kind === 'renameFolder' ? index.folderOf(dialog.id) : null
   const dialogFile = dialog?.kind === 'renameFile' ? index.fileOf(dialog.id) : null
 
@@ -479,7 +482,7 @@ export function DrivePage() {
           ) : null}
         </div>
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          {canWrite ? (
+          {isAdmin ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Trash" asChild>
@@ -577,7 +580,7 @@ export function DrivePage() {
       }} />
 
       <div className={cn('grid gap-4', details && 'lg:grid-cols-[minmax(0,1fr)_18rem]')}>
-        <div className="min-w-0 rounded-xl border bg-card">
+        <div className="@container min-w-0 rounded-xl border bg-card">
           {layout === 'list' ? (
             <>
               <DriveListHead api={api} controls={controls} />
@@ -586,7 +589,9 @@ export function DrivePage() {
           ) : (
             <>
               <div className="flex items-center justify-between border-b px-3 py-1.5">
-                <span className="text-xs text-muted-foreground">Sorted by {sort.col}, {sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {sort.col ? `Sorted by ${sort.col}, ${sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}` : 'Folders A to Z, then the newest files'}
+                </span>
                 {controls}
               </div>
               {state ?? (

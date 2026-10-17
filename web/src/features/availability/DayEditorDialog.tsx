@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { LuLock, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu'
 import { fitRangesToDay, normalizeRanges } from '@shared/availability'
 import type { DayHours } from '@shared/settings/defaults'
-import { formatDateKey, formatTimeRange } from '@shared/time'
+import { formatDateKey, formatTimeRange, todayKey } from '@shared/time'
 import type { AvailabilityRange } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { TimeSelect } from '@/components/app/TimeSelect'
@@ -30,7 +30,7 @@ export function DayEditorDialog({
   /** False: the person backed out (keep the dialog open). */
   onSave: (ranges: AvailabilityRange[]) => Promise<boolean | void>
 }) {
-  const { settings } = useBranch()
+  const { settings, timezone } = useBranch()
   const a = settings.availability
   const [ranges, setRanges] = useState<AvailabilityRange[]>([])
   const [busy, setBusy] = useState(false)
@@ -39,9 +39,10 @@ export function DayEditorDialog({
   if ((state?.dateKey ?? null) !== lastKey) {
     setLastKey(state?.dateKey ?? null)
     setError(null)
+    // A new day starts from the opening hours; a locked one shows only what's saved.
     setRanges(
       state
-        ? state.ranges.length
+        ? state.ranges.length || state.locked
           ? state.ranges
           : [{ startMin: state.hours.openMin, endMin: state.hours.closeMin }]
         : [],
@@ -50,6 +51,7 @@ export function DayEditorDialog({
   if (!state) return null
 
   const locked = state.locked
+  const past = state.dateKey < todayKey(timezone)
   const step = a.stepMinutes
 
   async function save(next: AvailabilityRange[]) {
@@ -85,14 +87,14 @@ export function DayEditorDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{state.exists ? 'Edit availability' : 'Add availability'}</DialogTitle>
+          <DialogTitle>{locked ? 'Availability' : state.exists ? 'Edit availability' : 'Add availability'}</DialogTitle>
           <DialogDescription>{formatDateKey(state.dateKey, 'weekdayLong')}</DialogDescription>
         </DialogHeader>
         {locked ? (
           <Alert>
             <LuLock />
             <AlertDescription>
-              This day is within {a.lockWindowDays} days and can’t be changed here. Please contact an admin.
+              {past ? 'This day is over, so its availability can’t be changed.' : `This day is within ${a.lockWindowDays} days and can’t be changed here. Please contact an admin.`}
             </AlertDescription>
           </Alert>
         ) : state.leadWarning ? (

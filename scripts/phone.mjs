@@ -648,7 +648,7 @@ function practiceLoginLines() {
   const password = practicePassword();
   return [
     `  Sign in with an email and password (no Google on the practice copy). The password of each is ${password}`,
-    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the app's office tabs" : `a ${l.role}: "Coming to the app"`}`),
+    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the staff's tabs, everything" : l.role === "coach" ? "a coach: the staff's tabs, a coach's view" : `a ${l.role}: "Coming to the app"`}`),
   ];
 }
 

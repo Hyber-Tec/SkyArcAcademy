@@ -1,15 +1,21 @@
-import { type Position, POSITION_LABELS, paperEvaluation, shotGroup, shotTotals } from '../shooting/evaluation'
+import { type PaperShot, type Position, POSITION_LABELS, paperEvaluation, shotGroup, shotTotals } from '../shooting/evaluation'
 import type { Evaluation } from '../shooting/evaluation'
 import { radiusFromScore } from '../shooting/target'
+import { CARD_EDGES_MM } from '../targets/card'
+import { FLAT, FLAT_SIZE, flatPoint } from '../targets/flat'
+import { scoreAt } from '../targets/score'
+import type { SyntheticCard, SyntheticShot } from '../targets/synthetic'
 import { type DateKey, addDays, diffDays, toInstant, tzOffsetMinutes } from '../time'
 import type { AuditStamp } from '../types'
 import { SAMPLE_PREFIX, type SampleDoc } from './data'
 
 /**
  * Sample scores for the sample students (shared/src/sample/data.ts): SIUS results on days they came to class, with
- * the made-up shots a synthetic SIUS PDF prints (scripts/lib/sius-pdf.ts), and a few paper cards. Better students
- * shoot tighter groups, everyone improves a little week to week, and one of the two SIUS computers runs on Pacific
- * time, like the academy's. Deterministic for a given today, so running it again rewrites the same documents.
+ * the made-up shots a synthetic SIUS PDF prints (scripts/lib/sius-pdf.ts), and a few paper cards, the recent ones
+ * mostly scanned with the phone app (a made-up picture of the card in the Drive, shared/src/targets/synthetic.ts).
+ * Better students shoot tighter groups, everyone improves a little week to week, and one of the two SIUS computers
+ * runs on Pacific time, like the academy's. Deterministic for a given today, so running it again rewrites the same
+ * documents.
  */
 
 export interface SampleShot {
@@ -24,13 +30,63 @@ export interface SampleSiusSpec {
   series: { sighter?: boolean; shots: SampleShot[] }[]
 }
 
+/** A scanned card's picture: the card as the phone app flattens it for the Drive, with these made-up holes. */
+export interface SampleCardSpec {
+  holes: SyntheticShot[]
+  /** Coaches' red pen marks beside the bulls. */
+  ink: boolean
+  seed: number
+}
+
+/** A SIUS result's PDF, or a scanned card's picture. */
+export type SampleFile = { kind: 'sius'; fileId: string; name: string; spec: SampleSiusSpec } | { kind: 'card'; fileId: string; name: string; card: SampleCardSpec }
+
 export interface SampleScore {
   evaluationId: string
   evaluation: Omit<Evaluation, keyof AuditStamp>
-  /** SIUS results come with their PDF; paper cards have no file. */
-  file: { fileId: string; name: string; spec: SampleSiusSpec } | null
+  /** SIUS results come with their PDF, scanned paper cards with the card's picture; typed cards have no file. */
+  file: SampleFile | null
   /** When the result was shot (the upload time in the Drive). */
   at: Date
+}
+
+/**
+ * A sample card's picture as the phone app would have saved it (shared/src/targets/flat.ts): the flattened card,
+ * six pixels a millimetre and square to the card, every hole where flatPoint puts it.
+ */
+export function sampleCardPicture(card: SampleCardSpec): SyntheticCard {
+  // The synthetic photo samples each pixel at its whole coordinates; the flattened card has a pixel's centre half a
+  // pixel in, so the card sits half a pixel up and left of flatPoint's middle.
+  const middle = flatPoint((CARD_EDGES_MM.left + CARD_EDGES_MM.right) / 2, (CARD_EDGES_MM.top + CARD_EDGES_MM.bottom) / 2)
+  return { width: FLAT_SIZE.width, height: FLAT_SIZE.height, pxPerMm: FLAT.pxPerMm, centre: { x: middle.x - 0.5, y: middle.y - 0.5 }, shots: card.holes, ink: card.ink, noise: 0, seed: card.seed }
+}
+
+/** How far out a sample card's hole may be (mm): every hole stays on its bull's close-up (26 mm around it). */
+const CARD_REACH_MM = 24
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * A card scanned with the phone: its holes, and what the scan saved for them, each hole as its shot scored by ISSF's
+ * rule (shared/src/targets/score.ts). Now and then the scan missed a hole (the bull saved as a 0 without a place) or
+ * put a shot a little off its hole: the card's page on the website is where the office puts that right.
+ */
+function scannedCard(points: { x: number; y: number }[], r: () => number): { card: SampleCardSpec; shots: PaperShot[] } {
+  const holes: SyntheticShot[] = points.map((p, i) => {
+    const d = Math.hypot(p.x, p.y)
+    const k = d > CARD_REACH_MM ? CARD_REACH_MM / d : 1
+    return { bull: i + 1, x: round2(p.x * k), y: round2(p.y * k), look: r() < 0.3 ? 'fibres' : 'wall' }
+  })
+  const slip = r()
+  const which = Math.floor(r() * holes.length)
+  const turn = r() * Math.PI * 2
+  const by = 0.7 + r() * 0.6
+  const shots = holes.map((h, i): PaperShot => {
+    if (i === which && slip < 0.25) return { v: 0 }
+    const x = i === which && slip < 0.6 ? round2(h.x + by * Math.cos(turn)) : h.x
+    const y = i === which && slip < 0.6 ? round2(h.y + by * Math.sin(turn)) : h.y
+    return { v: scoreAt(Math.hypot(x, y)).value, x, y }
+  })
+  return { card: { holes, ink: r() < 0.5, seed: Math.floor(r() * 1e9) }, shots }
 }
 
 /** A small deterministic random generator per key (mulberry32), giving numbers from 0 up to 1. */
@@ -98,17 +154,28 @@ export function buildSampleScores(docs: readonly SampleDoc[], opts: { academyId:
       const at = toInstant(c.dateKey, minute, opts.timezone)
       const evaluationId = `${SAMPLE_PREFIX}e-${key}`
       if (r() < 0.2) {
-        // A paper card: ten bulls scored in whole numbers.
-        const values = Array.from({ length: 10 }, () => {
-          const shot = shotAt(off.x + gaussian(r) * spread, off.y + gaussian(r) * spread)
-          return Math.floor(shot.v)
-        })
-        out.push({
-          evaluationId,
-          evaluation: paperEvaluation({ studentId: s.id, studentName: s.name, position, dateKey: c.dateKey, shots: values, total: null, fileId: null, note: '' }),
-          file: null,
-          at,
-        })
+        // A paper card: ten bulls, a shot at each. About half of the last two weeks' were scanned with the phone (the
+        // shots keep their places, and the Drive the card's picture); the others were typed in as whole numbers.
+        const points = Array.from({ length: 10 }, () => ({ x: off.x + gaussian(r) * spread, y: off.y + gaussian(r) * spread }))
+        const card = rng(`${key}|card`)
+        if (weeksAgo < 2 && card() < 0.45) {
+          const scan = scannedCard(points, card)
+          const fileId = `${SAMPLE_PREFIX}f-${key}`
+          out.push({
+            evaluationId,
+            evaluation: paperEvaluation({ studentId: s.id, studentName: s.name, position, dateKey: c.dateKey, shots: scan.shots, total: null, fileId, note: '' }),
+            file: { kind: 'card', fileId, name: `${c.dateKey} ${POSITION_LABELS[position]} paper card.png`, card: scan.card },
+            at,
+          })
+        } else {
+          const values = points.map((p) => Math.floor(shotAt(p.x, p.y).v))
+          out.push({
+            evaluationId,
+            evaluation: paperEvaluation({ studentId: s.id, studentName: s.name, position, dateKey: c.dateKey, shots: values, total: null, fileId: null, note: '' }),
+            file: null,
+            at,
+          })
+        }
       } else {
         const sighters = r() < 0.6 ? Array.from({ length: 3 + Math.floor(r() * 5) }, () => shotAt(off.x + gaussian(r) * spread * 1.2, off.y + gaussian(r) * spread * 1.2)) : []
         const series = [0, 1].map(() => Array.from({ length: 10 }, () => shotAt(off.x + gaussian(r) * spread, off.y + gaussian(r) * spread)))
@@ -150,7 +217,7 @@ export function buildSampleScores(docs: readonly SampleDoc[], opts: { academyId:
             problems: [],
             sius: { printed, event: 'Air Rifle 60', clockFixMin: academyOffset - pcOffsetMin },
           },
-          file: { fileId, name: `${c.dateKey} ${POSITION_LABELS[position]} ${totals.total.toFixed(1)}.pdf`, spec },
+          file: { kind: 'sius', fileId, name: `${c.dateKey} ${POSITION_LABELS[position]} ${totals.total.toFixed(1)}.pdf`, spec },
           at,
         })
       }

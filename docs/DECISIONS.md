@@ -298,3 +298,33 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
 - **Testing:** every change is tried as the owner uses it, on the iPhone Simulator (taps, drags, two-finger pinches,
   the keyboard, light and dark) and on the website (desktop and phone widths, light and dark), with screenshots looked
   at, before it's called done.
+
+## 13. Coaches in the app, cards corrected on the website, and the zoom fixed for good (2026-10-17)
+
+- **The zoom jumped on a real phone** (Goo, a second time): a hand's second finger lands a moment after the first and
+  one finger lifts before the other, which the previous tests (both fingers at once) never did. The page also took the
+  first finger to scroll before the picture knew it was a pinch. Every zoomable picture now follows each finger and
+  carries on from the fingers that are down, so a late finger or a lifted one never moves the picture, and the page waits
+  for the picture on the phone's own gesture thread. A drag on a shot waits a moment for a second finger, so a pinch
+  never nudges a shot. A zoomed picture has a button to zoom back out. Tests now pinch as a hand does (late finger,
+  either finger lifted first) and measure the picture between events.
+- **Coaches have the app** (the same five tabs as the office): their own classes on Today (with their hours) and the
+  Schedule, every student (their own first, "Mine"), no family contacts (the office's, as on the website), scanning
+  cards and correcting or deleting scores. Parents and students still see "Coming to the app".
+- **Coaches keep scores and the Drive like admins** ("they have pretty much the same"): the rules let them add, correct
+  and delete scores and add, rename, move and trash Drive files and folders. Emptying the Trash stays the admins'.
+- **Correcting a scanned card on the website**, for admins and coaches: the card's picture zooms (wheel, trackpad pinch,
+  two fingers, double-click), a bull opens up close, and its green circle is pressed and dragged onto the hole (on the
+  website the pointer is the circle, so it moves the circle grabbed; on the phone a finger anywhere moves the nearest
+  one, so the finger never hides it). Shots are added, removed or typed, the replay shows the draft, and Save keeps it
+  as the phone does. The sample data has a few scanned cards with made-up pictures to try it on.
+- **Each tab's title sits at the top** of the phone's pages, as Today's does, without the empty bar of a large header
+  above it.
+- **In time order, everywhere a list of classes reads as a day:** the phone's Schedule lists the day's classes earliest
+  first, each with its coach (the website's grid keeps coaches as rows, in the academy's order). The other lists were
+  checked: people A to Z, results and messages newest first, the Drive's folders A to Z with files newest first.
+- **The academy's name is its full one, "Sky Arc Sports Academy"** (Goo: "please use its full name"; this answers
+  A11): the sign-in heading says "Sign in to Sky Arc Sports Academy", under the full logo too (an exception to the logo
+  rule in CLAUDE.md), on the website and the phone, and the other sign-in pages and tab titles use it.
+- **The website's schedule on a phone** gives the classes the width: the coach column is a narrow strip (colour,
+  initials, first name) instead of almost half the screen.

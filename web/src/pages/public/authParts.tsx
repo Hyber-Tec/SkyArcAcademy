@@ -50,7 +50,7 @@ export function AuthShell({
         <div className="mb-8 flex justify-center">
           <SkyArcLogo className="h-16" />
         </div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-balance">{title}</h1>
         {description ? <div className="mt-1 text-sm text-muted-foreground">{description}</div> : null}
         <div className="mt-6">{children}</div>
         {footer ? <div className="mt-6 space-y-2 border-t pt-4 text-xs text-muted-foreground">{footer}</div> : null}

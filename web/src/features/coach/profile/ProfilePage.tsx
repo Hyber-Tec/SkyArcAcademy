@@ -132,7 +132,8 @@ function ProfileHeader({ staff, loading }: { staff: WithId<Staff> | null; loadin
           <h1 className="truncate text-2xl font-semibold tracking-tight">{staff.name}</h1>
           <StaffStatusBadge status={staff.status} />
         </div>
-        <p className="mt-1 truncate text-sm text-muted-foreground">
+        {/* Wraps on a phone rather than cutting off the date. */}
+        <p className="mt-1 text-sm text-pretty text-muted-foreground">
           Coach at {branch.name}
           {since}
         </p>

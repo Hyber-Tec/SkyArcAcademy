@@ -1,6 +1,7 @@
 import { PauseCircle } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
+import { HelpLinks } from "@/components/AuthParts";
 import { CenteredCard } from "@/components/CenteredCard";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
@@ -35,6 +36,7 @@ export function PausedAccess({ why = "paused" }: { why?: keyof typeof WORDS }) {
         </Button>
       </View>
       <DeleteAccountLink />
+      <HelpLinks />
     </CenteredCard>
   );
 }
