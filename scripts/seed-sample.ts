@@ -3,15 +3,16 @@
  * coaches, a manager, students and families, ten weeks of classes around today with makeups and trials, availability,
  * time entries, announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic
  * PDFs in the students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the
- * card in the Drive, as the phone app saves it), and two progress reports (one shared with the family).
+ * card in the Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
  * Running it again rewrites the same documents and adds classes around the new today.
  *
  *   npm run seed:sample                # add it to production (skyarcacademy)
  *   npm run seed:sample -- --remove    # delete it, with everything the app made for the sample people
- *   npm run seed:sample -- --coach-login you+coach@example.com
- *                                      # gives that email the sample coach Daniel Reed's access, to see the website and
- *                                      # the phone app as a coach does (it gets the academy's sign-in email, as anyone the
- *                                      # academy adds); --remove takes it away with the rest
+ *   npm run seed:sample -- --login coach=you+coach@example.com
+ *                                      # gives that email a sample person's access, to see the website and the phone app
+ *                                      # as they do: coach (Daniel Reed), parent (the Hwang family's two children) or
+ *                                      # student (Jiwoo Hwang). It gets the academy's sign-in email, as anyone the academy
+ *                                      # adds; --remove takes it away with the rest
  *
  * Removing finds sample documents by their `sample-` IDs and `@skyarc-sample.test` emails, and also deletes what the
  * app made for those people later: classes, time entries, kiosk PINs, notifications and audit entries. Real people and
@@ -25,7 +26,7 @@ import { COL } from '../shared/src/paths'
 import { composeReport } from '../shared/src/reports/compose'
 import { presetPeriod } from '../shared/src/reports/period'
 import { newMemberData } from '../shared/src/branchFactory'
-import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData, sampleStaffId } from '../shared/src/sample/data'
+import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData, sampleStaffId, sampleStudentId } from '../shared/src/sample/data'
 import { buildSampleScores, sampleCardPicture } from '../shared/src/sample/scores'
 import { POSITION_LABELS } from '../shared/src/shooting/evaluation'
 import type { SessionStatus } from '../shared/src/settings/defaults'
@@ -39,7 +40,7 @@ import { encodePng } from './lib/png'
 import { siusPdf } from './lib/sius-pdf'
 import { deleteObject, uploadObject } from './lib/storage-rest'
 
-const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, 'coach-login': { type: 'string' } } })
+const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, login: { type: 'string' } } })
 const base = `branches/${ACADEMY_ID}`
 
 const isSample = (v: unknown) => typeof v === 'string' && v.startsWith(SAMPLE_PREFIX)
@@ -55,8 +56,8 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.openShifts]: (id) => isSample(id),
   [COL.kioskPins]: (_, d) => isSample(d.staffId),
   kioskPinOwners: (id) => isSample(id),
-  // A sample person's own sign-in, and an email given a sample coach's access (--coach-login).
-  [COL.members]: (id, d) => isSampleEmail(id) || isSample(d.staffId),
+  // A sample person's own sign-in, and an email given a sample person's access (--login).
+  [COL.members]: (id, d) => isSampleEmail(id) || isSample(d.staffId) || isSample(d.studentId) || (Array.isArray(d.studentIds) && d.studentIds.some(isSample)),
   [COL.signupRequests]: (id) => isSampleEmail(id),
   [COL.notifications]: (_, d) => isSampleEmail(d.recipientKey),
   [COL.announcements]: (id) => isSample(id),
@@ -102,8 +103,8 @@ async function add() {
 
 /**
  * The sample students' shooting: their scores, the SIUS PDFs and scanned cards' pictures behind them uploaded into
- * their Drive folders, and two progress reports for the last 30 days (one shared with a family that has a sign-in, one
- * draft).
+ * their Drive folders, and progress reports for the last 30 days (shared with each family that can sign in, as a parent
+ * or the student, and one draft).
  */
 async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown>, timezone: string, levels: readonly string[], now: Date) {
   const today = todayKey(timezone, now)
@@ -149,17 +150,21 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
     out.push({ path: `${base}/${COL.driveFolders}/${studentFolderId(studentId)}`, data: { name, parentId: null, studentId, createdAt: now, createdBy: manager } })
   }
 
-  // Two reports for the last 30 days: one shared with a family that can sign in, one draft.
+  // Reports for the last 30 days: shared with each family that can sign in (a parent or the student), and one draft.
   const period = presetPeriod('last_30', today)
   const inPeriod = (studentId: string) => scores.filter((s) => s.evaluation.studentId === studentId && s.evaluation.dateKey >= period.from && s.evaluation.dateKey <= period.to)
-  const withParent = new Set(docs.filter((d) => d.path.includes(`/${COL.members}/`) && d.data.role === 'parent').flatMap((d) => (d.data.studentIds as string[]) ?? []))
+  const members = docs.filter((d) => d.path.includes(`/${COL.members}/`))
+  const withLogin = new Set([
+    ...members.filter((d) => d.data.role === 'parent').flatMap((d) => (d.data.studentIds as string[]) ?? []),
+    ...members.filter((d) => d.data.role === 'student').map((d) => String(d.data.studentId)),
+  ])
   const candidates = [...new Set(scores.map((s) => s.evaluation.studentId))].filter((id) => inPeriod(id).length >= 3)
-  const sharedFor = candidates.find((id) => withParent.has(id))
-  const draftFor = candidates.find((id) => id !== sharedFor)
+  const sharedFor = candidates.filter((id) => withLogin.has(id)).slice(0, 6)
+  const draftFor = candidates.find((id) => !withLogin.has(id)) ?? candidates.find((id) => !sharedFor.includes(id))
   const studentDoc = (id: string) => docs.find((d) => d.path === `${base}/${COL.students}/${id}`)?.data ?? {}
   const contact = (academy.contact ?? {}) as Record<string, string>
   let reports = 0
-  for (const [studentId, shared] of [[sharedFor, true], [draftFor, false]] as const) {
+  for (const [studentId, shared] of [...sharedFor.map((id) => [id, true] as const), [draftFor, false] as const]) {
     if (!studentId) continue
     const st = studentDoc(studentId)
     // The same stamps the evaluations get, so the report's fingerprint matches them (no "check before sharing").
@@ -260,34 +265,44 @@ async function remove() {
   console.log(paths.length ? `  removed ${paths.length} documents from ${PROJECT_ID}` : `  no sample data in ${PROJECT_ID}`)
 }
 
-/** The sample coach a --coach-login signs in as: classes on Mondays, Wednesdays and Thursdays. */
-const LOGIN_COACH = { key: 'daniel-reed', name: 'Daniel Reed' }
+/**
+ * Whose access a --login gives, by role: a coach with classes on Mondays, Wednesdays and Thursdays, a parent of two
+ * children, and one of those children (so a parent's and a student's view of the same child compare).
+ */
+type LoginRole = 'coach' | 'parent' | 'student'
+const LOGINS: Record<LoginRole, { name: string; access: { staffId?: string; studentId?: string; studentIds?: string[] }; check: string }> = {
+  coach: { name: 'Daniel Reed', access: { staffId: sampleStaffId('daniel-reed') }, check: `${COL.staff}/${sampleStaffId('daniel-reed')}` },
+  parent: { name: 'Jiyeon Hwang', access: { studentIds: [sampleStudentId('jiwoo-hwang'), sampleStudentId('minjun-hwang')] }, check: `${COL.students}/${sampleStudentId('jiwoo-hwang')}` },
+  student: { name: 'Jiwoo Hwang', access: { studentId: sampleStudentId('jiwoo-hwang') }, check: `${COL.students}/${sampleStudentId('jiwoo-hwang')}` },
+}
 
 /**
- * Gives `email` the sample coach's access: a member doc for it with the coach's role and staff record. The academy's
- * sign-in email goes to it (functions/src/invites.ts), as for anyone the academy adds; whoever reads that mailbox signs
- * in with Google or makes a password there. The sample data must be there first.
+ * Gives an email a sample person's access (`role=email`): a member doc with that role and their record(s). The
+ * academy's sign-in email goes to it (functions/src/invites.ts), as for anyone the academy adds; whoever reads that
+ * mailbox signs in with Google or makes a password there. The sample data must be there first.
  */
-async function coachLogin(email: string) {
-  const key = email.trim().toLowerCase()
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) throw new Error(`Not an email: ${email}`)
-  const staffId = sampleStaffId(LOGIN_COACH.key)
-  if (!(await getDocument(`${base}/${COL.staff}/${staffId}`))) throw new Error(`No sample coach ${LOGIN_COACH.name} in ${PROJECT_ID}. Run npm run seed:sample first.`)
+async function sampleLogin(arg: string) {
+  const [role, raw = ''] = arg.split('=') as [string, string?]
+  if (!(role in LOGINS)) throw new Error(`--login takes coach=, parent= or student= and an email (got "${arg}").`)
+  const who = LOGINS[role as LoginRole]
+  const key = raw.trim().toLowerCase()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) throw new Error(`Not an email: ${raw}`)
+  if (!(await getDocument(`${base}/${who.check}`))) throw new Error(`No sample data for ${who.name} in ${PROJECT_ID}. Run npm run seed:sample first.`)
   const existing = await getDocument(`${base}/${COL.members}/${key}`)
-  if (existing && existing.staffId !== staffId) throw new Error(`${key} already has access to the academy (${String(existing.role)}); not changing it.`)
-  if (existing) return console.log(`= ${key} already has the sample coach ${LOGIN_COACH.name}'s access in ${PROJECT_ID}.`)
+  if (existing && existing.role !== role) throw new Error(`${key} already has access to the academy (${String(existing.role)}); not changing it.`)
+  if (existing) return console.log(`= ${key} already has ${who.name}'s access (${role}) in ${PROJECT_ID}.`)
   const now = new Date()
   await commit([
     {
       path: `${base}/${COL.members}/${key}`,
-      data: { ...newMemberData({ email: key, displayName: LOGIN_COACH.name, role: 'coach', staffId, createdBy: SAMPLE_AUTHOR }), createdAt: now, updatedAt: now },
+      data: { ...newMemberData({ email: key, displayName: who.name, role: role as LoginRole, ...who.access, createdBy: SAMPLE_AUTHOR }), createdAt: now, updatedAt: now },
     },
   ])
-  console.log(`+ ${key} has the sample coach ${LOGIN_COACH.name}'s access in ${PROJECT_ID}; the academy's sign-in email goes to it.`)
+  console.log(`+ ${key} has ${who.name}'s access (${role}) in ${PROJECT_ID}; the academy's sign-in email goes to it.`)
   console.log('  Removed with the sample data: npm run seed:sample -- --remove')
 }
 
-;(values.remove ? remove() : values['coach-login'] ? coachLogin(values['coach-login']) : add()).catch((e) => {
+;(values.remove ? remove() : values.login ? sampleLogin(values.login) : add()).catch((e) => {
   console.error(e)
   process.exit(1)
 })

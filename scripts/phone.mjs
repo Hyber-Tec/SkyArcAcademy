@@ -79,8 +79,8 @@ const STUDIO_JAVA = "/Applications/Android Studio.app/Contents/jbr/Contents/Home
 const JAVA21 = "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home";
 const PLATFORM = { ios: "iPhone", android: "Android" };
 /**
- * The practice copy's logins, all made up (reserved .test addresses): its owner, made by `npm run seed`, and a coach and
- * a parent from the sample data (shared/src/sample/data.ts), to see the app as they do. They share one password, made
+ * The practice copy's logins, all made up (reserved .test addresses): its owner, made by `npm run seed`, and a coach, a
+ * parent and a student from the sample data (shared/src/sample/data.ts), to see the app as they do. They share one password, made
  * at random on this Mac the first time and kept in mobile/.expo/practice-login.json (git-ignored, never in the
  * repository); the commands print it.
  */
@@ -89,6 +89,7 @@ const PRACTICE_LOGINS = [
   { ...PRACTICE_OWNER, role: "owner" },
   { email: "daniel.reed@skyarc-sample.test", name: "Daniel Reed", role: "coach" },
   { email: "jiyeon.hwang@skyarc-sample.test", name: "Jiyeon Hwang", role: "parent" },
+  { email: "seoyeon.lim@skyarc-sample.test", name: "Seoyeon Lim", role: "student" },
 ];
 const PRACTICE_PASSWORD_FILE = path.join(stateDir, "practice-login.json");
 /** The flows the others run as steps (mobile/maestro): not tests of their own. */
@@ -648,7 +649,7 @@ function practiceLoginLines() {
   const password = practicePassword();
   return [
     `  Sign in with an email and password (no Google on the practice copy). The password of each is ${password}`,
-    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the staff's tabs, everything" : l.role === "coach" ? "a coach: the staff's tabs, a coach's view" : `a ${l.role}: "Coming to the app"`}`),
+    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the staff's tabs, everything" : l.role === "coach" ? "a coach: the staff's tabs, a coach's view" : `a ${l.role}: the family's tabs`}`),
   ];
 }
 
@@ -1381,7 +1382,7 @@ async function test() {
   step(`Signing the app out on ${where}, then in again as the practice owner (dev-connect.yaml, sign-in.yaml)`);
   signOutForTest(s);
   if (!maestro(s.device, "maestro/dev-connect.yaml", values) || !maestro(s.device, "maestro/sign-in.yaml", values)) {
-    stop([`The app didn't get to Today as the practice owner on ${where}. Maestro's screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Ask Claude Code: "npm run phone:test can't sign in".`]);
+    stop([`The app didn't get to Home as the practice owner on ${where}. Maestro's screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Ask Claude Code: "npm run phone:test can't sign in".`]);
   }
   ok(`Signed in as the practice owner (${PRACTICE_OWNER.email})`);
   let failed = 0;
@@ -1514,7 +1515,7 @@ async function prepare() {
 const SCREENS_DIR = path.join(mobile, ".publish", "screenshots");
 /** The five screens both stores get, uploaded in this order: the office's five tabs, as the practice owner. */
 const SCREENS = [
-  { file: "01-today", tab: "today", label: "Today", what: "Today: the day's classes" },
+  { file: "01-home", tab: "today", label: "Home", what: "Home: the day's classes" },
   { file: "02-schedule", tab: "schedule", label: "Schedule", what: "Schedule: the day's classes by coach" },
   { file: "03-scan", tab: "scan", label: "Scan", what: "Scan: photographing a paper target" },
   { file: "04-students", tab: "students", label: "Students", what: "Students: the academy's students" },

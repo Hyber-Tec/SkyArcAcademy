@@ -105,6 +105,10 @@ describe('sample data', () => {
     expect(summary.classes).toBeGreaterThan(300)
     expect(summary.shifts).toBeGreaterThan(40)
     expect(of('members').filter((d) => d.data.role === 'parent').length).toBe(7)
+    // Students with their own sign-in, each linked to their own record.
+    const own = of('members').filter((d) => d.data.role === 'student')
+    expect(own.length).toBe(3)
+    for (const m of own) expect(of('students').some((st) => st.path.endsWith(`/${String(m.data.studentId)}`))).toBe(true)
     // One shift was closed by the automatic clock-out within the last week.
     expect(of('clockShifts').filter((d) => d.data.autoClosed === true)).toHaveLength(1)
   })
