@@ -1,0 +1,160 @@
+# The family's app, as the sample parent (two children; the practice password): Home with the child switcher and a
+# class's sheet, Classes (upcoming and past), Reports and a report with its shots played back, and More (the
+# appearance, the delete-account dialog opened and canceled). It changes nothing but the report's "Viewed". Signs out,
+# in as the parent, then back in as the owner the other flows expect.
+# Run after sign-in.yaml (the practice owner):
+#   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/family.yaml
+appId: com.skyarcacademy.app
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- scrollUntilVisible:
+    element:
+      id: "more-sign-out"
+    direction: DOWN
+# Once more, so the row isn't left under the floating tab bar.
+- scroll
+- tapOn:
+    id: "more-sign-out"
+- runFlow:
+    file: sign-in.yaml
+    env:
+      EMAIL: jiyeon.hwang@skyarc-sample.test
+# Home: the greeting, the children, each one's next class, and a class's sheet.
+- extendedWaitUntil:
+    visible:
+      id: "family-home"
+    timeout: 30000
+- assertVisible:
+    id: "family-home-greeting"
+- assertVisible:
+    id: "family-child-filter"
+- extendedWaitUntil:
+    visible:
+      id: "family-next"
+    timeout: 30000
+- tapOn:
+    id: "family-child-sample-.*"
+    index: 0
+- tapOn:
+    id: "family-child-all"
+- runFlow:
+    when:
+      visible:
+        id: "family-next-.*"
+    commands:
+      - tapOn:
+          id: "family-next-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "family-session-students"
+          timeout: 15000
+      - tapOn:
+          id: "family-session-close"
+- scrollUntilVisible:
+    element:
+      id: "family-attendance"
+    direction: DOWN
+# Classes: what's coming, then what's past, and a class's sheet.
+- runFlow:
+    file: steps/family-tab.yaml
+    env:
+      TAB: classes
+      LABEL: Classes
+- extendedWaitUntil:
+    visible:
+      id: "family-classes"
+    timeout: 30000
+- tapOn:
+    id: "family-classes-show-past"
+- extendedWaitUntil:
+    visible:
+      id: "family-classes-list"
+    timeout: 30000
+- tapOn:
+    id: "family-class-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "family-session-sheet"
+    timeout: 15000
+- tapOn:
+    id: "family-session-close"
+- tapOn:
+    id: "family-classes-show-upcoming"
+# Reports: the shared reports, and one opened with its shots played back.
+- runFlow:
+    file: steps/family-tab.yaml
+    env:
+      TAB: reports
+      LABEL: Reports
+- extendedWaitUntil:
+    visible:
+      id: "family-reports-list"
+    timeout: 30000
+- tapOn:
+    id: "family-report-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "report-student"
+    timeout: 15000
+- assertVisible:
+    id: "report-tiles"
+- scrollUntilVisible:
+    element:
+      id: "replay-play"
+    direction: DOWN
+- tapOn:
+    id: "replay-play"
+- assertVisible:
+    id: "replay-readout"
+- scrollUntilVisible:
+    element:
+      id: "report-footer"
+    direction: DOWN
+- runFlow:
+    file: steps/back.yaml
+# More: the account and the children, the appearance, the delete-account dialog (canceled), then signing out.
+- runFlow:
+    file: steps/family-tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- extendedWaitUntil:
+    visible:
+      id: "family-more"
+    timeout: 30000
+- assertVisible:
+    id: "family-more-account"
+- assertVisible:
+    id: "family-more-students"
+- tapOn:
+    id: "family-more-appearance-dark"
+- tapOn:
+    id: "family-more-appearance-system"
+- scrollUntilVisible:
+    element:
+      id: "delete-account-link"
+    direction: DOWN
+- scroll
+- tapOn:
+    id: "delete-account-link"
+- extendedWaitUntil:
+    visible:
+      id: "delete-account-dialog"
+    timeout: 10000
+- tapOn: "Cancel"
+- assertNotVisible:
+    id: "delete-account-dialog"
+- tapOn:
+    id: "family-more-sign-out"
+# Back to the owner, for the flows after this one.
+- runFlow:
+    file: sign-in.yaml

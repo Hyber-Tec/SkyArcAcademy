@@ -37,8 +37,8 @@ appId: com.skyarcacademy.app
       visible: "Not Now"
     commands:
       - tapOn: "Not Now"
-# Today: its tab on iPhone; on Android Maestro can't see a tab's id, so the screen's own.
+# Home (the staff's or the family's): its tab on iPhone; on Android Maestro can't see a tab's id, so the screen's own.
 - extendedWaitUntil:
     visible:
-      id: "tab-today|today-screen"
+      id: "tab-today|today-screen|family-tab-home|family-home"
     timeout: 60000

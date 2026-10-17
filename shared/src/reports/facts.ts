@@ -91,6 +91,22 @@ export interface PreviousReport {
   evaluations: number
 }
 
+/**
+ * Attendance over some classes: attended against missed (canceled classes don't count either way), and past classes
+ * nobody has marked yet. The reports and the families' Home show it.
+ */
+export function attendanceFacts(sessions: readonly FactsSession[]): ReportFacts['attendance'] {
+  const attended = sessions.filter((s) => s.status === 'present').length
+  const missed = sessions.filter((s) => s.status === 'no_show').length
+  return {
+    attended,
+    missed,
+    canceled: sessions.filter((s) => s.status === 'canceled').length,
+    unmarked: sessions.filter((s) => s.past && (s.status === 'pending' || s.status === 'confirmed')).length,
+    percent: attended + missed ? Math.round((attended / (attended + missed)) * 100) : null,
+  }
+}
+
 /** The period's figures from its evaluations (already in the period), its classes and the last shared report. */
 export function reportFacts(evaluations: readonly (Evaluation & { id: string })[], sessions: readonly FactsSession[], previous: PreviousReport | null): { facts: ReportFacts; series: EvaluationPoint[] } {
   const series = inOrder(evaluations).map(toPoint)
@@ -99,8 +115,6 @@ export function reportFacts(evaluations: readonly (Evaluation & { id: string })[
   const sius = series.filter((p) => p.source === 'sius')
   const siusShots = sius.reduce((n, p) => n + p.shots, 0)
   const scored = series.flatMap((p) => p.marks.map((m) => wholeScore(m.v)))
-  const attended = sessions.filter((s) => s.status === 'present').length
-  const missed = sessions.filter((s) => s.status === 'no_show').length
   const average = shots ? round1((series.reduce((n, p) => n + p.wholeTotal, 0) / shots) * 10) : null
   const groups = sius.map((p) => p.groupMm).filter((g): g is number => typeof g === 'number' && g > 0)
   const facts: ReportFacts = {
@@ -116,13 +130,7 @@ export function reportFacts(evaluations: readonly (Evaluation & { id: string })[
       eights: scored.filter((v) => v === 8).length,
       lower: scored.filter((v) => v <= 7).length,
     },
-    attendance: {
-      attended,
-      missed,
-      canceled: sessions.filter((s) => s.status === 'canceled').length,
-      unmarked: sessions.filter((s) => s.past && (s.status === 'pending' || s.status === 'confirmed')).length,
-      percent: attended + missed ? Math.round((attended / (attended + missed)) * 100) : null,
-    },
+    attendance: attendanceFacts(sessions),
     trend: trendOf(positions),
     previous,
     deltaAverage: previous?.average != null && average !== null ? round1(average - previous.average) : null,

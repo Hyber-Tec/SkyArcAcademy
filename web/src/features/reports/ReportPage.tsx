@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { useEffect, useMemo } from 'react'
 import { LuArrowLeft, LuDownload, LuPencil } from 'react-icons/lu'
 import { useNavigate, useParams } from 'react-router'
@@ -9,8 +9,9 @@ import { useBranch } from '@/branch/BranchProvider'
 import { FullPageMessage, FullPageSpinner } from '@/components/app/FullPage'
 import { Button } from '@/components/ui/button'
 import { db } from '@/lib/firebase'
-import { branchDocRef, useDoc } from '@/lib/firestore'
+import { branchCol, branchDocRef, useDoc } from '@/lib/firestore'
 import { ReportDocument } from './ReportDocument'
+import { reportSeenKey } from './model'
 
 /**
  * `/report/{id}`: the report as families see it, ready to print or save as a PDF. Families get Back and Download PDF;
@@ -19,7 +20,7 @@ import { ReportDocument } from './ReportDocument'
 export function ReportPage() {
   const { reportId = '' } = useParams()
   const navigate = useNavigate()
-  const { branchId, timezone, role, portal, actor } = useBranch()
+  const { branchId, timezone, role, portal, actor, viewAs } = useBranch()
   const ref = useMemo(() => branchDocRef(branchId, COL.progressReports, reportId), [branchId, reportId])
   const { data: r, loading, error } = useDoc<ProgressReportDoc>(ref)
   const family = role === 'parent' || role === 'student'
@@ -29,10 +30,16 @@ export function ReportPage() {
     if (r) document.title = `${r.student.name} – Progress report – ${r.period.label}`
   }, [r])
 
-  // The family's view receipt: written once (the rules refuse a second), remembered in this browser.
+  // The family's view receipt: written once (the rules refuse a second), remembered in this browser. An owner or admin
+  // previewing the family's view writes nothing.
+  const opened = !!r && family && !viewAs && r.sharedWithParents
   useEffect(() => {
-    if (!r || !family || !r.sharedWithParents) return
-    const key = `skyarc:report-view:${reportId}:${actor.email}`
+    if (!opened) return
+    // Their own "report ready" inbox items are read now, so Home and Reports stop calling it new (for them only).
+    void getDocs(query(branchCol(branchId, COL.notifications), where('recipientKey', '==', actor.email), where('refs.reportId', '==', reportId)))
+      .then((snap) => Promise.all(snap.docs.filter((d) => !d.data().readAt).map((d) => updateDoc(d.ref, { readAt: serverTimestamp() }))))
+      .catch(() => undefined)
+    const key = reportSeenKey(reportId, actor.email)
     try {
       if (localStorage.getItem(key)) return
     } catch {
@@ -47,7 +54,7 @@ export function ReportPage() {
           // As above.
         }
       })
-  }, [r, family, branchId, reportId, actor.email, role])
+  }, [opened, branchId, reportId, actor.email, role])
 
   const back = () => {
     if (window.history.length > 1) navigate(-1)

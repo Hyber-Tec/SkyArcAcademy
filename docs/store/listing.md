@@ -108,7 +108,7 @@ data's made-up people), signed in as the practice owner, on a simulator and an e
 
 The five screens, named in the order to upload them:
 
-1. `01-today`: Today, the day's classes.
+1. `01-home`: Home, the day's classes.
 2. `02-schedule`: Schedule, the day's classes by coach.
 3. `03-scan`: Scan, photographing a paper target.
 4. `04-students`: Students, the academy's students.

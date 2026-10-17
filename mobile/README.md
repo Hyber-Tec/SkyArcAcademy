@@ -1,10 +1,11 @@
 # Sky Arc phone app
 
 The iPhone and Android app for Sky Arc, built with [Expo](https://expo.dev) (SDK 57) and React Native, forked from
-HyberCRM's phone app. For now it is the **academy staff's app** (owners, admins and coaches): five tabs, **Today,
-Schedule, Scan, Students and More**, each showing what the person's role may see. The website stays the main thing; the
-app helps the staff see the day and do a few things on the go, above all scanning paper targets. Parents and students
-who sign in see a screen saying their part comes to the app later, with a button to the website. It uses the same Firebase project (`skyarcacademy`), the same
+HyberCRM's phone app. The **academy staff** (owners, admins and coaches) get five tabs, **Home, Schedule, Scan,
+Students and More**, each showing what the person's role may see. The website stays the main thing; the app helps the
+staff see the day and do a few things on the go, above all scanning paper targets. Parents and students get the
+**family's part**: four tabs, **Home, Classes, Reports and More**, with a parent's children's (or the student's own)
+classes and the progress reports the academy shared. It uses the same Firebase project (`skyarcacademy`), the same
 Cloud Functions and the same security rules as the website, and the business logic in `../shared`.
 
 How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-the-apps.md); publishing to the stores is
@@ -18,12 +19,12 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
 - **Access** follows the academy's member doc for the email (`branches/skyarc/members/{email}`), live: an owner or an
   admin gets the staff's tabs with everything; a coach gets the same tabs with what the rules give a coach (their own
   classes, every student without the family's contacts, scanning and changing scores); a parent or a student gets
-  "Coming to the app"; an email the academy hasn't
+  the family's tabs; an email the academy hasn't
   added gets "No access yet", which opens the app by itself once an admin adds it; paused access says so. The first
   sign-in links the account to the member doc, as the website does.
-- **Each tab's title** sits at the very top of its page, as Today's greeting does, without the empty bar of a large
+- **Each tab's title** sits at the very top of its page, as Home's greeting does, without the empty bar of a large
   header above it (`TabHeader`, with a strip under the status bar so what scrolls up doesn't show through the clock).
-- **Today:** the date in the academy's zone with its open hours, today's numbers (classes, students, coaches; a coach
+- **Home:** the date in the academy's zone with its open hours, today's numbers (classes, students, coaches; a coach
   sees their classes, students and hours), the way to Scan, and today's classes in time order. A class (one coach's students at one time) opens a sheet with the coach a
   call or a text away and each student with their status and the class's note.
 - **Schedule:** the week's days, then the chosen day's classes in time order, earliest first, each with its coach (a
@@ -56,6 +57,24 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
   scores stay as its PDF gives them.
 - **More:** the account, the coaches and the office with their contacts, the appearance (system, light, dark), the
   website, the privacy policy, the version, signing out, and deleting the account.
+- **The family's part** (`src/app/(app)/(family)/`; parents and students see much the same, a parent their children and
+  a student themself; their data in `src/features/family/`, one query per student as the rules require):
+  - **Home:** a greeting and the date; each child's next class (a parent's children in the same class share a card)
+    with the coach, its status in plain words, the class's note ("Makeup for 10/15") and how soon it starts, or that
+    it's on now; the rest of this week, or next week's once this one has nothing left; the latest shared progress
+    report, "New" until someone in the family opens it; attendance over the last 30 days; and how to reach the academy
+    (its contact details from Settings → Academy, when it has given them). A parent with several children picks All or
+    one child, and the choice holds on every tab.
+  - **Classes:** what's coming (earliest first) or what's past (latest first), day by day, a few weeks more on request;
+    a class opens a sheet with the coach, each child in it with their status and note, and the academy's phone and email
+    for a change (families don't change classes in the app).
+  - **Reports:** the shared reports, newest first. A report opens on its own screen, as the website shows it to
+    families (its options decide what shows): the period's figures, how the scores went, the coach's words, the scores
+    over time (a tap reads a date's scores), the period's shots played back on the target result after result (the
+    same playback as a score's, `src/features/scores/ShotReplay.tsx`), each position's figures, the first and latest
+    results side by side, and the goals. Opening it records the family's view, so the academy sees "Viewed".
+  - **More:** the account, the children (or the student's own record) as the academy has them, the appearance, the
+    website, help, the privacy policy, the version, signing out, and deleting the account.
 - **Which build this is:** More → Version shows the version and build number (`release.json`) and, for a copy built on
   this Mac, from which commit and when it was built (`EXPO_PUBLIC_BUILT_AT`, `EXPO_PUBLIC_BUILD_COMMIT`, which
   `scripts/phone.mjs` sets; `src/lib/env.ts`).
@@ -86,14 +105,15 @@ Those commands choose the practice copy or the real project themselves, so a `.e
 
 ### The practice logins
 
-The practice copy has three logins, all made up (reserved `.test` addresses), with one password made at random on
+The practice copy has four logins, all made up (reserved `.test` addresses), with one password made at random on
 each Mac (kept in `mobile/.expo/practice-login.json`, never in git; the commands print it):
 
 | Login | Who | What the app shows |
 | --- | --- | --- |
 | `owner@example.test` | The academy's owner (made by `npm run seed`) | The staff's tabs, everything |
 | `daniel.reed@skyarc-sample.test` | A sample coach | The staff's tabs, a coach's view |
-| `jiyeon.hwang@skyarc-sample.test` | A sample parent | "Coming to the app" |
+| `jiyeon.hwang@skyarc-sample.test` | A sample parent | The family's tabs, with her two children |
+| `seoyeon.lim@skyarc-sample.test` | A sample student (her parent has a login too; a shared report) | The family's tabs, her own |
 
 There is no Google sign-in on the practice copy.
 
@@ -163,15 +183,18 @@ emulator, against the practice copy:
 
 - `dev-connect.yaml` (development builds): opens the development server on `PORT` from Expo's launcher, accepts "Open
   in “Sky Arc”?", and puts away the developer menu.
-- `sign-in.yaml`: signs in with `EMAIL` and `PASSWORD` (the practice owner) and waits for Today.
+- `sign-in.yaml`: signs in with `EMAIL` and `PASSWORD` (the practice owner) and waits for Home (the staff's or the family's).
 - `today.yaml`, `schedule.yaml`, `students.yaml`, `more.yaml`: each tab and the screens that open from it (a class's
   sheet, a student's page and a file, the coaches and a coach's sheet). They change nothing.
 - `scan.yaml` (iPhone only for now): a made-up card that `npm run phone:test` draws (`scripts/practice-card.ts`, all
   tens) and puts in the simulator's Photos first, chosen in Scan, read, checked up close and saved for a sample student
   as a prone card. It adds that paper result and the card's copy to the practice copy.
+- `family.yaml`: signs out, in as the sample parent (two children), then Home (the child switcher, a class's sheet),
+  Classes (upcoming and past), Reports (a report with its shots played back) and More (the delete-account dialog,
+  opened and canceled), and back in as the owner. It changes nothing but the report's "Viewed".
 - `screenshots/tab.yaml`: opens the tab `TAB` for the stores' screenshots (`npm run publish:screenshots`).
 - `steps/`: steps the flows run, not tests of their own: `tab.yaml` opens a tab (`TAB` and its name `LABEL`),
-  `back.yaml` goes back a page.
+  `family-tab.yaml` one of the family's, `back.yaml` goes back a page.
 
 With `npm run iphone:sim` (or `android:sim`) running in one window, run `npm run phone:test` in another. It signs the
 app out, runs `dev-connect.yaml` and `sign-in.yaml`, then every other flow in `maestro/` (or those named:
@@ -186,7 +209,7 @@ app.config.ts          native configuration: ids, version and build (release.jso
 metro.config.js        builds ../shared into the app (imported as @shared/...)
 firebase/emulator/     keyless Firebase files for builds that only talk to the emulators (project demo-skyarc)
 src/app/               screens (Expo Router): sign-in, forgot-password, verify-email; (app)/ with the staff's tabs and
-                       the screens over them, coming-soon, no-access
+                       the family's, the screens over them, and no-access
 src/state/             Auth, Branch (the academy) and Appearance providers
 src/features/<area>/   each area's data hooks and components
 src/components/        the shared building blocks, in the website's neutral look, light and dark; brand/ the logos

@@ -17,7 +17,7 @@ import { compensationRef } from '@/features/employees/api'
 import { useDoc } from '@/lib/firestore'
 import { type MyDetails, saveMyDetails } from '../api'
 import { NOT_LINKED, useMyStaff } from '../hooks'
-import { SectionTitle } from './parts'
+import { SectionTitle } from '@/features/profile/ProfileLayout'
 
 /** Profile → Account details: the contact details the coach keeps up to date, and what the center has on file. */
 export function AccountSection() {

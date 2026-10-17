@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { useBranch } from '@/branch/BranchProvider'
 import { PasswordDialog, SignInMethodsList } from '@/components/app/SignInSecurity'
 import { Button } from '@/components/ui/button'
-import { SectionTitle } from './parts'
+import { SectionTitle } from './ProfileLayout'
 
 /** Profile → Sign-in & security: how the account signs in, its password, and signing out. */
 export function SecuritySection() {

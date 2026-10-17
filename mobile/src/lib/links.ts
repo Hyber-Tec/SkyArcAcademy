@@ -1,5 +1,5 @@
 import * as WebBrowser from "expo-web-browser";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import { env } from "./env";
 import { toast } from "./toast";
 
@@ -16,6 +16,19 @@ export async function openUrl(url: string): Promise<void> {
     toast.error("Couldn’t open the page", { description: url });
   }
 }
+
+/** An address in the phone's maps app (Apple Maps on an iPhone, the map app on Android). */
+export async function openMap(address: string): Promise<void> {
+  const q = encodeURIComponent(address.trim());
+  try {
+    await Linking.openURL(Platform.OS === "ios" ? `https://maps.apple.com/?q=${q}` : `geo:0,0?q=${q}`);
+  } catch {
+    toast.error("Couldn’t open the map", { description: address });
+  }
+}
+
+/** A website as the academy typed it ("skyarcacademy.com"), as a link. */
+export const webLink = (site: string) => (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`);
 
 /** A phone number, digits and a leading + only, for tel: and sms: links. */
 const dialable = (phone: string) => phone.replace(/[^\d+]/g, "");

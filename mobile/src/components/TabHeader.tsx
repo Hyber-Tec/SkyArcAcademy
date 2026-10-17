@@ -6,7 +6,7 @@ import { space } from "@/theme";
 
 /**
  * A tab's title at the very top of its page, where the phone's large title would be but without the empty bar above it
- * (owner, 2026-10-17: use the space), as Today's greeting sits; an action (a button) on its right.
+ * (owner, 2026-10-17: use the space), as Home's greeting sits; an action (a button) on its right.
  */
 export function TabHeader({ title, right, testID }: { title: string; right?: ReactNode; testID?: string }) {
   return (

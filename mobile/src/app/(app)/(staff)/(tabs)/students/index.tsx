@@ -11,34 +11,30 @@ import { SearchField } from "@/components/SearchField";
 import { SkeletonCards } from "@/components/Skeleton";
 import { StatusBarScrim, TabHeader } from "@/components/TabHeader";
 import { T } from "@/components/Text";
-import { useStudentList, useTaughtStudentIds } from "@/features/data/hooks";
-import { useBranch } from "@/state/BranchProvider";
+import { useStudentList } from "@/features/data/hooks";
 import { studentLine } from "@/features/students/format";
 import { space, useColors } from "@/theme";
 
-type Show = "mine" | "active" | "all";
+type Show = "all" | "active";
 
 /**
- * Every student, by name, with a search field at the top: the current ones by default, everyone with "All". A coach
- * starts with their own students (classes in the last 90 days or coming), as on the website. A student opens their
- * page: classes, scores and Drive files (and, for the office, the family's contacts).
+ * Every student, by name, with a search field at the top: everyone at first ("All", for the office and coaches alike:
+ * the owner, 2026-10-17), the current ones with "Current". A student opens their page: classes, scores and Drive files
+ * (and, for the office, the family's contacts).
  */
 export default function StudentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isCoach } = useBranch();
   const students = useStudentList();
-  const taught = useTaughtStudentIds();
   const [query, setQuery] = useState("");
-  const [show, setShow] = useState<Show>(isCoach ? "mine" : "active");
+  const [show, setShow] = useState<Show>("all");
   const current = useMemo(() => students.data.filter((s) => !isInactiveStudent(s.status)), [students.data]);
-  const mine = useMemo(() => (taught ? students.data.filter((s) => taught.has(s.id)) : []), [students.data, taught]);
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = show === "mine" ? mine : show === "active" ? current : students.data;
+    const base = show === "active" ? current : students.data;
     return q ? base.filter((s) => (s.nameLower ?? s.name.toLowerCase()).includes(q) || s.name.toLowerCase().includes(q)) : base;
-  }, [students.data, current, mine, show, query]);
-  const loading = students.loading || (show === "mine" && !taught);
+  }, [students.data, current, show, query]);
+  const loading = students.loading;
 
   return (
     <View style={[styles.fill, { backgroundColor: colors.grouped }]}>
@@ -59,9 +55,8 @@ export default function StudentsScreen() {
               value={show}
               onChange={setShow}
               options={[
-                ...(isCoach ? [{ value: "mine" as const, label: "Mine", count: mine.length, testID: "students-filter-mine" }] : []),
-                { value: "active", label: "Current", count: current.length, testID: "students-filter-active" },
                 { value: "all", label: "All", count: students.data.length, testID: "students-filter-all" },
+                { value: "active", label: "Current", count: current.length, testID: "students-filter-active" },
               ]}
               testID="students-filter"
             />
@@ -75,16 +70,8 @@ export default function StudentsScreen() {
             <EmptyState
               testID="students-empty"
               icon={<UsersRound size={26} color={colors.mutedForeground} />}
-              title={query ? "No student by that name" : show === "mine" ? "No classes yet" : "No students yet"}
-              text={
-                query
-                  ? show === "all"
-                    ? "Check the spelling."
-                    : "Try “All” to include everyone."
-                  : show === "mine"
-                    ? "Students show here once you have classes with them. “All” shows every student."
-                    : "Students are added on the website."
-              }
+              title={query ? "No student by that name" : "No students yet"}
+              text={query ? (show === "all" ? "Check the spelling." : "Try “All” to include former students.") : "Students are added on the website."}
             />
           )
         }

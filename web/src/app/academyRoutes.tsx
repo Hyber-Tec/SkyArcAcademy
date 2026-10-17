@@ -72,8 +72,10 @@ const adminRoutes: RouteObject[] = [
 ]
 
 const coachRoutes: RouteObject[] = [
-  { index: true, element: <Navigate to="today" replace /> },
-  { path: 'today', lazy: page(() => import('@/features/coach/today/CoachTodayPage'), 'CoachTodayPage') },
+  { index: true, element: <Navigate to="home" replace /> },
+  { path: 'home', lazy: page(() => import('@/features/coach/home/CoachHomePage'), 'CoachHomePage') },
+  // The first page was "Today" until 2026-10-17.
+  { path: 'today', element: <Navigate to="/coach/home" replace /> },
   { path: 'announcements', lazy: page(() => import('@/features/announcements/AnnouncementsPage'), 'CoachAnnouncementsPage') },
   { path: 'announcements/:announcementId', lazy: page(() => import('@/features/announcements/AnnouncementsPage'), 'CoachAnnouncementPostPage') },
   { path: 'schedule', lazy: page(() => import('@/features/schedule/CoachSchedulePage'), 'CoachSchedulePage') },
@@ -92,29 +94,38 @@ const coachRoutes: RouteObject[] = [
       { index: true, lazy: page(() => import('@/features/coach/profile/ProfilePage'), 'ProfileIndex') },
       { path: 'account', lazy: page(() => import('@/features/coach/profile/AccountSection'), 'AccountSection') },
       { path: 'notifications', lazy: page(() => import('@/features/coach/profile/NotificationsSection'), 'NotificationsSection') },
-      { path: 'security', lazy: page(() => import('@/features/coach/profile/SecuritySection'), 'SecuritySection') },
-      { path: 'appearance', lazy: page(() => import('@/features/coach/profile/AppearanceSection'), 'AppearanceSection') },
+      { path: 'security', lazy: page(() => import('@/features/profile/SecuritySection'), 'SecuritySection') },
+      { path: 'appearance', lazy: page(() => import('@/features/profile/AppearanceSection'), 'AppearanceSection') },
       { path: '*', element: <Navigate to="/coach/profile" replace /> },
     ],
   },
-  { path: '*', element: <Navigate to="/coach/today" replace /> },
+  { path: '*', element: <Navigate to="/coach/home" replace /> },
 ]
 
-const parentRoutes: RouteObject[] = [
-  { index: true, element: <Navigate to="home" replace /> },
-  { path: 'home', lazy: page(() => import('@/features/family/FamilyPages'), 'ParentHomePage') },
-  { path: 'reports', lazy: page(() => import('@/features/family/ReportsPages'), 'ParentReportsPage') },
-  { path: '*', element: <Navigate to="/parent/home" replace /> },
-]
-
-const studentRoutes: RouteObject[] = [
-  { index: true, element: <Navigate to="home" replace /> },
-  { path: 'home', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentHomePage') },
-  { path: 'calendar', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentPortalCalendarPage') },
-  { path: 'profile', lazy: page(() => import('@/features/family/FamilyPages'), 'StudentInfoPage') },
-  { path: 'reports', lazy: page(() => import('@/features/family/ReportsPages'), 'StudentReportsPage') },
-  { path: '*', element: <Navigate to="/student/home" replace /> },
-]
+/** Parents and students share one portal design: Home, Classes, Reports and Profile (a parent sees their children). */
+function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
+  return [
+    { index: true, element: <Navigate to="home" replace /> },
+    { path: 'home', lazy: page(() => import('@/features/family/HomePage'), 'FamilyHomePage') },
+    { path: 'classes', lazy: page(() => import('@/features/family/ClassesPage'), 'FamilyClassesPage') },
+    { path: 'reports', lazy: page(() => import('@/features/family/ReportsPage'), 'FamilyReportsPage') },
+    {
+      path: 'profile',
+      lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyProfilePage'),
+      children: [
+        { index: true, lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyProfileIndex') },
+        { path: 'account', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyAccountSection') },
+        { path: 'security', lazy: page(() => import('@/features/profile/SecuritySection'), 'SecuritySection') },
+        { path: 'appearance', lazy: page(() => import('@/features/profile/AppearanceSection'), 'AppearanceSection') },
+        { path: 'help', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyHelpSection') },
+        { path: '*', element: <Navigate to={`/${portal}/profile`} replace /> },
+      ],
+    },
+    // Addresses of the pages these replaced (the student's Calendar and My Info, until 2026-10-17).
+    { path: 'calendar', element: <Navigate to={`/${portal}/classes?view=month`} replace /> },
+    { path: '*', element: <Navigate to={`/${portal}/home`} replace /> },
+  ]
+}
 
 /**
  * Every signed-in page of the academy. Sky Arc is one academy: the portals sit at the top of the site (`/admin`,
@@ -157,7 +168,7 @@ export const academyRoute: RouteObject = {
           <PortalLayout portal="parent" />
         </RequirePortal>
       ),
-      children: parentRoutes,
+      children: familyRoutes('parent'),
     },
     {
       path: '/student',
@@ -166,7 +177,7 @@ export const academyRoute: RouteObject = {
           <PortalLayout portal="student" />
         </RequirePortal>
       ),
-      children: studentRoutes,
+      children: familyRoutes('student'),
     },
     {
       path: '/kiosk',

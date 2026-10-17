@@ -108,7 +108,7 @@ export function CoachSchedulePage() {
       </div>
     ) : null
 
-  // Computers: links with ?date= (notifications, Today's week) bring that day into view once it's drawn.
+  // Computers: links with ?date= (notifications, Home's week) bring that day into view once it's drawn.
   const scrolledTo = useRef<string | null>(null)
   useEffect(() => {
     if (isMobile || !dateParam || !isDateKey(dateParam) || scrolledTo.current === dateParam) return

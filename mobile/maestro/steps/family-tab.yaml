@@ -1,0 +1,21 @@
+# A step the flows run (not a test of its own): opens one tab of the family's app. TAB is home, classes, reports or
+# more, and LABEL its name on the tab bar.
+#   - runFlow:
+#       file: steps/family-tab.yaml
+#       env: { TAB: reports, LABEL: Reports }
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "family-tab-${TAB}"
+# On Android Maestro can't see a tab's test id: there the tab is its name on the tab bar, Material's label view.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "${LABEL}"
+          id: ".*navigation_bar_item_(large|small)_label_view"

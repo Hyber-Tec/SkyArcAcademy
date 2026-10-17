@@ -7,8 +7,8 @@ import { useColors } from "@/theme";
 /**
  * The signed-in app. The academy's member doc for the person's email decides (BranchProvider): none yet → No access;
  * paused → paused; otherwise the part of their one role. Owners, admins and coaches get the staff's tabs (each sees what
- * the rules give their role); parents and students are told their part comes to the app later, with a way to the
- * website meanwhile.
+ * the rules give their role); parents and students get the family's (their children's or their own classes and shared
+ * progress reports).
  */
 export default function AppLayout() {
   const colors = useColors();
@@ -21,7 +21,7 @@ export default function AppLayout() {
           {/* Without access to the academy, nothing else opens, a link included. */}
           <Stack.Protected guard={false}>
             <Stack.Screen name="(staff)" />
-            <Stack.Screen name="coming-soon" />
+            <Stack.Screen name="(family)" />
           </Stack.Protected>
         </Stack>
       }
@@ -41,7 +41,7 @@ function PortalStack() {
         <Stack.Screen name="(staff)" />
       </Stack.Protected>
       <Stack.Protected guard={!isStaff}>
-        <Stack.Screen name="coming-soon" />
+        <Stack.Screen name="(family)" />
       </Stack.Protected>
       <Stack.Protected guard={false}>
         <Stack.Screen name="no-access" />

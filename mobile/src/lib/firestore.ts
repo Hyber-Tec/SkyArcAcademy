@@ -10,9 +10,9 @@ export interface DocState<T> {
   fromServer: boolean;
 }
 
-const MAX_RETRIES = 3;
+export const MAX_RETRIES = 3;
 
-function isRetryable(error: unknown): boolean {
+export function isRetryable(error: unknown): boolean {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
   return /permission-denied|unauthenticated|unavailable/.test(code);
 }
@@ -23,7 +23,7 @@ function isRetryable(error: unknown): boolean {
  * only in a new token.)
  */
 let refreshingToken: Promise<unknown> | null = null;
-function refreshTokenOnce(): void {
+export function refreshTokenOnce(): void {
   refreshingToken ??= (auth.currentUser?.getIdToken(true) ?? Promise.resolve())
     .catch(() => undefined)
     .finally(() => {

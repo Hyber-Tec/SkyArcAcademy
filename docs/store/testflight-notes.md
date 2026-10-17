@@ -30,7 +30,7 @@ BEFORE YOU START
 - When Scan asks for the camera, allow it (it's only for paper targets).
 
 PLEASE TRY
-1. Today: are today's classes right, in the academy's time? (Coaches see their own.)
+1. Home: are today's classes right, in the academy's time? (Coaches see their own.)
 2. Schedule: another day and week; open a class and call or text its coach.
 3. Scan: photograph a paper target flat and whole, or choose a photo of one. Are the scores right? Save it for the student, then find it in their files.
 4. Students: search for a student; open their classes, scores and a file (the office also sees the family's contacts). Open a score and correct it.

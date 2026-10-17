@@ -157,6 +157,8 @@ const STUDENTS: SampleStudent[] = [
 const MOTHERS = ['Jiyeon', 'Sunhee', 'Eunji', 'Laura', 'Karen', 'Rachel', 'Megan', 'Julie']
 const FATHERS = ['Hyunwoo', 'Sungmin', 'Minho', 'Michael', 'Brian', 'Steven', 'Mark']
 const PARENT_LOGINS = new Set(['hwang', 'jang', 'tak', 'seoyeon-lim', 'isaac-brooks', 'grace-ellis', 'sophie-novak'])
+/** Older students with a sign-in of their own (the student portal): one whose parent also has one, one without. */
+const STUDENT_LOGINS = new Set(['arin-tak', 'seoyeon-lim', 'elijah-hayes'])
 const SCHOOLS = ['North Ridge Middle School', 'Lakeview High School', 'Maple Creek Middle School', 'Summit Oaks High School', 'Brookside Elementary School']
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -481,6 +483,18 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     if (!parent || !kids.length) continue
     add(`${COL.members}/${parent.email}`, {
       ...newMemberData({ email: parent.email, displayName: parent.name, role: 'parent', studentIds: kids.map((k) => sampleStudentId(k.key)), createdBy: SAMPLE_AUTHOR }),
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+
+  // Student sign-ins: their own email, linked to their own record.
+  for (const key of STUDENT_LOGINS) {
+    const s = STUDENTS.find((x) => x.key === key)
+    if (!s) continue
+    const email = sampleEmail(s.first, s.last)
+    add(`${COL.members}/${email}`, {
+      ...newMemberData({ email, displayName: `${s.first} ${s.last}`, role: 'student', studentId: sampleStudentId(s.key), createdBy: SAMPLE_AUTHOR }),
       createdAt: now,
       updatedAt: now,
     })

@@ -10,8 +10,6 @@ import {
   LuMegaphone,
   LuSettings,
   LuShieldCheck,
-  LuSun,
-  LuUser,
   LuUserCog,
   LuUsers,
   LuWallet,
@@ -78,12 +76,12 @@ export const ADMIN_NAV: PortalNav = {
 }
 
 /**
- * The coach portal: the same five places as the phone app (Today, Schedule, Availability, News, Profile), plus
+ * The coach portal: the same five places as the phone app (Home, Schedule, Availability, News, Profile), plus
  * students and pay. Profile holds the person's own pages (account, notifications, sign-in, appearance).
  */
 export const COACH_NAV: PortalNav = {
   main: [
-    { key: 'today', label: 'Today', to: 'today', icon: LuSun },
+    { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
@@ -94,7 +92,7 @@ export const COACH_NAV: PortalNav = {
   ],
   secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
   mobileTabs: [
-    { key: 'today', label: 'Today', to: 'today', icon: LuSun },
+    { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'News', to: 'announcements', icon: LuMegaphone },
@@ -102,35 +100,30 @@ export const COACH_NAV: PortalNav = {
   ],
 }
 
-export const PARENT_NAV: PortalNav = {
-  main: [
-    { key: 'home', label: 'Upcoming Classes', to: 'home', icon: LuCalendarDays },
-    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
-  ],
-  secondary: [],
-}
-
-export const STUDENT_NAV: PortalNav = {
+/**
+ * Parents and students: one portal design, the same four places (a parent sees their children, a student
+ * themself). Profile holds the person's own pages (account, sign-in, appearance, contact and help).
+ */
+export const FAMILY_NAV: PortalNav = {
   main: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
-    { key: 'calendar', label: 'Calendar', to: 'calendar', icon: LuCalendarDays },
+    { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
-    { key: 'profile', label: 'My Info', to: 'profile', icon: LuUser },
   ],
-  secondary: [],
+  secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
   mobileTabs: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
-    { key: 'calendar', label: 'Calendar', to: 'calendar', icon: LuCalendarDays },
+    { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
-    { key: 'profile', label: 'My Info', to: 'profile', icon: LuUser },
+    { key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound },
   ],
 }
 
 export const PORTAL_NAV: Record<Portal, PortalNav> = {
   admin: ADMIN_NAV,
   coach: COACH_NAV,
-  parent: PARENT_NAV,
-  student: STUDENT_NAV,
+  parent: FAMILY_NAV,
+  student: FAMILY_NAV,
 }
 
 /** Flattened leaves, for page titles and access checks. */
