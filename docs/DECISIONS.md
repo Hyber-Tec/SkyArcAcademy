@@ -248,6 +248,32 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
 - **Saved as:** the card itself, flattened and cropped like a scan, in the student's Drive folder
   (`YYYY-MM-DD Position paper card.jpg`), and its scores as a paper result with each shot's place on the target. The
   reports and the website's target pictures draw scanned shots and measure their group, as for SIUS results.
-- **Publishing (Claude's recommendation):** a public listing, from the academy's own Apple developer account; unlisted
-  only if Apple asks for it, since a public app can become unlisted but never the other way round. Why, and the steps:
-  [docs/publishing.md](publishing.md#public-or-unlisted).
+- **Publishing:** a public listing; unlisted only if Apple asks for it, since a public app can become unlisted but never
+  the other way round. Whose account: decided in §11.
+
+## 11. The phone app, after Goo tried it on their iPhone (2026-10-16)
+
+- **Publishing (Goo):** the app goes out under **HyberTec LLC's own Apple developer account**, as a **public** listing
+  anyone can download, not under an account of the academy's. Apple allows it; to be ready for its review, a letter
+  from the academy licensing its name and logo to HyberTec (guideline 5.2.1), and review notes that say who builds and
+  runs the app (4.2.6, 4.3). Steps: [docs/publishing.md](publishing.md#public-or-unlisted).
+- **Checking a card:** pinch to zoom into the card and into a bull; a shot is held and dragged onto its hole (its
+  circle is the pellet's size at every zoom, and its score follows as it moves); a tap places a missing one.
+- **Close calls get a look:** a hole that touches a ring's line by less than 0.35 mm is marked to check, with the reason
+  ("the hole touches the 8 ring's line by 0.22 mm, so ISSF counts 8; by eye it may look like 7"). This is where the app
+  and the coaches differ most (one sample card: 80 by the gauge, 77 by the coach); A15 still asks which way the
+  academy scores.
+- **Saving is instant:** the card's scores are kept on the phone at once (the server confirms them), and the card's copy
+  uploads in the background. It waits in the app's own files until the Drive has it, so closing the app or losing the
+  connection only delays it (the app tries again when it opens); a copy the Drive refuses says so in a message, and
+  its file shows "Upload failed" in the Drive.
+- **A score opens its own screen** on the phone (from the student's page): its total, group and where the group sits,
+  its shots played back one by one, and what can be changed. A scanned card comes back as it was checked, on the
+  card's picture, to move, add or remove shots bull by bull; a typed card takes new scores; the position, the date
+  (paper) and the coach's note change; Save keeps the changes, and leaving asks first. A SIUS result's scores stay as
+  its PDF gives them, as on the website. A score is deleted from its screen, by swiping its row to the left, or by
+  holding the row (Open, Delete); its file stays in the Drive.
+- **Shots played back:** a result's shots appear on one target one by one in the order they were fired (the newest in
+  amber with its number, earlier ones in the position's colour), with the shot, its score and the running total under
+  it; play, pause, step and play again. On the phone's score screen and the website's score details, and later in the
+  reports that compare results.

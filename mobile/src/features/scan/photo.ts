@@ -1,7 +1,7 @@
 import { AlphaType, ColorType, FilterMode, ImageFormat, MipmapMode, Skia, type SkImage } from "@shopify/react-native-skia";
-import { CARD_EDGES_MM } from "@shared/targets/card";
-import { type Mat3, invert3, multiply3 } from "@shared/targets/geometry";
-import { type CardScan, scanCard } from "@shared/targets/scan";
+import { CARD_BULLS, CARD_EDGES_MM, bullCentreMm } from "@shared/targets/card";
+import { type Mat3, type Vec, invert3, multiply3 } from "@shared/targets/geometry";
+import { type CardScan, type ScannedBull, scanCard } from "@shared/targets/scan";
 import { Directory, File, Paths } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 
@@ -53,6 +53,11 @@ export async function readPhoto(source: string, shotsPerBull: number | "auto" = 
 export const FLAT = { marginMm: 4, pxPerMm: 6 } as const;
 const FLAT_LEFT = CARD_EDGES_MM.left - FLAT.marginMm;
 const FLAT_TOP = CARD_EDGES_MM.top - FLAT.marginMm;
+/** The flattened card's size in pixels: the Drive's copy of a scanned card is exactly this. */
+export const FLAT_SIZE = {
+  width: Math.round((CARD_EDGES_MM.right - CARD_EDGES_MM.left + 2 * FLAT.marginMm) * FLAT.pxPerMm),
+  height: Math.round((CARD_EDGES_MM.bottom - CARD_EDGES_MM.top + 2 * FLAT.marginMm) * FLAT.pxPerMm),
+} as const;
 
 export interface FlatCard {
   image: SkImage;
@@ -65,13 +70,20 @@ export function flatPoint(xMm: number, yMm: number): { x: number; y: number } {
   return { x: (xMm - FLAT_LEFT) * FLAT.pxPerMm, y: (yMm - FLAT_TOP) * FLAT.pxPerMm };
 }
 
+/** Where record bull `n` is on the flattened card, as a review places it (its centre, and a millimetre's pixels). */
+export function flatBull(n: number): { center: Vec; axes: ScannedBull["axes"] } | null {
+  const cb = CARD_BULLS.find((b) => b.kind === "record" && b.n === n);
+  if (!cb) return null;
+  const c = bullCentreMm(cb);
+  return { center: flatPoint(c.x, c.y), axes: [FLAT.pxPerMm, 0, 0, FLAT.pxPerMm] };
+}
+
 /** The card flattened and cropped as a scanner would give it, through the scan's perspective; null without a card. */
 export function flattenCard(read: ReadPhoto): FlatCard | null {
   const H = read.scan.cardToImage;
   const toCard = H ? invert3(H) : null;
   if (!toCard) return null;
-  const width = Math.round((CARD_EDGES_MM.right - CARD_EDGES_MM.left + 2 * FLAT.marginMm) * FLAT.pxPerMm);
-  const height = Math.round((CARD_EDGES_MM.bottom - CARD_EDGES_MM.top + 2 * FLAT.marginMm) * FLAT.pxPerMm);
+  const { width, height } = FLAT_SIZE;
   // Photo pixels → card millimetres → the flat card's pixels.
   const k = FLAT.pxPerMm;
   const toFlat: Mat3 = [k, 0, -FLAT_LEFT * k, 0, k, -FLAT_TOP * k, 0, 0, 1];

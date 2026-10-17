@@ -49,7 +49,7 @@ Privacy: PRIVACY POLICY ADDRESS
 
 **Support URL:** `https://skyarcacademy.com`
 **Marketing URL:** `https://skyarcacademy.com`
-**Copyright:** `2026 HyberTec LLC` (or the academy, if it publishes the app under its own account).
+**Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app: [docs/publishing.md](../publishing.md), "Public or unlisted").
 **Category:** Sports; secondary Education.
 **What's New** (first version): `First release.`
 

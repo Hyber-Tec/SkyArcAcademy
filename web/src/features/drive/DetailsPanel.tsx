@@ -3,11 +3,12 @@ import { Link } from 'react-router'
 import { categoryOf } from '@shared/drive/files'
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated } from '@shared/drive/model'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from '@shared/shooting/evaluation'
+import { canReplay } from '@shared/shooting/replay'
 import { formatDateKey, formatInstant, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useStudentList } from '@/features/data/hooks'
-import { TargetPlot } from '@/features/scores/TargetPlot'
+import { ShotReplay } from '@/features/scores/ShotReplay'
 import { FileGlyph, FolderGlyph, PersonChip, updatedText } from './parts'
 
 const CATEGORY: Record<string, string> = { pdf: 'PDF', image: 'Photo', document: 'Document', spreadsheet: 'Spreadsheet', presentation: 'Presentation', video: 'Video', text: 'Text', other: 'File' }
@@ -80,11 +81,7 @@ export function DetailsPanel({ index, folderId, selected, scoresByFile }: { inde
         <Header icon={<FileGlyph kind={f.kind} />} name={f.name} />
         {e ? (
           <div className="space-y-3 rounded-lg border p-3">
-            {e.source === 'sius' ? (
-              <div className="flex justify-center">
-                <TargetPlot shots={e.series.flatMap((s) => s.shots)} size={176} color={POSITION_COLORS[e.position]} />
-              </div>
-            ) : null}
+            {canReplay(e) ? <ShotReplay key={e.id} evaluation={e} color={POSITION_COLORS[e.position]} size={176} className="mx-auto" /> : null}
             <dl className="grid grid-cols-2 gap-3">
               <Row label="Position">{POSITION_LABELS[e.position]}</Row>
               <Row label="Shot">{`${formatDateKey(e.dateKey, 'medium')}${e.timeMin !== null ? `, ${formatMinutes(e.timeMin)}` : ''}`}</Row>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { evaluationPoints, paperEvaluation, per10, shotGroup, shotTotals } from './evaluation'
-import { groupSizeMm, meanPoint, offsetWords, radiusFromScore, ringRadiusMm, shotPoint, wholeScore } from './target'
+import { canReplay, replayShots, replayStepMs } from './replay'
+import { groupSizeMm, meanPoint, offsetWords, radiusFromScore, ringRadiusMm, shotPoint, targetViewMm, wholeScore } from './target'
 
 describe('the 10 m air rifle target', () => {
   it('places shots from their score and direction', () => {
@@ -58,6 +59,31 @@ describe('evaluations', () => {
     expect(card.mpi).toEqual({ x: 0, y: 1.5 })
     expect(card.groupMm).toBe(8.1)
     expect(evaluationPoints(card)).toEqual([{ x: 1, y: 0 }, { x: -1, y: 3 }])
+  })
+
+  it('plays a result back shot by shot, with the running total', () => {
+    const card = paperEvaluation({ studentId: 's', studentName: 'S', position: 'prone', dateKey: '2026-10-01', shots: [{ v: 10, x: 1, y: 0 }, 9, { v: 8, x: 0, y: -6 }], total: null, fileId: null, note: '' })
+    expect(replayShots(card)).toEqual([
+      { n: 1, series: null, value: 10, point: { x: 1, y: 0 }, running: 10 },
+      { n: 2, series: null, value: 9, point: null, running: 19 },
+      { n: 3, series: null, value: 8, point: { x: 0, y: -6 }, running: 27 },
+    ])
+    expect(canReplay(card)).toBe(true)
+    expect(canReplay(paperEvaluation({ studentId: 's', studentName: 'S', position: 'prone', dateKey: '2026-10-01', shots: [10, 9], total: null, fileId: null, note: '' }))).toBe(false)
+    // About twelve seconds for a whole result, never rushed nor slow.
+    expect([10, 20, 40, 60].map(replayStepMs)).toEqual([700, 600, 300, 250])
+  })
+
+  it('zooms a target picture to the shots', () => {
+    const full = ringRadiusMm(1) + 1.5
+    // A tight group: no closer in than the 5 ring.
+    expect(targetViewMm([{ x: 1, y: 1 }], 300)).toBe(ringRadiusMm(5) + 1)
+    // Out to the farthest shot, with its pellet.
+    expect(targetViewMm([{ x: 0, y: -16 }], 300)).toBeCloseTo(16 + 2.25 + 0.8)
+    // The whole target: asked for, a shot near the edge, or a small picture.
+    expect(targetViewMm([{ x: 1, y: 1 }], 300, 'full')).toBe(full)
+    expect(targetViewMm([{ x: 22, y: 0 }], 300)).toBe(full)
+    expect(targetViewMm([{ x: 1, y: 1 }], 100)).toBe(full)
   })
 })
 

@@ -115,6 +115,12 @@ export function useStudentEvaluations(studentId: string | null) {
   return { ...state, data };
 }
 
+/** One scored target (a SIUS result or a paper card). */
+export function useEvaluation(id: string | null) {
+  const { branchId } = useBranch();
+  return useDoc<Evaluation>(id ? `${ROOT.branches}/${branchId}/${COL.evaluations}/${id}` : null);
+}
+
 const millis = (t: { toMillis?: () => number } | null | undefined) => t?.toMillis?.() ?? 0;
 
 /** The files in a student's Drive folder (at any depth), Trash left out, newest first. */
