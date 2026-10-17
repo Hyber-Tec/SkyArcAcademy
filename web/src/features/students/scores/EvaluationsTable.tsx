@@ -3,6 +3,7 @@ import { LuChevronDown, LuChevronRight, LuFileText, LuPencil, LuTrash2 } from 'r
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { type Evaluation, POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition, per10 } from '@shared/shooting/evaluation'
+import { canReplay } from '@shared/shooting/replay'
 import { offsetWords } from '@shared/shooting/target'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -19,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { one } from '@/features/reports/model'
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from '@/features/scores/api'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
-import { TargetPlot } from '@/features/scores/TargetPlot'
+import { ShotReplay } from '@/features/scores/ShotReplay'
 import { cn } from '@/lib/utils'
 
 /** The student's evaluations, newest first; a row opens to the target, the series and any notes. */
@@ -138,15 +139,10 @@ export function EvaluationsTable({ evaluations, mode }: { evaluations: WithId<Ev
 }
 
 function Details({ e, mode }: { e: WithId<Evaluation>; mode: 'admin' | 'coach' }) {
-  const directions = e.series.some((s) => s.shots.some((t) => t.a !== null))
   const where = offsetWords(e.mpi)
   return (
     <div className="flex flex-col gap-4 sm:flex-row">
-      {directions ? (
-        <div className="shrink-0 self-center rounded-xl bg-white p-1">
-          <TargetPlot shots={e.series.flatMap((s) => s.shots)} size={150} color={POSITION_COLORS[e.position]} highlightLast />
-        </div>
-      ) : null}
+      {canReplay(e) ? <ShotReplay key={e.id} evaluation={e} color={POSITION_COLORS[e.position]} size={168} highlightLast className="shrink-0 self-center" /> : null}
       <div className="min-w-0 flex-1 space-y-2 text-sm">
         {e.series.length ? (
           <ul className="space-y-1">

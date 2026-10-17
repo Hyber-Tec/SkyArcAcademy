@@ -62,6 +62,17 @@ export function groupSizeMm(points: readonly ShotPoint[]): number | null {
   return round1(widest + PELLET_MM)
 }
 
+/**
+ * How far from the centre a picture of the target reaches (mm), so a tight group is still easy to read: out to the
+ * farthest shot, never closer in than the 5 ring, and the whole target with `full` or on a small picture (under
+ * 120 px, where rings that close would be too small to tell apart).
+ */
+export function targetViewMm(points: readonly ShotPoint[], sizePx: number, zoom: 'auto' | 'full' = 'auto'): number {
+  const farthest = points.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.y)), 0) + PELLET_MM / 2 + 0.8
+  const full = ringRadiusMm(1) + 1.5
+  return zoom === 'full' || sizePx < 120 ? full : Math.min(full, Math.max(ringRadiusMm(5) + 1, farthest))
+}
+
 /** Whole-number score of a decimal shot (10.4 → 10, 9.9 → 9). */
 export function wholeScore(value: number): number {
   return Math.floor(value + 1e-9)
