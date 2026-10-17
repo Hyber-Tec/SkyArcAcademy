@@ -1,5 +1,6 @@
-import { POSITIONS, POSITION_LABELS, type Position } from "@shared/shooting/evaluation";
-import { type CardReview, changeShotsPerBull, reviewTotals, startReview, typedReview } from "@shared/targets/review";
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, paperEvaluation } from "@shared/shooting/evaluation";
+import { canReplay } from "@shared/shooting/replay";
+import { type CardReview, changeShotsPerBull, reviewShots, reviewTotals, startReview, typedReview } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
@@ -24,17 +25,22 @@ import { lastChoices } from "@/features/scan/choices";
 import { type CardFile, type FlatCard, type ReadPhoto, cardFile, flattenCard, readPhoto } from "@/features/scan/photo";
 import { knowFolder, saveCard } from "@/features/scan/save";
 import { type PickedStudent, StudentPicker } from "@/features/scan/StudentPicker";
+import { ShotReplay } from "@/features/scores/ShotReplay";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
 type Phase = { kind: "reading" } | { kind: "failed"; reason: string } | { kind: "review" } | { kind: "saving" };
 
+/** The shots' colour on the replay until a position is chosen (then the position's). */
+const UNSET_COLOR = "#6b7280";
+
 /**
  * A scanned card, checked and saved: the photos come from the camera or the library (`photos`, one or several, read
- * one after the other). Each is read (photo.ts), shown flattened with every bull's score, and saved once a person has
- * chosen who shot it, the position and the date: the card's copy goes to the student's Drive folder and its scores
- * become an evaluation, which the progress reports use.
+ * one after the other). Each is read (photo.ts) and shown as a score's screen shows it: the total, the shots played
+ * back one by one (at once), the card flattened with every bull's score to zoom into and correct bull by bull. It's
+ * saved once a person has chosen who shot it, the position and the date: the card's copy goes to the student's Drive
+ * folder and its scores become an evaluation, which the progress reports use.
  */
 export default function ScanReviewScreen() {
   const params = useLocalSearchParams<{ photos?: string; from?: string }>();
@@ -65,6 +71,8 @@ export default function ScanReviewScreen() {
   const [editing, setEditing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [choosingDate, setChoosingDate] = useState(false);
+  // The page holds still while a finger zooms or pans the card.
+  const [locked, setLocked] = useState(false);
   const uri = photos[index] ?? null;
   /** The card's copy for the Drive, made while the person checks the card (so Save doesn't wait for it). */
   const fileRef = useRef<{ read: ReadPhoto; file: CardFile } | null>(null);
@@ -113,14 +121,33 @@ export default function ScanReviewScreen() {
     if (student) void knowFolder(branchId, student.id);
   }, [student, branchId]);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace("/scan"));
-  const next = () => (index + 1 < photos.length ? setIndex(index + 1) : close());
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/scan"));
+  const next = () => (index + 1 < photos.length ? setIndex(index + 1) : leave());
+  // Closing loses a card read and not saved (and the photos after it): asked first.
+  const close = async () => {
+    const later = photos.length - index - 1;
+    if (phase.kind === "review" || phase.kind === "failed") {
+      const ok = await confirmAsync({
+        title: "Close without saving?",
+        message: `This card isn’t saved${later ? `, and the ${later === 1 ? "next photo isn’t" : `${later} photos after it aren’t`} read yet` : ""}.`,
+        confirmLabel: "Close",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    leave();
+  };
   const typeInstead = () => {
     setReview(typedReview(lastChoices.shotsPerBull ?? 1));
     setPhase({ kind: "review" });
   };
 
   const totals = review ? reviewTotals(review) : null;
+  // The card's shots as a result, for the replay (it follows every change made below).
+  const replay = useMemo(
+    () => (review ? paperEvaluation({ studentId: "", studentName: "", position: "standing", dateKey: today, shots: reviewShots(review), total: null, fileId: null, note: "" }) : null),
+    [review, today],
+  );
   const ready = !!review && !!student && !!position && phase.kind === "review";
 
   const save = async () => {
@@ -160,11 +187,18 @@ export default function ScanReviewScreen() {
         options={{
           title,
           headerLeft: () => (
-            <IconButton icon={<X size={22} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} testID="scan-review-close" />
+            <IconButton icon={<X size={22} color={colors.foreground} />} accessibilityLabel="Close" onPress={() => void close()} testID="scan-review-close" />
           ),
         }}
       />
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
+        // The note being typed stays above the keyboard; dragging the page down puts the keyboard away.
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive"
+        scrollEnabled={!locked}
+      >
         {phase.kind === "reading" || !uri ? (
           <Reading uri={uri} width={viewWidth} />
         ) : phase.kind === "failed" ? (
@@ -202,28 +236,38 @@ export default function ScanReviewScreen() {
           </Card>
         ) : review && read ? (
           <>
-            {flat ? (
-              <CardView image={flat.image} width={flat.width} height={flat.height} review={review} viewWidth={viewWidth} onBull={setEditing} />
-            ) : (
-              <Image
-                source={{ uri: read.uri }}
-                style={{ width: viewWidth, height: (viewWidth * read.height) / read.width, borderRadius: 12 }}
-                contentFit="contain"
-              />
-            )}
-            <View style={styles.totalRow}>
-              <T variant="title" testID="scan-total">
+            <Card style={styles.head}>
+              <T variant="display" testID="scan-total">
                 {totals?.total ?? 0}
                 <T variant="heading" tone="muted">
                   {" "}
                   / {(totals?.shots ?? 10) * 10}
                 </T>
               </T>
-              <T variant="small" tone={totals && (totals.toCheck || totals.missing) ? "warning" : "muted"} style={styles.totalNote}>
-                {totals && totals.toCheck ? `${totals.toCheck} ${totals.toCheck === 1 ? "bull" : "bulls"} to check: tap to look` : "Every bull looks right"}
+              <T variant="small" tone={totals && (totals.toCheck || totals.missing) ? "warning" : "muted"}>
+                {totals && totals.toCheck ? `${totals.toCheck} ${totals.toCheck === 1 ? "bull is" : "bulls are"} worth a look: tap ${totals.toCheck === 1 ? "it" : "them"} below` : "Every bull looks right"}
               </T>
-            </View>
-            <BullTiles review={review} onBull={setEditing} />
+            </Card>
+            {/* The shots played back as soon as the card is read; what's changed below shows here too. */}
+            {replay && canReplay(replay) ? (
+              <Card style={styles.center}>
+                <ShotReplay key={uri} evaluation={replay} color={position ? POSITION_COLORS[position] : UNSET_COLOR} size={Math.min(viewWidth - space.lg * 2, 380)} autoPlay />
+              </Card>
+            ) : null}
+            <ListSection title="The card" footer="Tap a bull to check it and move its shots. Pinch the card with two fingers to zoom in.">
+              <View style={styles.insetGap}>
+                {flat ? (
+                  <CardView image={flat.image} width={flat.width} height={flat.height} review={review} viewWidth={viewWidth - space.sm * 2} onBull={setEditing} onLock={setLocked} testID="scan-card" />
+                ) : (
+                  <Image
+                    source={{ uri: read.uri }}
+                    style={{ width: viewWidth - space.sm * 2, height: ((viewWidth - space.sm * 2) * read.height) / read.width, borderRadius: 10 }}
+                    contentFit="contain"
+                  />
+                )}
+                <BullTiles review={review} onBull={setEditing} />
+              </View>
+            </ListSection>
             <ListSection
               title="Shots per bull"
               footer="How many shots were fired at each bull. Most cards have one: 10 shots, out of 100. Some drills fire two at each bull: 20 shots, out of 200. The app counts them by itself; change it here if it got it wrong."
@@ -240,7 +284,7 @@ export default function ScanReviewScreen() {
                 />
               </View>
             </ListSection>
-            <ListSection title="The card">
+            <ListSection title="Who and when">
               <ListRow
                 icon={<UserRound size={20} color={colors.mutedForeground} />}
                 title={student ? student.name : "Who shot it?"}
@@ -338,9 +382,10 @@ const styles = StyleSheet.create({
   readingNote: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: 999 },
   failed: { gap: space.md },
   actions: { gap: space.sm },
-  totalRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: space.md },
-  totalNote: { flexShrink: 1, textAlign: "right" },
+  head: { gap: space.xs },
+  center: { alignItems: "center" },
   inset: { padding: space.sm },
+  insetGap: { padding: space.sm, gap: space.md },
   footer: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, gap: space.sm, borderTopWidth: StyleSheet.hairlineWidth },
   hint: { textAlign: "center" },
 });

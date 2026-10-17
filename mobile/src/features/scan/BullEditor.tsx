@@ -14,26 +14,24 @@ import { IconButton } from "@/components/IconButton";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
-import { ZoomCanvas } from "./ZoomCanvas";
+import { type Drag, ZoomCanvas } from "./ZoomCanvas";
 
 /** How much of the bull the close-up shows around its centre, in millimetres: ring 1 and a little beyond. */
 const VIEW_MM = 26;
 const PELLET_R = PELLET_MM / 2;
-/** A drag that starts this close to a shot's centre (mm) moves the shot. */
-const GRAB_MM = PELLET_R + 1.6;
-
 const STATE_TEXT = {
-  ok: "Looks right. Hold and drag the green circle to move the shot; pinch to zoom in.",
-  check: "Worth a look: the scan wasn't sure, the hole only just touches a line, or it saw more marks than shots. Pinch to zoom in, then drag the green circle onto the hole.",
-  missing: "No hole found here: it counts as a miss (0). If there is one, tap its centre, then drag to fine-tune.",
+  ok: "Looks right. To move a shot, drag anywhere on the picture: the green circle follows your finger. Pinch with two fingers to zoom in.",
+  check: "Worth a look: the scan wasn't sure, the hole only just touches a line, or it saw more marks than shots. Pinch to zoom in, then drag anywhere to move the green circle onto the hole.",
+  missing: "No hole found here: it counts as a miss (0). If there is one, tap its centre, then drag anywhere to fine-tune.",
   unseen: "The photo doesn’t show this bull. Type its score below.",
 } as const;
 
 /**
  * One bull, up close, to check what the scan found: the photo turned flat around the bull with its rings drawn on it,
- * each counted shot as a pellet-sized circle (it grows with the zoom, as the hole does). Pinch to zoom; hold a shot
- * and drag it onto the hole, its score following as it moves; tap to place a missing shot. Other marks the scan saw
- * can be counted instead, and a bull the photo doesn't show takes typed scores.
+ * each counted shot as a pellet-sized circle (it grows with the zoom, as the hole does). A finger dragged anywhere on
+ * the picture moves the shot nearest it by the same amount (so the finger never hides the circle; zoomed in, finer),
+ * its score following as it moves; two fingers pinch to zoom; a tap places a missing shot. Other marks the scan saw can
+ * be counted instead, and a bull the photo doesn't show takes typed scores.
  */
 export function BullEditor({ image, review, n, onChange, onClose }: { image: SkImage | null; review: CardReview; n: number | null; onChange: (next: CardReview) => void; onClose: () => void }) {
   const colors = useColors();
@@ -59,65 +57,73 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
   const [moving, setMoving] = useState<{ i: number; x: number; y: number } | null>(null);
   const short = bull.shots.length < review.shotsPerBull;
 
-  // The shots' places for the gestures (content units: millimetres from the close-up's top-left).
+  // The shots' places for the gestures (content units: millimetres from the close-up's top-left; NaN when typed).
   const places = useSharedValue<number[]>([]);
   useEffect(() => {
-    places.value = bull.shots.flatMap((s) => (s.x === null || s.y === null ? [Number.NaN, Number.NaN] : [VIEW_MM + s.x, VIEW_MM - s.y]));
+    places.set(bull.shots.flatMap((s) => (s.x === null || s.y === null ? [Number.NaN, Number.NaN] : [VIEW_MM + s.x, VIEW_MM - s.y])));
   }, [bull.shots, places]);
   const dragIndex = useSharedValue(-1);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
   const lastTenth = useSharedValue(-1);
+  // The page stays still while a finger is on the picture.
+  const [locked, setLocked] = useState(false);
 
-  const grab = (x: number, y: number) => {
-    "worklet";
-    let best = -1;
-    let bestD = GRAB_MM * GRAB_MM;
-    const p = places.value;
-    for (let i = 0; i * 2 < p.length; i++) {
-      const d = (p[i * 2] - x) ** 2 + (p[i * 2 + 1] - y) ** 2;
-      if (d <= bestD) {
-        bestD = d;
-        best = i;
-      }
-    }
-    dragIndex.value = best;
-    if (best >= 0) {
-      dragX.value = p[best * 2];
-      dragY.value = p[best * 2 + 1];
-    }
-    return best >= 0;
-  };
   const showMove = (i: number, x: number, y: number) => setMoving({ i, x, y });
+  const clearMove = () => setMoving(null);
   const drop = (i: number, x: number, y: number) => {
     setMoving(null);
     onChange(placeShot(review, bull.n, i, x, y));
   };
-  const onDrag = (x: number, y: number, done: boolean) => {
-    "worklet";
-    const i = dragIndex.value;
-    if (i < 0) return;
-    if (done && !Number.isFinite(x)) {
-      dragIndex.value = -1;
-      return;
-    }
-    // The shot's centre follows the finger.
-    dragX.value = x;
-    dragY.value = y;
-    const mx = x - VIEW_MM;
-    const my = VIEW_MM - y;
-    if (done) {
+  const drag: Drag = {
+    // The shot nearest the finger moves, wherever on the picture the finger is.
+    start: (x, y) => {
+      "worklet";
+      let best = -1;
+      let bestD = Infinity;
+      const p = places.value;
+      for (let i = 0; i * 2 < p.length; i++) {
+        if (!Number.isFinite(p[i * 2])) continue;
+        const d = (p[i * 2] - x) ** 2 + (p[i * 2 + 1] - y) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      dragIndex.value = best;
+      if (best >= 0) {
+        dragX.value = p[best * 2];
+        dragY.value = p[best * 2 + 1];
+      }
+      return best >= 0;
+    },
+    move: (dx, dy) => {
+      "worklet";
+      const i = dragIndex.value;
+      if (i < 0) return;
+      // Kept on the close-up.
+      const x = Math.min(2 * VIEW_MM, Math.max(0, dragX.value + dx));
+      const y = Math.min(2 * VIEW_MM, Math.max(0, dragY.value + dy));
+      dragX.value = x;
+      dragY.value = y;
+      const mx = x - VIEW_MM;
+      const my = VIEW_MM - y;
+      // The score shown while dragging changes by tenths (every 0.25 mm): only then is the screen told.
+      const tenth = Math.floor(Math.sqrt(mx * mx + my * my) * 4);
+      if (tenth !== lastTenth.value) {
+        lastTenth.value = tenth;
+        scheduleOnRN(showMove, i, mx, my);
+      }
+    },
+    end: (movedIt) => {
+      "worklet";
+      const i = dragIndex.value;
       dragIndex.value = -1;
       lastTenth.value = -1;
-      scheduleOnRN(drop, i, mx, my);
-      return;
-    }
-    // The score shown while dragging changes by tenths (every 0.25 mm): only then is the screen told.
-    const tenth = Math.floor(Math.sqrt(mx * mx + my * my) * 4);
-    if (tenth !== lastTenth.value) {
-      lastTenth.value = tenth;
-      scheduleOnRN(showMove, i, mx, my);
-    }
+      if (i < 0) return;
+      if (movedIt) scheduleOnRN(drop, i, dragX.value - VIEW_MM, VIEW_MM - dragY.value);
+      else scheduleOnRN(clearMove);
+    },
   };
   const tapped = (x: number, y: number) => {
     if (!short || !bull.found) return;
@@ -142,11 +148,11 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
           Done
         </Button>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} scrollEnabled={!locked}>
         <T tone={state === "ok" || (!pictured && bull.shots.length) ? "muted" : "warning"}>{text}</T>
         {pictured ? (
-          <View style={[styles.zoom, { width: size, height: size, borderColor: colors.border }]} accessibilityLabel={`Bull ${bull.n}, up close. Hold a shot and drag it onto the hole.`}>
-            <ZoomCanvas width={size} height={size} contentWidth={VIEW_MM * 2} contentHeight={VIEW_MM * 2} onTap={tapped} grab={grab} onDrag={onDrag} testID="bull-zoom">
+          <View style={[styles.zoom, { width: size, height: size, borderColor: colors.border }]} accessibilityLabel={`Bull ${bull.n}, up close. Drag anywhere to move the shot; pinch to zoom.`}>
+            <ZoomCanvas width={size} height={size} contentWidth={VIEW_MM * 2} contentHeight={VIEW_MM * 2} onTap={tapped} drag={drag} onLock={setLocked} testID="bull-zoom">
               <Photo image={image} bull={bull} />
               <Group transform={[{ translateX: VIEW_MM }, { translateY: VIEW_MM }]}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((ring) => (
@@ -180,7 +186,12 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
                   key={i}
                   testID={`bull-shot-${i}`}
                   title={`${s.value}${s.decimal !== null ? `  (${s.decimal.toFixed(1)})` : ""}`}
-                  subtitle={close ? `${how} · close call: the hole touches the ${close.ring} ring’s line by ${close.byMm.toFixed(2)} mm, so ISSF counts ${close.ring}; by eye it may look like ${close.ring - 1}` : how}
+                  subtitle={
+                    // The whole reason, however many lines it takes.
+                    <T variant="small" tone="muted">
+                      {close ? `${how} · close call: the hole touches the ${close.ring} ring’s line by ${close.byMm.toFixed(2)} mm, so ISSF counts ${close.ring}; by eye it may look like ${close.ring - 1}` : how}
+                    </T>
+                  }
                   right={
                     <Button variant="ghost" size="sm" onPress={() => onChange(removeShot(review, bull.n, i))} accessibilityLabel={`Remove shot ${i + 1}`}>
                       Remove

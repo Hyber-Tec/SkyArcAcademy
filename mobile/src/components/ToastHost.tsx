@@ -25,7 +25,13 @@ const setLayers = (next: string[]) => {
   layerListeners.forEach((l) => l());
 };
 
-/** Shows the newest toast under the status bar, on the topmost layer; tap it to close it (or to open what it's about). */
+/**
+ * A screen's header (its back and close buttons) stays reachable under a toast: right after "Saved", going back is the
+ * next tap.
+ */
+const HEADER = 58;
+
+/** Shows the newest toast under the screen's header, on the topmost layer; tap it to close it (or to open what it's about). */
 export function ToastHost() {
   const layer = useId();
   const onTop = useSyncExternalStore(subscribeLayers, topLayer) === layer;
@@ -44,7 +50,7 @@ export function ToastHost() {
   }, [current]);
   if (!current) return null;
   return (
-    <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { paddingTop: insets.top + space.sm, paddingHorizontal: space.md }]}>
+    <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { paddingTop: insets.top + HEADER, paddingHorizontal: space.md }]}>
       <ToastCard key={current.id} item={current} />
     </View>
   );

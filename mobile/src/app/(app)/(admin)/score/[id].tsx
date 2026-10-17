@@ -32,6 +32,7 @@ import { waitingCopy } from "@/features/scan/uploads";
 import { clock } from "@/features/schedule/format";
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from "@/features/scores/api";
 import { deleteScoreMessage, scorePer10, scoreTitle, scoreTotal } from "@/features/scores/format";
+import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
@@ -130,6 +131,11 @@ export default function ScoreScreen() {
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [choosingDate, setChoosingDate] = useState(false);
+  // The page holds still while a finger zooms or pans the card.
+  const [locked, setLocked] = useState(false);
+  // The shot the replay is showing (the darts follow it), and the one opened large.
+  const [current, setCurrent] = useState<number | null>(null);
+  const [openShot, setOpenShot] = useState<number | null>(null);
   const leaving = useRef(false);
 
   // The draft follows the saved score (a change made on the website shows here) until the person changes something.
@@ -214,6 +220,7 @@ export default function ScoreScreen() {
       <Stack.Screen options={{ title: scoreTitle({ position: draft.position, source: e.source }) }} />
       <Screen
         testID="score-screen"
+        scrollEnabled={!locked}
         footer={
           dirty ? (
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.grouped, paddingBottom: insets.bottom + space.sm }]}>
@@ -228,48 +235,53 @@ export default function ScoreScreen() {
         }
       >
         <Card style={styles.head}>
-          <View style={styles.grow}>
-            <T variant="small" tone="muted" numberOfLines={1}>
-              {e.studentName} · {formatDateKey(draft.dateKey, "medium")}
-              {sius && e.timeMin !== null ? `, ${clock(e.timeMin, settings.general.timeFormat !== "24h")}` : ""}
-            </T>
-            <T variant="display" testID="score-total">
-              {scoreTotal(preview)}
-              {sius ? null : (
-                <T variant="heading" tone="muted">
-                  {" "}
-                  / {preview.shots * 10}
-                </T>
-              )}
-            </T>
-            <T tone="muted">{facts.join(" · ")}</T>
-          </View>
-          {/* Per 10 shots, for results of another length (a card of ten already reads out of 100). */}
-          {preview.shots !== 10 ? (
-            <View style={styles.per10}>
-              <T variant="stat">{per10 ?? "–"}</T>
-              <T variant="tiny" tone="muted">
-                per 10
+          <View style={styles.headTop}>
+            <View style={styles.grow}>
+              <T variant="label" numberOfLines={2}>
+                {e.studentName}
+              </T>
+              <T variant="small" tone="muted" testID="score-when">
+                {formatDateKey(draft.dateKey, "medium")}
+                {sius && e.timeMin !== null ? `, ${clock(e.timeMin, settings.general.timeFormat !== "24h")}` : ""}
               </T>
             </View>
-          ) : null}
+            {/* Per 10 shots, for results of another length (a card of ten already reads out of 100). */}
+            {preview.shots !== 10 ? (
+              <View style={styles.per10}>
+                <T variant="stat">{per10 ?? "–"}</T>
+                <T variant="tiny" tone="muted">
+                  per 10
+                </T>
+              </View>
+            ) : null}
+          </View>
+          <T variant="display" testID="score-total">
+            {scoreTotal(preview)}
+            {sius ? null : (
+              <T variant="heading" tone="muted">
+                {" "}
+                / {preview.shots * 10}
+              </T>
+            )}
+          </T>
+          <T tone="muted">{facts.join(" · ")}</T>
         </Card>
 
         {canReplay(preview) ? (
           <Card style={styles.center}>
-            <ShotReplay evaluation={preview} color={POSITION_COLORS[draft.position]} size={target} />
+            <ShotReplay evaluation={preview} color={POSITION_COLORS[draft.position]} size={target} onStep={sius ? setCurrent : undefined} />
           </Card>
         ) : null}
 
         {mode === "card" && draft.review ? (
           <ListSection
             title={scanned ? "The card" : "Scores"}
-            footer={scanned ? "Tap a bull to check it: hold a shot and drag it onto the hole; pinch to zoom in." : "Typed scores, without places on the target. Tap a bull to change its score."}
+            footer={scanned ? "Tap a bull to check it and move its shots. Pinch the card with two fingers to zoom in." : "Typed scores, without places on the target. Tap a bull to change its score."}
           >
             <View style={styles.inset}>
               {scanned ? (
                 flat ? (
-                  <CardView image={flat} width={flat.width()} height={flat.height()} review={draft.review} viewWidth={inner} onBull={setEditing} testID="score-card" />
+                  <CardView image={flat} width={flat.width()} height={flat.height()} review={draft.review} viewWidth={inner} onBull={setEditing} onLock={setLocked} testID="score-card" />
                 ) : note ? (
                   <T variant="small" tone="muted" style={styles.note}>
                     {note}
@@ -292,20 +304,10 @@ export default function ScoreScreen() {
             testID="score-total-field"
           />
         ) : sius ? (
-          <ListSection title="Series" footer={e.sighters ? `Before them, ${e.sighters} sighters (never counted).` : undefined}>
-            {e.series.map((s) => (
-              <ListRow
-                key={s.n}
-                title={`Series ${s.n}`}
-                subtitle={s.shots.map((t) => t.v.toFixed(1)).join("  ")}
-                right={
-                  <T variant="label" style={styles.number}>
-                    {s.total.toFixed(1)}
-                  </T>
-                }
-                testID={`score-series-${s.n}`}
-              />
-            ))}
+          <ListSection title="Shots" footer={`Tap a shot to see it larger.${e.sighters ? ` Before them, ${e.sighters} sighters (never counted).` : ""}`}>
+            <View style={styles.inset}>
+              <ShotDarts evaluation={e} color={POSITION_COLORS[draft.position]} width={inner} current={current} onOpen={setOpenShot} />
+            </View>
           </ListSection>
         ) : (
           <ListSection title="Shots" footer="These scores change on the website.">
@@ -366,6 +368,7 @@ export default function ScoreScreen() {
         </Button>
       </Screen>
 
+      {sius ? <ShotSheet evaluation={e} color={POSITION_COLORS[draft.position]} n={openShot} onChange={setOpenShot} onClose={() => setOpenShot(null)} /> : null}
       {draft.review ? <BullEditor image={flat} review={draft.review} n={editing} onChange={(review) => change({ review })} onClose={() => setEditing(null)} /> : null}
       <DatePickerDialog
         open={choosingDate}
@@ -385,9 +388,10 @@ export default function ScoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
+  head: { gap: space.xs },
+  headTop: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   grow: { flex: 1, gap: 2 },
-  per10: { alignItems: "flex-end", paddingTop: space.lg },
+  per10: { alignItems: "flex-end" },
   center: { alignItems: "center" },
   inset: { padding: space.sm, gap: space.md },
   note: { padding: space.sm },

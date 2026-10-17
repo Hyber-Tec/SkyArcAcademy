@@ -81,7 +81,7 @@ export function DetailsPanel({ index, folderId, selected, scoresByFile }: { inde
         <Header icon={<FileGlyph kind={f.kind} />} name={f.name} />
         {e ? (
           <div className="space-y-3 rounded-lg border p-3">
-            {canReplay(e) ? <ShotReplay key={e.id} evaluation={e} color={POSITION_COLORS[e.position]} size={176} className="mx-auto" /> : null}
+            {canReplay(e) ? <ShotReplay key={e.id} evaluation={e} color={POSITION_COLORS[e.position]} size={228} highlightLast={e.source === 'sius'} className="mx-auto" /> : null}
             <dl className="grid grid-cols-2 gap-3">
               <Row label="Position">{POSITION_LABELS[e.position]}</Row>
               <Row label="Shot">{`${formatDateKey(e.dateKey, 'medium')}${e.timeMin !== null ? `, ${formatMinutes(e.timeMin)}` : ''}`}</Row>

@@ -1,8 +1,11 @@
+import { useMemo } from 'react'
 import type { IconType } from 'react-icons'
 import { LuArrowDownRight, LuArrowRight, LuArrowUpRight } from 'react-icons/lu'
 import { type EvaluationPoint, type PositionFacts, type TrendLevel, trendLabel } from '@shared/reports/types'
 import { POSITION_COLORS, POSITION_LABELS } from '@shared/shooting/evaluation'
 import { formatDateKey } from '@shared/time'
+import { playPoints } from '@/features/scores/playback'
+import { ShotReplay } from '@/features/scores/ShotReplay'
 import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { Sparkline } from './charts'
@@ -135,19 +138,41 @@ function Delta({ value, unit = '', goodWhenUp = true }: { value: number | null; 
 const pct = (p: EvaluationPoint) => (p.innerTens !== null && p.shots ? Math.round((p.innerTens / p.shots) * 100) : null)
 
 /**
- * Two evaluations of one position side by side: the scores, the change between them and both targets (SIUS). Used
- * by the report ("First vs latest") and the student's Scores tab (any two).
+ * A report's target: on screen its shots play back one by one (results in date order, each one's shots in the order
+ * they were fired); printed and in the PDF, the still picture with every shot and the average point.
  */
+export function ReportTarget({ points, color, size, title, caption }: { points: readonly EvaluationPoint[]; color: string; size: number; title: string; caption?: string }) {
+  const shots = useMemo(() => playPoints(points), [points])
+  const marks = useMemo(() => points.flatMap((p) => p.marks), [points])
+  return (
+    <>
+      <ShotReplay shots={shots} color={color} size={size} tone="paper" caption={caption} className="print:hidden" />
+      <div className="hidden flex-col items-center gap-1 print:flex">
+        <TargetPlot shots={marks} size={size} color={color} title={title} />
+        {caption ? (
+          <div className="text-center text-[11px]" style={{ color: INK.muted }}>
+            {caption}
+          </div>
+        ) : null}
+      </div>
+    </>
+  )
+}
+
 /** A result's target (SIUS, or a paper card scanned with the phone app), or a note for a card typed in by hand. */
 function picture(p: EvaluationPoint, label: string, color: string) {
-  if (p.marks.some((m) => m.a !== null)) return <TargetPlot shots={p.marks} size={150} color={color} title={`${label}: ${p.marks.length} shots`} />
+  if (p.marks.some((m) => m.a !== null)) return <ReportTarget points={[p]} size={150} color={color} title={`${label}: ${p.marks.length} shots`} />
   return (
-    <div className="flex size-[150px] items-center justify-center rounded-full border border-dashed p-6 text-center text-[11px] leading-snug" style={{ borderColor: INK.hairline, color: INK.muted }}>
+    <div className="flex aspect-square w-full max-w-[150px] items-center justify-center self-start rounded-full border border-dashed p-5 text-center text-[11px] leading-snug" style={{ borderColor: INK.hairline, color: INK.muted }}>
       Paper card: where the shots landed isn’t recorded
     </div>
   )
 }
 
+/**
+ * Two evaluations of one position side by side: the scores, the change between them and both targets (SIUS). Used
+ * by the report ("First vs latest") and the student's Scores tab (any two).
+ */
 export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: EvaluationPoint; labelA: string; labelB: string }) {
   const color = POSITION_COLORS[b.position]
   const targets = a.marks.some((m) => m.a !== null) || b.marks.some((m) => m.a !== null)
@@ -170,7 +195,7 @@ export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: Ev
   )
   return (
     <div className="rounded-2xl border p-5" style={{ borderColor: INK.hairline }}>
-      <div className="grid grid-cols-2 items-end gap-4 sm:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-2 items-start gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
         {side(a, labelA, 'left')}
         <div className="col-span-2 flex justify-center sm:col-span-1 sm:pb-6">
           <Delta value={change} />
@@ -179,8 +204,8 @@ export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: Ev
       </div>
       {targets ? (
         <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="flex justify-center">{picture(a, labelA, color)}</div>
-          <div className="flex justify-center">{picture(b, labelB, color)}</div>
+          <div className="flex min-w-0 justify-center">{picture(a, labelA, color)}</div>
+          <div className="flex min-w-0 justify-center">{picture(b, labelB, color)}</div>
         </div>
       ) : null}
       {tens !== null || group !== null ? (

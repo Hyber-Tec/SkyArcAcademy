@@ -17,11 +17,12 @@ import { one, stateLabel, trendSeries } from '@/features/reports/model'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { CompareCard } from './scores/CompareCard'
-import { EvaluationsTable } from './scores/EvaluationsTable'
+import { ResultsPanel } from './scores/ResultsPanel'
 
 /**
- * Student page → Scores: every scored target (SIUS results and paper cards) over time, a comparison of any two, and
- * the student's progress reports. Coaches see it all; admins also add paper scores and make reports.
+ * Student page → Scores: the latest result played back on the target with its series shot by shot, every result
+ * (each with its target in small, and picking one shows it large), the scores over time, a comparison of any two,
+ * and the student's progress reports. Coaches see it all; admins also add paper scores and make reports.
  */
 export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: 'admin' | 'coach' }) {
   const { timezone } = useBranch()
@@ -45,58 +46,57 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
 
   return (
     <div className="space-y-5" data-testid="scores-tab">
-      <section className="rounded-xl border bg-card p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold">Scores</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {scored.length ? `${scored.length} scored ${scored.length === 1 ? 'evaluation' : 'evaluations'}, per 10 shots in whole numbers (decimals for SIUS).` : 'No scores yet.'}
-            </p>
+      <section className="@container overflow-hidden rounded-xl border bg-card">
+        <div className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold">Scores</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {scored.length ? `${scored.length} scored ${scored.length === 1 ? 'evaluation' : 'evaluations'}, per 10 shots in whole numbers (decimals for SIUS).` : 'No scores yet.'}
+              </p>
+            </div>
+            {admin ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+                  <LuPlus /> Add paper scores
+                </Button>
+                <Button size="sm" onClick={() => setCreating(true)} disabled={!scored.length}>
+                  <LuFilePlus /> New report
+                </Button>
+              </div>
+            ) : null}
           </div>
-          {admin ? (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-                <LuPlus /> Add paper scores
-              </Button>
-              <Button size="sm" onClick={() => setCreating(true)} disabled={!scored.length}>
-                <LuFilePlus /> New report
-              </Button>
+          {summary.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {summary.map((s) => (
+                <div key={s.pos} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                  <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[s.pos] }} />
+                  <span className="font-medium">{POSITION_LABELS[s.pos]}</span>
+                  <span className="text-muted-foreground">
+                    {s.n} {s.n === 1 ? 'result' : 'results'}
+                  </span>
+                  {s.average !== null ? <span className="font-semibold tabular-nums">avg {one(s.average)}</span> : null}
+                </div>
+              ))}
             </div>
           ) : null}
         </div>
-        {summary.length ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {summary.map((s) => (
-              <div key={s.pos} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[s.pos] }} />
-                <span className="font-medium">{POSITION_LABELS[s.pos]}</span>
-                <span className="text-muted-foreground">
-                  {s.n} {s.n === 1 ? 'result' : 'results'}
-                </span>
-                {s.average !== null ? <span className="font-semibold tabular-nums">avg {one(s.average)}</span> : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {points.length >= 2 ? (
-          <div className="mt-5 rounded-xl border bg-white p-4 text-[#0b0b0b]">
+        <ResultsPanel evaluations={evaluations} mode={mode} />
+      </section>
+
+      {points.length >= 2 ? (
+        <section className="rounded-xl border bg-card p-5">
+          <div className="rounded-xl border bg-white p-4 text-[#0b0b0b]">
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-sm font-semibold">Scores over time</h3>
+              <h2 className="text-sm font-semibold">Scores over time</h2>
               <span className="text-xs text-[#7d7a72]">per 10 shots</span>
             </div>
             <TrendChart className="mt-2" series={trendSeries(points)} from={points[0].dateKey} to={today > points[points.length - 1].dateKey ? today : points[points.length - 1].dateKey} label={`${student.name}'s scores per 10 shots over time`} />
           </div>
-        ) : null}
-      </section>
+        </section>
+      ) : null}
 
       <CompareCard evaluations={scored} />
-
-      <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="border-b px-5 py-3.5">
-          <h2 className="text-base font-semibold">Results</h2>
-        </div>
-        <EvaluationsTable evaluations={evaluations} mode={mode} />
-      </section>
 
       <section className="overflow-hidden rounded-xl border bg-card" data-testid="student-reports">
         <div className="flex items-center justify-between gap-2 border-b px-5 py-3.5">

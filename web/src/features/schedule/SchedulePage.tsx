@@ -725,7 +725,7 @@ export function SchedulePage() {
             ) : null}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-lg font-semibold tracking-tight">
+                <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
                   {view === 'day' ? (
                     <>
                       <span className="sm:hidden">{formatDateKey(date, 'weekdayMedium')}</span>

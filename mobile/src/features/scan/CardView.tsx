@@ -21,9 +21,29 @@ const FONT_FAMILY = Platform.select({ ios: "Helvetica Neue", default: "sans-seri
 /**
  * The scanned card, flattened as it will be saved, with what the scan found drawn on it: each record bull's outer ring
  * in its state's colour and every counted shot as a pellet-sized circle, with a label of its score. Pinch to zoom in
- * (it stays sharp), drag to look around, double-tap to zoom in or out; tapping a bull opens its check.
+ * (it stays sharp, and stays where it's left), drag to look around once zoomed, double-tap to zoom in or out; tapping
+ * a bull opens its check.
  */
-export function CardView({ image, width: imageWidth, height: imageHeight, review, viewWidth, onBull, testID }: { image: SkImage; width: number; height: number; review: CardReview; viewWidth: number; onBull: (n: number) => void; testID?: string }) {
+export function CardView({
+  image,
+  width: imageWidth,
+  height: imageHeight,
+  review,
+  viewWidth,
+  onBull,
+  onLock,
+  testID,
+}: {
+  image: SkImage;
+  width: number;
+  height: number;
+  review: CardReview;
+  viewWidth: number;
+  onBull: (n: number) => void;
+  /** While a pinch or a zoomed pan is under way here, the screen's scrolling should stop. */
+  onLock?: (locked: boolean) => void;
+  testID?: string;
+}) {
   const viewHeight = Math.round((imageHeight * viewWidth) / imageWidth);
   const zoom = useZoomState(viewWidth, viewHeight, imageWidth, imageHeight);
   const font = useMemo(() => matchFont({ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: "700" }), []);
@@ -51,6 +71,7 @@ export function CardView({ image, width: imageWidth, height: imageHeight, review
       contentHeight={imageHeight}
       state={zoom}
       onTap={tapped}
+      onLock={onLock}
       overlay={bulls.map(({ b, at, state }) => (
         <Badge key={b.n} zoom={zoom} x={at.x + ring1 * 0.72} y={at.y + ring1 * 0.72} text={`${b.n}: ${scoreLabel(b.shots.map((t) => t.value))}`} color={STATE_COLORS[state]} font={font} />
       ))}

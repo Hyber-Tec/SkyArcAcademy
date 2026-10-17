@@ -63,7 +63,8 @@ const hrs = (min: number) => `${String(Math.round((min / 60) * 10) / 10).replace
 /** Day / Week / Month. */
 export function ViewSwitch({ view, onView, full }: { view: ScheduleView; onView: (v: ScheduleView) => void; full?: boolean }) {
   return (
-    <div className={cn('grid grid-cols-3 rounded-xl bg-muted p-1', full && 'w-full')} role="group" aria-label="View">
+    // In a phone's header it's compact, so the date beside it isn't cut short.
+    <div className={cn('grid rounded-xl bg-muted p-1', full ? 'w-full grid-cols-3' : 'shrink-0 grid-cols-[auto_auto_auto] sm:grid-cols-3')} role="group" aria-label="View">
       {(['day', 'week', 'month'] as const).map((v) => (
         <button
           key={v}
@@ -71,7 +72,8 @@ export function ViewSwitch({ view, onView, full }: { view: ScheduleView; onView:
           aria-pressed={view === v}
           onClick={() => onView(v)}
           className={cn(
-            'h-8 rounded-lg px-3 text-sm font-medium capitalize transition',
+            'rounded-lg font-medium capitalize transition',
+            full ? 'h-8 px-3 text-sm' : 'h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm',
             view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
           )}
         >

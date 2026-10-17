@@ -29,6 +29,50 @@ export async function reloadPage(error?: unknown): Promise<void> {
   window.location.reload()
 }
 
+/** The build a page runs: its entry script, which gets a new name with every deploy ("/assets/app-1a2b3c.js"). */
+function entryOf(doc: Document): string | null {
+  return doc.querySelector<HTMLScriptElement>('script[type="module"][src*="/assets/"]')?.getAttribute('src') ?? null
+}
+
+let newBuildSeen = false
+
+/** Whether the site now serves a newer build than this tab runs (asked of the network, past every cache). */
+async function newBuildDeployed(): Promise<boolean> {
+  const mine = entryOf(document)
+  if (!mine) return false
+  try {
+    const res = await fetch('/app', { cache: 'no-store', credentials: 'same-origin' })
+    if (!res.ok) return false
+    const theirs = entryOf(new DOMParser().parseFromString(await res.text(), 'text/html'))
+    return !!theirs && theirs !== mine
+  } catch {
+    // Offline, or the request was blocked: ask again later.
+    return false
+  }
+}
+
+/**
+ * A tab or an installed app left open keeps running the build it opened with: pages it has already shown come from
+ * the browser's cache, so nothing fails and nothing tells it a deploy happened. When the app comes back to the screen
+ * (and every 15 minutes while it's in view), it asks whether a newer build is out and, if so, offers to reload
+ * (`onNewBuild`). It never reloads by itself, so an upload or an edit in progress isn't cut off.
+ */
+export function watchForNewBuild(onNewBuild: () => void): void {
+  let lastAsked = Date.now()
+  const ask = () => {
+    if (newBuildSeen || document.visibilityState !== 'visible' || Date.now() - lastAsked < 60_000) return
+    lastAsked = Date.now()
+    void newBuildDeployed().then((fresh) => {
+      if (!fresh || newBuildSeen) return
+      newBuildSeen = true
+      onNewBuild()
+    })
+  }
+  document.addEventListener('visibilitychange', ask)
+  window.addEventListener('focus', ask)
+  window.setInterval(ask, 15 * 60_000)
+}
+
 /** Reloads for the new build unless it just did; true while a reload is under way. */
 export function reloadForNewBuild(error?: unknown): boolean {
   if (reloadStarted) return true
