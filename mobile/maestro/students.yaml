@@ -1,4 +1,5 @@
-# The Students tab: the list, the filter, a search, and a student's page with their family, classes, scores and files.
+# The Students tab: the list, the filter, a search, and a student's page with their family, classes, scores and files;
+# a score opens its own screen, where its shots play back one by one.
 # Run after sign-in.yaml (the practice owner; the sample academy has students with scores and SIUS PDFs):
 #   maestro test maestro/students.yaml
 appId: com.skyarcacademy.app
@@ -27,6 +28,43 @@ appId: com.skyarcacademy.app
     timeout: 15000
 - assertVisible:
     id: "student-family"
+- scrollUntilVisible:
+    element:
+      id: "student-scores"
+    direction: DOWN
+# A score opens its own screen, when the student has one: its shots play back on the target.
+- runFlow:
+    when:
+      visible:
+        id: "student-score-.*"
+    commands:
+      - tapOn:
+          id: "student-score-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "score-total"
+          timeout: 20000
+      - runFlow:
+          when:
+            visible:
+              id: "replay-play"
+          commands:
+            - tapOn:
+                id: "replay-play"
+            - extendedWaitUntil:
+                visible:
+                  id: "replay-readout"
+                  text: "(Series 1 · )?Shot [2-9].*"
+                timeout: 10000
+            - tapOn:
+                id: "replay-play"
+      - runFlow:
+          file: steps/back.yaml
+      - extendedWaitUntil:
+          visible:
+            id: "student-screen"
+          timeout: 15000
 - scrollUntilVisible:
     element:
       id: "student-files"

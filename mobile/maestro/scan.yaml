@@ -35,7 +35,7 @@ appId: com.skyarcacademy.app
     text: ".*10.*"
 # A bull up close, then back.
 - tapOn:
-    id: "scan-bull-1"
+    id: "scan-tile-1"
 - extendedWaitUntil:
     visible:
       id: "bull-zoom"

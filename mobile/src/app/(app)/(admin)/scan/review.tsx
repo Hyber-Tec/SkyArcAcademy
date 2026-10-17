@@ -4,7 +4,7 @@ import { type DateKey, formatDateKey } from "@shared/time";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Calendar, Camera, ImageIcon, UserRound, X } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
@@ -21,8 +21,8 @@ import { BullEditor } from "@/features/scan/BullEditor";
 import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
 import { lastChoices } from "@/features/scan/choices";
-import { type FlatCard, type ReadPhoto, cardFile, flattenCard, readPhoto } from "@/features/scan/photo";
-import { saveCard } from "@/features/scan/save";
+import { type CardFile, type FlatCard, type ReadPhoto, cardFile, flattenCard, readPhoto } from "@/features/scan/photo";
+import { knowFolder, saveCard } from "@/features/scan/save";
 import { type PickedStudent, StudentPicker } from "@/features/scan/StudentPicker";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
@@ -66,6 +66,8 @@ export default function ScanReviewScreen() {
   const [picking, setPicking] = useState(false);
   const [choosingDate, setChoosingDate] = useState(false);
   const uri = photos[index] ?? null;
+  /** The card's copy for the Drive, made while the person checks the card (so Save doesn't wait for it). */
+  const fileRef = useRef<{ read: ReadPhoto; file: CardFile } | null>(null);
 
   // A new photo starts from nothing: its own reading, review and note.
   const [shown, setShown] = useState<string | null>(null);
@@ -96,6 +98,20 @@ export default function ScanReviewScreen() {
       live = false;
     };
   }, [uri]);
+  useEffect(() => {
+    if (!read || phase.kind !== "review" || fileRef.current?.read === read) return;
+    const t = setTimeout(() => {
+      try {
+        fileRef.current = { read, file: cardFile(read, flat) };
+      } catch {
+        // Made again on Save, which then says what went wrong.
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [read, flat, phase.kind]);
+  useEffect(() => {
+    if (student) void knowFolder(branchId, student.id);
+  }, [student, branchId]);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace("/scan"));
   const next = () => (index + 1 < photos.length ? setIndex(index + 1) : close());
@@ -120,20 +136,17 @@ export default function ScanReviewScreen() {
     }
     setPhase({ kind: "saving" });
     try {
-      const file = cardFile(read, flat);
-      const result = await saveCard({ branchId, actor, student, position, dateKey, note, review, total: null, file });
+      const file = fileRef.current?.read === read ? fileRef.current.file : cardFile(read, flat);
+      await saveCard({ branchId, actor, student, position, dateKey, note, review, total: null, file });
       lastChoices.student = student;
       lastChoices.position = position;
       lastChoices.dateKey = dateKey;
       lastChoices.shotsPerBull = review.shotsPerBull;
-      if (result.uploaded)
-        toast.success(`Saved for ${student.name}`, { description: `${totals.total} out of ${totals.shots * 10}, ${POSITION_LABELS[position].toLowerCase()}` });
-      else
-        toast.error("The scores are saved, the card’s photo isn’t", {
-          description: `${result.error ?? "The upload failed."} The Drive shows it as failed: upload the photo there again.`,
-        });
+      toast.success(`Saved for ${student.name}`, { description: `${totals.total} out of ${totals.shots * 10}, ${POSITION_LABELS[position].toLowerCase()}. The card’s photo goes to their Drive in the background.` });
       next();
     } catch (e) {
+      // The copy is made again on the next try.
+      fileRef.current = null;
       setPhase({ kind: "review" });
       toast.error("Couldn’t save the card", { description: e instanceof Error ? e.message : String(e) });
     }
@@ -211,7 +224,10 @@ export default function ScanReviewScreen() {
               </T>
             </View>
             <BullTiles review={review} onBull={setEditing} />
-            <ListSection title="Shots per bull" footer="Most cards have one shot on each bull. Some drills fire two.">
+            <ListSection
+              title="Shots per bull"
+              footer="How many shots were fired at each bull. Most cards have one: 10 shots, out of 100. Some drills fire two at each bull: 20 shots, out of 200. The app counts them by itself; change it here if it got it wrong."
+            >
               <View style={styles.inset}>
                 <SegmentedControl
                   testID="scan-shots-per-bull"

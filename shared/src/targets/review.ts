@@ -1,4 +1,5 @@
-import type { PaperShot } from '../shooting/evaluation'
+import type { EvalShot, PaperShot } from '../shooting/evaluation'
+import { PELLET_MM, ringRadiusMm } from '../shooting/target'
 import type { Vec } from './geometry'
 import type { CardScan, ScannedBull, ScannedShot } from './scan'
 import { scoreAt } from './score'
@@ -19,6 +20,8 @@ export interface ReviewShot {
   confidence: number
   /** Placed, moved or typed by a person. */
   manual: boolean
+  /** As a saved card has it (reopened to change it), until it's moved. */
+  saved?: boolean
 }
 
 export interface ReviewBull {
@@ -71,11 +74,46 @@ export function typedReview(shotsPerBull = 1): CardReview {
   }
 }
 
+/**
+ * A close call: a hole that only just touches its ring's line (by less than this), so ISSF's 4.5 mm rule counts the
+ * ring while the hole, which looks about 4 mm across, may seem not to touch it. Worth a person's look.
+ */
+export const CLOSE_MM = 0.35
+
+/** The close call a placed shot is, if any: the ring whose line its hole only just touches, and by how much (mm). */
+export function closeCall(s: Pick<ReviewShot, 'x' | 'y' | 'value'>): { ring: number; byMm: number } | null {
+  if (s.x === null || s.y === null || s.value < 1) return null
+  const touch = ringRadiusMm(s.value) + PELLET_MM / 2 - Math.sqrt(s.x * s.x + s.y * s.y)
+  return touch < CLOSE_MM ? { ring: s.value, byMm: Math.max(0, Math.round(touch * 100) / 100) } : null
+}
+
 export function bullState(b: ReviewBull, shotsPerBull: number): BullState {
   if (!b.found && !b.shots.length) return 'unseen'
   if (b.shots.length < shotsPerBull) return 'missing'
-  if (b.extra.length || b.shots.some((s) => s.confidence < SURE)) return 'check'
+  if (b.extra.length || b.shots.some((s) => (s.confidence < SURE && !s.manual) || (!s.manual && closeCall(s)))) return 'check'
   return 'ok'
+}
+
+/**
+ * A saved paper card back as a review, to look at and correct: its shots are kept bull by bull (each bull's shots, a
+ * missing one as a 0 without a place), so one or two shots per bull come back where they were. Where the bulls are
+ * drawn is the caller's (`place`: the bull's centre and millimetre axes on the picture shown, or null without one).
+ */
+export function reviewFromShots(shots: readonly Pick<EvalShot, 'v' | 'x' | 'y'>[], place: (n: number) => { center: Vec; axes: ScannedBull['axes'] } | null): CardReview {
+  const perBull = shots.length >= 20 && shots.length % 10 === 0 ? shots.length / 10 : 1
+  const bulls: ReviewBull[] = Array.from({ length: 10 }, (_, i) => {
+    const n = i + 1
+    const at = place(n)
+    const own = shots.slice(i * perBull, (i + 1) * perBull)
+    const kept = own
+      .filter((t) => (typeof t.x === 'number' && typeof t.y === 'number') || t.v > 0)
+      .map((t): ReviewShot => {
+        const placed = typeof t.x === 'number' && typeof t.y === 'number'
+        return { x: placed ? (t.x as number) : null, y: placed ? (t.y as number) : null, value: t.v, decimal: placed ? scoreAt(Math.sqrt((t.x as number) ** 2 + (t.y as number) ** 2)).decimal : null, confidence: 1, manual: true, saved: true }
+      })
+    return { n, found: !!at, center: at?.center ?? { x: 0, y: 0 }, axes: at?.axes ?? [1, 0, 0, 1], shots: kept, extra: [] }
+  })
+  return { bulls, shotsPerBull: perBull }
 }
 
 function withBull(r: CardReview, n: number, change: (b: ReviewBull) => ReviewBull): CardReview {

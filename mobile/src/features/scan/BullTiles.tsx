@@ -39,8 +39,9 @@ export function BullTiles({ review, onBull }: { review: CardReview; onBull: (n: 
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  tile: { width: "18.4%", aspectRatio: 0.9, borderRadius: radius.md, borderWidth: 1.5, alignItems: "center", justifyContent: "center", gap: 2 },
+  // Five to a row at any width: the tiles take their share and the gaps what's left.
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: space.sm },
+  tile: { width: "18.5%", aspectRatio: 0.9, borderRadius: radius.md, borderWidth: 1.5, alignItems: "center", justifyContent: "center", gap: 2 },
   score: { fontVariant: ["tabular-nums"], paddingHorizontal: 2 },
   dot: { width: 6, height: 6, borderRadius: 3 },
 });

@@ -28,15 +28,22 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
 - **Scan:** a paper card from the camera (a frame the card's shape to fill) or from Photos (several at once, read one
   after the other). The phone reads it (`src/features/scan/photo.ts`, with the engine in `../shared/src/targets`): it
   finds the card's twelve bulls whichever way up the photo is, measures each bull, finds the holes and scores them by
-  ISSF's rule, one or two shots per bull. The check screen shows the card flattened with every bull's score; a bull
-  worth a look (unsure, a second mark, no hole) opens up close, where a shot is moved, added, removed, swapped for
-  another mark or typed. Then who shot it (today's classes first), the position and the date, and **Save**: the
-  flattened card goes to the student's Drive folder (`YYYY-MM-DD Position paper card.jpg`) and its scores, with each
-  shot's place, become a paper result for the reports, with an audit entry (`src/features/scan/save.ts`). A photo
-  without a card says why and offers to type the scores instead.
+  ISSF's rule, one or two shots per bull. The check screen shows the card flattened with every bull's score, to pinch
+  and zoom; a bull worth a look (unsure, a second mark, no hole, or a hole that only just touches a ring's line)
+  opens up close, where a shot is held and dragged onto its hole, added, removed, swapped for another mark or typed.
+  Then who shot it, the position and the date, and **Save**, which doesn't wait: the scores, with each shot's place,
+  become a paper result for the reports at once, with an audit entry, and the flattened card uploads to the student's
+  Drive folder in the background (`YYYY-MM-DD Position paper card.jpg`; `src/features/scan/save.ts`). A photo without a
+  card says why and offers to type the scores instead.
 - **Students:** every student, searchable; a student's page has their family's phone and email (call, text, email),
   their next and last classes, their latest scores and the files in their Drive folder, which open full screen
-  (pictures, PDFs).
+  (pictures, PDFs). A score swipes left to be deleted, or is held for Open and Delete.
+- **A score** (`score/[id]`, opened from the student's page): its total, group and where the group sits, and its shots
+  played back one by one on the target (`src/features/scores/ShotReplay.tsx`, the same playback as the website's). A
+  scanned card comes back on its picture, to change bull by bull as when it was checked; a typed card's bulls take new
+  scores; the position, the date and the note change; **Save changes** keeps them, with an audit entry
+  (`src/features/scores/api.ts`), and **Delete this score** removes it (its file stays in the Drive). A SIUS result's
+  scores stay as its PDF gives them.
 - **More:** the account, the coaches and the office with their contacts, the appearance (system, light, dark), the
   website, the privacy policy, the version, signing out, and deleting the account.
 - **Which build this is:** More → Version shows the version and build number (`release.json`) and, for a copy built on

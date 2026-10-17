@@ -34,17 +34,20 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        unconfirmed email → verify-email; otherwise (app)/, which reads the academy's member doc for the
                        person's email (BranchProvider) and opens the part of their one role.
   (app)/(admin)/       owners and admins: (tabs) Today · Schedule · Scan · Students · More, and the screens that open
-                       over them (class/[id] and coach/[id] sheets, student/[id], file/[id], and the Scan screens)
+                       over them (class/[id] and coach/[id] sheets, student/[id], score/[id], file/[id], and the Scan
+                       screens)
   (app)/coming-soon    coaches, parents and students: their part comes to the app later; the website meanwhile
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
                        rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks), schedule (classes, the week strip,
-                       class cards), students, drive (downloading a Drive file through the Storage rules), scan, access,
-                       account (deleting an account)
+                       class cards), students, drive (downloading a Drive file through the Storage rules), scan (reading
+                       a card, the zoomable card and bull views, saving), scores (a score's changes, its shots played
+                       back), access, account (deleting an account)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, Dialog, IconButton, DatePickerDialog,
-                       MonthScroller, ContactButtons, ToastHost) and brand/ (the official logos)
+                       MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost) and brand/ (the official
+                       logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
                        call/text/email), toast, Google sign-in, env
 src/theme/             the website's neutral palette in light and dark with Sky Arc's red, status colors, spacing, type

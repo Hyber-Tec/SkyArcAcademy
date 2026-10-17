@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { type Mat3, applyH, fitEllipse, fitHomography } from './geometry'
-import { type CardReview, bullState, changeShotsPerBull, placeShot, placedShot, removeShot, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
+import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
 import { scanCard } from './scan'
 import { MISS_BEYOND_MM, scoreAt } from './score'
 import { type SyntheticShot, drawSyntheticCard } from './synthetic'
@@ -183,5 +183,37 @@ describe('the review of a scanned card', () => {
     expect(taken.bulls[0].shots).toHaveLength(1)
     expect(taken.bulls[0].shots[0]).toMatchObject({ x: 1, y: 1, value: 10 })
     expect(taken.bulls[0].extra).toHaveLength(1)
+  })
+})
+
+describe('close calls and saved cards', () => {
+  it('flags a hole that only just touches its ring’s line', () => {
+    // Ring 8's line is touched with the hole's centre up to 7.5 mm out.
+    expect(closeCall(placedShot(0, 7.3))).toEqual({ ring: 8, byMm: 0.2 })
+    expect(closeCall(placedShot(0, 6.9))).toBeNull()
+    expect(closeCall({ x: null, y: null, value: 8 })).toBeNull()
+  })
+
+  it('asks for a look at a close call the scan found, not one a person placed', () => {
+    const bull = (manual: boolean): ReviewBull => ({ n: 1, found: true, center: { x: 0, y: 0 }, axes: [1, 0, 0, 1], shots: [{ ...placedShot(0, 7.4), manual }], extra: [] })
+    expect(bullState(bull(false), 1)).toBe('check')
+    expect(bullState(bull(true), 1)).toBe('ok')
+  })
+
+  it('rebuilds a saved card bull by bull, one or two shots each', () => {
+    const one = reviewFromShots(Array.from({ length: 10 }, (_, i) => (i === 3 ? { v: 0 } : { v: 9, x: 1, y: -3 })), () => ({ center: { x: 5, y: 5 }, axes: [6, 0, 0, 6] }))
+    expect(one.shotsPerBull).toBe(1)
+    expect(one.bulls[3].shots).toHaveLength(0)
+    expect(one.bulls[0].shots[0]).toMatchObject({ x: 1, y: -3, value: 9, saved: true })
+    // A shot moved after reopening is the person's own again.
+    const moved = placeShot(one, 1, 0, 0, 0).bulls[0].shots[0]
+    expect(moved).toMatchObject({ value: 10, manual: true })
+    expect(moved.saved).toBeUndefined()
+    expect(reviewShots(one)).toHaveLength(10)
+    const two = reviewFromShots(Array.from({ length: 20 }, (_, i) => ({ v: i % 2 ? 8 : 7 })), () => null)
+    expect(two.shotsPerBull).toBe(2)
+    expect(two.bulls[9].shots.map((s) => s.value)).toEqual([7, 8])
+    expect(two.bulls[0].found).toBe(false)
+    expect(reviewTotals(two).total).toBe(150)
   })
 })
