@@ -21,6 +21,8 @@ const routes: RouteObject[] = [
   // The homepage's "Book a trial" (the booking itself comes later).
   { path: '/trial', element: <TrialPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  // Help for anyone (the stores' Support URL; the phone app links it).
+  { path: '/help', lazy: page(() => import('@/pages/public/HelpPage'), 'HelpPage') },
   // Asking the academy for access (coaches, parents), once signed in.
   { path: '/join', lazy: page(() => import('@/features/signup/BranchSignupPage'), 'BranchSignupPage') },
   academyRoute,
