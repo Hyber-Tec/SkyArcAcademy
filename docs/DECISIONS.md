@@ -259,7 +259,7 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   runs the app (4.2.6, 4.3). Steps: [docs/publishing.md](publishing.md#public-or-unlisted).
 - **Checking a card:** pinch to zoom into the card and into a bull; a shot is held and dragged onto its hole (its
   circle is the pellet's size at every zoom, and its score follows as it moves); a tap places a missing one.
-- **Close calls get a look:** a hole that touches a ring's line by less than 0.35 mm is marked to check, with the reason
+- **Close calls get a look:** a hole that touches a ring's line by less than 0.4 mm is marked to check, with the reason
   ("the hole touches the 8 ring's line by 0.22 mm, so ISSF counts 8; by eye it may look like 7"). This is where the app
   and the coaches differ most (one sample card: 80 by the gauge, 77 by the coach); A15 still asks which way the
   academy scores.
