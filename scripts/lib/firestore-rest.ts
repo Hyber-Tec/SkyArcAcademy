@@ -73,8 +73,11 @@ async function request(url: string, init: RequestInit = {}) {
   return res
 }
 
+/** A document or collection path for a URL: each segment escaped (a member's email can hold a "+", read as a space). */
+const urlPath = (path: string) => path.split('/').map(encodeURIComponent).join('/')
+
 export async function getDocument(path: string): Promise<Record<string, unknown> | null> {
-  const res = await request(`${BASE}/${path}`)
+  const res = await request(`${BASE}/${urlPath(path)}`)
   if (res.status === 404) return null
   const json = (await res.json()) as { fields?: Record<string, Value> }
   return decodeFields(json.fields ?? {})
@@ -109,7 +112,7 @@ export async function listDocuments(collectionPath: string): Promise<{ path: str
   const out: { path: string; id: string; data: Record<string, unknown> }[] = []
   let pageToken = ''
   do {
-    const res = await request(`${BASE}/${collectionPath}?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`)
+    const res = await request(`${BASE}/${urlPath(collectionPath)}?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`)
     if (res.status === 404) break
     const json = (await res.json()) as { documents?: { name: string; fields?: Record<string, Value> }[]; nextPageToken?: string }
     for (const d of json.documents ?? []) {
