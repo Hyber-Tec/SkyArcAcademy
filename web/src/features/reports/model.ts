@@ -20,6 +20,11 @@ export function signed(n: number): string {
   return `${n > 0 ? '+' : '−'}${one(Math.abs(n))}`
 }
 
+/** This browser has opened the shared report as a family member (ReportPage writes it with the view receipt). */
+export function reportSeenKey(reportId: string, email: string) {
+  return `skyarc:report-view:${reportId}:${email}`
+}
+
 /** "Draft", "Shared Oct 4" or "Viewed Oct 5", as staff see a report's state. */
 export function stateLabel(r: Pick<ProgressReportDoc, 'status' | 'sharedAt' | 'firstViewedAt'>, timezone: string): string {
   if (r.status !== 'shared') return 'Draft'

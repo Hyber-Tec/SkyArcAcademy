@@ -1,4 +1,3 @@
-import { query, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import {
   LuArrowDown,
@@ -14,10 +13,9 @@ import {
 } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { COL } from '@shared/paths'
 import { gradeLabel, isInactiveStudent, nextGrade, relativeDayLabel, STUDENT_STATUS_LABELS, STUDENT_STATUSES } from '@shared/people'
-import { addDays, formatDateKey, todayKey } from '@shared/time'
-import type { Session, Student, StudentStatus, WithId } from '@shared/types'
+import { formatDateKey, todayKey } from '@shared/time'
+import type { Student, StudentStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, ItemMenuButton, menu } from '@/components/app/ItemMenu'
 import { PageHeader } from '@/components/app/PageHeader'
@@ -40,7 +38,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useStudentList } from '@/features/data/hooks'
-import { branchCol, useQuery } from '@/lib/firestore'
 import { advanceGrades, createStudent, setStudentStatus } from './api'
 
 type SortKey = 'name' | 'grade' | 'level' | 'signUp'
@@ -48,23 +45,11 @@ type SortKey = 'name' | 'grade' | 'level' | 'signUp'
 /** A Select can't hold an empty value, so "none" has its own. */
 const NONE = '__none'
 
-/** Student IDs a coach teaches: sessions in the last 90 days or upcoming. */
-function useTaughtStudentIds(enabled: boolean): Set<string> | null {
-  const { branchId, staffId, timezone } = useBranch()
-  const from = addDays(todayKey(timezone), -90)
-  const q = useMemo(
-    () => (enabled && staffId ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', from)) : null),
-    [enabled, staffId, branchId, from],
-  )
-  const { data, loading } = useQuery<Session>(q, `taught-${staffId}-${from}`)
-  return useMemo(() => (enabled ? (loading ? null : new Set(data.filter((s) => !s.isDeleted).map((s) => s.studentId))) : null), [enabled, data, loading])
-}
-
+/** Students: every student, for admins and coaches alike (coaches read and open them; admins also change them). */
 export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const { branchId, actor, timezone, settings } = useBranch()
   const navigate = useNavigate()
   const { data: students, loading } = useStudentList()
-  const taught = useTaughtStudentIds(mode === 'coach')
   const today = todayKey(timezone)
   const isAdmin = mode === 'admin'
   const base = `/${mode}/students`
@@ -104,7 +89,6 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = students
-      .filter((s) => !taught || taught.has(s.id))
       .filter((s) => !q || s.nameLower.includes(q))
       .filter((s) => statuses.length === 0 || statuses.includes(s.status))
       .filter((s) => levels.length === 0 || levels.includes(s.level ?? NONE))
@@ -130,7 +114,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
         }
       }
     })
-  }, [students, taught, search, statuses, levels, ladder, grades, sort])
+  }, [students, search, statuses, levels, ladder, grades, sort])
 
   const header = (key: SortKey, label: string, className?: string) => (
     <TableHead className={className}>
@@ -149,7 +133,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
     <div>
       <PageHeader
         title="Students"
-        description={mode === 'coach' ? 'Students you teach (last 90 days and upcoming).' : `${rows.length} of ${students.length} students`}
+        description={loading ? '\u00a0' : `${rows.length} of ${students.length} students`}
         actions={
           isAdmin ? (
             <>
@@ -283,7 +267,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
                 </ContextMenuFor>
               )
             })}
-            {!loading && taught !== null && rows.length === 0 ? (
+            {!loading && rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
                   No students found.

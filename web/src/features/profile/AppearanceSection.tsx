@@ -1,7 +1,7 @@
 import { LuCheck } from 'react-icons/lu'
 import { type ThemeSetting, useTheme } from '@/components/app/theme'
 import { cn } from '@/lib/utils'
-import { SectionTitle } from './parts'
+import { SectionTitle } from './ProfileLayout'
 
 const OPTIONS: { value: ThemeSetting; label: string; hint: string }[] = [
   { value: 'light', label: 'Light', hint: 'Always light' },

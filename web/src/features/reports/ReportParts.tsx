@@ -68,51 +68,88 @@ export function TrendChip({ level, audience, size = 'md' }: { level: TrendLevel;
 
 const dash = <span style={{ color: INK.muted }}>—</span>
 
-/** Every position side by side: the table twin of the charts. */
+/** Every position side by side: the table twin of the charts. Phones get a card per position instead of a wide table. */
 export function PositionTable({ positions }: { positions: PositionFacts[] }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
-      <table className="w-full min-w-[520px] border-collapse text-[12.5px]">
-        <thead>
-          <tr className="text-left text-[11px]" style={{ color: INK.muted }}>
-            <th className="py-2 pr-3 font-medium">Position</th>
-            <th className="py-2 pr-3 text-right font-medium">Evaluations</th>
-            <th className="py-2 pr-3 text-right font-medium">Average</th>
-            <th className="py-2 pr-3 text-right font-medium">Decimal</th>
-            <th className="py-2 pr-3 text-right font-medium">Best</th>
-            <th className="py-2 pr-3 text-right font-medium">Latest</th>
-            <th className="py-2 pr-3 text-right font-medium">Inner tens</th>
-            <th className="py-2 text-right font-medium">Group</th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
-          {positions.map((p) => (
-            <tr key={p.position} className="border-t" style={{ borderColor: INK.hairline }}>
-              <td className="py-2.5 pr-3">
-                <span className="inline-flex items-center gap-2 font-medium">
+    <div>
+      <div className="space-y-3 sm:hidden print:hidden">
+        {positions.map((p) => {
+          const cells: [string, React.ReactNode][] = [
+            ['Average', p.average !== null ? <span key="average" className="font-semibold">{one(p.average)}</span> : dash],
+            ['Decimal', p.decimal !== null ? one(p.decimal) : dash],
+            ['Best', p.best ? `${one(p.best.wholePer10)} · ${formatDateKey(p.best.dateKey, 'monthDay')}` : dash],
+            ['Latest', p.latest ? one(p.latest.wholePer10) : dash],
+            ['Inner tens', p.innerTensPct !== null ? `${p.innerTensPct}%` : dash],
+            ['Group', p.groupMm !== null ? `${one(p.groupMm)} mm` : dash],
+          ]
+          return (
+            <div key={p.position} className="rounded-xl border p-3.5" style={{ borderColor: INK.hairline }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-2 text-[13px] font-semibold">
                   <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[p.position] }} />
                   {POSITION_LABELS[p.position]}
                 </span>
-              </td>
-              <td className="py-2.5 pr-3 text-right">{p.evaluations}</td>
-              <td className="py-2.5 pr-3 text-right font-semibold">{p.average !== null ? one(p.average) : dash}</td>
-              <td className="py-2.5 pr-3 text-right">{p.decimal !== null ? one(p.decimal) : dash}</td>
-              <td className="py-2.5 pr-3 text-right">
-                {p.best ? (
-                  <>
-                    {one(p.best.wholePer10)} <span style={{ color: INK.muted }}>{formatDateKey(p.best.dateKey, 'monthDay')}</span>
-                  </>
-                ) : (
-                  dash
-                )}
-              </td>
-              <td className="py-2.5 pr-3 text-right">{p.latest ? one(p.latest.wholePer10) : dash}</td>
-              <td className="py-2.5 pr-3 text-right">{p.innerTensPct !== null ? `${p.innerTensPct}%` : dash}</td>
-              <td className="py-2.5 text-right">{p.groupMm !== null ? `${one(p.groupMm)} mm` : dash}</td>
+                <span className="text-[11px]" style={{ color: INK.muted }}>
+                  {p.evaluations} {p.evaluations === 1 ? 'evaluation' : 'evaluations'}
+                </span>
+              </div>
+              <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5 text-[12.5px] tabular-nums">
+                {cells.map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-[11px]" style={{ color: INK.muted }}>
+                      {label}
+                    </dt>
+                    <dd className="mt-0.5">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )
+        })}
+      </div>
+      <div className="-mx-1 hidden overflow-x-auto px-1 sm:block print:block">
+        <table className="w-full min-w-[520px] border-collapse text-[12.5px]">
+          <thead>
+            <tr className="text-left text-[11px]" style={{ color: INK.muted }}>
+              <th className="py-2 pr-3 font-medium">Position</th>
+              <th className="py-2 pr-3 text-right font-medium">Evaluations</th>
+              <th className="py-2 pr-3 text-right font-medium">Average</th>
+              <th className="py-2 pr-3 text-right font-medium">Decimal</th>
+              <th className="py-2 pr-3 text-right font-medium">Best</th>
+              <th className="py-2 pr-3 text-right font-medium">Latest</th>
+              <th className="py-2 pr-3 text-right font-medium">Inner tens</th>
+              <th className="py-2 text-right font-medium">Group</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="tabular-nums">
+            {positions.map((p) => (
+              <tr key={p.position} className="border-t" style={{ borderColor: INK.hairline }}>
+                <td className="py-2.5 pr-3">
+                  <span className="inline-flex items-center gap-2 font-medium">
+                    <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[p.position] }} />
+                    {POSITION_LABELS[p.position]}
+                  </span>
+                </td>
+                <td className="py-2.5 pr-3 text-right">{p.evaluations}</td>
+                <td className="py-2.5 pr-3 text-right font-semibold">{p.average !== null ? one(p.average) : dash}</td>
+                <td className="py-2.5 pr-3 text-right">{p.decimal !== null ? one(p.decimal) : dash}</td>
+                <td className="py-2.5 pr-3 text-right">
+                  {p.best ? (
+                    <>
+                      {one(p.best.wholePer10)} <span style={{ color: INK.muted }}>{formatDateKey(p.best.dateKey, 'monthDay')}</span>
+                    </>
+                  ) : (
+                    dash
+                  )}
+                </td>
+                <td className="py-2.5 pr-3 text-right">{p.latest ? one(p.latest.wholePer10) : dash}</td>
+                <td className="py-2.5 pr-3 text-right">{p.innerTensPct !== null ? `${p.innerTensPct}%` : dash}</td>
+                <td className="py-2.5 text-right">{p.groupMm !== null ? `${one(p.groupMm)} mm` : dash}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-2 text-[11px]" style={{ color: INK.muted }}>
         Scores are per 10 shots: whole numbers out of 100 for every result, and decimals (out of 109) for SIUS results.
       </p>

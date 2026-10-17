@@ -16,7 +16,7 @@ import { branchCol, useQuery } from '@/lib/firestore'
 import { useNow } from '@/lib/useNow'
 import { useMyStaff } from '../hooks'
 
-/** How far ahead Today looks for the next session and for sessions in conflict (four weeks, as admin Home). */
+/** How far ahead Home looks for the next session and for sessions in conflict (four weeks, as admin Home). */
 const AHEAD_DAYS = 28
 
 export type NextUp =
@@ -46,7 +46,7 @@ const ms = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.
 const byTime = (a: WithId<Session>, b: WithId<Session>) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)
 
 /**
- * Everything the coach's Today page shows, from their own sessions,
+ * Everything the coach's Home shows, from their own sessions,
  * availability, clock shifts and the posts addressed to them: what's on now
  * and next, today's list, what's left to do and how the week looks. All
  * dates and times are the branch's.

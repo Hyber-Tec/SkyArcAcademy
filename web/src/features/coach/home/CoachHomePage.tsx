@@ -48,11 +48,11 @@ function summary(t: CoachDay): string {
 }
 
 /**
- * Coach → Today (the portal's first page, as in the phone app): a greeting,
- * the session that's on now or next, today's sessions, what's left to do, the
- * time clock and the week. Two columns on computers, one on phones.
+ * Coach → Home (the portal's first page): a greeting, the session that's on
+ * now or next, today's sessions, what's left to do, the time clock and the
+ * week. Two columns on computers, one on phones.
  */
-export function CoachTodayPage() {
+export function CoachHomePage() {
   const { staffId } = useBranch()
   const wide = useWide()
   const t = useCoachDay()

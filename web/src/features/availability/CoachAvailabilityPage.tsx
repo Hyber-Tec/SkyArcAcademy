@@ -23,7 +23,7 @@ function span(days: number): string {
 /**
  * Coach → Availability: where the coach stands (how far ahead it's set and
  * which open days in the notice window still need times), then the calendar.
- * `?date=` opens that day (links from Today).
+ * `?date=` opens that day (links from Home).
  */
 export function CoachAvailabilityPage() {
   const { staffId, settings, timezone } = useBranch()
@@ -50,7 +50,7 @@ export function CoachAvailabilityPage() {
     return { lastSet, gaps }
   }, [availability, dayConfigs, settings, today, timezone, now])
 
-  // Links from Today: open the asked day once, then drop it from the address.
+  // Links from Home: open the asked day once, then drop it from the address.
   const asked = params.get('date')
   useEffect(() => {
     if (!asked || !isDateKey(asked)) return

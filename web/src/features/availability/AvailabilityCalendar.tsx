@@ -36,7 +36,7 @@ const LONG_PRESS_MS = 350
 
 const SKIP_REASON = { closed: 'closed', outside: 'outside opening hours', too_many: 'too many ranges', locked: 'locked' } as const
 
-/** Lets a page open a day of the calendar (Today's and the status line's "Set" links). */
+/** Lets a page open a day of the calendar (Home's and the status line's "Set" links). */
 export interface AvailabilityCalendarHandle {
   /** Scrolls to the date and opens its editor, once the calendar's data is in. */
   openDay: (date: DateKey) => void

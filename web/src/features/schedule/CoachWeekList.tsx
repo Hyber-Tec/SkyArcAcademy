@@ -35,7 +35,7 @@ export function CoachWeekList({
   sessions: WithId<Session>[]
   hoursOf: (d: DateKey) => DayHours
   conflictsOf: (s: WithId<Session>) => Conflict[]
-  /** A date to show (from a notification or Today); its day opens and scrolls into view. */
+  /** A date to show (from a notification or Home); its day opens and scrolls into view. */
   focus: DateKey | null
   /** -1 / +1 for the previous or next week, 0 for this week. */
   onWeek: (step: -1 | 0 | 1) => void
@@ -65,7 +65,7 @@ export function CoachWeekList({
     if (earlier.includes(d)) setShowEarlier(true)
     requestAnimationFrame(() => document.getElementById(`tday-${d}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
-  // Notifications and Today link here with a date: open that day.
+  // Notifications and Home link here with a date: open that day.
   useEffect(() => {
     if (!focus || !days.includes(focus) || !byDay.has(focus)) return
     if (focus < today) setShowEarlier(true)

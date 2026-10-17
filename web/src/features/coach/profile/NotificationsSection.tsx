@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { NOTIFICATION_SWITCHES, prefOn, setMyNotificationPref } from '../api'
 import { NOT_LINKED, useMyStaff } from '../hooks'
-import { SectionTitle } from './parts'
+import { SectionTitle } from '@/features/profile/ProfileLayout'
 
 /**
  * Profile → Notifications: the four switches in `staff.notificationPrefs`. They

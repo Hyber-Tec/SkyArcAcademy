@@ -144,7 +144,11 @@ export function ReportDocument({
             {contact}
           </div>
         ) : null}
-        <div>Questions about this report? We’re happy to talk. · Prepared {preparedText}</div>
+        {/* On a phone the two lines stack, rather than leave the dot at the end of one. */}
+        <div>
+          Questions about this report? We’re happy to talk.<span className="hidden sm:inline print:inline"> · </span>
+          <span className="block sm:inline print:inline">Prepared {preparedText}</span>
+        </div>
       </div>
       <div className="shrink-0 tabular-nums">
         Page {page} of {PAGES}
