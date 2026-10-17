@@ -29,8 +29,11 @@ Start with [Where things stand](#where-things-stand-2026-10-16) and [What Apple 
 - **The commands**: `npm run publish:iphone`, `npm run publish:android`, `npm run publish:screenshots` (never run yet),
   and every text the stores ask for, in [docs/store/](store/).
 
+**Decided:** a public listing from HyberTec's Apple account ([Public or unlisted](#public-or-unlisted)).
+
 **Left, in this order, when you decide to publish** (each is explained further down):
-1. **Decide [Public or unlisted](#public-or-unlisted).**
+1. **The academy's letter** allowing HyberTec LLC to publish the app under its name and logo
+   ([Public or unlisted](#public-or-unlisted), guideline 5.2.1).
 2. **The privacy policy** (https://skyarcacademy.web.app/privacy) is a draft for the academy's review. Before submitting,
    it must be in effect, and it must say what the phone app does: the camera and photo library, for photos of paper
    targets that go into the academy's Drive. Ask Claude Code to add that paragraph when the academy approves the policy.
@@ -43,38 +46,36 @@ Start with [Where things stand](#where-things-stand-2026-10-16) and [What Apple 
 
 ## Public or unlisted
 
-**Recommendation (2026-10-16): submit it as a public listing, from the academy's own Apple developer account. If
-Apple answers that the app is only for one academy's people, ask for unlisted distribution then. Don't start
-unlisted.** Checked against Apple's pages that day; read them again before submitting.
+**Decided (the owner, 2026-10-16): a public listing, published by HyberTec LLC from HyberTec's own Apple developer
+account**, the one that already publishes HyberTec's apps and signs the testing builds. Anyone can find "Sky Arc" in the
+App Store and download it; it still opens nothing without an account the academy made. Checked against Apple's pages on
+2026-10-16; read them again before submitting.
 
 - **What the two are.** Both are the real App Store: the same review, the same automatic updates. A **public** app
-  shows when someone searches "Sky Arc"; it still opens nothing without an account the academy made. An **unlisted**
-  app shows nowhere (no search, charts or categories): people install it from its link, which the academy puts on its
-  website, in the invite emails or on a QR code at the front desk. Apple made unlisted for apps "not suited for public
-  distribution", such as employee resources and apps for a limited audience
-  (https://developer.apple.com/support/unlisted-app-distribution/).
-- **Why public first.** After approval Apple allows one change only: a public app can become unlisted, never the other
-  way round ("Once your app is approved, the distribution method can't be changed. However, you can change a publicly
+  shows when someone searches "Sky Arc". An **unlisted** app shows nowhere (no search, charts or categories): people
+  install it from its link. Apple made unlisted for apps "not suited for public distribution", such as employee
+  resources and apps for a limited audience (https://developer.apple.com/support/unlisted-app-distribution/).
+- **Why public.** After approval Apple allows one change only: a public app can become unlisted, never the other way
+  round ("Once your app is approved, the distribution method can't be changed. However, you can change a publicly
   available app to an unlisted app", https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/set-distribution-methods).
-  An unlisted app that later wants to be found would be a new app that everyone installs again. Starting public keeps
-  both doors open, and parents can find the app by its name when their part comes to it.
-- **The risk, honestly.** Apple sometimes refuses an app that serves one business's own people (guideline 3.2) and
-  points to unlisted distribution instead. If that happens: request it at
+  Parents can find the app by its name when their part comes to it.
+- **Unlisted only if Apple asks.** Apple sometimes refuses an app that serves one business's own people (guideline
+  3.2) and points to unlisted distribution instead. If that happens: request it at
   https://developer.apple.com/contact/request/unlisted-app/, add "intended for unlisted distribution" to the review
   notes, and submit again. A round trip of a few days; nothing in the app changes.
-- **Whose account.** Apple's guideline 4.2.6 says an app built from a template must be submitted by the business it
-  belongs to, not by its developer on the business's behalf, and guideline 4.3 refuses copies of one app. Sky Arc's app
-  shares its code with HyberTec's own Hyber CRM app, so submitting both from HyberTec's account invites those
-  refusals. From the academy's account, the store also shows the academy as the seller. The academy enrolls in the
-  Apple Developer Program as an organization (https://developer.apple.com/programs/enroll/): its legal name and a
-  D-U-N-S number (free from Dun & Bradstreet), $99 a year, and Apple's checks take days to weeks, so start early. It then
-  adds HyberTec's Apple ID to its team (App Manager), and the publishing commands sign and upload with its team
-  (`APPLE_TEAM_ID`).
-- **Before then.** Your testing builds (`npm run iphone`) are signed by HyberTec LLC's team, as Hyber CRM's are, and the
-  first one registers the app's id, `com.skyarcacademy.app`, in HyberTec's Apple account. Nothing is uploaded, so the id
-  stays free to move: before the academy's account publishes, delete it in HyberTec's account (developer.apple.com →
-  Certificates, Identifiers & Profiles → Identifiers). Once a build has been uploaded to App Store Connect from one
-  account, the id stays with that account, so the first upload must come from the account that will publish.
+- **HyberTec's account.** Nothing in Apple's rules stops a developer from publishing an app it builds and runs for a
+  client: the store shows HyberTec LLC as the seller, and the testing builds have already registered the app's id,
+  `com.skyarcacademy.app`, in HyberTec's account. Three review guidelines to be ready for:
+  - **5.2.1:** an app should come from whoever owns or has licensed its name and logo, and "Sky Arc Sports Academy" is
+    the academy's. Reviewers often ask for proof when the seller's name differs from the app's. Before submitting, get
+    a short letter from the academy, signed by its owner, allowing HyberTec LLC to publish the Sky Arc app under the
+    academy's name and logo. Attach it in **App Review Information → Attachment**; the review notes mention it.
+  - **4.2.6 and 4.3:** Apple refuses apps made from a commercialized template and submitted by the template's
+    provider for its clients, and copies of one app. Sky Arc's app grew from the same in-house code as Hyber CRM's, but
+    it is its own product for one sport (the schedule by coach, paper targets scored from a photo). The review notes
+    say so up front, and a reply is ready if a reviewer cites either ([docs/store/review-notes.md](store/review-notes.md)).
+- **If the academy wants the app later.** App Store Connect can transfer an app to another developer account (the
+  app's page → App Information → Transfer App), and people keep it without installing it again.
 
 ## What Apple and Google will check
 
@@ -210,11 +211,12 @@ Do this once the TestFlight build is the one you want to ship.
    - **Screenshots:** the five files under **iPhone 6.9" Display**, in order (the app is iPhone-only).
    - **Promotional Text, Description, Keywords, Support URL, Marketing URL:** paste from
      [docs/store/listing.md](store/listing.md).
-   - **Version:** `1.0.0`, to match the builds. **Copyright:** `2026 HyberTec LLC` (or the academy, if it publishes).
+   - **Version:** `1.0.0`, to match the builds. **Copyright:** `2026 HyberTec LLC`.
    - **Build:** click **+** and choose the TestFlight build.
    - **App Review Information:** Sign-in required → **Yes**, with the review login
      ([A way in for the reviewers](#a-way-in-for-the-reviewers)); your name, phone and email for Apple to reach you;
-     **Notes:** the Apple notes from [docs/store/review-notes.md](store/review-notes.md).
+     **Notes:** the Apple notes from [docs/store/review-notes.md](store/review-notes.md); **Attachment:** the academy's
+     letter ([Public or unlisted](#public-or-unlisted)).
    - **Version Release:** **Manually release this version**. Click **Save**.
 4. **App Information:** **Category** Sports, secondary Education; **Content Rights**: no third-party content; **Age
    Rating**: answer the questions as they are (not made for kids; no chat; no user-generated content shared outside the

@@ -1,7 +1,7 @@
 # Notes for the reviewers
 
-What to paste into App Store Connect's **App Review Information**, the reply to send if Apple answers with guideline
-4.8, and Google Play's **App access** instructions. Fill in the ALL CAPS parts. Keep them true: reviewers try what the
+What to paste into App Store Connect's **App Review Information**, the replies to send if Apple answers with
+guideline 4.8, or with 5.2.1, 4.2.6 or 4.3 (who publishes the app), and Google Play's **App access** instructions. Fill in the ALL CAPS parts. Keep them true: reviewers try what the
 notes say.
 
 **The review login doesn't exist yet.** Make it before submitting ([docs/publishing.md](../publishing.md), "A way in for
@@ -18,6 +18,9 @@ the repository.
 
 ```
 Sky Arc is the app of Sky Arc Sports Academy's office (an air rifle academy for young people). The academy runs its classes, coaches, students and results on our website; this app gives its owners and admins the day's classes, the schedule by coach, the students with their families' contacts, and scoring of paper targets from a photo. Coaches, parents and students who sign in see a screen saying their part comes to the app later, with a link to the website.
+
+WHO PUBLISHES IT
+HyberTec LLC designed, built and runs the Sky Arc platform (this app, its website and its server) for Sky Arc Sports Academy, which has licensed its name and logo to us for it: the academy's letter is attached. Sky Arc is not made from a template or an app generation service; it is its own product for one sport.
 
 DEMO ACCOUNT
 Sign in with the email and password (no Google needed):
@@ -51,6 +54,15 @@ Sign in with Apple ([docs/publishing.md](../publishing.md), "Sign in with Apple"
 
 ```
 Thank you for the review. Sky Arc is the business app of one academy's office, and nobody can use it without an account the academy has created: the academy adds the person's email address, and only that address can open the app. Google sign-in and email-and-password sign-in are two ways for that person to prove they own the address the academy added; an account the academy hasn't added sees "No access yet" and nothing else. We believe this falls under guideline 4.8's exception for "an education, enterprise, or business app that requires the user to sign in with an existing education or enterprise account". If you still find Sign in with Apple necessary, please tell us and we will add it.
+```
+
+## If Apple answers with guideline 5.2.1, 4.2.6 or 4.3
+
+Reply from the same message, with the academy's letter attached again ([docs/publishing.md](../publishing.md), "Public
+or unlisted"). Check the details are still true before sending.
+
+```
+Thank you for the review. HyberTec LLC designed, built and operates the Sky Arc platform (this app, its website at skyarcacademy.web.app and its server) for Sky Arc Sports Academy, an air rifle academy, under a license to the academy's name and logo: the academy's signed letter is attached. Sky Arc is not built from a commercialized template or an app generation service, and it is not a copy of another app: it is made for this one sport and academy (classes by coach, students and their families, and scoring paper air rifle targets from a photo with its own image analysis). Our other app serves a different business. We are glad to answer any question about it.
 ```
 
 ## Google Play: App access
