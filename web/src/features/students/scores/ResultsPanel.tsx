@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
-import { LuFileText, LuPencil, LuPencilLine, LuTrash2 } from 'react-icons/lu'
+import { LuFileText, LuPencil, LuPencilLine, LuScanSearch, LuTrash2 } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10 } from '@shared/shooting/evaluation'
+import { wasScanned } from '@shared/targets/flat'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -12,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { one } from '@/features/reports/model'
 import { deleteEvaluation } from '@/features/scores/api'
+import { cardPath } from '@/features/scores/card/parts'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { prefersReducedMotion } from '@/features/scores/playback'
 import { MiniTarget } from '@/features/scores/TargetPlot'
@@ -28,7 +30,8 @@ const COLUMNS =
 
 /**
  * A student's results, newest first: the one picked shown large (FeaturedResult), above a list where every result
- * has a small picture of its target. Picking a result plays it back.
+ * has a small picture of its target. Picking a result plays it back. Admins and coaches alike correct and delete them:
+ * a card scanned with the phone on its picture (the card's page), a typed card or a SIUS result in a dialog.
  */
 export function ResultsPanel({ evaluations, mode }: { evaluations: WithId<Evaluation>[]; mode: 'admin' | 'coach' }) {
   const { branchId, actor } = useBranch()
@@ -39,7 +42,6 @@ export function ResultsPanel({ evaluations, mode }: { evaluations: WithId<Evalua
   const [editing, setEditing] = useState<WithId<Evaluation> | null>(null)
   const [showAll, setShowAll] = useState(false)
   const featured = useRef<HTMLDivElement>(null)
-  const admin = mode === 'admin'
   const rows = useMemo(() => [...evaluations].reverse(), [evaluations])
   const selected = rows.find((e) => e.id === picked?.id) ?? rows[0] ?? null
 
@@ -62,8 +64,10 @@ export function ResultsPanel({ evaluations, mode }: { evaluations: WithId<Evalua
   const entriesOf = (e: WithId<Evaluation>, withFile: boolean) =>
     menu(
       withFile && !!e.fileId && { label: 'Open the file in the Drive', icon: LuFileText, onSelect: () => navigate(`/${mode}/drive/file/${e.fileId}`) },
-      admin && { label: e.source === 'paper' ? 'Edit scores' : 'Edit position or note', icon: LuPencil, separatorBefore: withFile && !!e.fileId, onSelect: () => setEditing(e) },
-      admin && { label: 'Delete', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void remove(e) },
+      wasScanned(e)
+        ? { label: 'Check the card', icon: LuScanSearch, separatorBefore: withFile && !!e.fileId, onSelect: () => navigate(cardPath(mode, e)) }
+        : { label: e.source === 'paper' ? 'Edit scores' : 'Edit position or note', icon: LuPencil, separatorBefore: withFile && !!e.fileId, onSelect: () => setEditing(e) },
+      { label: 'Delete', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void remove(e) },
     )
 
   const pick = (e: WithId<Evaluation>) => {
@@ -83,7 +87,7 @@ export function ResultsPanel({ evaluations, mode }: { evaluations: WithId<Evalua
   return (
     <>
       <div ref={featured} className="scroll-mt-16 border-t">
-        <FeaturedResult key={`${selected.id}:${replays}`} e={selected} mode={mode} entries={entriesOf(selected, false)} latest={selected.id === rows[0].id} autoPlay={replays > 0} />
+        <FeaturedResult key={`${selected.id}:${replays}`} e={selected} mode={mode} entries={entriesOf(selected, wasScanned(selected))} latest={selected.id === rows[0].id} autoPlay={replays > 0} />
       </div>
 
       <div className="border-t" data-testid="results-list">

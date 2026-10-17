@@ -2,11 +2,16 @@
  * Sample data for trying the app before the academy's real data arrives (shared/src/sample/data.ts): fictional
  * coaches, a manager, students and families, ten weeks of classes around today with makeups and trials, availability,
  * time entries, announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic
- * PDFs in the students' Drive folders, a few paper cards, and two progress reports (one shared with the family).
+ * PDFs in the students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the
+ * card in the Drive, as the phone app saves it), and two progress reports (one shared with the family).
  * Running it again rewrites the same documents and adds classes around the new today.
  *
  *   npm run seed:sample                # add it to production (skyarcacademy)
  *   npm run seed:sample -- --remove    # delete it, with everything the app made for the sample people
+ *   npm run seed:sample -- --coach-login you+coach@example.com
+ *                                      # gives that email the sample coach Daniel Reed's access, to see the website and
+ *                                      # the phone app as a coach does (it gets the academy's sign-in email, as anyone the
+ *                                      # academy adds); --remove takes it away with the rest
  *
  * Removing finds sample documents by their `sample-` IDs and `@skyarc-sample.test` emails, and also deletes what the
  * app made for those people later: classes, time entries, kiosk PINs, notifications and audit entries. Real people and
@@ -19,19 +24,22 @@ import { driveObjectPath, studentFolderId } from '../shared/src/drive/types'
 import { COL } from '../shared/src/paths'
 import { composeReport } from '../shared/src/reports/compose'
 import { presetPeriod } from '../shared/src/reports/period'
-import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData } from '../shared/src/sample/data'
-import { buildSampleScores } from '../shared/src/sample/scores'
+import { newMemberData } from '../shared/src/branchFactory'
+import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData, sampleStaffId } from '../shared/src/sample/data'
+import { buildSampleScores, sampleCardPicture } from '../shared/src/sample/scores'
 import { POSITION_LABELS } from '../shared/src/shooting/evaluation'
 import type { SessionStatus } from '../shared/src/settings/defaults'
 import { resolveBusinessRules } from '../shared/src/settings/businessRules'
 import { resolveSettings } from '../shared/src/settings/resolve'
 import type { SettingsOverrides } from '../shared/src/settings/resolve'
+import { drawSyntheticCard } from '../shared/src/targets/synthetic'
 import { todayKey } from '../shared/src/time'
 import { PROJECT_ID, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
+import { encodePng } from './lib/png'
 import { siusPdf } from './lib/sius-pdf'
 import { deleteObject, uploadObject } from './lib/storage-rest'
 
-const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false } } })
+const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, 'coach-login': { type: 'string' } } })
 const base = `branches/${ACADEMY_ID}`
 
 const isSample = (v: unknown) => typeof v === 'string' && v.startsWith(SAMPLE_PREFIX)
@@ -47,7 +55,8 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.openShifts]: (id) => isSample(id),
   [COL.kioskPins]: (_, d) => isSample(d.staffId),
   kioskPinOwners: (id) => isSample(id),
-  [COL.members]: (id) => isSampleEmail(id),
+  // A sample person's own sign-in, and an email given a sample coach's access (--coach-login).
+  [COL.members]: (id, d) => isSampleEmail(id) || isSample(d.staffId),
   [COL.signupRequests]: (id) => isSampleEmail(id),
   [COL.notifications]: (_, d) => isSampleEmail(d.recipientKey),
   [COL.announcements]: (id) => isSample(id),
@@ -87,13 +96,14 @@ async function add() {
   await commit([...docs, ...shooting.docs], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
   console.log(`\n+ Sample data in ${PROJECT_ID}: ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
   console.log(`  ${summary.classes} classes, ${summary.makeups} makeups, ${summary.trials} trial visits, ${summary.shifts} time entries`)
-  console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs in the students' Drive folders), ${shooting.reports} progress reports`)
+  console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs and ${shooting.cards} scanned cards in the students' Drive folders), ${shooting.reports} progress reports`)
   console.log('  Remove it all with: npm run seed:sample -- --remove')
 }
 
 /**
- * The sample students' shooting: their scores, the SIUS PDFs behind them uploaded into their Drive folders, and two
- * progress reports for the last 30 days (one shared with a family that has a sign-in, one draft).
+ * The sample students' shooting: their scores, the SIUS PDFs and scanned cards' pictures behind them uploaded into
+ * their Drive folders, and two progress reports for the last 30 days (one shared with a family that has a sign-in, one
+ * draft).
  */
 async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown>, timezone: string, levels: readonly string[], now: Date) {
   const today = todayKey(timezone, now)
@@ -102,33 +112,39 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
   const out: SampleDoc[] = []
   const folders = new Map<string, string>()
   let pdfs = 0
+  let cards = 0
   for (const sc of scores) {
     const e = sc.evaluation
     out.push({ path: `${base}/${COL.evaluations}/${sc.evaluationId}`, data: { ...e, createdAt: sc.at, createdBy: manager.email, updatedAt: sc.at, updatedBy: manager.email } })
-    if (!sc.file) continue
-    const bytes = await siusPdf(sc.file.spec)
-    await uploadObject(driveObjectPath(ACADEMY_ID, sc.file.fileId), bytes, 'application/pdf')
-    pdfs++
-    process.stdout.write(`\r  uploading sample PDFs ${pdfs}`)
+    const file = sc.file
+    if (!file) continue
+    // A SIUS result's PDF, or a scanned card's picture: the flattened card the phone app keeps, here made up.
+    const pdf = file.kind === 'sius'
+    const bytes = pdf ? await siusPdf(file.spec) : encodePng(drawSyntheticCard(sampleCardPicture(file.card)))
+    const mime = pdf ? 'application/pdf' : 'image/png'
+    await uploadObject(driveObjectPath(ACADEMY_ID, file.fileId), bytes, mime)
+    if (pdf) pdfs++
+    else cards++
+    process.stdout.write(`\r  uploading sample files ${pdfs + cards}`)
     out.push({
-      path: `${base}/${COL.driveFiles}/${sc.file.fileId}`,
+      path: `${base}/${COL.driveFiles}/${file.fileId}`,
       data: {
-        name: sc.file.name,
+        name: file.name,
         size: bytes.length,
-        kind: 'pdf',
-        mime: 'application/pdf',
+        kind: pdf ? 'pdf' : 'png',
+        mime,
         status: 'ready',
         folderId: studentFolderId(e.studentId),
         studentId: e.studentId,
         evaluationId: sc.evaluationId,
-        originalName: `${e.studentName.split(' ')[0]} 20 shot ${POSITION_LABELS[e.position].toLowerCase()}.pdf`,
+        ...(pdf ? { originalName: `${e.studentName.split(' ')[0]} 20 shot ${POSITION_LABELS[e.position].toLowerCase()}.pdf` } : {}),
         uploadedAt: sc.at,
         uploadedBy: manager,
       },
     })
     folders.set(e.studentId, e.studentName)
   }
-  if (pdfs) process.stdout.write('\n')
+  if (pdfs + cards) process.stdout.write('\n')
   for (const [studentId, name] of folders) {
     out.push({ path: `${base}/${COL.driveFolders}/${studentFolderId(studentId)}`, data: { name, parentId: null, studentId, createdAt: now, createdBy: manager } })
   }
@@ -186,7 +202,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
       category: 'reports',
       entityType: 'academy',
       entityId: ACADEMY_ID,
-      summary: `Added sample shooting: ${scores.length} evaluations (${pdfs} SIUS PDFs in the Drive) and ${reports} progress reports`,
+      summary: `Added sample shooting: ${scores.length} evaluations (${pdfs} SIUS PDFs and ${cards} scanned cards in the Drive) and ${reports} progress reports`,
       context: '',
       dateKey: null,
       studentId: null,
@@ -197,7 +213,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
       via: 'function',
     },
   })
-  return { docs: out, evaluations: scores.length, pdfs, reports }
+  return { docs: out, evaluations: scores.length, pdfs, cards, reports }
 }
 
 async function remove() {
@@ -244,7 +260,34 @@ async function remove() {
   console.log(paths.length ? `  removed ${paths.length} documents from ${PROJECT_ID}` : `  no sample data in ${PROJECT_ID}`)
 }
 
-;(values.remove ? remove() : add()).catch((e) => {
+/** The sample coach a --coach-login signs in as: classes on Mondays, Wednesdays and Thursdays. */
+const LOGIN_COACH = { key: 'daniel-reed', name: 'Daniel Reed' }
+
+/**
+ * Gives `email` the sample coach's access: a member doc for it with the coach's role and staff record. The academy's
+ * sign-in email goes to it (functions/src/invites.ts), as for anyone the academy adds; whoever reads that mailbox signs
+ * in with Google or makes a password there. The sample data must be there first.
+ */
+async function coachLogin(email: string) {
+  const key = email.trim().toLowerCase()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) throw new Error(`Not an email: ${email}`)
+  const staffId = sampleStaffId(LOGIN_COACH.key)
+  if (!(await getDocument(`${base}/${COL.staff}/${staffId}`))) throw new Error(`No sample coach ${LOGIN_COACH.name} in ${PROJECT_ID}. Run npm run seed:sample first.`)
+  const existing = await getDocument(`${base}/${COL.members}/${key}`)
+  if (existing && existing.staffId !== staffId) throw new Error(`${key} already has access to the academy (${String(existing.role)}); not changing it.`)
+  if (existing) return console.log(`= ${key} already has the sample coach ${LOGIN_COACH.name}'s access in ${PROJECT_ID}.`)
+  const now = new Date()
+  await commit([
+    {
+      path: `${base}/${COL.members}/${key}`,
+      data: { ...newMemberData({ email: key, displayName: LOGIN_COACH.name, role: 'coach', staffId, createdBy: SAMPLE_AUTHOR }), createdAt: now, updatedAt: now },
+    },
+  ])
+  console.log(`+ ${key} has the sample coach ${LOGIN_COACH.name}'s access in ${PROJECT_ID}; the academy's sign-in email goes to it.`)
+  console.log('  Removed with the sample data: npm run seed:sample -- --remove')
+}
+
+;(values.remove ? remove() : values['coach-login'] ? coachLogin(values['coach-login']) : add()).catch((e) => {
   console.error(e)
   process.exit(1)
 })
