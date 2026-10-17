@@ -112,28 +112,38 @@ describe('Drive records', () => {
     await assertFails(getDoc(doc(db('admin@b.test'), `branches/${A}/driveFiles/f1`)))
   })
 
-  it('admins add files as themselves, starting as uploads; coaches can’t', async () => {
+  it('staff (coaches too) add files as themselves, starting as uploads', async () => {
     await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f2`), fileRecord('admin@a.test')))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f3`), fileRecord('someone@a.test')))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f4`), fileRecord('admin@a.test', { status: 'ready' })))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f5`), fileRecord('admin@a.test', { size: 101 * 1024 * 1024 })))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f6`), fileRecord('admin@a.test', { stray: true })))
-    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f7`), fileRecord('coach@a.test')))
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f7`), fileRecord('coach@a.test')))
+    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f8`), fileRecord('admin@a.test')))
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/f9`), fileRecord('parent@a.test')))
   })
 
-  it('admins rename, move and trash files, but never change what was uploaded', async () => {
+  it('staff rename, move and trash files, but never change what was uploaded', async () => {
     const a = db('admin@a.test')
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { name: 'Renamed.pdf', folderId: null, studentId: null }))
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: true, trashedAt: serverTimestamp(), trashedBy: actor('admin@a.test') }))
     await assertFails(updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { size: 99 }))
-    await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f1`), { name: 'x.pdf' }))
+    await assertSucceeds(updateDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f1`), { name: 'x.pdf' }))
+    await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f1`), { uploadedBy: actor('coach@a.test') }))
+    await assertFails(updateDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/f1`), { name: 'y.pdf' }))
   })
 
-  it('deletes a file record only once it is in the Trash', async () => {
+  it('deletes a file record once admins empty it from the Trash, or a failed upload for anyone on staff', async () => {
     const a = db('admin@a.test')
     await assertFails(deleteDoc(doc(a, `branches/${A}/driveFiles/f1`)))
     await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: true })
+    await assertFails(deleteDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f1`)))
     await assertSucceeds(deleteDoc(doc(a, `branches/${A}/driveFiles/f1`)))
+    const c = db('coach@a.test')
+    await setDoc(doc(c, `branches/${A}/driveFiles/f2`), fileRecord('coach@a.test'))
+    await assertFails(deleteDoc(doc(c, `branches/${A}/driveFiles/f2`)))
+    await updateDoc(doc(c, `branches/${A}/driveFiles/f2`), { status: 'error', error: 'The upload didn’t finish.' })
+    await assertSucceeds(deleteDoc(doc(c, `branches/${A}/driveFiles/f2`)))
   })
 
   it('keeps students’ folders at the top, named for them, and out of the Trash', async () => {
@@ -147,7 +157,9 @@ describe('Drive records', () => {
     await assertFails(updateDoc(doc(a, `branches/${A}/driveFolders/student-s1`), { studentId: 's9' }))
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/driveFolders/n1`), { trashed: true }))
     await assertSucceeds(deleteDoc(doc(a, `branches/${A}/driveFolders/n1`)))
-    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFolders/n2`), folderRecord('coach@a.test')))
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFolders/student-s5`), folderRecord('coach@a.test', { name: 'S5', parentId: null, studentId: 's5' })))
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFolders/n2`), folderRecord('coach@a.test')))
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/driveFolders/n3`), folderRecord('parent@a.test')))
   })
 })
 
@@ -164,28 +176,42 @@ describe('Drive files in Storage', () => {
     await setDoc(doc(a, `branches/${A}/driveFiles/f2`), fileRecord('admin@a.test'))
     await assertFails(uploadBytes(ref(storage('admin@a.test'), `branches/${A}/drive/f2`), PDF, { contentType: 'text/html' }))
     await assertFails(uploadBytes(ref(storage('admin@a.test'), `branches/${A}/drive/f2`), new Uint8Array(9), { contentType: 'application/pdf' }))
-    await assertFails(uploadBytes(ref(storage('coach@a.test'), `branches/${A}/drive/f2`), PDF, { contentType: 'application/pdf' }))
+    await assertFails(uploadBytes(ref(storage('parent@a.test'), `branches/${A}/drive/f2`), PDF, { contentType: 'application/pdf' }))
     await assertFails(uploadBytes(ref(storage('admin@a.test'), `branches/${A}/drive/no-record`), PDF, { contentType: 'application/pdf' }))
     await assertSucceeds(uploadBytes(ref(storage('admin@a.test'), `branches/${A}/drive/f2`), PDF, { contentType: 'application/pdf' }))
     await assertFails(uploadBytes(ref(storage('admin@a.test'), `branches/${A}/drive/f1`), PDF, { contentType: 'application/pdf' }))
   })
 
-  it('deletes bytes only once the record is in the Trash', async () => {
+  it('a coach uploads a card for their record', async () => {
+    await setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f3`), fileRecord('coach@a.test'))
+    await assertSucceeds(uploadBytes(ref(storage('coach@a.test'), `branches/${A}/drive/f3`), PDF, { contentType: 'application/pdf' }))
+  })
+
+  it('deletes bytes only once the record is in the Trash (admins) or the upload failed (staff)', async () => {
     await assertFails(deleteObject(ref(storage('admin@a.test'), `branches/${A}/drive/f1`)))
     await updateDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f1`), { trashed: true })
     await assertFails(deleteObject(ref(storage('coach@a.test'), `branches/${A}/drive/f1`)))
     await assertSucceeds(deleteObject(ref(storage('admin@a.test'), `branches/${A}/drive/f1`)))
+    await env.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), `branches/${A}/driveFiles/f4`), { ...fileRecord('coach@a.test'), status: 'error' })
+      await uploadBytes(ref(c.storage(), `branches/${A}/drive/f4`), PDF, { contentType: 'application/pdf' })
+    })
+    await assertFails(deleteObject(ref(storage('parent@a.test'), `branches/${A}/drive/f4`)))
+    await assertSucceeds(deleteObject(ref(storage('coach@a.test'), `branches/${A}/drive/f4`)))
   })
 })
 
 describe('evaluations', () => {
-  it('staff read them, families don’t, and only admins write them', async () => {
+  it('staff read and write them (coaches too); families don’t', async () => {
     await assertSucceeds(getDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e1`)))
     await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e1`)))
     await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e2`), evaluation({ source: 'paper', total: 88, wholeTotal: 88, shots: 10 })))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e3`), evaluation({ position: 'sitting' })))
-    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e4`), evaluation()))
-    await assertFails(deleteDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e1`)))
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e4`), evaluation()))
+    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e5`), evaluation({ position: 'sitting' })))
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e6`), evaluation()))
+    await assertFails(deleteDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e1`)))
+    await assertSucceeds(deleteDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e4`)))
     await assertSucceeds(deleteDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e1`)))
   })
 })

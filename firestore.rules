@@ -401,9 +401,10 @@ service cloud.firestore {
 
       // ------------------------------------------------------ drive
 
-      // The Drive (shared/src/drive/types.ts): one folder per student at the top, plus any folders admins make.
-      // Staff open it; admins add, rename, move and trash. Nothing is deleted from the browser unless it's in the
-      // Trash (or a failed upload); families never see it.
+      // The Drive (shared/src/drive/types.ts): one folder per student at the top, plus any folders staff make.
+      // Staff (admins and coaches alike: coaches scan cards and add results too, the owner's call of 2026-10-17) open
+      // it, add, rename, move and trash. Only admins empty the Trash; anyone on staff clears a failed upload. Families
+      // never see it.
       function byMe(actor) {
         return actor is map && actor.email == emailKey();
       }
@@ -421,10 +422,10 @@ service cloud.firestore {
 
       match /driveFolders/{folderId} {
         allow read: if isStaff(b);
-        allow create: if isAdmin(b) && validFolder(folderId, request.resource.data)
+        allow create: if isStaff(b) && validFolder(folderId, request.resource.data)
           && request.resource.data.get('trashed', false) == false
           && byMe(request.resource.data.createdBy);
-        allow update: if isAdmin(b) && validFolder(folderId, request.resource.data)
+        allow update: if isStaff(b) && validFolder(folderId, request.resource.data)
           && request.resource.data.studentId == resource.data.studentId
           && request.resource.data.createdBy == resource.data.createdBy;
         allow delete: if isAdmin(b) && resource.data.get('trashed', false) == true;
@@ -445,21 +446,23 @@ service cloud.firestore {
       match /driveFiles/{fileId} {
         allow read: if isStaff(b);
         // The record comes first (status uploading), then the bytes (storage.rules checks the record).
-        allow create: if isAdmin(b) && validFile(request.resource.data)
+        allow create: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.status == 'uploading'
           && request.resource.data.get('trashed', false) == false
           && byMe(request.resource.data.uploadedBy);
-        allow update: if isAdmin(b) && validFile(request.resource.data)
+        allow update: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.size == resource.data.size
           && request.resource.data.kind == resource.data.kind
           && request.resource.data.mime == resource.data.mime
           && request.resource.data.uploadedBy == resource.data.uploadedBy;
-        allow delete: if isAdmin(b) && (resource.data.get('trashed', false) == true || resource.data.status == 'error');
+        allow delete: if (isAdmin(b) && resource.data.get('trashed', false) == true)
+          || (isStaff(b) && resource.data.status == 'error');
       }
 
       // ------------------------------------------------------ scores and reports
 
-      // Evaluations: one scored target each (a SIUS result or a paper card). Staff read them; admins keep them.
+      // Evaluations: one scored target each (a SIUS result or a paper card). Staff (admins and coaches) read, add,
+      // correct and delete them, each change in the audit log.
       match /evaluations/{evaluationId} {
         function validEvaluation(d) {
           return d.studentId is string && d.studentName is string
@@ -473,8 +476,8 @@ service cloud.firestore {
         }
 
         allow read: if isStaff(b);
-        allow create, update: if isAdmin(b) && validEvaluation(request.resource.data);
-        allow delete: if isAdmin(b);
+        allow create, update: if isStaff(b) && validEvaluation(request.resource.data);
+        allow delete: if isStaff(b);
       }
 
       // Progress reports: admins make and edit drafts; admins and coaches share them (docs/DECISIONS.md §6, Q11:

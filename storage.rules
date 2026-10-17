@@ -36,8 +36,9 @@ service firebase.storage {
     }
 
     // The Drive's files (shared/src/drive): results and target photos of minors, so staff only, read through these
-    // rules (getBlob), never through download links. Each file's Firestore record is written first; the bytes must
-    // match it, never replace a file, and are deleted only once the record is in the Trash (or the upload failed).
+    // rules (getBlob), never through download links. Staff (coaches too) add files: each file's Firestore record is
+    // written first, and the bytes must match it and never replace a file. They're deleted only once the record is in
+    // the Trash (admins) or the upload failed (staff).
     function isStaff(b) {
       return isMember(b) && member(b).get('role', '') in ['owner', 'admin', 'coach'];
     }
@@ -48,13 +49,14 @@ service firebase.storage {
       }
 
       allow read: if isStaff(b);
-      allow create: if isAdmin(b)
+      allow create: if isStaff(b)
         && request.resource.size <= 100 * 1024 * 1024
         && request.resource.contentType.matches('application/pdf|image/(jpeg|png|heic|heif|webp|gif)|text/(plain|csv)|application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint|vnd[.]openxmlformats-officedocument[.][a-z.]+)|video/(mp4|quicktime)')
         && record().status == 'uploading'
         && record().size == request.resource.size;
       allow update: if false;
-      allow delete: if isAdmin(b) && (record().get('trashed', false) == true || record().status == 'error');
+      allow delete: if (isAdmin(b) && record().get('trashed', false) == true)
+        || (isStaff(b) && record().status == 'error');
     }
   }
 }
