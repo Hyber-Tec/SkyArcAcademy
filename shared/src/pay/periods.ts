@@ -1,5 +1,5 @@
 import type { PayPeriodType } from '../settings/defaults'
-import { type DateKey, addDays, diffDays, endOfMonth, parseDateKey, makeDateKey } from '../time'
+import { type DateKey, addDays, diffDays, endOfMonth, formatDateKey, parseDateKey, makeDateKey } from '../time'
 
 export interface PayPeriod {
   start: DateKey
@@ -36,4 +36,9 @@ export function recentPeriods(date: DateKey, type: PayPeriodType, anchor: DateKe
 
 export function periodId(p: PayPeriod): string {
   return `${p.start}_${p.end}`
+}
+
+/** "Oct 11 – Oct 24, 2026": a pay period as the website's and the phone's lists show it. */
+export function payPeriodLabel(p: PayPeriod): string {
+  return `${formatDateKey(p.start, 'monthDay')} – ${formatDateKey(p.end, 'medium')}`
 }

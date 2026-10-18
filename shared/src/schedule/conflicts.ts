@@ -113,7 +113,9 @@ export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conf
   } else if (hours.isOpen) {
     const a = ctx.availability
     const ranges = a && !a.unavailable ? effectiveRanges(a.ranges, hours) : []
-    if (ranges.length === 0) out.push({ kind: 'coach_unavailable', message: `${coach} isn’t available that day.` })
+    // Marked not available (an answer) reads differently from no availability given at all.
+    if (a?.unavailable) out.push({ kind: 'coach_unavailable', message: `${coach} is marked not available that day.` })
+    else if (ranges.length === 0) out.push({ kind: 'coach_unavailable', message: `${coach} hasn’t given availability that day.` })
     else if (!rangesContain(ranges, s.startMin, s.endMin)) {
       out.push({ kind: 'coach_unavailable', message: `${coach} is only available ${rangesText(ranges)}.` })
     }

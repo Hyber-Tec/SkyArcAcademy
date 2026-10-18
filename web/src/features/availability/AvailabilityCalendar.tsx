@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { LuClipboardPaste, LuCopy, LuCopyPlus, LuLock, LuPencil, LuRepeat, LuTrash2, LuX } from 'react-icons/lu'
+import { LuBan, LuClipboardPaste, LuCopy, LuCopyPlus, LuLock, LuPencil, LuRepeat, LuTrash2, LuX } from 'react-icons/lu'
 import { toast } from 'sonner'
-import { dayHours, effectiveLockDays, effectiveRanges, fitRangesToDay, isInsideLeadTime, isLockedForCoach, normalizeRanges, weeklyRepeats } from '@shared/availability'
+import { dayHours, dayMark, effectiveLockDays, effectiveRanges, fitRangesToDay, isInsideLeadTime, isLockedForCoach, normalizeRanges, weeklyRepeats } from '@shared/availability'
 import { type DateKey, addDays, dateRange, diffDays, formatDateKey, formatMinutesShort, nowMinutes, startOfWeek, todayKey } from '@shared/time'
 import type { AvailabilityRange } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -19,14 +19,17 @@ import { useLoadWindow } from '@/lib/useLoadWindow'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/components/app/useConfirm'
-import { type DayWrite, describeRanges, describeSessions, sessionsLeftUncovered, writeAvailability } from './api'
+import { type DayWrite, describeRanges, sessionsLeftUncovered, uncoveredWarning, writeAvailability } from './api'
 import { DayEditorDialog, type DayEditorState } from './DayEditorDialog'
 
 /** What is selected: one time range, or a run of days (Shift-click extends it). */
 type Selection = { kind: 'item'; date: DateKey; index: number } | { kind: 'days'; anchor: DateKey; focus: DateKey } | null
 
+/** A day as copied, or as a plan writes it: its times, or not available. */
+type DayCopy = { ranges: AvailabilityRange[]; unavailable?: boolean }
+
 /** What was copied: one range (pasted into days) or whole days (pasted day by day). */
-type Clipboard = { kind: 'item'; range: AvailabilityRange } | { kind: 'days'; days: AvailabilityRange[][] } | null
+type Clipboard = { kind: 'item'; range: AvailabilityRange } | { kind: 'days'; days: DayCopy[] } | null
 
 const CHIPS_SHOWN = 3
 /** Pointer travel (px) before a press on a time becomes a drag. */
@@ -36,10 +39,12 @@ const LONG_PRESS_MS = 350
 
 const SKIP_REASON = { closed: 'closed', outside: 'outside opening hours', too_many: 'too many ranges', locked: 'locked' } as const
 
-/** Lets a page open a day of the calendar (Home's and the status line's "Set" links). */
+/** Lets a page open a day of the calendar (Home's and the status line's "Set" links), or mark days not available. */
 export interface AvailabilityCalendarHandle {
   /** Scrolls to the date and opens its editor, once the calendar's data is in. */
   openDay: (date: DateKey) => void
+  /** Marks the days not available (closed and locked ones are skipped). */
+  markNotAvailable: (dates: DateKey[]) => void
 }
 
 /**
@@ -86,6 +91,9 @@ export function AvailabilityCalendar({
   const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, dayConfigs), [settings, dayConfigs])
   // What counts is the part inside that date's opening hours (none on closed days).
   const rangesOf = useCallback((d: DateKey) => effectiveRanges(normalizeRanges(availability.get(d)?.ranges ?? []), hoursOf(d)), [availability, hoursOf])
+  // Times, not available, unset or closed.
+  const markOf = useCallback((d: DateKey) => dayMark(availability.get(d), hoursOf(d)), [availability, hoursOf])
+  const copyOf = useCallback((d: DateKey): DayCopy => ({ ranges: rangesOf(d), unavailable: markOf(d) === 'unavailable' }), [rangesOf, markOf])
 
   const selectedDays = useMemo(() => {
     if (selection?.kind !== 'days') return []
@@ -111,15 +119,7 @@ export function AvailabilityCalendar({
         nowMin: nowMinutes(timezone, new Date(now)),
       })
       if (uncovered.length) {
-        const n = uncovered.length
-        const ok = await confirm({
-          title: `${n} booked class${n > 1 ? 'es are' : ' is'} in this time`,
-          description:
-            mode === 'coach'
-              ? `${describeSessions(uncovered)} ${n > 1 ? 'are' : 'is'} booked in the time you’re removing. If you save, ${n > 1 ? 'they stay' : 'it stays'} booked and ${n > 1 ? 'show' : 'shows'} as a conflict until the admin moves, reassigns or cancels ${n > 1 ? 'them' : 'it'}. If it’s urgent, tell the admin too.`
-              : `${describeSessions(uncovered)} ${n > 1 ? 'are' : 'is'} booked in this time. If you save, ${n > 1 ? 'they' : 'it'} will show as ${n > 1 ? 'conflicts' : 'a conflict'} on the schedule until ${n > 1 ? 'they’re' : 'it’s'} moved, reassigned or canceled.`,
-          confirmLabel: 'Save anyway',
-        })
+        const ok = await confirm({ ...uncoveredWarning(uncovered, mode), confirmLabel: 'Save anyway' })
         if (!ok) return false
       }
       await writeAvailability({ branchId, actor, timezone, staffId, staffName, via: mode, days, summary })
@@ -129,17 +129,23 @@ export function AvailabilityCalendar({
   )
 
   /**
-   * Writes a plan of day → ranges, skipping closed and locked days and fitting
-   * each day to its opening hours; reports what was skipped.
+   * Writes a plan of day → times or not available, skipping closed and locked
+   * days and fitting each day to its opening hours; reports what was skipped.
+   * A day planned without times is cleared (its not available mark too).
    */
   const applyPlan = useCallback(
-    async (plan: { date: DateKey; ranges: AvailabilityRange[] }[], summary: string, done: string) => {
+    async (plan: ({ date: DateKey } & DayCopy)[], summary: string | undefined, done: string) => {
       const writes: DayWrite[] = []
       const skipped: Record<string, number> = {}
-      for (const { date, ranges } of plan) {
+      for (const { date, ranges, unavailable } of plan) {
         const skip = (why: keyof typeof SKIP_REASON) => (skipped[why] = (skipped[why] ?? 0) + 1)
         if (locked(date)) {
           skip('locked')
+          continue
+        }
+        if (unavailable) {
+          if (!hoursOf(date).isOpen) skip('closed')
+          else if (markOf(date) !== 'unavailable') writes.push({ dateKey: date, ranges: [], unavailable: true })
           continue
         }
         const fit = fitRangesToDay(ranges, hoursOf(date), a)
@@ -149,7 +155,7 @@ export function AvailabilityCalendar({
           continue
         }
         const before = rangesOf(date)
-        if (JSON.stringify(before) !== JSON.stringify(fit.ranges)) writes.push({ dateKey: date, ranges: fit.ranges })
+        if (markOf(date) === 'unavailable' || JSON.stringify(before) !== JSON.stringify(fit.ranges)) writes.push({ dateKey: date, ranges: fit.ranges })
       }
       try {
         if (writes.length && !(await write(writes, summary))) return
@@ -161,7 +167,31 @@ export function AvailabilityCalendar({
       if (writes.length) toast.success(done, notes.length ? { description: `Skipped: ${notes.join(', ')}.` } : undefined)
       else if (notes.length) toast.info('Nothing changed', { description: `Skipped: ${notes.join(', ')}.` })
     },
-    [locked, hoursOf, rangesOf, a, write],
+    [locked, hoursOf, rangesOf, markOf, a, write],
+  )
+
+  /** Marks days not available; asks first when some of them have times. */
+  const markNotAvailable = useCallback(
+    async (dates: DateKey[]) => {
+      const targets = dates.filter((d) => markOf(d) === 'available' || markOf(d) === 'unset')
+      if (!targets.length) return toast.info(dates.some((d) => markOf(d) === 'unavailable') ? 'Already marked not available.' : 'Nothing to mark: the academy is closed.')
+      const timed = targets.filter((d) => markOf(d) === 'available').length
+      if (
+        timed &&
+        !(await confirm({
+          title: `Mark ${targets.length === 1 ? 'this day' : `${targets.length} days`} not available?`,
+          description: `${timed === 1 ? 'One of them has' : `${timed} of them have`} times now; marking ${targets.length === 1 ? 'it' : 'them'} not available removes ${timed === 1 ? 'them' : 'those times'}.`,
+          confirmLabel: 'Mark not available',
+        }))
+      )
+        return
+      void applyPlan(
+        targets.map((d) => ({ date: d, ranges: [], unavailable: true })),
+        targets.length === 1 ? undefined : `Marked ${staffName} not available on ${targets.length} days`,
+        targets.length === 1 ? `Not available on ${formatDateKey(targets[0], 'weekdayMedium')}` : `Not available on ${targets.length} days`,
+      )
+    },
+    [markOf, confirm, applyPlan, staffName],
   )
 
   const openEditor = useCallback(
@@ -171,21 +201,23 @@ export function AvailabilityCalendar({
         toast.info('The academy is closed on this day.')
         return
       }
+      const mark = markOf(d)
       setEditor({
         dateKey: d,
         ranges: rangesOf(d),
-        exists: rangesOf(d).length > 0,
+        unavailable: mark === 'unavailable',
+        exists: mark === 'available' || mark === 'unavailable',
         locked: locked(d),
         leadWarning: mode === 'coach' && a.leadTimeEnforcement === 'warn' && isInsideLeadTime(d, timezone, leadDays) && !locked(d),
         hours,
       })
     },
-    [hoursOf, rangesOf, locked, mode, a.leadTimeEnforcement, timezone, leadDays],
+    [hoursOf, rangesOf, markOf, locked, mode, a.leadTimeEnforcement, timezone, leadDays],
   )
 
   // A day asked for before the availability loaded opens once it has.
   const [askedDay, setAskedDay] = useState<DateKey | null>(null)
-  useImperativeHandle(ref, () => ({ openDay: (d) => setAskedDay(d) }), [])
+  useImperativeHandle(ref, () => ({ openDay: (d) => setAskedDay(d), markNotAvailable: (dates) => void markNotAvailable(dates) }), [markNotAvailable])
   useEffect(() => {
     if (!askedDay || loading) return
     setAskedDay(null)
@@ -202,14 +234,14 @@ export function AvailabilityCalendar({
       setClipboard({ kind: 'item', range })
       toast.success(`Copied ${formatMinutesShort(range.startMin)}–${formatMinutesShort(range.endMin)}`, { description: 'Select a day and press ⌘/Ctrl+V.' })
     } else {
-      const days = selectedDays.map((d) => rangesOf(d))
-      if (days.every((r) => r.length === 0)) return toast.info('Nothing to copy on those days.')
+      const days = selectedDays.map(copyOf)
+      if (days.every((x) => !x.unavailable && x.ranges.length === 0)) return toast.info('Nothing to copy on those days.')
       setClipboard({ kind: 'days', days })
       toast.success(`Copied ${days.length === 1 ? 'the day' : `${days.length} days`}`, {
         description: days.length > 1 ? 'Select the first day to paste onto and press ⌘/Ctrl+V.' : 'Select a day and press ⌘/Ctrl+V.',
       })
     }
-  }, [selection, selectedDays, rangesOf])
+  }, [selection, selectedDays, rangesOf, copyOf])
 
   const paste = useCallback(() => {
     if (!clipboard || !selection) return
@@ -224,7 +256,7 @@ export function AvailabilityCalendar({
       )
     } else {
       // Copied days replace the days from the selected one on.
-      const plan = clipboard.days.map((ranges, i) => ({ date: addDays(start, i), ranges }))
+      const plan = clipboard.days.map((day, i) => ({ date: addDays(start, i), ...day }))
       void applyPlan(plan, `Pasted ${plan.length} days of ${staffName}’s availability`, plan.length === 1 ? 'Day pasted' : `${plan.length} days pasted`)
       setSelection({ kind: 'days', anchor: start, focus: addDays(start, plan.length - 1) })
     }
@@ -243,15 +275,16 @@ export function AvailabilityCalendar({
       setSelection({ kind: 'days', anchor: selection.date, focus: selection.date })
       return
     }
-    const withRanges = selectedDays.filter((d) => rangesOf(d).length > 0)
-    if (!withRanges.length) return
-    if (withRanges.length > 1 && !(await confirm({ title: `Remove availability on ${withRanges.length} days?`, confirmLabel: 'Remove', destructive: true }))) return
+    // Clearing takes times and not available marks alike: the days are unset again.
+    const marked = selectedDays.filter((d) => markOf(d) === 'available' || markOf(d) === 'unavailable')
+    if (!marked.length) return
+    if (marked.length > 1 && !(await confirm({ title: `Clear ${marked.length} days?`, description: 'Their times and not available marks are removed.', confirmLabel: 'Clear', destructive: true }))) return
     void applyPlan(
-      withRanges.map((d) => ({ date: d, ranges: [] })),
-      `Removed ${staffName}’s availability on ${withRanges.length} day${withRanges.length > 1 ? 's' : ''}`,
-      'Availability removed',
+      marked.map((d) => ({ date: d, ranges: [] })),
+      `Cleared ${staffName}’s availability on ${marked.length} day${marked.length > 1 ? 's' : ''}`,
+      marked.length > 1 ? `${marked.length} days cleared` : 'Day cleared',
     )
-  }, [selection, selectedDays, rangesOf, applyPlan, staffName, confirm])
+  }, [selection, selectedDays, rangesOf, markOf, applyPlan, staffName, confirm])
 
   /** Drag a range onto another day: move it (or copy it with Alt/Option). */
   const dropRange = useCallback(
@@ -375,11 +408,11 @@ export function AvailabilityCalendar({
     })
     if (!ok) return
     void applyPlan(
-      days.map((d) => ({ date: d, ranges: rangesOf(addDays(d, -7)) })),
+      days.map((d) => ({ date: d, ...copyOf(addDays(d, -7)) })),
       `Copied last week’s availability for ${staffName}`,
       'Last week copied',
     )
-  }, [selection, selectedDays, today, settings.general.weekStartsOn, applyPlan, rangesOf, staffName, confirm])
+  }, [selection, selectedDays, today, settings.general.weekStartsOn, applyPlan, copyOf, staffName, confirm])
 
   // Desktop keyboard: ⌘/Ctrl+C copy, ⌘/Ctrl+V paste, Delete clear, Enter edit, Escape deselect.
   useEffect(() => {
@@ -421,6 +454,8 @@ export function AvailabilityCalendar({
   }
 
   const singleDay = selection?.kind === 'days' && selectedDays.length === 1 ? selectedDays[0] : null
+  const singleMarked = !!singleDay && (markOf(singleDay) === 'available' || markOf(singleDay) === 'unavailable')
+  const selectionDays = selection?.kind === 'item' ? [selection.date] : selectedDays
   const selectionLabel =
     selection?.kind === 'item'
       ? (() => {
@@ -455,7 +490,7 @@ export function AvailabilityCalendar({
           <Button variant="outline" size="sm" onClick={copyLastWeek}>
             <LuCopyPlus /> Copy last week
           </Button>
-          <Button variant="outline" size="sm" disabled={!singleDay || !rangesOf(singleDay).length} onClick={() => setRepeatOpen(true)}>
+          <Button variant="outline" size="sm" disabled={!singleMarked} onClick={() => setRepeatOpen(true)}>
             <LuRepeat /> Repeat weekly
           </Button>
         </div>
@@ -481,6 +516,9 @@ export function AvailabilityCalendar({
               <Button size="xs" variant="ghost" onClick={clear}>
                 <LuTrash2 /> {selection.kind === 'item' ? 'Remove' : 'Clear'}
               </Button>
+              <Button size="xs" variant="ghost" onClick={() => void markNotAvailable(selectionDays)} data-testid="selection-not-available">
+                <LuBan /> Not available
+              </Button>
               <span className="ml-auto hidden items-center gap-1 text-xs text-muted-foreground xl:flex">
                 <Kbd>⌘C</Kbd> copy <Kbd>⌘V</Kbd> paste <Kbd>Del</Kbd> clear <Kbd>Esc</Kbd> deselect
               </span>
@@ -504,15 +542,16 @@ export function AvailabilityCalendar({
           renderDay={(d) => {
             const ranges = rangesOf(d)
             const hours = hoursOf(d)
+            const mark = markOf(d)
             const isLocked = locked(d)
             const inSelection = selectedSet.has(d)
-            const needs = mode === 'coach' && hours.isOpen && !isLocked && ranges.length === 0 && d >= today && isInsideLeadTime(d, timezone, leadDays)
+            const needs = mode === 'coach' && mark === 'unset' && !isLocked && d >= today && isInsideLeadTime(d, timezone, leadDays)
             const extra = ranges.length - CHIPS_SHOWN
             return (
               <div
                 role="button"
                 tabIndex={-1}
-                aria-label={`${formatDateKey(d, 'weekdayLong')}: ${hours.isOpen ? describeRanges(ranges) : 'closed'}`}
+                aria-label={`${formatDateKey(d, 'weekdayLong')}: ${!hours.isOpen ? 'closed' : mark === 'unavailable' ? 'not available' : describeRanges(ranges)}`}
                 onClick={(e) => onDayClick(d, e.shiftKey)}
                 onDoubleClick={() => !isMobile && openEditor(d)}
                 className={cn(
@@ -558,6 +597,14 @@ export function AvailabilityCalendar({
                   )
                 })}
                 {extra > 0 ? <div className="text-center text-[11px] text-muted-foreground">+{extra} more</div> : null}
+                {mark === 'unavailable' ? (
+                  <div
+                    className="flex flex-1 items-center justify-center gap-1 rounded-md border border-dashed border-muted-foreground/30 bg-muted/50 px-0.5 py-1.5 text-center text-[10.5px] leading-tight font-medium text-balance text-muted-foreground sm:rounded-lg sm:text-xs"
+                    data-testid="availability-not-available"
+                  >
+                    <LuBan className="hidden size-3.5 shrink-0 sm:block" aria-hidden /> Not available
+                  </div>
+                ) : null}
                 {!hours.isOpen ? <div className="m-auto text-xs font-medium">Closed</div> : null}
               </div>
             )
@@ -581,17 +628,17 @@ export function AvailabilityCalendar({
         {isMobile ? 'Tap a day to set availability. ' : 'Hold Alt/Option while dragging to copy instead of move. '}
         Times follow each day’s opening hours; closed days take no availability.
         {mode === 'coach'
-          ? ` Days within ${a.lockWindowDays} days are locked; amber days are inside the ${leadDays}-day notice window and still need availability.`
+          ? ` Days within ${a.lockWindowDays} days are locked; amber days are inside the ${leadDays}-day notice window and still need an answer: your times, or not available.`
           : ''}
       </p>
 
       <DayEditorDialog
         state={editor}
         onClose={() => setEditor(null)}
-        onSave={async (ranges) => {
+        onSave={async (day) => {
           if (!editor) return false
-          if (!(await write([{ dateKey: editor.dateKey, ranges }]))) return false
-          toast.success('Availability saved')
+          if (!(await write([{ dateKey: editor.dateKey, ...day }]))) return false
+          toast.success(day.unavailable ? 'Marked not available' : day.ranges.length ? 'Availability saved' : 'Day cleared')
           return true
         }}
       />
@@ -600,13 +647,13 @@ export function AvailabilityCalendar({
         open={repeatOpen}
         onOpenChange={setRepeatOpen}
         dateKey={singleDay}
-        onRepeat={(weeks) => {
+        onRepeat={(weeks, every) => {
           if (!singleDay) return
-          const ranges = rangesOf(singleDay)
+          const day = copyOf(singleDay)
           void applyPlan(
-            weeklyRepeats(singleDay, weeks).map((d) => ({ date: d, ranges })),
-            `Repeated ${staffName}’s availability weekly`,
-            `Repeated for ${weeks} week${weeks > 1 ? 's' : ''}`,
+            weeklyRepeats(singleDay, weeks, every).map((d) => ({ date: d, ...day })),
+            `Repeated ${staffName}’s availability ${every === 2 ? 'every other week' : 'weekly'}`,
+            `Repeated ${every === 2 ? 'every other week' : 'weekly'} for ${weeks} week${weeks > 1 ? 's' : ''}`,
           )
         }}
       />
@@ -623,38 +670,53 @@ function RepeatDialog({
   open: boolean
   onOpenChange: (o: boolean) => void
   dateKey: string | null
-  onRepeat: (weeks: number) => void
+  onRepeat: (weeks: number, every: 1 | 2) => void
 }) {
   const [weeks, setWeeks] = useState('4')
+  // Every other week: a rotation (Sundays that alternate between coaches).
+  const [every, setEvery] = useState<'1' | '2'>('1')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Repeat weekly</DialogTitle>
           <DialogDescription>
-            Copy {dateKey ? formatDateKey(dateKey, 'weekdayMedium') : ''}’s availability to the same weekday in the following weeks. Closed and locked days are
-            skipped, and times follow each day’s opening hours.
+            Copy {dateKey ? formatDateKey(dateKey, 'weekdayMedium') : ''}’s availability (its times, or not available) to the same weekday in the following weeks,
+            or every other week for a rotation. Closed and locked days are skipped, and times follow each day’s opening hours.
           </DialogDescription>
         </DialogHeader>
-        <Select value={weeks} onValueChange={setWeeks}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[1, 2, 3, 4, 6, 8, 12].map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                For {n} week{n > 1 ? 's' : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={every} onValueChange={(v) => setEvery(v === '2' ? '2' : '1')}>
+            <SelectTrigger className="w-full" aria-label="How often">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Every week</SelectItem>
+              <SelectItem value="2">Every other week</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={weeks} onValueChange={setWeeks}>
+            <SelectTrigger className="w-full" aria-label="For how long">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4, 6, 8, 12].filter((n) => every === '1' || n % 2 === 0).map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  For {n} week{n > 1 ? 's' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={() => {
-              onRepeat(Number(weeks))
+              // Every other week needs an even span (1 or 3 weeks would repeat it once less than it says).
+              const n = every === '2' && Number(weeks) % 2 ? Number(weeks) + 1 : Number(weeks)
+              onRepeat(n, every === '2' ? 2 : 1)
               onOpenChange(false)
             }}
           >

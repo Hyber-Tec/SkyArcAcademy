@@ -4,6 +4,12 @@ import { FamilyProvider } from "@/features/family/FamilyProvider";
 import { useColors } from "@/theme";
 
 /**
+ * A link straight to a screen over the tabs (a day's sheet, a post) still has the tabs beneath it, so the sheet is a
+ * sheet and closing it, or Back, lands on the tabs.
+ */
+export const unstable_settings = { anchor: "(tabs)" };
+
+/**
  * The family's part of the app (parents and students, who see much the same: a parent their children, a student
  * themself): five tabs, and what opens over them (a class's sheet, a score, its original file, a progress report, the
  * academy's news, a post and its attachments). Every screen loads its record by ID, so links and the back gesture

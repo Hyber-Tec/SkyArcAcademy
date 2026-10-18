@@ -1,5 +1,4 @@
-import { type PayPeriod, periodId } from '@shared/pay/periods'
-import { formatDateKey } from '@shared/time'
+import { type PayPeriod, payPeriodLabel, periodId } from '@shared/pay/periods'
 import { DatePicker } from '@/components/app/DatePicker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { usePayPeriods } from './hooks'
@@ -9,10 +8,6 @@ export interface RangeValue {
   to: string
   /** Set when the range is exactly a pay period. */
   period: PayPeriod | null
-}
-
-export function periodLabel(p: PayPeriod) {
-  return `${formatDateKey(p.start, 'monthDay')} – ${formatDateKey(p.end, 'medium')}`
 }
 
 export function PeriodPicker({ value, onChange, lockedThrough }: { value: RangeValue; onChange: (v: RangeValue) => void; lockedThrough?: string | null }) {
@@ -36,7 +31,7 @@ export function PeriodPicker({ value, onChange, lockedThrough }: { value: RangeV
         <SelectContent>
           {recent.map((p) => (
             <SelectItem key={periodId(p)} value={periodId(p)}>
-              {periodLabel(p)}
+              {payPeriodLabel(p)}
               {periodId(p) === periodId(current) ? ' (current)' : ''}
               {lockedThrough && p.end <= lockedThrough ? ' · locked' : ''}
             </SelectItem>

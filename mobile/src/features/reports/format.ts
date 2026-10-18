@@ -27,5 +27,14 @@ export function preparedOn(r: Pick<ProgressReportDoc, "sharedAt" | "generatedAt"
   return ms === null ? null : formatInstant(ms, timezone, { month: "long", day: "numeric", year: "numeric" });
 }
 
+/** "Draft", "Shared Oct 4" or "Viewed Oct 5": a report's state as the staff see it (web/src/features/reports/model.ts). */
+export function stateLabel(r: Pick<ProgressReportDoc, "status" | "sharedAt" | "firstViewedAt">, timezone: string): string {
+  if (r.status !== "shared") return "Draft";
+  const viewed = millis(r.firstViewedAt);
+  if (viewed !== null) return `Viewed ${formatInstant(viewed, timezone, { month: "short", day: "numeric" })}`;
+  const shared = sharedOn(r, timezone);
+  return shared ? `Shared ${shared}` : "Shared";
+}
+
 /** "6 scored evaluations". */
 export const evaluationsText = (n: number) => `${n} scored ${n === 1 ? "evaluation" : "evaluations"}`;

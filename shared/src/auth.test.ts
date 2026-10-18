@@ -38,6 +38,9 @@ describe('emails and methods', () => {
     expect(authErrorMessage('auth/wrong-password', 'change-password')).toMatch(/current password/)
     expect(authErrorMessage('auth/email-already-in-use', 'sign-up')).toMatch(/already an account/)
     expect(authErrorMessage('auth/something-new', 'reset')).toMatch(/send the email/)
+    expect(authErrorMessage('auth/something-new', 'change-password')).toMatch(/change your password/)
+    expect(authErrorMessage('auth/provider-already-linked', 'change-password')).toMatch(/already has a password/)
+    expect(authErrorMessage('auth/user-mismatch', 'change-password')).toMatch(/different account/)
   })
 })
 

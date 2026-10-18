@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { LuArrowDown, LuArrowUp, LuFolder } from 'react-icons/lu'
 import { isViewableImage } from '@shared/drive/files'
-import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemOwner, itemUpdated } from '@shared/drive/model'
+import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
 import { POSITION_COLORS, POSITION_LABELS, type Evaluation, per10 } from '@shared/shooting/evaluation'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -12,7 +12,7 @@ import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { DropTargetWrapper, type DroppedEntry } from './dropzone'
 import { fileBlob } from './FilePreview'
-import { FileGlyph, FolderGlyph, PersonChip, updatedText } from './parts'
+import { FileGlyph, FolderGlyph, PersonChip } from './parts'
 import { flightOf } from './upload'
 
 /**

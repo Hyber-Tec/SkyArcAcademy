@@ -1,7 +1,7 @@
 import { type WriteBatch, deleteDoc, doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { deleteObject, ref as storageRef } from 'firebase/storage'
 import { cleanFileName, cleanFolderName } from '@shared/drive/files'
-import type { DriveIndex } from '@shared/drive/model'
+import { type DriveIndex, planMove } from '@shared/drive/model'
 import { type DriveActor, type DriveFile, type DriveFolder, driveObjectPath, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import type { WithId } from '@shared/types'
@@ -129,37 +129,25 @@ export async function renameFile(branchId: string, actor: Actor, file: WithId<Dr
   await batch.commit()
 }
 
-/** A file leaving its student's folder stops being a score's file, if it was one. */
-const unlinked = (f: Pick<DriveFile, 'evaluationId'>) => (f.evaluationId ? { evaluationId: null } : {})
-
 /**
  * Moves folders and files into `targetId` (null: the top). A move keeps what moves as it was; the folder it lands in
  * has changed. Files keep track of whose folder they're in, at any depth; a score's file that leaves its student stops
- * being a score's file (`evaluationId` cleared), so neither family sees it (storage.rules).
+ * being a score's file (`evaluationId` cleared), so neither family sees it (storage.rules; planMove in
+ * @shared/drive/model, which the phone uses too).
  */
 export async function moveItems(branchId: string, actor: Actor, index: DriveIndex, folderIds: string[], fileIds: string[], targetId: string | null) {
-  if (!index.canMoveInto(folderIds, targetId)) throw new Error('A folder can’t go inside itself, and a student’s folder stays where it is.')
-  const student = index.studentOf(targetId)
+  const plan = planMove(index, folderIds, fileIds, targetId)
   const writes: ((b: WriteBatch) => void)[] = [...folderWrites(branchId, index, targetId, actor)]
-  for (const id of folderIds) {
-    if (id === targetId) continue
-    writes.push((b) => b.update(folderRef(branchId, id), { parentId: targetId }))
-    for (const f of index.subtreeFiles(id)) if ((f.studentId ?? null) !== student) writes.push((b) => b.update(fileRef(branchId, f.id), { studentId: student, ...unlinked(f) }))
-  }
-  for (const id of fileIds) {
-    const f = index.fileOf(id)
-    writes.push((b) => b.update(fileRef(branchId, id), { folderId: targetId, studentId: student, ...(f && (f.studentId ?? null) !== student ? unlinked(f) : {}) }))
-  }
-  const names = [...folderIds.map((id) => index.folderOf(id)?.name), ...fileIds.map((id) => index.fileOf(id)?.name)].filter(Boolean)
-  const into = targetId ? `“${index.folderOf(targetId)?.name ?? 'a folder'}”` : 'the top of the Drive'
+  for (const id of plan.folderIds) writes.push((b) => b.update(folderRef(branchId, id), { parentId: targetId }))
+  for (const f of plan.files) writes.push((b) => b.update(fileRef(branchId, f.id), f.patch))
   writes.push((b) =>
     addAudit(b, branchId, actor, {
       action: 'drive.move',
       category: 'drive',
       entityType: 'drive',
       entityId: targetId ?? 'top',
-      summary: `Moved ${names.length === 1 ? `“${names[0]}”` : `${names.length} items`} to ${into}`,
-      studentId: student,
+      summary: plan.summary,
+      studentId: plan.student,
     }),
   )
   await commitAll(writes)

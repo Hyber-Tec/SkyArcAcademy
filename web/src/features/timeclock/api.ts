@@ -1,11 +1,9 @@
 import { type DocumentData, type Query, doc, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
 import { useMemo } from 'react'
 import { COL } from '@shared/paths'
-import { type PayType, type PricedSegment, type Rates, payModelFor, priceShift } from '@shared/pay/segment'
-import { type BusinessRules, payModelOn } from '@shared/settings/businessRules'
-import type { BranchSettings } from '@shared/settings/defaults'
+import type { PayType } from '@shared/pay/segment'
 import { type DateKey, addDays, formatDateKey, formatMinutes, minutesOf, toInstant } from '@shared/time'
-import type { ClockShift, Compensation, Session, Staff, StaffRole, WithId } from '@shared/types'
+import type { ClockShift, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { type Actor, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
@@ -37,57 +35,6 @@ export function useSessionsRange(from: DateKey, to: DateKey, coachId: string | n
       : query(base, where('dateKey', '>=', from), where('dateKey', '<=', to))
   }, [branchId, from, to, coachId, enabled])
   return useQuery<Session>(q, `pay-sessions-${branchId}-${from}-${to}-${coachId}-${enabled}`, opts)
-}
-
-export interface ShiftPay {
-  shift: WithId<ClockShift>
-  segments: PricedSegment[]
-  open: boolean
-}
-
-/**
- * Prices closed shifts with the shared engine: teaching = time inside sessions
- * whose status counts as teaching (default: attended sessions only).
- */
-export function priceShifts(opts: {
-  shifts: WithId<ClockShift>[]
-  sessions: WithId<Session>[]
-  settings: BranchSettings
-  /** The branch's pay model on each shift's date. */
-  rules: BusinessRules
-  timezone: string
-  ratesFor: (staffId: string) => StaffPay
-}): ShiftPay[] {
-  const counted = new Set(opts.settings.payroll.teachingSessionStatuses)
-  return opts.shifts
-    .slice()
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.inMin - b.inMin)
-    .map((shift) => {
-      if (!shift.clockOutAt) return { shift, segments: [], open: true }
-      const windows = opts.sessions
-        .filter((s) => s.coachId === shift.staffId && !s.isDeleted && counted.has(s.status))
-        .map((s) => ({ startMs: s.startAt.toMillis(), endMs: s.endAt.toMillis() }))
-      const { rates, role } = opts.ratesFor(shift.staffId)
-      const model = payModelFor({ role, branchModel: payModelOn(opts.rules, shift.dateKey) })
-      const segments = priceShift(
-        { startMs: shift.clockInAt.toMillis(), endMs: shift.clockOutAt.toMillis() },
-        windows,
-        rates,
-        model,
-        shift.forcedType,
-      )
-      return { shift, segments, open: false }
-    })
-}
-
-export interface StaffPay {
-  rates: Rates
-  /** Owners and admins are paid one rate; coaches follow the branch pay model. */
-  role: StaffRole | undefined
-}
-
-export function effectiveRates(staff: WithId<Staff> | undefined, comp: Compensation | null | undefined): StaffPay {
-  return { rates: comp?.rates ?? { teaching: 0, admin: 0 }, role: staff?.role }
 }
 
 // ---------------------------------------------------------------- writes

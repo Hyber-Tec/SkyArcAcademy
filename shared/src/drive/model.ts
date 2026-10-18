@@ -1,4 +1,6 @@
+import { formatInstant } from '../time'
 import type { WithId } from '../types'
+import { cleanFolderName } from './files'
 import { type DriveActor, type DriveFile, type DriveFolder, studentFolderId } from './types'
 
 /**
@@ -470,6 +472,96 @@ export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: D
 /** "2 folders · 14 files · 18.3 MB": what a folder holds. */
 export function countLabel(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`
+}
+
+/** "Oct 16, 2026 by Paige": when something changed, in the academy's time zone, and who changed it ("" without a date). */
+export function updatedText(at: unknown, by: DriveActor | null | undefined, timezone: string): string {
+  const ms = tsMs(at)
+  if (!ms) return ''
+  const day = formatInstant(ms, timezone, { month: 'short', day: 'numeric', year: 'numeric' })
+  const who = actorName(by)
+  return who ? `${day} by ${who}` : day
+}
+
+/** A search lists this many hits at most (the count says how many there are). */
+export const DRIVE_SEARCH_LIMIT = 200
+
+// ------------------------------------------------------------- changes
+
+/** “Old results”, or "3 items": what an action is about, for its message and its audit entry. */
+const itemsLabel = (names: readonly string[]) => (names.length === 1 ? `“${names[0]}”` : `${names.length} items`)
+
+/** Why a folder can't take this name beside the others (case and spacing ignored), or null when it can. */
+export function folderNameProblem(index: DriveIndex, parentId: string | null, name: string, exceptId: string | null = null): string | null {
+  return index.nameTaken(parentId, name, exceptId) ? `There’s already a folder called “${cleanFolderName(name)}” here.` : null
+}
+
+/**
+ * Why these can't be moved into `targetId` (null: the top of the Drive), or null when they can: a folder never goes
+ * inside itself or anything inside it, a student's folder stays at the top, and there's no moving things to where they
+ * already all are.
+ */
+export function moveRefusal(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): string | null {
+  if (!index.canMoveInto(folderIds, targetId)) return folderIds.some((id) => index.folderOf(id)?.studentId) ? 'A student’s folder stays at the top.' : 'A folder can’t go inside itself.'
+  const homes = new Set([...folderIds.map((id) => index.folderOf(id)?.parentId ?? null), ...fileIds.map((id) => index.fileOf(id)?.folderId ?? null)])
+  return homes.size === 1 && homes.has(targetId) ? 'It’s already here.' : null
+}
+
+/** A file's fields that change when it moves (or when the folder it's in moves). */
+export interface MovedFile {
+  id: string
+  patch: { folderId?: string | null; studentId: string | null; evaluationId?: null }
+}
+
+/** What moving folders and files into a folder changes, before it's written (moveItems on the website and the phone). */
+export interface MovePlan {
+  /** The student whose folder they land in, at any depth (null: none). */
+  student: string | null
+  /** The folders whose parent becomes the target. */
+  folderIds: string[]
+  files: MovedFile[]
+  /** For the audit log: "Moved “Old” to “Mia Larkin”". */
+  summary: string
+}
+
+/**
+ * Moving folders and files into `targetId` (null: the top). What moves stays as it was; files keep track of whose
+ * folder they're in, at any depth, and a score's file that leaves its student stops being a score's file
+ * (`evaluationId` cleared), so neither family sees it (storage.rules). Throws when a folder would go inside itself or a
+ * student's folder would leave the top.
+ */
+export function planMove(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): MovePlan {
+  if (!index.canMoveInto(folderIds, targetId)) throw new Error('A folder can’t go inside itself, and a student’s folder stays where it is.')
+  const student = index.studentOf(targetId)
+  const unlinked = (f: Pick<DriveFile, 'evaluationId'>) => (f.evaluationId ? { evaluationId: null } : {})
+  const folders = folderIds.filter((id) => id !== targetId)
+  const files: MovedFile[] = []
+  for (const id of folders) {
+    for (const f of index.subtreeFiles(id)) if ((f.studentId ?? null) !== student) files.push({ id: f.id, patch: { studentId: student, ...unlinked(f) } })
+  }
+  for (const id of fileIds) {
+    const f = index.fileOf(id)
+    files.push({ id, patch: { folderId: targetId, studentId: student, ...(f && (f.studentId ?? null) !== student ? unlinked(f) : {}) } })
+  }
+  const names = [...folderIds.map((id) => index.folderOf(id)?.name), ...fileIds.map((id) => index.fileOf(id)?.name)].filter((n): n is string => !!n)
+  const into = targetId ? `“${index.folderOf(targetId)?.name ?? 'a folder'}”` : 'the top of the Drive'
+  return { student, folderIds: folders, files, summary: `Moved ${itemsLabel(names)} to ${into}` }
+}
+
+/**
+ * The question before moving folders and files to the Trash: what goes (a folder takes what's inside it), and who can
+ * bring it back. `trash` names where the Trash is for whoever reads it ("the Trash", or the website's on the phone).
+ */
+export function trashQuestion(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], opts: { isAdmin: boolean; trash?: string }): { title: string; message: string } {
+  const folders = folderIds.map((id) => index.folderOf(id)).filter((f): f is IndexFolder => !!f)
+  const files = fileIds.map((id) => index.fileOf(id)).filter((f): f is IndexFile => !!f)
+  const inside = folders.reduce((n, f) => n + index.countsOf(f.id).files, 0)
+  const count = folders.length + files.length
+  const trash = opts.trash ?? 'the Trash'
+  return {
+    title: count === 1 ? `Move “${folders[0]?.name ?? files[0]?.name}” to the Trash?` : `Move ${count} items to the Trash?`,
+    message: `${inside ? `${countLabel(inside, 'file')} inside go${inside === 1 ? 'es' : ''} with ${folders.length === 1 ? 'it' : 'them'}. ` : ''}${opts.isAdmin ? 'You' : 'An admin'} can restore ${count === 1 ? 'it' : 'them'} from ${trash}.`,
+  }
 }
 
 /** 1.4 MB, 820 KB, 0 B. */

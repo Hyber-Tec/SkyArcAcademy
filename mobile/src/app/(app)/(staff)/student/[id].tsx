@@ -1,9 +1,9 @@
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { ExternalLink, FileImage, FileText, Folder, UserRoundX } from "lucide-react-native";
+import { CalendarDays, ExternalLink, FileImage, FileText, Folder, UserRoundX } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { categoryOf } from "@shared/drive/files";
 import { formatBytes } from "@shared/drive/model";
-import { STUDENT_STATUS_LABELS, formatPhone } from "@shared/people";
+import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel } from "@shared/people";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import { formatDateKey, formatInstant } from "@shared/time";
 import { showActions } from "@/components/ActionSheet";
@@ -14,6 +14,7 @@ import { Card } from "@/components/Card";
 import { confirmAsync } from "@/components/Confirm";
 import { ContactButtons } from "@/components/ContactButtons";
 import { EmptyState } from "@/components/EmptyState";
+import { FactRow } from "@/components/FactRow";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { Skeleton } from "@/components/Skeleton";
@@ -35,9 +36,10 @@ const FILES_SHOWN = 8;
 
 /**
  * A student at a glance (loaded by ID, so it opens from anywhere): who they are, their parents a call, a text or an
- * email away (the office's only, as on the website), their next and last classes (a coach's own with them), their
- * latest scores (each opens its own screen, and swipes away to be deleted) and the files in their Drive folder. Other
- * changes are made on the website.
+ * email away (the office's only, as on the website), their next and last classes (a coach's own with them) and every
+ * class month by month (student/calendar), their latest scores (each opens its own screen, and swipes away to be
+ * deleted), the files in their Drive folder, and the website's Info tab as a coach sees it (the student's own record,
+ * never the office's private one). Other changes are made on the website.
  */
 export default function StudentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -142,6 +144,17 @@ export default function StudentScreen() {
               onPress={() => router.push({ pathname: "/class/[id]", params: { id: classIdOf(c) } })}
             />
           ))}
+          <ListRow
+            icon={
+              <RowIcon>
+                <CalendarDays size={17} color={colors.foreground} />
+              </RowIcon>
+            }
+            title="Calendar"
+            subtitle={isAdmin ? "Every class, month by month" : "Your classes with them, month by month"}
+            onPress={() => router.push({ pathname: "/student/calendar", params: { id: s.id } })}
+            testID="student-calendar-open"
+          />
         </ListSection>
 
         <ListSection
@@ -208,6 +221,20 @@ export default function StudentScreen() {
             );
           })}
           {!files.loading && !files.data.length ? <ListRow title="No files yet" subtitle="Scanned targets and SIUS results are filed here." /> : null}
+        </ListSection>
+
+        {/* The website's Info tab, the part coaches see: the student's own record (contacts and family stay the office's). */}
+        <ListSection title="Info" footer={isAdmin ? "Coaches see these too. Change them on the website." : "What admins have on file for this student."} testID="student-info">
+          <FactRow label="First name" value={s.firstName || "—"} />
+          <FactRow label="Last name" value={s.lastName || "—"} />
+          <FactRow label="Grade" value={s.grade ? gradeLabel(s.grade) : "—"} />
+          <FactRow label="Level" value={s.level || "—"} />
+          <FactRow label="Program" value={s.program || "—"} />
+          <FactRow label="Status" value={<Badge tone={s.status === "enrolled" ? "success" : "secondary"}>{STUDENT_STATUS_LABELS[s.status]}</Badge>} />
+          <FactRow label="School" value={s.school || "—"} />
+          <FactRow label="Sign-up date" value={s.signUpDate ? formatDateKey(s.signUpDate, "medium") : "—"} />
+          <FactRow label="First class" value={s.firstSessionDate ? formatDateKey(s.firstSessionDate, "medium") : "—"} />
+          <FactRow label="Last class" value={s.lastSessionDate ? formatDateKey(s.lastSessionDate, "medium") : "—"} />
         </ListSection>
 
         <Button variant="outline" icon={<ExternalLink size={18} color={colors.foreground} />} onPress={() => void openWebsite(`/${portal}/students/${s.id}`)} testID="student-open-website">

@@ -119,8 +119,8 @@ export function useCoachDay() {
 
   const todo = useMemo(() => {
     const waiting = sessions.filter((s) => conflicts.has(s.id))
-    const ranges = new Map(avail.data.map((a) => [a.dateKey, a.ranges]))
-    const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, rangesOn: (d) => ranges.get(d), now: new Date(now) })
+    const saved = new Map(avail.data.map((a) => [a.dateKey, a]))
+    const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, dayOn: (d) => saved.get(d), now: new Date(now) })
     // Until both lists are in, nothing counts as unread (as the News badge).
     const unread: WithId<Announcement>[] =
       feed.loading || reads.loading

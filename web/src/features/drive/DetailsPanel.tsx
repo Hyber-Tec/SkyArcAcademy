@@ -1,7 +1,7 @@
 import { LuHardDrive } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { categoryOf } from '@shared/drive/files'
-import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated } from '@shared/drive/model'
+import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from '@shared/shooting/evaluation'
 import { canReplay } from '@shared/shooting/replay'
 import { formatDateKey, formatInstant, formatMinutes } from '@shared/time'
@@ -9,7 +9,7 @@ import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useStudentList } from '@/features/data/hooks'
 import { ShotReplay } from '@/features/scores/ShotReplay'
-import { FileGlyph, FolderGlyph, PersonChip, updatedText } from './parts'
+import { FileGlyph, FolderGlyph, PersonChip } from './parts'
 
 const CATEGORY: Record<string, string> = { pdf: 'PDF', image: 'Photo', document: 'Document', spreadsheet: 'Spreadsheet', presentation: 'Presentation', video: 'Video', text: 'Text', other: 'File' }
 

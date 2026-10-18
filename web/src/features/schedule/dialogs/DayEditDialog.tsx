@@ -197,6 +197,8 @@ export function DayEditDialog({
               {coaches.map((t) => {
                 const r = rows[t.id]
                 if (!r) return null
+                // No record for the day (and untouched): the coach hasn't answered, which isn't the same as not available.
+                const unset = !availabilityByKey.get(`${t.id}|${dateKey}`) && JSON.stringify(r) === JSON.stringify(initial[t.id])
                 return (
                   <div key={t.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
                     <div className="w-36 truncate text-sm font-medium">{t.name}</div>
@@ -208,7 +210,7 @@ export function DayEditDialog({
                           setRow(t.id, v === true ? { unavailable: true, hidden: true } : { unavailable: false, ranges: r.ranges.length ? r.ranges : [{ startMin: openMin, endMin: closeMin }] })
                         }
                       />
-                      Unavailable
+                      Not available
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox checked={r.hidden || r.unavailable} disabled={past || r.unavailable} onCheckedChange={(v) => setRow(t.id, { hidden: v === true })} />
@@ -216,7 +218,7 @@ export function DayEditDialog({
                     </label>
                     <div className="ml-auto flex flex-col gap-1">
                       {r.unavailable ? (
-                        <span className="text-sm text-muted-foreground">—</span>
+                        <span className="text-sm text-muted-foreground">{unset ? 'Not set' : 'Not available'}</span>
                       ) : (
                         r.ranges.map((rg, i) => (
                           <div key={i} className="flex items-center gap-1.5">

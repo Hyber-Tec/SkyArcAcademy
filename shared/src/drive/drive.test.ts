@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { WithId } from '../types'
-import { classifyFile, cleanFolderName } from './files'
-import { DRIVE_DEFAULT_SORT, buildDriveIndex, cycleDriveSort, formatBytes, levelItems, sortDriveItems, trashEntries } from './model'
+import { classifyFile, cleanFolderName, kindOfMime, withExtension } from './files'
+import {
+  DRIVE_DEFAULT_SORT,
+  buildDriveIndex,
+  cycleDriveSort,
+  folderNameProblem,
+  formatBytes,
+  levelItems,
+  moveRefusal,
+  planMove,
+  sortDriveItems,
+  trashEntries,
+  trashQuestion,
+  updatedText,
+} from './model'
 import { type DriveFile, type DriveFolder, studentFolderId } from './types'
 
 const at = (ms: number) => ({ seconds: ms / 1000, nanoseconds: 0, toDate: () => new Date(ms), toMillis: () => ms })
@@ -105,5 +118,91 @@ describe('what the Drive takes', () => {
     expect(cleanFolderName('  a/b  ')).toBe('a-b')
     expect(formatBytes(1536)).toBe('1.5 KB')
     expect(formatBytes(23_500_000)).toBe('22.4 MB')
+  })
+})
+
+describe('changing the Drive', () => {
+  const idx = () =>
+    buildDriveIndex(
+      [folder(studentFolderId('mia'), null, { studentId: 'mia' }), folder('x', null), folder('old', studentFolderId('mia')), folder('a', null), folder('b', 'a')],
+      [file('f1', 'x'), file('r', studentFolderId('mia'), { studentId: 'mia', evaluationId: 'e1' }), file('in-a', 'a'), file('in-b', 'b')],
+      students,
+    )
+
+  it('says when and by whom something changed, in the academy’s time zone', () => {
+    // 02:00 UTC on Oct 17 is still Oct 16 in New York.
+    expect(updatedText(at(Date.UTC(2026, 9, 17, 2)), by, 'America/New_York')).toBe('Oct 16, 2026 by Paige')
+    expect(updatedText(at(Date.UTC(2026, 9, 17, 2)), null, 'UTC')).toBe('Oct 17, 2026')
+    expect(updatedText(null, by, 'UTC')).toBe('')
+  })
+
+  it('refuses a folder name already beside it, but not its own', () => {
+    expect(folderNameProblem(idx(), null, '  X ')).toBe('There’s already a folder called “X” here.')
+    expect(folderNameProblem(idx(), null, 'x', 'x')).toBeNull()
+    expect(folderNameProblem(idx(), 'a', 'x')).toBeNull()
+  })
+
+  it('says why something can’t be moved there', () => {
+    expect(moveRefusal(idx(), ['a'], [], 'b')).toBe('A folder can’t go inside itself.')
+    expect(moveRefusal(idx(), [studentFolderId('mia')], [], 'x')).toBe('A student’s folder stays at the top.')
+    expect(moveRefusal(idx(), [], ['f1'], 'x')).toBe('It’s already here.')
+    expect(moveRefusal(idx(), ['b'], ['in-a'], 'a')).toBe('It’s already here.')
+    expect(moveRefusal(idx(), ['b'], ['in-a'], 'x')).toBeNull()
+    expect(moveRefusal(idx(), [], ['f1'], null)).toBeNull()
+  })
+
+  it('files a moved folder’s files under the student it lands with', () => {
+    expect(planMove(idx(), ['x'], [], studentFolderId('mia'))).toEqual({
+      student: 'mia',
+      folderIds: ['x'],
+      files: [{ id: 'f1', patch: { studentId: 'mia' } }],
+      summary: 'Moved “x” to “Mia Larkin”',
+    })
+  })
+
+  it('stops a result being a score’s file once it leaves its student, and keeps it inside the student’s folder', () => {
+    expect(planMove(idx(), [], ['r'], null)).toEqual({
+      student: null,
+      folderIds: [],
+      files: [{ id: 'r', patch: { folderId: null, studentId: null, evaluationId: null } }],
+      summary: 'Moved “r.pdf” to the top of the Drive',
+    })
+    expect(planMove(idx(), [], ['r'], 'old').files).toEqual([{ id: 'r', patch: { folderId: 'old', studentId: 'mia' } }])
+    expect(planMove(idx(), ['b'], ['f1'], null).summary).toBe('Moved 2 items to the top of the Drive')
+    expect(() => planMove(idx(), ['a'], [], 'b')).toThrow()
+  })
+
+  it('asks before the Trash, saying what goes with a folder and who can bring it back', () => {
+    expect(trashQuestion(idx(), ['a'], [], { isAdmin: false })).toEqual({
+      title: 'Move “a” to the Trash?',
+      message: '2 files inside go with it. An admin can restore it from the Trash.',
+    })
+    expect(trashQuestion(idx(), [], ['f1', 'in-a'], { isAdmin: true, trash: 'the Drive’s Trash on the website' })).toEqual({
+      title: 'Move 2 items to the Trash?',
+      message: 'You can restore them from the Drive’s Trash on the website.',
+    })
+    expect(trashQuestion(idx(), ['b'], [], { isAdmin: true }).message).toBe('1 file inside goes with it. You can restore it from the Trash.')
+  })
+})
+
+describe('naming files the phone adds', () => {
+  it('knows the extension of each type the Drive takes', () => {
+    expect(kindOfMime('image/jpeg')).toBe('jpg')
+    expect(kindOfMime('IMAGE/PNG')).toBe('png')
+    expect(kindOfMime('image/heic')).toBe('heic')
+    expect(kindOfMime('image/tiff')).toBeNull()
+    expect(kindOfMime(null)).toBeNull()
+  })
+
+  it('gives a file the extension of what is stored, or a name when it has none', () => {
+    expect(withExtension('IMG_0412.HEIC', 'jpg', 'Photo')).toBe('IMG_0412.jpg')
+    expect(withExtension('my.card.png', 'png', 'Photo')).toBe('my.card.png')
+    expect(withExtension('a/b.jpeg', 'jpg', 'Photo')).toBe('a-b.jpg')
+    expect(withExtension(null, 'jpg', 'Photo 2026-10-18 14.05')).toBe('Photo 2026-10-18 14.05.jpg')
+    expect(withExtension('.jpg', 'jpg', 'Photo')).toBe('Photo.jpg')
+    expect(withExtension('photo.', 'jpg', 'Photo')).toBe('photo.jpg')
+    const long = withExtension(`${'x'.repeat(250)}.heic`, 'jpg', 'Photo')
+    expect(long.length).toBeLessThanOrEqual(200)
+    expect(long.endsWith('x.jpg')).toBe(true)
   })
 })

@@ -76,7 +76,7 @@ export function ToDoCard({ t }: { t: CoachDay }) {
               icon={LuCalendarClock}
               tone="violet"
               title={`Set availability for ${plural(gaps.length, 'day')}`}
-              subtitle={`Open days inside your ${settings.availability.leadTimeDays}-day notice. Each locks ${settings.availability.lockWindowDays} days ahead.`}
+              subtitle={`Give your times, or mark the day not available. Open days inside your ${settings.availability.leadTimeDays}-day notice; each locks ${settings.availability.lockWindowDays} days ahead.`}
               seeAll={{ label: 'Open Availability', to: `${coach}/availability` }}
               items={gaps.map((d) => {
                 const h = t.hoursOf(d)

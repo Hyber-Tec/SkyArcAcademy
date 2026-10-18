@@ -244,10 +244,13 @@ service cloud.firestore {
           && data.dayStartAt > request.time + duration.value(lockDays(), 'd');
       }
 
+      // A day holds times, or is marked not available (an answer, with no times).
       function validAvailability(docId, data) {
         let utcMidnight = timestamp.date(int(data.dateKey[0:4]), int(data.dateKey[5:7]), int(data.dateKey[8:10]));
         return docId == data.staffId + '_' + data.dateKey
           && data.ranges is list
+          && data.get('unavailable', false) is bool
+          && (data.get('unavailable', false) == false || data.ranges.size() == 0)
           && data.dayStartAt is timestamp
           && data.dayStartAt > utcMidnight - duration.value(15, 'h')
           && data.dayStartAt < utcMidnight + duration.value(15, 'h');

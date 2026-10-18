@@ -72,6 +72,14 @@ describe('availability lock', () => {
     await assertFails(setDoc(doc(user('coach@a.test'), `branches/${B}/availability/s-other_${f}`), block('s-other', f)))
   })
 
+  it('coaches mark a day not available, without times', async () => {
+    const d = far()
+    const db = user('coach@a.test')
+    await assertSucceeds(setDoc(doc(db, `branches/${B}/availability/s-coach_${d}`), { ...block('s-coach', d), ranges: [], unavailable: true }))
+    await assertFails(setDoc(doc(db, `branches/${B}/availability/s-coach_${d}`), { ...block('s-coach', d), unavailable: true }))
+    await assertFails(setDoc(doc(db, `branches/${B}/availability/s-coach_${d}`), { ...block('s-coach', d), ranges: [], unavailable: 'yes' }))
+  })
+
   it('admins change any day', async () => {
     await assertSucceeds(deleteDoc(doc(user('admin@a.test'), `branches/${B}/availability/s-coach_${near()}`)))
   })

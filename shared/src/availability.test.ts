@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availabilityGaps, clipToHours, dayHours, effectiveLockDays, effectiveRanges, isLockedForCoach, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
+import { availabilityGaps, clipToHours, dayHours, dayMark, effectiveLockDays, effectiveRanges, isLockedForCoach, lastAnswered, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
 import { DEFAULT_SETTINGS as ACADEMY_DEFAULTS } from './settings/defaults'
 
 // A fixed week for these tests (Sunday closed, Mon–Fri 2–9 PM, Saturday 9–5), independent of the academy's defaults.
@@ -68,6 +68,9 @@ describe('availability', () => {
 
   it('repeats weekly', () => {
     expect(weeklyRepeats('2026-09-30', 2)).toEqual(['2026-10-07', '2026-10-14'])
+    // Every other week, over the same span: a rotation.
+    expect(weeklyRepeats('2026-09-30', 4, 2)).toEqual(['2026-10-14', '2026-10-28'])
+    expect(weeklyRepeats('2026-09-30', 1, 2)).toEqual([])
   })
 })
 
@@ -110,27 +113,60 @@ describe('days that still need availability', () => {
   const now = new Date('2026-09-30T20:00:00Z')
   const base = { today: '2026-09-30', timeZone: NY, settings: DEFAULT_SETTINGS, now }
   it('lists open, unlocked days inside the lead window that have no times', () => {
-    const set = new Map([['2026-10-08', [{ startMin: 900, endMin: 1200 }]]])
+    const set = new Map([['2026-10-08', { ranges: [{ startMin: 900, endMin: 1200 }] }]])
     // Sunday Oct 11 is closed in the default week.
-    expect(availabilityGaps({ ...base, rangesOn: (d) => set.get(d) })).toEqual(['2026-10-09', '2026-10-10', '2026-10-12', '2026-10-13', '2026-10-14'])
+    expect(availabilityGaps({ ...base, dayOn: (d) => set.get(d) })).toEqual(['2026-10-09', '2026-10-10', '2026-10-12', '2026-10-13', '2026-10-14'])
   })
   it('ignores times outside the date’s hours and follows per-date hours', () => {
-    const set = new Map([['2026-10-09', [{ startMin: 600, endMin: 700 }]]])
+    const set = new Map([['2026-10-09', { ranges: [{ startMin: 600, endMin: 700 }] }]])
     const configs = new Map([['2026-10-12', { isOpen: false, openMin: 840, closeMin: 1260 }]])
-    expect(availabilityGaps({ ...base, dayConfigs: configs, rangesOn: (d) => set.get(d) })).toEqual(['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-13', '2026-10-14'])
+    expect(availabilityGaps({ ...base, dayConfigs: configs, dayOn: (d) => set.get(d) })).toEqual(['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-13', '2026-10-14'])
+  })
+  it('counts a day marked not available as answered', () => {
+    const set = new Map([
+      ['2026-10-08', { ranges: [{ startMin: 900, endMin: 1200 }] }],
+      ['2026-10-09', { ranges: [], unavailable: true }],
+      ['2026-10-10', { ranges: [], unavailable: true }],
+    ])
+    expect(availabilityGaps({ ...base, dayOn: (d) => set.get(d) })).toEqual(['2026-10-12', '2026-10-13', '2026-10-14'])
   })
   it('has nothing to ask when the lead time blocks changes', () => {
     const settings = { ...DEFAULT_SETTINGS, availability: { ...DEFAULT_SETTINGS.availability, leadTimeEnforcement: 'block' as const } }
-    expect(availabilityGaps({ ...base, settings, rangesOn: () => [] })).toEqual([])
+    expect(availabilityGaps({ ...base, settings, dayOn: () => null })).toEqual([])
   })
   it('has nothing to ask when the center doesn’t ask for notice', () => {
     const settings = { ...DEFAULT_SETTINGS, availability: { ...DEFAULT_SETTINGS.availability, leadTimeEnforcement: 'off' as const } }
-    expect(availabilityGaps({ ...base, settings, rangesOn: () => [] })).toEqual([])
+    expect(availabilityGaps({ ...base, settings, dayOn: () => null })).toEqual([])
   })
   it('takes the date’s hours from the caller', () => {
     const closed = { isOpen: false, openMin: 0, closeMin: 0 }
     const open = { isOpen: true, openMin: 840, closeMin: 1260 }
     const hoursOf = (d: string) => (d === '2026-10-09' ? open : closed)
-    expect(availabilityGaps({ ...base, hoursOf, rangesOn: () => [] })).toEqual(['2026-10-09'])
+    expect(availabilityGaps({ ...base, hoursOf, dayOn: () => ({ ranges: [] }) })).toEqual(['2026-10-09'])
+  })
+})
+
+describe('where a day stands', () => {
+  const open = { isOpen: true, openMin: 840, closeMin: 1260 }
+  it('tells times, not available, unset and closed apart', () => {
+    expect(dayMark({ ranges: [{ startMin: 900, endMin: 1000 }] }, open)).toBe('available')
+    expect(dayMark({ ranges: [], unavailable: true }, open)).toBe('unavailable')
+    expect(dayMark({ ranges: [] }, open)).toBe('unset')
+    expect(dayMark(null, open)).toBe('unset')
+    // Times outside the date's hours don't count, and a closed day takes nothing.
+    expect(dayMark({ ranges: [{ startMin: 600, endMin: 700 }] }, open)).toBe('unset')
+    expect(dayMark({ ranges: [], unavailable: true }, { ...open, isOpen: false })).toBe('closed')
+  })
+  it('finds the last day answered, either way', () => {
+    const hoursOf = (d: string) => dayHours(d, DEFAULT_SETTINGS)
+    const days: [string, { ranges: { startMin: number; endMin: number }[]; unavailable?: boolean }][] = [
+      ['2026-10-05', { ranges: [{ startMin: 900, endMin: 1000 }] }],
+      ['2026-10-07', { ranges: [], unavailable: true }],
+      ['2026-10-09', { ranges: [] }],
+      // Sunday: closed, so it doesn't count.
+      ['2026-10-11', { ranges: [{ startMin: 900, endMin: 1000 }] }],
+    ]
+    expect(lastAnswered(days, hoursOf)).toBe('2026-10-07')
+    expect(lastAnswered([], hoursOf)).toBe(null)
   })
 })

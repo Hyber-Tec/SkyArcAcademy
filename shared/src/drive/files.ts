@@ -37,6 +37,21 @@ export function extOf(name: string): string {
   return m ? m[1].toLowerCase() : ''
 }
 
+/** The extension the Drive gives a content type it takes ("image/jpeg" → "jpg"), or null for one it doesn't. */
+export function kindOfMime(mime: string | null | undefined): string | null {
+  const want = (mime ?? '').trim().toLowerCase()
+  return (want && Object.keys(DRIVE_TYPES).find((kind) => DRIVE_TYPES[kind] === want)) || null
+}
+
+/**
+ * A file's name ending in the extension of what's stored: "IMG_0412.HEIC" kept as a JPEG is "IMG_0412.jpg". `fallback`
+ * names a file that came without a name.
+ */
+export function withExtension(name: string | null | undefined, kind: string, fallback: string): string {
+  const stem = cleanFileName(name ?? '').replace(/\.([a-z0-9]{1,8})?$/i, '').trim() || cleanFileName(fallback) || 'Untitled'
+  return `${stem.slice(0, 200 - kind.length - 1).trim()}.${kind}`
+}
+
 export function categoryOf(kind: string): FileCategory {
   if (kind === 'pdf') return 'pdf'
   if (['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'gif'].includes(kind)) return 'image'

@@ -6,15 +6,19 @@ import { radius, space, useColors } from "@/theme";
 
 type FieldProps = TextInputProps & { label?: string; hint?: string; error?: string | null; right?: React.ReactNode };
 
+/** The iPhone's keyboards without a return key: nothing on them closes the keyboard. */
+const NO_RETURN_KEY = new Set<TextInputProps["keyboardType"]>(["number-pad", "decimal-pad", "phone-pad"]);
+
 /**
  * A labelled text field. A multiline one with `flex: 1` in its style grows to fill its container. On an iPhone a
- * multiline field's keyboard has a Done bar (its return key starts a new line, so it can't close the keyboard).
+ * multiline field's keyboard has a Done bar (its return key starts a new line, so it can't close the keyboard), and so
+ * do the keyboards without a return key (a phone number's).
  */
 export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, hint, error, right, style, ...props }, ref) {
   const colors = useColors();
   const grows = StyleSheet.flatten(style)?.flex === 1;
   const bar = useId();
-  const done = Platform.OS === "ios" && !!props.multiline && !props.inputAccessoryViewID;
+  const done = Platform.OS === "ios" && (!!props.multiline || NO_RETURN_KEY.has(props.keyboardType)) && !props.inputAccessoryViewID;
   return (
     <View style={[styles.wrap, grows && styles.grow]}>
       {label ? <T variant="label">{label}</T> : null}

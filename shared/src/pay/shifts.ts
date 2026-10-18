@@ -1,6 +1,6 @@
 import { type BusinessRules, payModelOn } from '../settings/businessRules'
 import type { BranchSettings } from '../settings/defaults'
-import type { ClockShift, Session, StaffRole } from '../types'
+import type { ClockShift, Compensation, Session, Staff, StaffRole } from '../types'
 import { type PricedSegment, type Rates, payModelFor, priceShift } from './segment'
 
 /** What a shift is worth: its priced segments, or `open` while the person is still clocked in. */
@@ -14,6 +14,11 @@ export interface ShiftPay<S> {
 export interface StaffPay {
   rates: Rates
   role: StaffRole | undefined
+}
+
+/** An employee's rates from their compensation record ($0 until they're set), with their role. */
+export function effectiveRates(staff: Pick<Staff, 'role'> | null | undefined, comp: Pick<Compensation, 'rates'> | null | undefined): StaffPay {
+  return { rates: comp?.rates ?? { teaching: 0, admin: 0 }, role: staff?.role }
 }
 
 type PricedShiftInput = Pick<ClockShift, 'staffId' | 'dateKey' | 'inMin' | 'clockInAt' | 'clockOutAt' | 'forcedType'>

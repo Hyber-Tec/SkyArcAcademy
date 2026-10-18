@@ -4,8 +4,9 @@ import { LuLock, LuLockOpen, LuTriangleAlert } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { COL, DOC } from '@shared/paths'
 import { priceClassBlocks } from '@shared/pay/classes'
-import { periodId } from '@shared/pay/periods'
+import { payPeriodLabel, periodId } from '@shared/pay/periods'
 import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
+import { effectiveRates, priceShifts } from '@shared/pay/shifts'
 import { type DateKey, addDays, formatDateKey, todayKey } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -18,9 +19,8 @@ import { useStaffList } from '@/features/data/hooks'
 import { addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
-import { effectiveRates, priceShifts, useSessionsRange, useShifts } from './api'
+import { useSessionsRange, useShifts } from './api'
 import { useCompensationMap, usePayPeriods, usePayrollState } from './hooks'
-import { periodLabel } from './PeriodPicker'
 
 const money = formatMoney
 
@@ -57,7 +57,7 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       by.set(id, e)
       return e
     }
-    for (const p of priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor })) {
+    for (const p of priceShifts({ shifts, sessions, settings, rules, ratesFor })) {
       const e = entry(p.shift.staffId, p.shift.staffName)
       if (p.open) e.open++
       e.segments.push(...p.segments.map((s) => ({ ...s, dateKey: p.shift.dateKey })))
@@ -68,7 +68,7 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       entry(b.staffId, coachNames.get(b.staffId) ?? 'Coach').segments.push({ ...b.segment, dateKey: b.dateKey })
     }
     return [...by.entries()].map(([id, e]) => ({ id, name: e.name, segments: e.segments, t: totals(e.segments), open: e.open }))
-  }, [shifts, sessions, settings, rules, timezone, staffById, comps, period.start, period.end])
+  }, [shifts, sessions, settings, rules, staffById, comps, period.start, period.end])
   const grand = totals(people.flatMap((p) => p.segments))
   const openShifts = people.reduce((n, p) => n + p.open, 0)
 
@@ -104,10 +104,10 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       category: 'pay',
       entityType: 'payPeriod',
       entityId: id,
-      summary: `Locked the pay period ${periodLabel(period)} (${money(grand.total.pay)})`,
+      summary: `Locked the pay period ${payPeriodLabel(period)} (${money(grand.total.pay)})`,
     })
     await batch.commit()
-    toast.success(`Locked ${periodLabel(period)}`)
+    toast.success(`Locked ${payPeriodLabel(period)}`)
   }
 
   async function unlock() {
@@ -117,9 +117,9 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
     const batch = writeBatch(db)
     batch.update(branchDocRef(branchId, COL.payPeriods, id), { status: 'unlocked', unlockedAt: serverTimestamp(), unlockedBy: actor.email })
     batch.set(branchDocRef(branchId, COL.payroll, DOC.payrollState), { lockedThrough: previous, updatedAt: serverTimestamp(), updatedBy: actor.email })
-    addAudit(batch, branchId, actor, { action: 'pay.period_unlock', category: 'pay', entityType: 'payPeriod', entityId: id, summary: `Unlocked the pay period ${periodLabel(period)}` })
+    addAudit(batch, branchId, actor, { action: 'pay.period_unlock', category: 'pay', entityType: 'payPeriod', entityId: id, summary: `Unlocked the pay period ${payPeriodLabel(period)}` })
     await batch.commit()
-    toast.success(`Unlocked ${periodLabel(period)}`)
+    toast.success(`Unlocked ${payPeriodLabel(period)}`)
   }
 
   async function run(fn: () => Promise<void>) {
@@ -148,7 +148,7 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
             <SelectContent>
               {recent.map((p) => (
                 <SelectItem key={periodId(p)} value={periodId(p)}>
-                  {periodLabel(p)}
+                  {payPeriodLabel(p)}
                   {periodId(p) === periodId(current) ? ' (current)' : ''}
                   {isLocked(p.end) ? ' · locked' : ''}
                 </SelectItem>

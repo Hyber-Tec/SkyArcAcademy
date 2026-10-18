@@ -269,11 +269,28 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   })
 
   // Availability: each coach's working days, all opening hours ---------------
+  // Their other open days ahead are marked not available (an answer), the Sunday they're off in the rotation too,
+  // except Daniel's: he hasn't answered his yet, so his calendar shows the days still to set.
   const hannahOff = days.find((d) => d >= addDays(today, 8) && weekdayOf(d) === 'tuesday' && isOpen(d)) ?? null
   for (const coach of COACHES) {
     const staffId = sampleStaffId(coach.key)
     for (const d of days) {
-      if (!isOpen(d) || !worksOn(coach, d)) continue
+      if (!isOpen(d)) continue
+      if (!worksOn(coach, d)) {
+        if (coach.key === 'daniel-reed' || d < today) continue
+        add(`${COL.availability}/${availabilityDocId(staffId, d)}`, {
+          staffId,
+          dateKey: d,
+          weekday: weekdayOf(d),
+          ranges: [],
+          unavailable: true,
+          hidden: false,
+          dayStartAt: dayStartInstant(d, timezone),
+          updatedVia: 'coach',
+          ...stamp,
+        })
+        continue
+      }
       const hours = opts.week[weekdayOf(d)]
       // Hannah is out sick one Tuesday ahead: her classes that day show as conflicts to move.
       const off = coach.key === 'hannah-moreno' && d === hannahOff

@@ -28,6 +28,15 @@ From the App Store check of 2026-10-17 (`docs/publishing.md`, "Apple's checklist
   (today's rule)?
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
+- **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
+  recorded: the landing page, languages, push, the stores):
+  - **Families cancel a class themselves**, with the academy's notice rule (A5), and the office is told (an inbox for
+    owners and admins on the website, an email, or both). Today a class's sheet says to contact the academy.
+  - **Families book a makeup in an open slot** (§7: families book classes for their children). Not built.
+  - **A student's class that repeats every week.** Today the office copies whole weeks (Duplicate week).
+  - **Coaches' notes on a class** (a session log, "if they want"). Today only the office writes a class's note.
+  - **The kiosk as a registered device** with a setup PIN (§6 Q9); until then it opens for a signed-in admin.
+  - **Trial booking online** waits on the privacy policy's approval (§6 Q15).
 
 ## Later: agreed, not now
 
@@ -37,6 +46,8 @@ From the App Store check of 2026-10-17 (`docs/publishing.md`, "Apple's checklist
 - **Sign in with Apple:** only if Apple insists at review (guideline 4.8). The quicker fallback is email and password
   only in the iPhone app (`docs/publishing.md`, "Sign in with Apple").
 - **Push notifications in the phone app**, with Apple's rules for them (guideline 4.5.4) and the App Privacy answer.
+- **SIUS PDFs from the phone**, if coaches get them there: the phone can pick files already, but reading a SIUS result
+  is the website's (a server-side reader would do it).
 - **Korean and other languages:** one pass once everything works (`docs/DECISIONS.md` §6, Q14).
 - **Before the real data comes in:** remove the sample data with `npm run seed:sample -- --remove` (it also removes the
   logins made for testing with `--login`), then import the academy's history (A4).

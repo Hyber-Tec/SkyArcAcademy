@@ -20,11 +20,12 @@ import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { type DriveFileDoc, type EvaluationDoc, useAcademyNow, useEvaluation } from "@/features/data/hooks";
+import { type DriveFileDoc, type EvaluationDoc, useAcademyNow, useEvaluation, useStudentEvaluations } from "@/features/data/hooks";
 import { BullEditor } from "@/features/scan/BullEditor";
 import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from "@/features/scores/api";
+import { CompareCard } from "@/features/scores/CompareCard";
 import { deleteScoreMessage, scoreTitle } from "@/features/scores/format";
 import { ScoreHead, scoreFacts, useCardPicture } from "@/features/scores/ScoreParts";
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
@@ -78,10 +79,11 @@ function pictureNote(o: { failed: boolean; waiting: boolean; file: DriveFileDoc 
 
 /**
  * One score (loaded by ID, so it opens from anywhere): its total and how the group sits, its shots played back one by
- * one on the target, and what can be changed. A paper card scanned with the app comes back as it was checked, its
- * shots on the card's picture, to move, add or remove bull by bull; a typed card's bulls take new scores. The position,
- * the date and the coach's note change too, and the score can be deleted. Changes are kept with Save; leaving with
- * changes not saved asks first.
+ * one on the target, side by side with another of the student's results in its position (the first, the one before it,
+ * the lowest, or any two chosen; the saved scores), as the website's Compare, and what can be changed. A paper card
+ * scanned with the app comes back as it was checked, its shots on the card's picture, to move, add or remove bull by
+ * bull; a typed card's bulls take new scores. The position, the date and the coach's note change too, and the score can
+ * be deleted. Changes are kept with Save; leaving with changes not saved asks first.
  */
 export default function ScoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -98,6 +100,8 @@ export default function ScoreScreen() {
   const picture = useCardPicture(e ?? null);
   const { scanned, flat, file } = picture;
   const f = file.data;
+  // The student's other results, to compare with (the same listener as their page's).
+  const others = useStudentEvaluations(e?.studentId ?? null);
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -263,6 +267,8 @@ export default function ScoreScreen() {
             ))}
           </Card>
         ) : null}
+
+        <CompareCard anchor={e} evaluations={others.data} loading={others.loading} onOpen={(id) => router.push({ pathname: "/score/[id]", params: { id } })} alone testID="score-compare" />
 
         <ListSection title="Position">
           <View style={styles.inset}>

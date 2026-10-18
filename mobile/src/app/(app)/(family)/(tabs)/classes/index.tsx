@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { CalendarX2, History } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
@@ -10,9 +11,11 @@ import { ListSection } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { SkeletonCards } from "@/components/Skeleton";
+import { TabHeader } from "@/components/TabHeader";
 import { T } from "@/components/Text";
 import { useAcademyNow } from "@/features/data/hooks";
 import { FamilyClassRow } from "@/features/family/ClassCards";
+import { FamilyClassMonth } from "@/features/family/ClassMonth";
 import { useFamilySessions } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
@@ -23,6 +26,7 @@ import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
 type Show = "upcoming" | "past";
+type Mode = "list" | "month";
 
 /** Weeks shown at first, and added by "Show more". */
 const STEP_WEEKS = 8;
@@ -31,16 +35,22 @@ const MAX_AHEAD_WEEKS = 26;
 const MAX_BACK_WEEKS = 52;
 
 /**
- * The family's classes, day by day: what's coming (earliest first) or what's past (latest first), each with the coach,
- * its status in plain words and the class's note; a parent with several children picks All or one child. A class
- * opens its sheet. Read-only: the academy books and changes classes.
+ * The family's classes, as a list or on the months (List / Month, by the title, as on the website). The list goes day
+ * by day: what's coming (earliest first) or what's past (latest first), each with the coach, its status in plain words
+ * and the class's note. The months scroll vertically, each day marked with its classes (FamilyClassMonth), and the day
+ * tapped shows its classes under them. A parent with several children picks All or one child. A class opens its sheet.
+ * Read-only: the academy books and changes classes.
  */
 export default function FamilyClassesScreen() {
   const family = useFamily();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { settings } = useBranch();
   const { today, nowMin } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
+  const [mode, setMode] = useState<Mode>("list");
+  // The day chosen on the months (null: today, whichever day that is), kept while the list shows.
+  const [day, setDay] = useState<DateKey | null>(null);
   const [show, setShow] = useState<Show>("upcoming");
   const [ahead, setAhead] = useState(STEP_WEEKS);
   const [back, setBack] = useState(STEP_WEEKS);
@@ -73,9 +83,36 @@ export default function FamilyClassesScreen() {
     else setBack((w) => Math.min(MAX_BACK_WEEKS, w + STEP_WEEKS));
   };
   const span = upcoming ? `in the next ${weeks} weeks` : `in the last ${weeks} weeks`;
+  const switcher = family.ids.length ? (
+    <View style={styles.mode}>
+      <SegmentedControl<Mode>
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "list", label: "List" },
+          { value: "month", label: "Month" },
+        ]}
+        testID="family-classes-view"
+      />
+    </View>
+  ) : undefined;
+
+  // The months scroll by themselves (a list in the page's scroll would fight it): a page of their own, its top as the
+  // list's.
+  if (mode === "month" && family.ids.length) {
+    return (
+      <View style={[styles.page, { backgroundColor: colors.grouped }]} testID="family-classes">
+        <View style={[styles.top, { paddingTop: insets.top + space.lg }]}>
+          <TabHeader title="Classes" right={switcher} testID="family-classes-title" />
+          <ChildSwitcher />
+        </View>
+        <FamilyClassMonth selected={day ?? today} onSelect={setDay} today={today} nowMin={nowMin} hour12={hour12} />
+      </View>
+    );
+  }
 
   return (
-    <Screen title="Classes" typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-classes">
+    <Screen title="Classes" titleRight={switcher} typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-classes">
       {!family.ids.length ? (
         <NotLinked />
       ) : (
@@ -148,6 +185,9 @@ export default function FamilyClassesScreen() {
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1 },
+  top: { paddingHorizontal: space.lg, paddingBottom: space.md, gap: space.md },
+  mode: { width: 150 },
   controls: { gap: space.md },
   summary: { paddingHorizontal: space.xs },
   days: { gap: space.lg },

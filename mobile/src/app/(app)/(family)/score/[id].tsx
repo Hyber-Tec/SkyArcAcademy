@@ -21,6 +21,7 @@ import { one } from "@/features/reports/format";
 import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
 import { monthDay } from "@/features/schedule/format";
+import { CompareCard } from "@/features/scores/CompareCard";
 import { scoreTitle } from "@/features/scores/format";
 import { BestBadge, ScoreHead, scoreFacts, useCardPicture } from "@/features/scores/ScoreParts";
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
@@ -31,9 +32,10 @@ import { radius, space, useColors } from "@/theme";
 /**
  * One score, as the family sees it (loaded by ID, so a link opens it too): the same score the staff see, to look at
  * only. Its total and how the group sits; its shots played back one by one on the target as it opens; how it compares
- * with the student's other results in that position; a SIUS result's shots series by series, or a scanned card on its
- * picture with each bull's score (pinch to zoom), or a typed card's scores; the coach's note; and the original, the
- * SIUS result's PDF or the card's photo, full screen.
+ * with the student's other results in that position, and side by side with one of them (the first, the one before it,
+ * the lowest, or any two chosen), as the website's Compare; a SIUS result's shots series by series, or a scanned card
+ * on its picture with each bull's score (pinch to zoom), or a typed card's scores; the coach's note; and the original,
+ * the SIUS result's PDF or the card's photo, full screen.
  */
 export default function FamilyScoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -133,6 +135,8 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
         ) : null}
 
         <Compare e={e} own={own.data} loading={own.loading} first={family.firstName(e.studentId, e.studentName)} you={family.who === "student"} />
+
+        <CompareCard anchor={e} evaluations={own.data} loading={own.loading} onOpen={(id) => router.push({ pathname: "/score/[id]", params: { id } })} testID="family-compare" />
 
         {sius ? (
           <ListSection title="Shots" footer={`Tap a shot to see it larger.${e.sighters ? ` Before them, ${e.sighters} sighters (never counted).` : ""}`} testID="family-score-shots">

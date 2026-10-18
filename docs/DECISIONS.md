@@ -388,3 +388,45 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   writes only its own read receipt. A family reads a score's file record one at a time by its ID, never as a list (a
   query could have left the Trash check unasked; found while writing these rules).
 
+
+## 17. Coaches on the phone, "not available" days, and the Drive's drop area (2026-10-18)
+
+The owner, as a coach on the phone: "I don't have availability section here … I need to have every ability to do
+whatever I'm able to do as a coach on the website … on the phone too … Not only for the coach, but also for students
+and parents. Except admin."
+
+- **Availability on the phone, as clean as the owner's True Education design**: a tab of its own for coaches. Months
+  scroll down; each day is only its number, in a light green circle when available, a grey one when marked not
+  available, plain when nothing is set (an amber dot when it's inside the notice window and still to set); closed and
+  past days are light grey. A day opens a sheet: Available or Not available, start and end time wheels inside that
+  date's hours (up to the academy's number of times a day), Repeat every weekday (2–12 weeks, or every other week), and
+  Cancel, Remove and Save; a day inside the lock window says it's locked and shows what's saved. The top says the
+  academy's rule ("Set availability 2 weeks ahead · Changes within 7 days need an admin"); Today and the ⋯ menu (Copy
+  last week, Repeat weekly) sit by the title. HyberCRM's phone app (times in each day) was "really complicated".
+- **A coach's tabs: Home · Schedule · Availability · Scan · More.** A phone's tab bar holds five, so the coach's
+  Students is More's first row; the office keeps Home · Schedule · Scan · Students · More.
+- **"Not available" is an answer**, on the website and the phone: a day holds times, "not available", or nothing. Only
+  open days with nothing set count as days still to set (the calendar's amber days, the "N days aren't set" notice, the
+  website's and the phone's Home to-do), so a coach is no longer pushed to give times for a day off (the owner: "kind of
+  forcing them to actually mark their availability, which is a huge error"). The notice offers "Not available on all"
+  in one tap; the website's selection bar and day editor mark days not available; copying, pasting and repeating days
+  carry the mark. The schedule tells an admin "marked not available" from "hasn't given availability", and the admin's
+  day editor "Not set" from "Not available". The rules keep a day marked not available without times. Repeat weekly
+  can skip a week (every other week): the Sunday rotation in the meeting notes.
+- **A coach's payroll looks like the office's**, on the website and the phone ("we have a filter feature … so much
+  easier and clean"): the pay period or dates with Generate and Clear, a summary with the coach's rate and pay, the
+  records (the same ones the office lists, from one shared builder) and CSV; it opens on the current pay period.
+- **What coaches do on the website, on the phone too**: News (the academy's posts, with comments) and their
+  notifications (Home's bell); Home's to-do (classes waiting for the admin, days to set, unread posts) and time clock;
+  the Drive (browse, search, open, rename, move, Trash, new folders, photos added to a folder); Reports (every report;
+  sharing a draft with the family, with the email link or not); their details, notification switches and sign-in
+  (changing or adding a password: for parents and students too); a student's details and calendar. Comparing two
+  results (lowest, previous, first or any two) is on the phone's score screens, and families' Classes have a month view.
+  Still on the website only: SIUS PDFs (the phone can pick files, but reading a SIUS result is the website's), typing
+  paper scores for a photo already in the Drive, and the Trash.
+- **The Drive opens with its drop area** ("Drop SIUS PDFs here · one or several", and Choose PDFs), for admins and
+  coaches: the app reads each result's date and scores, asks whose it is and the position (suggested from the file
+  name, marked so, with "Set all" for several), files each in the student's folder named by its date, and saves its
+  scores; a PDF that isn't a SIUS result is kept as a file. It always worked by dropping anywhere on the page, but
+  nothing showed it, so the owner didn't find it.
+- **The meeting notes, checked** (the notes stay out of git): what's still missing is in `docs/TODO.md`.
