@@ -42,7 +42,8 @@ describe('class conflicts', () => {
   it('flags a coach with no availability that day', () => {
     expect(kinds(session(), ctx({ availability: null }))).toEqual(['coach_unavailable'])
     expect(kinds(session(), ctx({ availability: { ranges: [{ startMin: 840, endMin: 1080 }], unavailable: true } }))).toEqual(['coach_unavailable'])
-    expect(sessionConflicts(session(), ctx({ availability: null }))[0].message).toBe('Priya Raman isn’t available that day.')
+    expect(sessionConflicts(session(), ctx({ availability: null }))[0].message).toBe('Priya Raman hasn’t given availability that day.')
+    expect(sessionConflicts(session(), ctx({ availability: { ranges: [], unavailable: true } }))[0].message).toBe('Priya Raman is marked not available that day.')
   })
 
   it('flags availability that covers only part of the class', () => {

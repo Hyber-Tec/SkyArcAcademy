@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { LuCalendarCheck, LuCalendarClock, LuLock } from 'react-icons/lu'
+import { LuBan, LuCalendarCheck, LuCalendarClock, LuLock } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
-import { availabilityGaps, dayHours, effectiveLockDays, effectiveRanges } from '@shared/availability'
+import { availabilityGaps, dayHours, effectiveLockDays, lastAnswered } from '@shared/availability'
 import { type DateKey, addDays, formatDateKey, isDateKey, todayKey } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { PageHeader } from '@/components/app/PageHeader'
+import { Button } from '@/components/ui/button'
 import { useAvailability, useDayConfigs } from '@/features/data/hooks'
 import { NOT_LINKED, useMyStaff } from '@/features/coach/hooks'
 import { useNow } from '@/lib/useNow'
@@ -22,8 +23,8 @@ function span(days: number): string {
 
 /**
  * Coach → Availability: where the coach stands (how far ahead it's set and
- * which open days in the notice window still need times), then the calendar.
- * `?date=` opens that day (links from Home).
+ * which open days in the notice window still need an answer: times, or not
+ * available), then the calendar. `?date=` opens that day (links from Home).
  */
 export function CoachAvailabilityPage() {
   const { staffId, settings, timezone } = useBranch()
@@ -42,11 +43,9 @@ export function CoachAvailabilityPage() {
 
   const status = useMemo(() => {
     const hoursOf = (d: DateKey) => dayHours(d, settings, dayConfigs)
-    let lastSet: DateKey | null = null
-    for (const [d, doc] of availability) {
-      if (effectiveRanges(doc.ranges, hoursOf(d)).length && (!lastSet || d > lastSet)) lastSet = d
-    }
-    const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, rangesOn: (d) => availability.get(d)?.ranges, now: new Date(now) })
+    // Days marked not available are answered too.
+    const lastSet = lastAnswered(availability, hoursOf)
+    const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, dayOn: (d) => availability.get(d), now: new Date(now) })
     return { lastSet, gaps }
   }, [availability, dayConfigs, settings, today, timezone, now])
 
@@ -115,7 +114,7 @@ export function CoachAvailabilityPage() {
                 : !asksNotice
                   ? 'Add the days and times you can teach.'
                   : gaps.length
-                  ? `${gaps.length} open ${gaps.length === 1 ? 'day' : 'days'} in the next ${span(a.leadTimeDays)} still ${gaps.length === 1 ? 'needs' : 'need'} times.`
+                  ? `${gaps.length} open ${gaps.length === 1 ? 'day' : 'days'} in the next ${span(a.leadTimeDays)} ${gaps.length === 1 ? 'isn’t' : 'aren’t'} set yet: give your times, or mark ${gaps.length === 1 ? 'it' : 'them'} not available.`
                   : lockDays >= a.leadTimeDays
                     ? `The next ${span(a.leadTimeDays)} are locked. Ask an admin to change them.`
                     : `The next ${span(a.leadTimeDays)} are set. Days within ${lockDays} days are locked.`}
@@ -123,19 +122,24 @@ export function CoachAvailabilityPage() {
           </div>
         </div>
         {gaps.length ? (
-          <ul className="flex flex-wrap gap-1.5 sm:max-w-[55%] sm:justify-end" aria-label="Days that need times">
-            {gaps.map((d) => (
-              <li key={d}>
-                <button
-                  type="button"
-                  onClick={() => calendar.current?.openDay(d)}
-                  className="h-7 rounded-full border border-amber-300 bg-background px-3 text-xs font-medium text-amber-900 tabular-nums hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/60"
-                >
-                  {formatDateKey(d, 'weekdayMedium')}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-2 sm:max-w-[55%] sm:items-end">
+            <ul className="flex flex-wrap gap-1.5 sm:justify-end" aria-label="Days not set yet">
+              {gaps.map((d) => (
+                <li key={d}>
+                  <button
+                    type="button"
+                    onClick={() => calendar.current?.openDay(d)}
+                    className="h-7 rounded-full border border-amber-300 bg-background px-3 text-xs font-medium text-amber-900 tabular-nums hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/60"
+                  >
+                    {formatDateKey(d, 'weekdayMedium')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Button variant="outline" size="sm" className="self-start sm:self-end" onClick={() => calendar.current?.markNotAvailable(gaps)} data-testid="gaps-not-available">
+              <LuBan /> {gaps.length === 1 ? 'Not available that day' : `Not available on all ${gaps.length}`}
+            </Button>
+          </div>
         ) : lockDays > 0 ? (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <LuLock className="size-3.5" /> Locked through {formatDateKey(addDays(today, lockDays), 'monthDay')}

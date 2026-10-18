@@ -47,6 +47,35 @@ export function effectiveRanges(ranges: readonly AvailabilityRange[], hours: Day
   return hours.isOpen ? clipToHours(ranges, hours).ranges : []
 }
 
+/** A date's saved availability: its times (as stored), or marked not available. */
+export interface SavedDay {
+  ranges: readonly AvailabilityRange[]
+  /** Marked not available that day (by the coach or an admin): an answer, unlike a day left unset. */
+  unavailable?: boolean
+}
+
+/**
+ * Where a date stands for one coach: the academy is closed; they gave times (inside that date's hours); they marked it
+ * not available; or nothing is set. A day marked not available is answered, so it is never one still to set.
+ */
+export type DayMark = 'closed' | 'available' | 'unavailable' | 'unset'
+
+export function dayMark(saved: SavedDay | null | undefined, hours: DayHours): DayMark {
+  if (!hours.isOpen) return 'closed'
+  if (saved?.unavailable) return 'unavailable'
+  return saved && effectiveRanges(saved.ranges, hours).length ? 'available' : 'unset'
+}
+
+/** The last open date a coach has answered (times, or not available): "Set through". */
+export function lastAnswered(days: Iterable<readonly [DateKey, SavedDay]>, hoursOf: (dateKey: DateKey) => DayHours): DateKey | null {
+  let last: DateKey | null = null
+  for (const [d, saved] of days) {
+    const mark = dayMark(saved, hoursOf(d))
+    if ((mark === 'available' || mark === 'unavailable') && (!last || d > last)) last = d
+  }
+  return last
+}
+
 export type FitResult =
   | { ok: true; ranges: AvailabilityRange[]; trimmed: boolean }
   | { ok: false; reason: 'closed' | 'outside' | 'too_many' }
@@ -102,11 +131,11 @@ export function isInsideLeadTime(dateKey: DateKey, timeZone: string, leadDays: n
 }
 
 /**
- * Open days a coach should still give times for: inside the lead window, not
- * locked yet, and without availability inside that date's hours. They are the
- * amber days of the coach's calendar and the "availability still to set" of
- * Today (web and phone), so both always count the same days. A branch that
- * doesn't ask for notice (lead time "Do nothing") has none.
+ * Open days a coach still has to answer: inside the lead window, not locked
+ * yet, with neither times inside that date's hours nor a "not available" mark.
+ * They are the amber days of the coach's calendar and the "availability still
+ * to set" of Home (web and phone), so both always count the same days. A
+ * branch that doesn't ask for notice (lead time "Do nothing") has none.
  */
 export function availabilityGaps(input: {
   today: DateKey
@@ -115,8 +144,8 @@ export function availabilityGaps(input: {
   dayConfigs?: Map<DateKey, Pick<DayConfig, 'isOpen' | 'openMin' | 'closeMin'>> | null
   /** A date's hours, when the caller already has them (instead of `dayConfigs`). */
   hoursOf?: (dateKey: DateKey) => DayHours
-  /** Saved ranges of a date (as stored; clipped to the date's hours here). */
-  rangesOn: (dateKey: DateKey) => readonly AvailabilityRange[] | null | undefined
+  /** A date's saved availability (its ranges as stored; clipped to the date's hours here). */
+  dayOn: (dateKey: DateKey) => SavedDay | null | undefined
   now?: Date
 }): DateKey[] {
   const { today, timeZone, settings } = input
@@ -130,14 +159,17 @@ export function availabilityGaps(input: {
     if (!isInsideLeadTime(d, timeZone, lead, now)) break
     const hours = input.hoursOf ? input.hoursOf(d) : dayHours(d, settings, input.dayConfigs)
     if (!hours.isOpen || isLockedForCoach(d, timeZone, lockDays, now)) continue
-    if (effectiveRanges(input.rangesOn(d) ?? [], hours).length === 0) out.push(d)
+    if (dayMark(input.dayOn(d), hours) === 'unset') out.push(d)
   }
   return out
 }
 
-/** Dates `weeks` weeks after `dateKey` on the same weekday (repeat weekly). */
-export function weeklyRepeats(dateKey: DateKey, weeks: number): DateKey[] {
-  return Array.from({ length: weeks }, (_, i) => addDays(dateKey, 7 * (i + 1)))
+/**
+ * The same weekday in the `weeks` weeks after `dateKey` (Repeat weekly), or every other one with `every` 2 (a rotation,
+ * such as Sundays that alternate between coaches).
+ */
+export function weeklyRepeats(dateKey: DateKey, weeks: number, every: 1 | 2 = 1): DateKey[] {
+  return Array.from({ length: Math.floor(weeks / every) }, (_, i) => addDays(dateKey, 7 * every * (i + 1)))
 }
 
 export function rangesEqual(a: readonly AvailabilityRange[], b: readonly AvailabilityRange[]): boolean {
