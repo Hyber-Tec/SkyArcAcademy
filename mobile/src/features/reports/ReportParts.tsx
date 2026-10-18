@@ -14,7 +14,7 @@ import { radius, space, useColors } from "@/theme";
 import { INK } from "./charts";
 import { one, signed } from "./format";
 
-/** Pieces of the report screen (src/app/(app)/(family)/report/[id].tsx), as the website's report has them. */
+/** Pieces of a report's screen (ReportBody.tsx, the family's and the staff's), as the website's report has them. */
 
 export interface Tile {
   label: string;

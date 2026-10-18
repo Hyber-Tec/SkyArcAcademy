@@ -11,6 +11,9 @@ import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
 import { useAcademyNow, useHoursOf, useRecentEvaluations, useSessionsBetween, useStaffList } from "@/features/data/hooks";
 import { ScoreRow } from "@/features/family/ScoreRow";
+import { ClockCard } from "@/features/home/ClockCard";
+import { ToDoCard } from "@/features/home/ToDoCard";
+import { InboxBell } from "@/features/notifications/InboxBell";
 import { ClassRow } from "@/features/schedule/ClassRow";
 import { groupClasses } from "@/features/schedule/classes";
 import { longDay, plural, timeRange } from "@/features/schedule/format";
@@ -24,12 +27,13 @@ function greeting(nowMin: number): string {
 }
 
 /**
- * The day at a glance (the app opens here): the lockup, a greeting with the date, today's numbers, the way to scan
- * targets, today's classes in time order (a coach's own, for a coach), and the latest scores. Everything is live and in
- * the academy's time zone.
+ * The day at a glance (the app opens here): the lockup with the bell (the person's notifications) beside it, a greeting
+ * with the date, a coach's time clock, today's numbers, a coach's to-do (classes waiting for the admin, availability to
+ * set, posts to read), the way to scan targets, today's classes in time order (a coach's own, for a coach), and the
+ * latest scores. Everything is live and in the academy's time zone.
  */
 export default function TodayScreen() {
-  const { actor, staff, settings, isCoach } = useBranch();
+  const { actor, staff, settings, isCoach, staffId } = useBranch();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -49,11 +53,18 @@ export default function TodayScreen() {
   const first = (staff?.firstName || actor.name.split(/\s+/)[0] || "").trim();
 
   const contentStyle = Platform.OS === "android" ? { paddingTop: insets.top + space.lg } : undefined;
+  // A coach's own day: their time clock and what they still have to do (a coach not linked to a staff record has none).
+  const coach = isCoach && !!staffId;
 
   return (
     <TodayScroll contentStyle={contentStyle}>
       <View style={styles.header}>
-        <SkyArcLockup size="sm" testID="today-lockup" />
+        <View style={styles.top}>
+          <SkyArcLockup size="sm" testID="today-lockup" />
+          <View style={styles.bell}>
+            <InboxBell />
+          </View>
+        </View>
         <T variant="title" testID="today-greeting" accessibilityRole="header" style={styles.greeting}>
           {greeting(nowMin)}
           {first ? `, ${first}` : ""}
@@ -64,6 +75,8 @@ export default function TodayScreen() {
         </T>
       </View>
 
+      {coach ? <ClockCard todays={sessions.data} loading={sessions.loading} today={today} nowMin={nowMin} hour12={hour12} /> : null}
+
       <Card style={styles.stats} testID="today-stats">
         <Stat value={active.length} label={active.length === 1 ? "class" : "classes"} />
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
@@ -71,6 +84,8 @@ export default function TodayScreen() {
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
         {isCoach ? <Stat value={teaching} label={teaching === 1 ? "hour" : "hours"} /> : <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />}
       </Card>
+
+      {coach ? <ToDoCard /> : null}
 
       <Pressable
         testID="today-scan"
@@ -214,6 +229,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl * 2 },
   header: { gap: 2 },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
+  // The bell is a little taller than the lockup: it overhangs rather than pushing the greeting down.
+  bell: { marginVertical: -4 },
   greeting: { marginTop: space.md },
   grow: { flex: 1, gap: 2 },
   stats: { flexDirection: "row", alignItems: "center", paddingVertical: space.md },

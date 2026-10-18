@@ -6,9 +6,10 @@ import { radius, useColors } from "@/theme";
 
 /**
  * How the scores went over the period (computed from them, never written by hand), in the families' words ("Building
- * back up" for a dip), with an arrow so it never relies on colour alone.
+ * back up" for a dip) unless the staff's are asked for ("Dipping", as the website's lists say it), with an arrow so it
+ * never relies on colour alone.
  */
-export function TrendChip({ level, size = "md", testID }: { level: TrendLevel; size?: "sm" | "md"; testID?: string }) {
+export function TrendChip({ level, size = "md", audience = "family", testID }: { level: TrendLevel; size?: "sm" | "md"; audience?: "family" | "staff"; testID?: string }) {
   const colors = useColors();
   const look = {
     improving: { bg: colors.successTint, fg: colors.success, Icon: TrendingUp },
@@ -20,7 +21,7 @@ export function TrendChip({ level, size = "md", testID }: { level: TrendLevel; s
     <View style={[styles.chip, md ? styles.md : styles.sm, { backgroundColor: look.bg }]} testID={testID}>
       <look.Icon size={md ? 16 : 12} color={look.fg} />
       <T variant={md ? "small" : "tiny"} style={[styles.text, { color: look.fg }]} numberOfLines={1}>
-        {trendLabel(level, "family")}
+        {trendLabel(level, audience)}
       </T>
     </View>
   );

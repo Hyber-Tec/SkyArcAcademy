@@ -1,5 +1,5 @@
 import type { DateKey } from "@shared/time";
-import { ChevronRight, Image as ImageIcon, Megaphone, Paperclip, Pin } from "lucide-react-native";
+import { ChevronRight, Image as ImageIcon, Megaphone, MessageSquare, Paperclip, Pin } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
@@ -10,14 +10,16 @@ import type { NewsPost } from "./news";
 import { NewBadge } from "./ReportRow";
 
 /**
- * One of the academy's posts in a list (Home's "From the academy", the News page), as the website lists them: its title
- * in full, "New" until this person opens it; whether it's pinned, its category, the day it went up (in the academy's
- * zone) and how many pictures and files it has; and a line or two of its text. Tapping it opens the post.
+ * One of the academy's posts in a list (Home's "From the academy", the News page; the staff's News too), as the website
+ * lists them: its title in full, "New" until this person opens it; whether it's pinned, its category, the day it went
+ * up (in the academy's zone), how many pictures and files it has (and, for the staff, its comments); and a line or two
+ * of its text. Tapping it opens the post.
  */
 export function NewsRow({
   post: a,
   isNew,
   today,
+  comments = 0,
   divider = false,
   onPress,
   testID,
@@ -26,6 +28,8 @@ export function NewsRow({
   isNew: boolean;
   /** Today in the academy's zone ("Today", "Yesterday"). */
   today: DateKey;
+  /** How many comments it has, shown when there are some (the staff's lists: families never see comments). */
+  comments?: number;
   divider?: boolean;
   onPress: () => void;
   testID?: string;
@@ -36,7 +40,8 @@ export function NewsRow({
   const day = postedDay(a, timezone, today);
   const category = a.category?.trim() || "General";
   const holds = postHolds(a);
-  const label = [a.title, isNew ? "New" : null, a.pinned ? "Pinned" : null, category, day, holds.pictures, holds.files, preview].filter(Boolean).join(", ");
+  const talk = comments > 0 ? (comments === 1 ? "1 comment" : `${comments} comments`) : null;
+  const label = [a.title, isNew ? "New" : null, a.pinned ? "Pinned" : null, category, day, holds.pictures, holds.files, talk, preview].filter(Boolean).join(", ");
   return (
     <Pressable
       testID={testID}
@@ -82,6 +87,14 @@ export function NewsRow({
               <Paperclip size={12} color={colors.mutedForeground} />
               <T variant="small" tone="muted">
                 {holds.files}
+              </T>
+            </View>
+          ) : null}
+          {comments > 0 ? (
+            <View style={styles.inline}>
+              <MessageSquare size={12} color={colors.mutedForeground} />
+              <T variant="small" tone="muted">
+                {comments}
               </T>
             </View>
           ) : null}

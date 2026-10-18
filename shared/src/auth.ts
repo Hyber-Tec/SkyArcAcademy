@@ -79,6 +79,10 @@ export function authErrorMessage(code: string | undefined | null, action: AuthAc
       return 'This email already signs in with a password. Sign in with your email and password instead.'
     case 'credential-already-in-use':
       return 'That account is already linked to another sign-in.'
+    case 'provider-already-linked':
+      return 'Your account already has a password. Change it instead.'
+    case 'user-mismatch':
+      return 'That’s a different account. Use the one you’re signed in with.'
     case 'operation-not-allowed':
       return action === 'google' ? 'Google sign-in isn’t turned on for Sky Arc yet.' : 'Signing in with a password isn’t turned on for Sky Arc yet.'
     case 'expired-action-code':
@@ -96,7 +100,9 @@ export function authErrorMessage(code: string | undefined | null, action: AuthAc
         ? 'Couldn’t send the email. Try again in a moment.'
         : action === 'sign-up'
           ? 'Couldn’t create the account. Try again in a moment.'
-          : 'Couldn’t sign you in. Try again in a moment.'
+          : action === 'change-password'
+            ? 'Couldn’t change your password. Try again in a moment.'
+            : 'Couldn’t sign you in. Try again in a moment.'
   }
 }
 
