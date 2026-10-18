@@ -118,6 +118,8 @@ export interface AnnouncementInput {
   category: string
   audienceType: AnnouncementAudience
   audienceKeys: string[]
+  /** Parents and students see it too (on their Home), whoever the staff audience is. */
+  families: boolean
   commentsEnabled: boolean
   attachments: AnnouncementAttachment[]
   /** Create: notify the audience. Edit: notify them again. */
@@ -133,6 +135,7 @@ function contentFields(input: AnnouncementInput) {
     category: input.category.trim() || 'General',
     audienceType: input.audienceType,
     audienceKeys: input.audienceType === 'members' ? [...new Set(input.audienceKeys)] : [],
+    families: input.families,
     commentsEnabled: input.commentsEnabled,
     attachments: input.attachments,
   }

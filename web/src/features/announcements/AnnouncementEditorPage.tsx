@@ -40,6 +40,7 @@ interface Draft {
   attachments: AnnouncementAttachment[]
   audienceType: AnnouncementAudience
   audienceKeys: string[]
+  families: boolean
   commentsEnabled: boolean
   notify: boolean
 }
@@ -51,6 +52,7 @@ const EMPTY: Draft = {
   attachments: [],
   audienceType: 'all',
   audienceKeys: [],
+  families: false,
   commentsEnabled: false,
   notify: true,
 }
@@ -78,6 +80,7 @@ export function AnnouncementEditorPage() {
         attachments: a.attachments ?? [],
         audienceType: a.audienceType,
         audienceKeys: a.audienceKeys ?? [],
+        families: a.families === true,
         commentsEnabled: a.commentsEnabled,
         // "Notify again" always starts off.
         notify: false,
@@ -338,6 +341,13 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
           <Card className="gap-4 p-5">
             <h2 className="text-sm font-semibold">Publishing options</h2>
             <OptionRow
+              id="ann-families"
+              label="Families too"
+              description="Parents and students also see it, on their Home in the portal and the app. Comments stay with staff."
+              checked={draft.families}
+              onChange={(families) => set({ families })}
+            />
+            <OptionRow
               id="ann-comments"
               label="Allow comments"
               description="Let coaches leave comments on this announcement."
@@ -372,7 +382,7 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
           <>
             {editing
               ? `Your edits to “${draft.title.trim()}” will be saved immediately.`
-              : `This will immediately send “${draft.title.trim()}” to ${draft.audienceType === 'all' ? `all ${audienceSize} coaches` : `${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`}.`}
+              : `This will immediately send “${draft.title.trim()}” to ${draft.audienceType === 'all' ? `all ${audienceSize} coaches` : `${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`}${draft.families ? ', and show it to parents and students' : ''}.`}
             {draft.notify ? (
               <span className={cn('mt-2 block', editing && 'text-red-600 dark:text-red-400')}>
                 {editing ? 'The audience will be notified again.' : 'They’ll also get a notification.'}

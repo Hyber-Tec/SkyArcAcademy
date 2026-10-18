@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { announcementCategories, cleanCommentText, isInAudience, notificationMeta, stripHtmlToText } from './comms'
+import { announcementCategories, cleanCommentText, isForFamilies, isInAudience, notificationMeta, stripHtmlToText } from './comms'
 
 describe('announcements', () => {
   it('turns HTML into searchable text', () => {
@@ -15,6 +15,13 @@ describe('announcements', () => {
     expect(isInAudience({ audienceType: 'all', audienceKeys: [] }, 'a@x.test')).toBe(true)
     expect(isInAudience({ audienceType: 'members', audienceKeys: ['a@x.test'] }, 'a@x.test')).toBe(true)
     expect(isInAudience({ audienceType: 'members', audienceKeys: ['b@x.test'] }, 'a@x.test')).toBe(false)
+  })
+
+  it('shows families only the posts meant for them, and never archived ones', () => {
+    expect(isForFamilies({ families: true, archived: false })).toBe(true)
+    expect(isForFamilies({ families: false, archived: false })).toBe(false)
+    expect(isForFamilies({ archived: false })).toBe(false)
+    expect(isForFamilies({ families: true, archived: true })).toBe(false)
   })
 
   it('cleans comments like True Education', () => {

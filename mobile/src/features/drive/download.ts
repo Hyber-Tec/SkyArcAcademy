@@ -9,7 +9,7 @@ import { useBranch } from "@/state/BranchProvider";
 const pathOf = (uri: string) => decodeURIComponent(uri.replace(/^file:\/\//, ""));
 
 /** A Drive file's name as a file on the phone ("2026-10-15 Kneeling 176.3.pdf"), safe for any file system. */
-function fileName(file: { name?: string; kind: string }): string {
+export function fileName(file: { name?: string; kind: string }): string {
   const ext = file.kind || "bin";
   const base = (file.name ?? "")
     .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-")
@@ -20,42 +20,69 @@ function fileName(file: { name?: string; kind: string }): string {
 }
 
 /**
- * A Drive file on this phone, as a file:// URI: downloaded once into the app's cache through the Storage rules (staff,
- * and a family for its own child's score's file), never through a public link (CLAUDE.md, "Minors' data"). It keeps its
- * Drive name, in a folder of its own, so sharing or saving it gives the file a name people recognise. A copy whose size
- * no longer matches the record is downloaded again.
+ * A file in Storage to keep on this phone: its object's `path`, the `folder` of the app's cache it goes in, the `name`
+ * it has there (the one sharing or saving it gives) and its `size` as recorded (0 when unknown).
  */
-export async function localCopy(branchId: string, file: { id: string; kind: string; size: number; name?: string }): Promise<string> {
-  const dir = new Directory(Paths.cache, "drive", file.id);
+export interface StorageObject {
+  path: string;
+  folder: string[];
+  name: string;
+  size: number;
+}
+
+/**
+ * A file in Storage on this phone, as a file:// URI: downloaded once into the app's cache through the Storage rules,
+ * never through a public link (CLAUDE.md, "Minors' data"). A copy whose size no longer matches the record is downloaded
+ * again.
+ */
+export async function storageCopy(object: StorageObject): Promise<string> {
+  const dir = new Directory(Paths.cache, ...object.folder);
   if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
-  const local = new File(dir, fileName(file));
-  if (local.exists && (!file.size || local.size === file.size)) return local.uri;
+  const local = new File(dir, object.name);
+  if (local.exists && (!object.size || local.size === object.size)) return local.uri;
   if (local.exists) local.delete();
-  await writeToFile(ref(storage, driveObjectPath(branchId, file.id)), pathOf(local.uri));
+  await writeToFile(ref(storage, object.path), pathOf(local.uri));
   return local.uri;
 }
 
-/** A Drive file's local copy, fetched when the record is known; `retry` tries again after a failure. */
-export function useLocalCopy(file: { id: string; kind: string; size: number; name?: string } | null) {
-  const { branchId } = useBranch();
-  const id = file?.id ?? null;
-  const kind = file?.kind ?? "";
-  const size = file?.size ?? 0;
-  const name = file?.name ?? "";
+type DriveCopy = { id: string; kind: string; size: number; name?: string };
+
+/** A Drive file's object: it keeps its Drive name, in a folder of its own, so a shared copy has a name people recognise. */
+const driveObject = (branchId: string, file: DriveCopy): StorageObject => ({ path: driveObjectPath(branchId, file.id), folder: ["drive", file.id], name: fileName(file), size: file.size });
+
+/**
+ * A Drive file on this phone (staff, and a family for its own child's score's file), as a file:// URI (storageCopy).
+ */
+export async function localCopy(branchId: string, file: DriveCopy): Promise<string> {
+  return storageCopy(driveObject(branchId, file));
+}
+
+/** A file's local copy, fetched once the file is known (null until then); `retry` tries again after a failure. */
+export function useStorageCopy(object: StorageObject | null) {
+  const path = object?.path ?? null;
+  const folder = object?.folder.join("/") ?? "";
+  const name = object?.name ?? "";
+  const size = object?.size ?? 0;
   const [attempt, setAttempt] = useState(0);
-  const key = id ? `${id}:${size}:${name}:${attempt}` : null;
+  const key = path ? `${path}:${size}:${name}:${attempt}` : null;
   const [state, setState] = useState<{ key: string | null; uri: string | null; error: string | null }>({ key: null, uri: null, error: null });
   useEffect(() => {
-    if (!id || !key) return;
+    if (!path || !key) return;
     let live = true;
-    localCopy(branchId, { id, kind, size, name }).then(
+    storageCopy({ path, folder: folder.split("/"), name, size }).then(
       (uri) => live && setState({ key, uri, error: null }),
       (e: unknown) => live && setState({ key, uri: null, error: e instanceof Error ? e.message : String(e) }),
     );
     return () => {
       live = false;
     };
-  }, [key, id, kind, size, name, branchId]);
+  }, [key, path, folder, name, size]);
   const current = state.key === key ? state : { uri: null, error: null };
   return { uri: current.uri, error: current.error, loading: !!key && !current.uri && !current.error, retry: () => setAttempt((a) => a + 1) };
+}
+
+/** A Drive file's local copy, fetched when the record is known; `retry` tries again after a failure. */
+export function useLocalCopy(file: DriveCopy | null) {
+  const { branchId } = useBranch();
+  return useStorageCopy(file ? driveObject(branchId, file) : null);
 }

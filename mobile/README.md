@@ -5,9 +5,9 @@ HyberCRM's phone app. The **academy staff** (owners, admins and coaches) get fiv
 Students and More**, each showing what the person's role may see. The website stays the main thing; the app helps the
 staff see the day and do a few things on the go, above all scanning paper targets. Parents and students get the
 **family's part**: five tabs, **Home, Classes, Scores, Reports and More**, with a parent's children's (or the student's
-own) classes, every score as the staff see it, and the progress reports the academy shared. It uses the same Firebase
-project (`skyarcacademy`), the same Cloud Functions and the same security rules as the website, and the business logic
-in `../shared`.
+own) classes, every score as the staff see it, the progress reports the academy shared, and the academy's news for
+families. It uses the same Firebase project (`skyarcacademy`), the same Cloud Functions and the same security rules as
+the website, and the business logic in `../shared`.
 
 How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-the-apps.md); publishing to the stores is
 [docs/publishing.md](../docs/publishing.md). Rules for changing the code: [AGENTS.md](AGENTS.md).
@@ -63,11 +63,12 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
   a student themself; their data in `src/features/family/`, one query per student as the rules require):
   - **Home:** a greeting and the date; each child's next class (a parent's children in the same class share a card)
     with the coach, its status in plain words, the class's note ("Makeup for 10/15") and how soon it starts, or that
-    it's on now; the rest of this week, or next week's once this one has nothing left; the latest scores (each opens
-    its own screen, All scores the Scores tab); the latest shared progress report, "New" until someone in the family
-    opens it; attendance over the last 30 days; and how to reach the academy (its contact details from Settings →
-    Academy, when it has given them). A parent with several children picks All or one child, and the choice holds on
-    every tab.
+    it's on now; the rest of this week, or next week's once this one has nothing left; the academy's news ("From the
+    academy", when it has posts for families: the latest three, pinned first, each "New" until this person opens it,
+    and All news when there are more); the latest scores (each opens its own screen, All scores the Scores tab); the
+    latest shared progress report, "New" until someone in the family opens it; attendance over the last 30 days; and
+    how to reach the academy (its contact details from Settings → Academy, when it has given them). A parent with
+    several children picks All or one child, and the choice holds on every tab.
   - **Classes:** what's coming (earliest first) or what's past (latest first), day by day, a few weeks more on request;
     a class opens a sheet with the coach, each child in it with their status and note, and the academy's phone and email
     for a change (families don't change classes in the app).
@@ -84,6 +85,14 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
     (a dart opens a shot large), a scanned card on its picture with each bull's score (pinch or double-tap to zoom) or
     a typed card's scores, and the original, the SIUS result's PDF or the card's photo, full screen (`file/[id]`,
     through the Storage rules); one that's been removed says so.
+  - **News** (`news/`, from Home or a link): the posts the academy shows to families (the website's "Families too"),
+    pinned first, then month by month, each with its category, the day it went up (in the academy's zone), how many
+    pictures and files it has and a line or two of it. A post opens on its own screen: its title, who posted it and
+    when, its text as the website's editor wrote it (headings, lists, quotes, links that open in the phone's browser,
+    pictures that open full screen), and its attachments (pictures shown, files as rows), which open full screen
+    through the Storage rules, with Share. Opening it leaves the person's read receipt, so it stops being "New" for
+    them only (a parent's opening leaves it new for the student). A post the academy archives or stops showing to
+    families leaves the phone at once; opened from a link, it says it isn't available. Families don't see comments.
   - **Reports:** the shared reports, newest first. A report opens on its own screen, as the website shows it to
     families (its options decide what shows): the period's figures, how the scores went, the coach's words, the scores
     over time (a tap reads a date's scores), the period's shots played back on the target result after result (the
@@ -206,10 +215,11 @@ emulator, against the practice copy:
   tens) and puts in the simulator's Photos first, chosen in Scan, read, checked up close and saved for a sample student
   as a prone card. It adds that paper result and the card's copy to the practice copy.
 - `family.yaml`: signs out, in as the sample parent (two children), then Home (the child switcher, a class's sheet, the
-  latest scores and All scores), Classes (upcoming and past), Scores (each child's figures, one child's, a result with
-  its shots played back and its original opened and closed), Reports (a report with its shots played back) and More
-  (the delete-account dialog, opened and canceled), and back in as the owner. It changes nothing but the report's
-  "Viewed".
+  academy's news with a post opened and All news when Home doesn't show every post, the latest scores and All scores),
+  Classes (upcoming and past), Scores (each child's figures, one child's, a result with its shots played back and its
+  original opened and closed), Reports (a report with its shots played back) and More (the delete-account dialog,
+  opened and canceled), and back in as the owner. It changes nothing but the report's "Viewed" and the parent's read
+  receipt of the post opened.
 - `screenshots/tab.yaml`: opens the tab `TAB` for the stores' screenshots (`npm run publish:screenshots`).
 - `steps/`: steps the flows run, not tests of their own: `tab.yaml` opens a tab (`TAB` and its name `LABEL`),
   `family-tab.yaml` one of the family's, `back.yaml` goes back a page.

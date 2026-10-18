@@ -64,6 +64,10 @@ beforeEach(async () => {
     await setDoc(doc(db, `branches/${B}/members/coach@a.test`), m('coach@a.test', 'coach'))
     await setDoc(doc(db, `branches/${B}/members/other@a.test`), m('other@a.test', 'coach'))
     await setDoc(doc(db, `branches/${B}/members/parent@a.test`), m('parent@a.test', 'parent'))
+    await setDoc(doc(db, `branches/${B}/members/student@a.test`), m('student@a.test', 'student'))
+    await setDoc(doc(db, `${P}/families`), post({ families: true }))
+    await setDoc(doc(db, `${P}/families-archived`), post({ families: true, archived: true }))
+    await setDoc(doc(db, `${P}/families/comments/c-staff`), { ...comment('coach@a.test'), createdAt: new Date() })
     await setDoc(doc(db, `${P}/everyone`), post())
     await setDoc(doc(db, `${P}/for-coach`), post({ audienceType: 'members', audienceKeys: ['coach@a.test'] }))
     await setDoc(doc(db, `${P}/for-other`), post({ audienceType: 'members', audienceKeys: ['other@a.test'], commentsEnabled: false }))
@@ -83,8 +87,28 @@ describe('announcements', () => {
     await assertFails(getDocs(collection(db, P)))
   })
 
-  it('parents see no announcements', async () => {
-    await assertFails(getDocs(query(collection(user('parent@a.test'), P), where('audienceType', '==', 'all'))))
+  it('families see only the posts shown to them, not archived, and never staff’s comments', async () => {
+    for (const who of ['parent@a.test', 'student@a.test']) {
+      const db = user(who)
+      await assertFails(getDocs(query(collection(db, P), where('audienceType', '==', 'all'))))
+      await assertSucceeds(getDocs(query(collection(db, P), where('families', '==', true), where('archived', '==', false))))
+      await assertFails(getDocs(query(collection(db, P), where('families', '==', true))))
+      await assertSucceeds(getDoc(doc(db, `${P}/families`)))
+      await assertFails(getDoc(doc(db, `${P}/families-archived`)))
+      await assertFails(getDoc(doc(db, `${P}/everyone`)))
+      await assertFails(getDocs(collection(db, `${P}/families/comments`)))
+      await assertFails(addDoc(collection(db, `${P}/families/comments`), comment(who)))
+      await assertSucceeds(setDoc(doc(db, `${P}/families/reads/${who}`), receipt(who, 'families')))
+      await assertFails(setDoc(doc(db, `${P}/everyone/reads/${who}`), receipt(who, 'everyone')))
+      await assertFails(updateDoc(doc(db, `${P}/families`), { title: 'Changed' }))
+    }
+  })
+
+  it('staff still see posts shown to families, comments included', async () => {
+    await assertSucceeds(getDoc(doc(user('coach@a.test'), `${P}/families`)))
+    await assertSucceeds(getDocs(collection(user('coach@a.test'), `${P}/families/comments`)))
+    await assertSucceeds(setDoc(doc(user('admin@a.test'), `${P}/fam2`), post({ families: true })))
+    await assertFails(setDoc(doc(user('admin@a.test'), `${P}/fam3`), post({ families: 'yes' })))
   })
 
   it('admins publish with zero counters and cannot touch them later', async () => {

@@ -68,9 +68,9 @@ function useListPath(mode: Mode) {
 }
 
 function audienceLabel(a: Announcement) {
-  if (a.audienceType === 'all') return 'All coaches'
   const n = a.audienceKeys?.length ?? 0
-  return `${n} ${n === 1 ? 'person' : 'people'}`
+  const staff = a.audienceType === 'all' ? 'All coaches' : `${n} ${n === 1 ? 'person' : 'people'}`
+  return a.families ? `${staff} · families` : staff
 }
 
 function postedAt(a: Announcement, timezone: string) {

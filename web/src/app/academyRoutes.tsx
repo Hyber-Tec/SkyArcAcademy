@@ -102,7 +102,10 @@ const coachRoutes: RouteObject[] = [
   { path: '*', element: <Navigate to="/coach/home" replace /> },
 ]
 
-/** Parents and students share one portal design: Home, Classes, Scores, Reports and Profile (a parent sees their children). */
+/**
+ * Parents and students share one portal design: Home, Classes, Scores, Reports, News and Profile (a parent sees their
+ * children).
+ */
 function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
   return [
     { index: true, element: <Navigate to="home" replace /> },
@@ -110,6 +113,8 @@ function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
     { path: 'classes', lazy: page(() => import('@/features/family/ClassesPage'), 'FamilyClassesPage') },
     { path: 'scores', lazy: page(() => import('@/features/family/ScoresPage'), 'FamilyScoresPage') },
     { path: 'reports', lazy: page(() => import('@/features/family/ReportsPage'), 'FamilyReportsPage') },
+    { path: 'news', lazy: page(() => import('@/features/family/NewsPage'), 'FamilyNewsPage') },
+    { path: 'news/:announcementId', lazy: page(() => import('@/features/family/NewsPage'), 'FamilyNewsPostPage') },
     {
       path: 'profile',
       lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyProfilePage'),

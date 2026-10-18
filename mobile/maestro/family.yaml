@@ -1,8 +1,9 @@
 # The family's app, as the sample parent (two children; the practice password): Home with the child switcher, a class's
-# sheet and the latest scores, Classes (upcoming and past), Scores (each child's figures, one child's, a result with its
-# shots played back, its original opened and closed), Reports and a report with its shots played back, and More (the
-# appearance, the delete-account dialog opened and canceled). It changes nothing but the report's "Viewed". Signs out,
-# in as the parent, then back in as the owner the other flows expect.
+# sheet, the academy's news (a post opened, and All news when Home doesn't show them all) and the latest scores, Classes
+# (upcoming and past), Scores (each child's figures, one child's, a result with its shots played back, its original
+# opened and closed), Reports and a report with its shots played back, and More (the appearance, the delete-account
+# dialog opened and canceled). It changes nothing but the report's "Viewed" and the parent's read receipt of the post
+# opened. Signs out, in as the parent, then back in as the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
 #   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/family.yaml
 appId: com.skyarcacademy.app
@@ -58,6 +59,47 @@ appId: com.skyarcacademy.app
           timeout: 15000
       - tapOn:
           id: "family-session-close"
+# The academy's news for families (the sample data shows two posts to families): a post opened, its title, when and by
+# whom, and back to Home; the News page, when Home doesn't show every post.
+# Centred, so the post isn't left under the floating tab bar.
+- scrollUntilVisible:
+    element:
+      id: "family-home-news-.*"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "family-home-news-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "news-post-title"
+    timeout: 15000
+- assertVisible:
+    id: "news-post-meta"
+- runFlow:
+    file: steps/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: "family-home-news"
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: "family-home-all-news"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "family-home-all-news"
+          direction: DOWN
+          centerElement: true
+      - tapOn:
+          id: "family-home-all-news"
+      - extendedWaitUntil:
+          visible:
+            id: "family-news"
+          timeout: 15000
+      - runFlow:
+          file: steps/back.yaml
 # The latest scores, and all of them a tap away (the Scores tab).
 - scrollUntilVisible:
     element:

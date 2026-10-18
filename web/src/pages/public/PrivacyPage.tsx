@@ -57,8 +57,8 @@ export function PrivacyPage() {
               pay. Time clock PINs are stored only in scrambled form.
             </>,
             <>
-              <strong>Messages and activity.</strong> Announcements and comments, notification settings, and a record of changes made in the app (who changed what, and
-              when), so mistakes can be found and fixed.
+              <strong>Messages and activity.</strong> Announcements and comments, who has opened an announcement or a progress report and when (the academy’s
+              staff see it), notification settings, and a record of changes made in the app (who changed what, and when), so mistakes can be found and fixed.
             </>,
             <>
               <strong>Technical information.</strong> Your browser or phone keeps your sign-in and a few display preferences on your device. If you allow notifications
