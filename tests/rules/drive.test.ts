@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
-import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
@@ -94,22 +94,49 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/admin@a.test`), member('admin@a.test', 'admin'))
     await setDoc(doc(d, `branches/${A}/members/coach@a.test`), member('coach@a.test', 'coach', { staffId: 'c1' }))
     await setDoc(doc(d, `branches/${A}/members/parent@a.test`), member('parent@a.test', 'parent', { studentIds: ['s1'] }))
+    await setDoc(doc(d, `branches/${A}/members/student@a.test`), member('student@a.test', 'student', { studentId: 's1' }))
+    await setDoc(doc(d, `branches/${A}/members/other@a.test`), member('other@a.test', 'parent', { studentIds: ['s2'] }))
     await setDoc(doc(d, `branches/${B}/members/admin@b.test`), member('admin@b.test', 'admin'))
     await setDoc(doc(d, `branches/${A}/driveFolders/student-s1`), { name: 'Student One', parentId: null, studentId: 's1', createdAt: null, createdBy: actor('admin@a.test') })
-    await setDoc(doc(d, `branches/${A}/driveFiles/f1`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready' })
+    // f1 is e1's file (a score of s1); fnote sits in s1's folder without a score; fs2's score (es2) is s2's.
+    await setDoc(doc(d, `branches/${A}/driveFiles/f1`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready', evaluationId: 'e1' })
+    await setDoc(doc(d, `branches/${A}/driveFiles/fnote`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready', name: 'Notes.pdf' })
+    await setDoc(doc(d, `branches/${A}/driveFiles/fs2`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready', folderId: 'student-s2', studentId: 's2', evaluationId: 'es2' })
     await setDoc(doc(d, `branches/${A}/evaluations/e1`), evaluation())
+    await setDoc(doc(d, `branches/${A}/evaluations/es2`), evaluation({ studentId: 's2', studentName: 'Student Two', fileId: 'fs2' }))
   })
   await env.withSecurityRulesDisabled(async (c) => {
-    await uploadBytes(ref(c.storage(), `branches/${A}/drive/f1`), PDF, { contentType: 'application/pdf' })
+    for (const f of ['fnote', 'f1', 'fs2']) await uploadBytes(ref(c.storage(), `branches/${A}/drive/${f}`), PDF, { contentType: 'application/pdf' })
   })
 })
 
 describe('Drive records', () => {
-  it('staff read them; families and other academies don’t', async () => {
+  it('staff read them all; a family reads only the file a score of their own child came from', async () => {
     await assertSucceeds(getDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/f1`)))
     await assertSucceeds(getDoc(doc(db('coach@a.test'), `branches/${A}/driveFolders/student-s1`)))
-    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/f1`)))
+    await assertSucceeds(getDoc(doc(db('admin@a.test'), `branches/${A}/driveFiles/fnote`)))
+    await assertSucceeds(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/f1`)))
+    await assertSucceeds(getDoc(doc(db('student@a.test'), `branches/${A}/driveFiles/f1`)))
+    await assertFails(getDoc(doc(db('other@a.test'), `branches/${A}/driveFiles/f1`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/fnote`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/fs2`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFolders/student-s1`)))
+    await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/driveFiles`)))
     await assertFails(getDoc(doc(db('admin@b.test'), `branches/${A}/driveFiles/f1`)))
+  })
+
+  it('a family loses the file once it’s in the Trash, no longer a score’s file, or moved to another student', async () => {
+    const a = db('admin@a.test')
+    const read = () => getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/f1`))
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: true })
+    await assertFails(read())
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: false })
+    await assertSucceeds(read())
+    // Deleting the score clears the file's link (web and phone scores/api.ts).
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { evaluationId: null })
+    await assertFails(read())
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { evaluationId: 'e1', folderId: 'student-s2', studentId: 's2' })
+    await assertFails(read())
   })
 
   it('staff (coaches too) add files as themselves, starting as uploads', async () => {
@@ -164,11 +191,29 @@ describe('Drive records', () => {
 })
 
 describe('Drive files in Storage', () => {
-  it('staff read the bytes; families and other academies can’t', async () => {
+  it('staff read the bytes; a family reads only the file a score of their own child came from', async () => {
     await assertSucceeds(getBytes(ref(storage('admin@a.test'), `branches/${A}/drive/f1`)))
     await assertSucceeds(getBytes(ref(storage('coach@a.test'), `branches/${A}/drive/f1`)))
-    await assertFails(getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/f1`)))
+    await assertSucceeds(getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/f1`)))
+    await assertSucceeds(getBytes(ref(storage('student@a.test'), `branches/${A}/drive/f1`)))
+    await assertFails(getBytes(ref(storage('other@a.test'), `branches/${A}/drive/f1`)))
+    await assertFails(getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/fnote`)))
+    await assertFails(getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/fs2`)))
     await assertFails(getBytes(ref(storage('admin@b.test'), `branches/${A}/drive/f1`)))
+  })
+
+  it('a family loses the bytes once the file is in the Trash, no longer a score’s file, or moved to another student', async () => {
+    const a = db('admin@a.test')
+    const read = () => getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/f1`))
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: true })
+    await assertFails(read())
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { trashed: false })
+    await assertSucceeds(read())
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { evaluationId: null })
+    await assertFails(read())
+    await updateDoc(doc(a, `branches/${A}/driveFiles/f1`), { evaluationId: 'e1', folderId: 'student-s2', studentId: 's2' })
+    await assertFails(read())
+    await assertSucceeds(getBytes(ref(storage('other@a.test'), `branches/${A}/drive/f1`)))
   })
 
   it('takes bytes only for a matching upload record, of an allowed type, and never replaces them', async () => {
@@ -202,9 +247,22 @@ describe('Drive files in Storage', () => {
 })
 
 describe('evaluations', () => {
-  it('staff read and write them (coaches too); families don’t', async () => {
+  it('families read their own children’s, one student at a time, and never change them', async () => {
+    await assertSucceeds(getDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e1`)))
+    await assertSucceeds(getDoc(doc(db('student@a.test'), `branches/${A}/evaluations/e1`)))
+    await assertFails(getDoc(doc(db('other@a.test'), `branches/${A}/evaluations/e1`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/es2`)))
+    await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/evaluations`), where('studentId', '==', 's1'))))
+    await assertSucceeds(getDocs(query(collection(db('student@a.test'), `branches/${A}/evaluations`), where('studentId', '==', 's1'))))
+    await assertFails(getDocs(query(collection(db('parent@a.test'), `branches/${A}/evaluations`), where('studentId', '==', 's2'))))
+    await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/evaluations`)))
+    await assertFails(updateDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e1`), { note: 'Great!' }))
+    await assertFails(updateDoc(doc(db('student@a.test'), `branches/${A}/evaluations/e1`), { total: 200 }))
+    await assertFails(deleteDoc(doc(db('student@a.test'), `branches/${A}/evaluations/e1`)))
+  })
+
+  it('staff read and write them (coaches too); families don’t write', async () => {
     await assertSucceeds(getDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e1`)))
-    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/evaluations/e1`)))
     await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e2`), evaluation({ source: 'paper', total: 88, wholeTotal: 88, shots: 10 })))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e3`), evaluation({ position: 'sitting' })))
     await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e4`), evaluation()))

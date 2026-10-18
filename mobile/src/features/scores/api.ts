@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, writeBatch } from "@react-native-firebase/firestore";
+import { doc, getDoc, serverTimestamp, writeBatch } from "@react-native-firebase/firestore";
 import { COL, ROOT } from "@shared/paths";
 import { type Evaluation, POSITION_LABELS, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
 import { formatDateKey } from "@shared/time";
@@ -32,10 +32,15 @@ export async function updateEvaluation(branchId: string, actor: Actor, id: strin
   await batch.commit();
 }
 
-/** Deletes a score; its file stays in the Drive (its `evaluationId` then points nowhere, read as no scores). */
+/**
+ * Deletes a score. Its file stays in the Drive, no longer a score's file (`evaluationId` cleared), so the family stops
+ * seeing it (storage.rules).
+ */
 export async function deleteEvaluation(branchId: string, actor: Actor, id: string, e: Evaluation): Promise<void> {
   const batch = writeBatch(db);
   batch.delete(ref(branchId, id));
+  const file = e.fileId ? await getDoc(doc(db, ROOT.branches, branchId, COL.driveFiles, e.fileId)).catch(() => null) : null;
+  if (file?.exists() && file.data()?.evaluationId === id) batch.update(file.ref, { evaluationId: null, updatedAt: serverTimestamp() });
   addAudit(batch, branchId, actor, {
     action: "evaluation.delete",
     category: "reports",

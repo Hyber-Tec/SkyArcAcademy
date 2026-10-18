@@ -1,4 +1,4 @@
-import { type WriteBatch, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { type WriteBatch, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { COL } from '@shared/paths'
 import { type Evaluation, POSITION_LABELS, SOURCE_LABELS, per10 } from '@shared/shooting/evaluation'
 import { formatDateKey } from '@shared/time'
@@ -59,10 +59,15 @@ export async function updateEvaluation(branchId: string, actor: Actor, id: strin
   await batch.commit()
 }
 
-/** Deletes an evaluation; its file stays in the Drive (its `evaluationId` then points nowhere, read as no scores). */
+/**
+ * Deletes an evaluation. Its file stays in the Drive, no longer a score's file (`evaluationId` cleared), so the family
+ * stops seeing it (storage.rules).
+ */
 export async function deleteEvaluation(branchId: string, actor: Actor, id: string, e: Evaluation) {
   const batch = writeBatch(db)
   batch.delete(branchDocRef(branchId, COL.evaluations, id))
+  const file = e.fileId ? await getDoc(branchDocRef(branchId, COL.driveFiles, e.fileId)).catch(() => null) : null
+  if (file?.exists() && file.data().evaluationId === id) batch.update(file.ref, { evaluationId: null, updatedAt: serverTimestamp() })
   addAudit(batch, branchId, actor, {
     action: 'evaluation.delete',
     category: 'reports',
