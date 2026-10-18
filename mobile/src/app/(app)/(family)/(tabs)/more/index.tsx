@@ -1,6 +1,9 @@
+import type { SignInMethods } from "@shared/auth";
 import { ROLE_LABELS } from "@shared/roles";
+import { formatDateKey } from "@shared/time";
 import * as Application from "expo-application";
-import { Globe, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
+import { router } from "expo-router";
+import { Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
@@ -8,6 +11,7 @@ import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
+import { AcademyContact } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { studentLine } from "@/features/students/format";
 import { env } from "@/lib/env";
@@ -23,14 +27,21 @@ function builtWhen(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+/** "You sign in with Google", as the website's Account says how. */
+function signInLine(methods: SignInMethods): string {
+  if (methods.google && methods.password) return "You sign in with Google, or your email and password";
+  if (methods.google) return "You sign in with Google";
+  return "You sign in with your email and password";
+}
+
 /**
- * Everything else, kept short: the account signed in, the children (or the student's own record) as the academy has
- * them, the appearance, help, the privacy policy, the website, which version this is, signing out, and deleting the
- * account.
+ * Everything else, kept short: the account signed in and how it signs in (Sign-in & security), the children (or the
+ * student's own record) as the academy has them, the appearance, how to reach the academy, help, the privacy policy,
+ * the website, which version this is, signing out, and deleting the account: the website's Profile, for families.
  */
 export default function FamilyMoreScreen() {
   const { actor, member, name, portal } = useBranch();
-  const { email, signOut } = useAuth();
+  const { email, methods, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const family = useFamily();
   const colors = useColors();
@@ -47,6 +58,17 @@ export default function FamilyMoreScreen() {
           subtitle={`${email} · ${ROLE_LABELS[actor.role]}`}
           testID="family-more-account"
         />
+        <ListRow
+          icon={
+            <RowIcon>
+              <KeyRound size={17} color={colors.foreground} />
+            </RowIcon>
+          }
+          title="Sign-in & security"
+          subtitle={signInLine(methods)}
+          onPress={() => router.push("/more/security")}
+          testID="family-more-security"
+        />
       </ListSection>
 
       <ListSection
@@ -58,12 +80,27 @@ export default function FamilyMoreScreen() {
           family.ids.map((id) => {
             const s = family.students.get(id);
             const line = s ? studentLine(s) : "";
+            // The rest of what the website's Account shows: the school, and since when the classes go.
+            const more = s ? [s.school?.trim(), s.firstSessionDate ? `Classes since ${formatDateKey(s.firstSessionDate, "monthYear")}` : null].filter(Boolean).join(" · ") : "";
             return (
               <ListRow
                 key={id}
                 icon={<Avatar name={s?.name ?? family.firstName(id)} size={40} />}
                 title={<T variant="label">{s?.name ?? (family.loading ? "Loading…" : family.firstName(id))}</T>}
-                subtitle={line || (s ? "No grade or level yet" : undefined)}
+                subtitle={
+                  s ? (
+                    <View style={styles.lines}>
+                      <T variant="small" tone="muted">
+                        {line || "No grade or level yet"}
+                      </T>
+                      {more ? (
+                        <T variant="small" tone="muted">
+                          {more}
+                        </T>
+                      ) : null}
+                    </View>
+                  ) : undefined
+                }
                 testID={`family-more-student-${id}`}
               />
             );
@@ -88,6 +125,9 @@ export default function FamilyMoreScreen() {
         </View>
       </ListSection>
 
+      {/* The website's Contact & help: nothing when the academy hasn't given its details. */}
+      <AcademyContact title={`Contact ${name}`} footer={`Classes, records and reports are kept by ${name}: ask it about any of them.`} />
+
       <ListSection title="About">
         <ListRow
           icon={
@@ -96,7 +136,7 @@ export default function FamilyMoreScreen() {
             </RowIcon>
           }
           title="Open the website"
-          subtitle="The month calendar, and reports to download as PDFs"
+          subtitle="The same, on a bigger screen, and reports to download as PDFs"
           onPress={() => void openWebsite(`/${portal}`)}
           testID="family-more-website"
         />
@@ -152,6 +192,7 @@ export default function FamilyMoreScreen() {
 
 const styles = StyleSheet.create({
   segment: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, padding: space.sm },
+  lines: { gap: 1 },
   delete: { alignItems: "center", gap: space.sm },
   center: { textAlign: "center" },
 });

@@ -1,9 +1,10 @@
 # The family's app, as the sample parent (two children; the practice password): Home with the child switcher, a class's
 # sheet, the academy's news (a post opened, and All news when Home doesn't show them all) and the latest scores, Classes
-# (upcoming and past), Scores (each child's figures, one child's, a result with its shots played back, its original
-# opened and closed), Reports and a report with its shots played back, and More (the appearance, the delete-account
-# dialog opened and canceled). It changes nothing but the report's "Viewed" and the parent's read receipt of the post
-# opened. Signs out, in as the parent, then back in as the owner the other flows expect.
+# (upcoming and past, and the months with a day's class opened), Scores (each child's figures, one child's, a result
+# with its shots played back, compared with another, its original opened and closed), Reports and a report with its
+# shots played back, and More (the appearance, the delete-account dialog opened and canceled). It changes nothing but
+# the report's "Viewed" and the parent's read receipt of the post opened. Signs out, in as the parent, then back in as
+# the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
 #   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/family.yaml
 appId: com.skyarcacademy.app
@@ -147,6 +148,41 @@ appId: com.skyarcacademy.app
     id: "family-session-close"
 - tapOn:
     id: "family-classes-show-upcoming"
+# The months: each day marked with the children's classes and the day chosen under them (today, or the next day with a
+# class), a class's sheet opened from it, then the list again.
+- tapOn:
+    id: "family-classes-view-month"
+- extendedWaitUntil:
+    visible:
+      id: "family-month-day-title"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "family-month-next"
+    commands:
+      - tapOn:
+          id: "family-month-next"
+- runFlow:
+    when:
+      visible:
+        id: "family-month-class-.*"
+    commands:
+      - tapOn:
+          id: "family-month-class-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "family-session-sheet"
+          timeout: 15000
+      - tapOn:
+          id: "family-session-close"
+- tapOn:
+    id: "family-classes-view-list"
+- extendedWaitUntil:
+    visible:
+      id: "family-classes-show"
+    timeout: 10000
 # Scores: each child's figures (All), then one child's with the scores over time and where the shots went, and a result
 # opened: its shots played back as it opens, how it compares, and its original (a SIUS result's PDF or a card's photo)
 # opened and closed.
@@ -198,6 +234,37 @@ appId: com.skyarcacademy.app
     element:
       id: "family-score-compare"
     direction: DOWN
+# Side by side with another result of its position (when it has one): two chosen, the choices opened and closed. Its
+# modes are brought to the middle of the screen first: a control left under the header is tapped through to the status
+# bar, which scrolls the page to its top.
+- scrollUntilVisible:
+    element:
+      id: "family-compare-mode"
+    direction: DOWN
+    centerElement: true
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "family-compare-mode-choose"
+    commands:
+      - tapOn:
+          id: "family-compare-mode-choose"
+      - scrollUntilVisible:
+          element:
+            id: "family-compare-pick-0"
+          direction: DOWN
+          centerElement: true
+      - tapOn:
+          id: "family-compare-pick-0"
+      - extendedWaitUntil:
+          visible:
+            id: "family-compare-choose"
+          timeout: 10000
+      - tapOn:
+          id: "family-compare-choose-cancel"
+      - assertVisible:
+          id: "family-compare-change"
 # Its original, when it has one (a typed card hasn't).
 - scrollUntilVisible:
     element:

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { LuGitCompareArrows } from 'react-icons/lu'
-import { toPoint } from '@shared/reports/facts'
+import { type CompareMode, comparablePositions, comparePair, latestComparablePosition, positionPoints } from '@shared/reports/compare'
 import type { EvaluationPoint } from '@shared/reports/types'
-import { type Evaluation, POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
 import { formatDateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -10,9 +10,7 @@ import { Comparison } from '@/features/reports/ReportParts'
 import { one } from '@/features/reports/model'
 import { cn } from '@/lib/utils'
 
-type Mode = 'lowest' | 'previous' | 'first' | 'choose'
-
-const MODES: [Mode, string][] = [
+const MODES: [CompareMode, string][] = [
   ['lowest', 'Lowest vs latest'],
   ['previous', 'Previous vs latest'],
   ['first', 'First vs latest'],
@@ -23,39 +21,16 @@ const pointLabel = (p: EvaluationPoint) => `${formatDateKey(p.dateKey, 'medium')
 
 /** Two evaluations of one position side by side, picked the way families ask ("how far has she come?"). */
 export function CompareCard({ evaluations }: { evaluations: WithId<Evaluation>[] }) {
-  const points = useMemo(() => evaluations.filter((e) => e.shots > 0).map(toPoint), [evaluations])
-  const positions = POSITIONS.filter((p) => points.filter((x) => x.position === p).length >= 2)
-  const latestPosition = [...points].reverse().find((p) => positions.includes(p.position))?.position ?? positions[0] ?? null
+  // The modes and the pairs they compare: shared/src/reports/compare.ts (the phone app compares the same way).
+  const positions = useMemo(() => comparablePositions(evaluations), [evaluations])
+  const latestPosition = useMemo(() => latestComparablePosition(evaluations), [evaluations])
   const [chosenPosition, setPosition] = useState<Position | null>(null)
   const position = chosenPosition && positions.includes(chosenPosition) ? chosenPosition : latestPosition
-  const [mode, setMode] = useState<Mode>('first')
-  const list = points.filter((p) => p.position === position)
+  const [mode, setMode] = useState<CompareMode>('first')
+  const list = useMemo(() => (position ? positionPoints(evaluations, position) : []), [evaluations, position])
   const [pickA, setPickA] = useState<string | null>(null)
   const [pickB, setPickB] = useState<string | null>(null)
-
-  let a: EvaluationPoint | null = null
-  let b: EvaluationPoint | null = null
-  let labels: [string, string] = ['First', 'Latest']
-  if (list.length >= 2) {
-    const latest = list[list.length - 1]
-    if (mode === 'first') {
-      a = list[0]
-      b = latest
-    } else if (mode === 'previous') {
-      a = list[list.length - 2]
-      b = latest
-      labels = ['Previous', 'Latest']
-    } else if (mode === 'lowest') {
-      a = list.slice(0, -1).reduce((lo, p) => (p.wholePer10 < lo.wholePer10 || (p.wholePer10 === lo.wholePer10 && p.per10 < lo.per10) ? p : lo))
-      b = latest
-      labels = ['Lowest', 'Latest']
-    } else {
-      a = list.find((p) => p.id === pickA) ?? list[0]
-      b = list.find((p) => p.id === pickB) ?? latest
-      if (b.dateKey < a.dateKey) [a, b] = [b, a]
-      labels = ['Earlier', 'Later']
-    }
-  }
+  const pair = comparePair(list, mode, { picks: [pickA, pickB] })
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="compare-card">
@@ -126,11 +101,13 @@ export function CompareCard({ evaluations }: { evaluations: WithId<Evaluation>[]
               </Select>
             </div>
           ) : null}
-          {a && b ? (
+          {pair ? (
             <div className="rounded-xl bg-white p-1 text-[#0b0b0b]">
-              <Comparison a={a} b={b} labelA={labels[0]} labelB={labels[1]} />
+              <Comparison a={pair.a} b={pair.b} labelA={pair.labels[0]} labelB={pair.labels[1]} />
             </div>
-          ) : null}
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">Choose two different results to compare.</p>
+          )}
         </div>
       )}
     </section>
