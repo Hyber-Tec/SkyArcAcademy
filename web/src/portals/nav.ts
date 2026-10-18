@@ -102,9 +102,10 @@ export const COACH_NAV: PortalNav = {
 }
 
 /**
- * Parents and students: one portal design, the same five places (a parent sees their children, a student
- * themself). Scores holds every result, Reports the few the academy writes up (the owner, 2026-10-18). Profile holds
- * the person's own pages (account, sign-in, appearance, contact and help).
+ * Parents and students: one portal design, the same places (a parent sees their children, a student themself).
+ * Scores holds every result, Reports the few the academy writes up (the owner, 2026-10-18), News the academy's posts
+ * shown to families (docs/DECISIONS.md §16). Profile holds the person's own pages (account, sign-in, appearance, contact
+ * and help). Phones keep five tabs: News opens from Home's "From the academy" card, so Home stays lit there.
  */
 export const FAMILY_NAV: PortalNav = {
   main: [
@@ -112,10 +113,11 @@ export const FAMILY_NAV: PortalNav = {
     { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
     { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
+    { key: 'news', label: 'News', to: 'news', icon: LuMegaphone },
   ],
   secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
   mobileTabs: [
-    { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
+    { key: 'home', label: 'Home', to: 'home', icon: LuHouse, alsoActive: ['news'] },
     { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
     { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },

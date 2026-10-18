@@ -19,9 +19,14 @@ import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { type Family, andList, dayTitle, firstWord, hasEnded, useFamily, useFamilyEvaluations, useFamilySessions, useIsNewReport } from './data'
 import { ClassDetails, ClassList, ContactCard, FamilyStatus, FamilyTrend, KidMark, NoteChip, NotLinked } from './FamilyWidgets'
+import { useFamilyNews, useIsNewNews } from './news'
+import { NewsMeta, NewsTitle } from './NewsWidgets'
 
 /** How far ahead Home looks for each child's next class (four weeks, as the coach's Home). */
 const AHEAD_DAYS = 28
+
+/** The academy's posts shown on Home (the rest are on the News page). */
+const NEWS_ON_HOME = 3
 
 function greeting(minutes: number) {
   if (minutes < 12 * 60) return 'Good morning'
@@ -55,9 +60,9 @@ function summary(f: Family, next: { kidId: string; session: WithId<Session> | nu
 }
 
 /**
- * Parent and Student → Home: a greeting, each child's next class, the rest of the week, the latest scores, the latest
- * progress reports, attendance over the last 30 days, and how to reach the academy. Two columns on computers, one on
- * phones.
+ * Parent and Student → Home: a greeting, each child's next class, the rest of the week, the academy's news, the latest
+ * scores, the latest progress reports, attendance over the last 30 days, and how to reach the academy. Two columns on
+ * computers, one on phones.
  */
 export function FamilyHomePage() {
   const { timezone } = useBranch()
@@ -104,6 +109,7 @@ export function FamilyHomePage() {
         <div className="min-w-0 space-y-6">
           <NextClasses family={family} next={next} loading={loading || family.loading} today={today} now={now} onOpen={setOpen} />
           <WeekAhead family={family} sessions={weekAhead} others={next.some((n) => !!n.session && n.session.dateKey <= weekEnd)} loading={loading || family.loading} today={today} weekEnd={weekEnd} now={now} onOpen={setOpen} />
+          <FromTheAcademy family={family} today={today} />
         </div>
         <div className="min-w-0 space-y-6">
           <LatestScores family={family} evaluations={scores.data} loading={scores.loading || family.loading} today={today} />
@@ -281,6 +287,45 @@ function WeekAhead({
       ) : (
         <p className="px-4 py-6 text-center text-sm text-muted-foreground">{others ? 'Nothing else booked in the next seven days.' : 'Nothing booked in the next seven days.'}</p>
       )}
+    </section>
+  )
+}
+
+/**
+ * The academy's news for families: the latest few posts (pinned first), each "New" until the person opens it, opening
+ * on its own page. Nothing at all when the academy has none; "All news" when there are more than shown.
+ */
+function FromTheAcademy({ family, today }: { family: Family; today: string }) {
+  const { timezone } = useBranch()
+  const news = useFamilyNews()
+  const isNew = useIsNewNews()
+  const base = `/${family.who}`
+  if (news.loading) {
+    return (
+      <section className="rounded-xl border bg-card p-4">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="mt-5 h-4 w-3/4" />
+        <Skeleton className="mt-2 h-3 w-40 max-w-full" />
+      </section>
+    )
+  }
+  if (!news.data.length) return null
+  const shown = news.data.slice(0, NEWS_ON_HOME)
+  return (
+    <section className="overflow-hidden rounded-xl border bg-card" aria-label="From the academy" data-testid="family-news">
+      <CardHead title="From the academy" aside={news.data.length > shown.length ? <SeeAll to={`${base}/news`}>All news</SeeAll> : null} />
+      <ul className="divide-y">
+        {shown.map((a) => (
+          <li key={a.id}>
+            <Link to={`${base}/news/${a.id}`} state={{ from: 'home' }} className="block px-4 py-3.5 transition-colors hover:bg-muted/40" data-testid="family-news-item">
+              <NewsTitle a={a} isNew={isNew(a.id)} className="text-sm font-medium" />
+              <NewsMeta a={a} timezone={timezone} today={today} className="mt-1" />
+              {/* A line of it on computers (Home is a summary), two on phones where a line holds fewer words. */}
+              {a.contentText ? <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground lg:line-clamp-1">{a.contentText}</p> : null}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

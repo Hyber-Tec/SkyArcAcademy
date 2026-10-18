@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { LuEye } from 'react-icons/lu'
 import type { Announcement } from '@shared/comms'
+import { ROLE_LABELS, type Role } from '@shared/roles'
 import { formatInstant } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -15,13 +16,17 @@ function Initial({ name }: { name: string }) {
   )
 }
 
-/** Who opened the post, newest first, plus who in the audience hasn't yet. */
+/**
+ * Who opened the post, newest first (a parent's or a student's opening tagged as such, on a post shown to families), plus
+ * which coaches in its audience haven't yet.
+ */
 export function ReadReceiptsDialog({ a, open, onOpenChange }: { a: WithId<Announcement>; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { timezone } = useBranch()
   const { data: reads, loading } = useReads(a.id, open)
   const { data: members } = useMembers(open)
   const { data: staff } = useStaffList()
 
+  const roleOf = useMemo(() => new Map(members.map((m) => [m.email, m.role as Role])), [members])
   const notYet = useMemo(() => {
     const names = new Map(staff.map((s) => [s.id, s.name]))
     const readers = new Set(reads.map((r) => r.email))
@@ -52,7 +57,14 @@ export function ReadReceiptsDialog({ a, open, onOpenChange }: { a: WithId<Announ
             <div key={r.id} className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
               <Initial name={r.name} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{r.name || r.email}</div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-sm font-medium">{r.name || r.email}</span>
+                  {roleOf.get(r.email) === 'parent' || roleOf.get(r.email) === 'student' ? (
+                    <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+                      {ROLE_LABELS[roleOf.get(r.email)!]}
+                    </Badge>
+                  ) : null}
+                </div>
                 <div className="truncate text-xs text-muted-foreground">{r.email}</div>
               </div>
               <div className="shrink-0 text-xs text-muted-foreground">{r.readAt ? formatInstant(r.readAt.toDate(), timezone, { dateStyle: 'medium', timeStyle: 'short' }) : '…'}</div>
@@ -66,7 +78,9 @@ export function ReadReceiptsDialog({ a, open, onOpenChange }: { a: WithId<Announ
           ) : null}
           {notYet.length ? (
             <div className="mt-4 pb-1">
-              <div className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Not read yet ({notYet.length})</div>
+              <div className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {a.families ? 'Coaches not read yet' : 'Not read yet'} ({notYet.length})
+              </div>
               {notYet.map((m) => (
                 <div key={m.email} className="flex items-center gap-3 py-1.5 opacity-70">
                   <Initial name={m.name} />
