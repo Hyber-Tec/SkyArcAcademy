@@ -18,6 +18,8 @@ import { type EvaluationDoc, type SessionDoc, useFamilyEvaluations, useFamilyRep
 import { AcademyContact, ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { hasEnded, namesList } from "@/features/family/format";
+import { useFamilyNews, useIsNewNews } from "@/features/family/news";
+import { NewsRow } from "@/features/family/NewsRow";
 import { ReportRow } from "@/features/family/ReportRow";
 import { ScoreRow } from "@/features/family/ScoreRow";
 import { classIdOf, groupClasses } from "@/features/schedule/classes";
@@ -38,13 +40,16 @@ const ATTENDANCE_DAYS = 30;
 /** The latest scores Home shows: one student's, or each child's when a parent's Home shows them all. */
 const LATEST_ONE = 3;
 const LATEST_EACH = 2;
+/** The academy's latest posts Home shows (the rest are on the News page). */
+const LATEST_NEWS = 3;
 
 /**
  * The family's first page (the app opens here): a greeting with the date; each student's next class (a parent's
  * children in the same class share a card) with the coach, its status and the class's note; the rest of this week (or
- * next week's, once this one has nothing left); the latest scores (each opens its own screen; all of them are a tab
- * away); the latest shared progress report; attendance over the last 30 days; and how to reach the academy. A parent
- * with several children picks All or one child. Everything is live and in the academy's time zone.
+ * next week's, once this one has nothing left); the academy's latest news for families (when it has any; all of it on
+ * the News page); the latest scores (each opens its own screen; all of them are a tab away); the latest shared progress
+ * report; attendance over the last 30 days; and how to reach the academy. A parent with several children picks All or
+ * one child. Everything is live and in the academy's time zone.
  */
 export default function FamilyHomeScreen() {
   const { settings, member, actor, name: academy } = useBranch();
@@ -115,6 +120,7 @@ export default function FamilyHomeScreen() {
           <Card>
             <NotLinked />
           </Card>
+          <AcademyNews today={today} />
           <AcademyContact />
         </>
       ) : (
@@ -161,6 +167,8 @@ export default function FamilyHomeScreen() {
               ))}
             </ListSection>
           ) : null}
+
+          <AcademyNews today={today} />
 
           <ListSection title="Latest scores" testID="family-home-scores">
             {scores.loading ? (
@@ -245,6 +253,31 @@ export default function FamilyHomeScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/**
+ * "From the academy": the academy's latest posts for families (pinned first, then the newest), each "New" until this
+ * person opens it, and All news (the News page) when there are more than these, as on the website. Nothing while they
+ * load, or when the academy has none for families.
+ */
+function AcademyNews({ today }: { today: DateKey }) {
+  const news = useFamilyNews();
+  const isNew = useIsNewNews();
+  if (!news.data.length) return null;
+  const fresh = news.data.filter((a) => isNew(a.id)).length;
+  const shown = news.data.slice(0, LATEST_NEWS);
+  return (
+    <ListSection title="From the academy" detail={fresh ? `${fresh} new` : undefined} testID="family-home-news">
+      {[
+        ...shown.map((a) => (
+          <NewsRow key={a.id} post={a} isNew={isNew(a.id)} today={today} onPress={() => router.push({ pathname: "/news/[id]", params: { id: a.id } })} testID={`family-home-news-${a.id}`} />
+        )),
+        ...(news.data.length > shown.length
+          ? [<ListRow key="all" title="All news" right={String(news.data.length)} onPress={() => router.push("/news")} testID="family-home-all-news" />]
+          : []),
+      ]}
+    </ListSection>
   );
 }
 

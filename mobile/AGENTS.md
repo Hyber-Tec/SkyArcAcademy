@@ -38,8 +38,9 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        student/[id], score/[id], file/[id], and the Scan screens)
   (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
                        Scores · Reports · More, and what opens over them (session/[id] a class's sheet, score/[id] a
-                       score to look at, file/[id] its original, report/[id] a progress report); FamilyProvider holds
-                       whose they are and the child a parent chose
+                       score to look at, file/[id] its original, report/[id] a progress report, news/ the academy's
+                       news: the list, news/[id] a post, news/attachment a post's file); FamilyProvider holds whose
+                       they are and the child a parent chose
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
                        rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
@@ -49,15 +50,19 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        MiniTarget, a list's small target), access, account (deleting an account), family (what a family
-                       reads: their students, classes, scores and shared reports; the child switcher; the class cards; a
-                       score's row and a student's figures), reports (a progress report's figures and charts)
+                       reads: their students, classes, scores and shared reports, and the academy's news (news.ts); the
+                       child switcher; the class cards; a score's row, a post's row and a student's figures), reports (a
+                       progress report's figures and charts), announcements (a post's content, read from the website's
+                       editor's HTML into blocks (html.ts) and drawn with the app's own text (RichText); its dates and
+                       what it holds)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SectionTitle,
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
-                       call/text/email), toast, Google sign-in, env
+                       call/text/email, a link the website saved as the practice copy's phones reach it), toast, Google
+                       sign-in, env
 src/theme/             the website's neutral palette in light and dark with Sky Arc's red, status colors, spacing, type
 ../shared/src          the business logic the website and the Cloud Functions use, imported as @shared/...
 ```
@@ -78,7 +83,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **Audit log:** every change the app makes adds an entry in the same batch (`src/lib/audit.ts`, `via: "app"`), as the
   website does.
 - **Files of minors:** Drive files are read through the Storage rules (`src/features/drive/download.ts`), never through
-  download links (`getDownloadURL`), and live in the app's cache only.
+  download links (`getDownloadURL`), and live in the app's cache only. A news post's attachments open the same way
+  (`useStorageCopy`); the pictures in its text show from the links the website's editor put there, as the website shows
+  them.
 - **Look:** the website's shadcn neutral theme, light and dark (`useColors()`), on the grouped background of the
   phone's own list screens; Sky Arc's red (`colors.brand`) only as an accent. Use the shared components; a new
   reusable one goes in `src/components/` with its own file.
@@ -109,6 +116,12 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   classes, scores, shared reports), never staff records or the Drive's lists: the coach's name comes from the class
   itself, and a score's file is read by its ID, which the rules allow only for a score's own file in their child's
   folder (`src/features/family/data.ts`). The family's screens show only their own students' records, whatever the
-  phone's copy still holds from another account.
+  phone's copy still holds from another account. The academy's news is one query, exactly as the rules allow it
+  (`where("families", "==", true), where("archived", "==", false)`, no order: the phone sorts, pinned first), plus the
+  person's own read receipts (collection group `reads` by their email); opening a post writes their receipt once, with
+  only the fields the rules allow (`src/features/family/news.ts`). Families never see a post's comments.
+- **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
+  text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
+  the phone's browser (or its mail and phone apps).
 - **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). A new
   permission means new questions from both stores (docs/publishing.md).

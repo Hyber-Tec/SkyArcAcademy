@@ -27,6 +27,17 @@ export async function openMap(address: string): Promise<void> {
   }
 }
 
+/**
+ * A link the website saved, as this phone reaches it. On the practice copy the website's links to its files point at the
+ * Mac (`http://127.0.0.1:9199/…`, the Storage emulator), which the Android emulator reaches as 10.0.2.2 (React Native
+ * Firebase does the same for its own requests) and a phone at the emulators' host; other links stay as they are.
+ */
+export function reachable(url: string): string {
+  if (!env.useEmulators) return url;
+  const host = Platform.OS === "android" && env.emulatorHost === "127.0.0.1" ? "10.0.2.2" : env.emulatorHost;
+  return url.replace(/^http:\/\/(?:127\.0\.0\.1|localhost)(?=[:/]|$)/i, `http://${host}`);
+}
+
 /** A website as the academy typed it ("skyarcacademy.com"), as a link. */
 export const webLink = (site: string) => (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`);
 
