@@ -1,29 +1,26 @@
 import { limit, orderBy, query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
-import { LuArrowDown, LuArrowUp, LuCalendarCheck, LuCalendarClock, LuCalendarDays, LuDownload, LuLock, LuPencil, LuTrash2, LuUserRound } from 'react-icons/lu'
+import { LuCalendarCheck, LuCalendarClock, LuCalendarDays, LuDownload, LuLock, LuPencil, LuTrash2, LuUserRound } from 'react-icons/lu'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
-import { priceClassBlocks } from '@shared/pay/classes'
+import { PAY_LINE_LABELS, type PayLineType, payLines, payModelsBetween } from '@shared/pay/lines'
 import { missingRates, rateName } from '@shared/pay/rates'
 import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
+import { effectiveRates } from '@shared/pay/shifts'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import { type BusinessRules, type PayModel } from '@shared/settings/businessRules'
 import { type DateKey, addDays, formatDateKey, formatInstantTime, todayKey } from '@shared/time'
 import type { Session, Staff, StaffStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ConfirmDialog } from '@/components/app/ConfirmDialog'
-import { DatePicker } from '@/components/app/DatePicker'
 import { OptionPicker } from '@/components/app/OptionPicker'
 import { PageHeader } from '@/components/app/PageHeader'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useStaffList } from '@/features/data/hooks'
@@ -31,16 +28,12 @@ import { PayGapNotice, RateMissingNotice } from '@/features/employees/PayGapNoti
 import { usePayGaps } from '@/features/employees/payGaps'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { type ClockShift, deleteShift, effectiveRates, priceShifts, useSessionsRange, useShifts } from './api'
+import { type ClockShift, deleteShift, useSessionsRange, useShifts } from './api'
 import { useCompensationMap, usePayrollState } from './hooks'
+import { DateSortHead, GenerateClear, PayFilters, PayPager, PayRangeFields, PayRates, PayRecordsHeading, PayTiles, PayTypeBadge } from './PayParts'
 import { PayPeriodsDialog } from './PayPeriodsDialog'
 import { ShiftDialog } from './ShiftDialog'
-
-/** True Education's page sizes: recent records, and a generated report. */
-const BROWSE_PAGE = 25
-const REPORT_PAGE = 70
-/** How far back the recent list first looks; it reaches further back as pages need it. */
-const BROWSE_DAYS = 30
+import { BROWSE_DAYS, BROWSE_PAGE, REPORT_PAGE, downloadCsv, payDateLabel, shadeByDate } from './payTable'
 
 type RoleFilter = 'all' | 'coach' | 'admin'
 
@@ -48,6 +41,7 @@ interface PayRow {
   id: string
   staffId: string
   dateKey: DateKey
+  type: PayLineType
   seg: PricedSegment
   name: string
   /** The time entry the row is part of; null for classes taught (Classes taught), which come from the schedule. */
@@ -67,19 +61,15 @@ const money = formatMoney
 /** Owners and admins are filtered as admins. */
 const roleGroup = (s: Pick<Staff, 'role'> | undefined): 'coach' | 'admin' => (s?.role === 'owner' || s?.role === 'admin' ? 'admin' : 'coach')
 
-/** The pay models in force at some point between two dates. */
-function modelsBetween(rules: BusinessRules, from: DateKey, to: DateKey): PayModel[] {
-  return rules.payModels.filter((p, i) => p.from <= to && (rules.payModels[i + 1]?.from ?? '9999-12-31') > from).map((p) => p.model)
-}
-
 /**
  * Payroll in True Education's layout: filters (role, status, employee, dates),
  * the most recent payroll records 25 at a time, and a generated report for one
  * employee and date range with pay totals. Rows are pieces of time entries
  * (shifts), priced by the academy's pay model; Edit and Delete act on the
  * time entry they come from. Under Classes taught, a coach's rows are the
- * class blocks they taught instead, from the schedule. The applied filters
- * live in the URL.
+ * class blocks they taught instead, from the schedule. The rows are the shared
+ * pay lines (`payLines`), as a coach's own Payroll and the phone list them. The
+ * applied filters live in the URL.
  */
 export function PayrollPage() {
   const { branchId, actor, settings, rules, timezone } = useBranch()
@@ -150,27 +140,19 @@ export function PayrollPage() {
       return isReport || matches(person) || (!person && role === 'all' && status === 'all') ? (person?.name ?? fallbackName) : null
     }
     const out: PayRow[] = []
-    for (const p of priceShifts({ shifts, sessions, settings, rules, timezone, ratesFor })) {
-      const name = shown(p.shift.staffId, p.shift.staffName)
-      if (name === null) continue
-      // Unpaid time (Teaching only's gaps, and every clock-in under Classes taught) isn't a payroll record.
-      const paid = p.segments.filter((s) => !s.unpaid)
-      paid.forEach((seg, i) =>
-        out.push({ id: `${p.shift.id}-${i}`, staffId: p.shift.staffId, dateKey: p.shift.dateKey, shift: p.shift, seg, name, parts: paid.length, students: 0 }),
-      )
-    }
     const names = new Map(sessions.map((s) => [s.coachId, s.coachName]))
-    for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) {
-      if (b.dateKey < qFrom || b.dateKey > qTo) continue
-      const name = shown(b.staffId, names.get(b.staffId) ?? 'Coach')
+    for (const l of payLines({ shifts, sessions, settings, rules, ratesFor, from: qFrom, to: qTo })) {
+      // A time entry still clocked in has no pay yet.
+      if (l.open) continue
+      const name = shown(l.staffId, l.shift ? l.shift.staffName : (names.get(l.staffId) ?? 'Coach'))
       if (name === null) continue
-      out.push({ id: `class-${b.staffId}-${b.segment.startMs}`, staffId: b.staffId, dateKey: b.dateKey, shift: null, seg: b.segment, name, parts: 1, students: b.students })
+      out.push({ id: l.key, staffId: l.staffId, dateKey: l.dateKey, type: l.type, shift: l.shift, seg: l.segment, name, parts: l.parts, students: l.students ?? 0 })
     }
     const dir = sortAsc ? 1 : -1
     return out.sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.name.localeCompare(b.name) || a.seg.startMs - b.seg.startMs)
     // `matches` reads role and status.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shifts, sessions, settings, rules, timezone, staffById, comps, isReport, role, status, sortAsc, qFrom, qTo])
+  }, [shifts, sessions, settings, rules, staffById, comps, isReport, role, status, sortAsc, qFrom, qTo])
 
   const size = report ? REPORT_PAGE : BROWSE_PAGE
   const pageCount = Math.max(1, Math.ceil(rows.length / size))
@@ -205,7 +187,7 @@ export function PayrollPage() {
   const person = report ? staffById.get(report.staffId) : undefined
   const rates = report ? effectiveRates(person, comps.get(report.staffId)).rates : null
   const singleRate = roleGroup(person) === 'admin'
-  const models = report ? modelsBetween(rules, report.from, report.to) : []
+  const models = report ? payModelsBetween(rules, report.from, report.to) : []
   const paysAdmin = singleRate || models.includes('teaching_admin')
   const sum = totals(rows.map((r) => r.seg))
   // Rates the report's employee is missing (their time is priced at $0), and anyone missing one.
@@ -219,22 +201,17 @@ export function PayrollPage() {
   const timeOf = (ms: number) => formatInstantTime(ms, timezone)
   const entryLabel = (r: ShiftRow) =>
     `${r.name}’s time entry on ${formatDateKey(r.shift.dateKey, 'weekdayMedium')}, ${timeOf(r.shift.clockInAt.toMillis())} – ${r.shift.clockOutAt ? timeOf(r.shift.clockOutAt.toMillis()) : 'open'}`
-  const typeLabel = (r: PayRow) => (!isShiftRow(r) ? 'Classes' : r.seg.type === 'teaching' ? 'Teaching' : 'Admin')
 
   function exportCsv() {
     const lines = [['Date', 'Name', 'Type', 'Start time', 'End time', 'Hours', 'Rate', 'Total']]
     for (const r of rows) {
-      lines.push([r.dateKey, r.name, typeLabel(r), timeOf(r.seg.startMs), timeOf(r.seg.endMs), r.seg.hours.toFixed(2), r.seg.rate.toFixed(2), r.seg.pay.toFixed(2)])
+      lines.push([r.dateKey, r.name, PAY_LINE_LABELS[r.type], timeOf(r.seg.startMs), timeOf(r.seg.endMs), r.seg.hours.toFixed(2), r.seg.rate.toFixed(2), r.seg.pay.toFixed(2)])
     }
-    const blob = new Blob([lines.map((l) => l.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = report ? `payroll_${(person?.name ?? 'employee').replace(/\W+/g, '_')}_${report.from}_${report.to}.csv` : `payroll_recent_${today}.csv`
-    a.click()
+    downloadCsv(report ? `payroll_${(person?.name ?? 'employee').replace(/\W+/g, '_')}_${report.from}_${report.to}.csv` : `payroll_recent_${today}.csv`, lines)
   }
 
   // Rows are shaded by date, not one by one (TE).
-  const shaded = pageRows.reduce<boolean[]>((acc, r, i) => [...acc, i > 0 && (r.dateKey !== pageRows[i - 1].dateKey ? !acc[i - 1] : acc[i - 1])], [])
+  const shaded = shadeByDate(pageRows)
 
   return (
     <div className="max-w-6xl">
@@ -254,69 +231,49 @@ export function PayrollPage() {
       />
 
       {!report ? <PayGapNotice gaps={gaps} className="mb-4" /> : null}
-      <Card className="mb-4 px-4 py-4" data-testid="payroll-filters">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-36">
-            <Label className="text-xs text-muted-foreground">Role</Label>
-            <Select value={role} onValueChange={(v) => update({ role: v === 'all' ? null : v, page: report ? params.get('page') : null })}>
-              <SelectTrigger className="w-full" aria-label="Role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                <SelectItem value="coach">Coaches</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-36">
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select value={status} onValueChange={(v) => update({ status: v === 'active' ? null : v, page: report ? params.get('page') : null })}>
-              <SelectTrigger className="w-full" aria-label="Status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {STAFF_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STAFF_STATUS_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid w-full gap-1.5 sm:w-auto sm:min-w-56 sm:flex-1">
-            <Label className="text-xs text-muted-foreground">Employee</Label>
-            <OptionPicker
-              value={chosen}
-              onChange={setEmployee}
-              options={choices.map((s) => ({ value: s.id, label: s.name, hint: roleGroup(s) === 'admin' ? 'Admin' : undefined }))}
-              placeholder="Choose employee…"
-              searchPlaceholder="Search employees…"
-            />
-          </div>
-          <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-40">
-            <Label htmlFor="pay-from" className="text-xs text-muted-foreground">
-              From
-            </Label>
-            <DatePicker id="pay-from" value={from} onChange={setFrom} max={to} placeholder="Start date" />
-          </div>
-          <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-40">
-            <Label htmlFor="pay-to" className="text-xs text-muted-foreground">
-              Up to
-            </Label>
-            <DatePicker id="pay-to" value={to} onChange={setTo} min={from} placeholder="End date" />
-          </div>
-          <div className="flex w-full gap-2 sm:w-auto">
-            <Button className="flex-1 sm:flex-none" onClick={generate}>
-              Generate
-            </Button>
-            <Button variant="ghost" className="flex-1 sm:flex-none" onClick={clear}>
-              Clear
-            </Button>
-          </div>
+      <PayFilters>
+        <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-36">
+          <Label className="text-xs text-muted-foreground">Role</Label>
+          <Select value={role} onValueChange={(v) => update({ role: v === 'all' ? null : v, page: report ? params.get('page') : null })}>
+            <SelectTrigger className="w-full" aria-label="Role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              <SelectItem value="coach">Coaches</SelectItem>
+              <SelectItem value="admin">Admins</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </Card>
+        <div className="grid w-[calc(50%-0.375rem)] gap-1.5 sm:w-36">
+          <Label className="text-xs text-muted-foreground">Status</Label>
+          <Select value={status} onValueChange={(v) => update({ status: v === 'active' ? null : v, page: report ? params.get('page') : null })}>
+            <SelectTrigger className="w-full" aria-label="Status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {STAFF_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STAFF_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid w-full gap-1.5 sm:w-auto sm:min-w-56 sm:flex-1">
+          <Label className="text-xs text-muted-foreground">Employee</Label>
+          <OptionPicker
+            value={chosen}
+            onChange={setEmployee}
+            options={choices.map((s) => ({ value: s.id, label: s.name, hint: roleGroup(s) === 'admin' ? 'Admin' : undefined }))}
+            placeholder="Choose employee…"
+            searchPlaceholder="Search employees…"
+          />
+        </div>
+        <PayRangeFields from={from} to={to} onFrom={setFrom} onTo={setTo} />
+        <GenerateClear onGenerate={generate} onClear={clear} />
+      </PayFilters>
 
       {report ? (
         <Card className="mb-4 gap-3 px-4 py-4" data-testid="payroll-summary">
@@ -325,38 +282,9 @@ export function PayrollPage() {
             <span className="text-muted-foreground">
               {formatDateKey(report.from, 'medium')} – {formatDateKey(report.to, 'medium')}
             </span>
-            {rates ? (
-              singleRate ? (
-                <span>
-                  Hourly rate: <strong>{money(rates.admin)}/hr</strong>
-                </span>
-              ) : (
-                <>
-                  {paysAdmin ? (
-                    <span>
-                      Admin rate: <strong>{money(rates.admin)}/hr</strong>
-                    </span>
-                  ) : null}
-                  <span>
-                    Teaching rate: <strong>{money(rates.teaching)}/hr</strong>
-                  </span>
-                </>
-              )
-            ) : null}
+            {rates ? <PayRates rates={rates} singleRate={singleRate} paysAdmin={paysAdmin} /> : null}
           </div>
-          <div className={cn('grid gap-2 sm:gap-3', singleRate ? 'grid-cols-1' : paysAdmin ? 'grid-cols-3' : 'grid-cols-2')}>
-            {[
-              ...(!singleRate && paysAdmin ? [{ label: 'Admin', v: sum.admin }] : []),
-              ...(!singleRate ? [{ label: 'Teaching', v: sum.teaching }] : []),
-              { label: 'Total pay', v: sum.total, total: true },
-            ].map((t) => (
-              <div key={t.label} className={cn('min-w-0 rounded-lg border px-3 py-2.5 sm:px-4 sm:py-3', 'total' in t && 'bg-muted/40')}>
-                <div className="truncate text-[11px] font-semibold text-muted-foreground uppercase sm:text-xs">{t.label}</div>
-                <div className="truncate text-base font-semibold tabular-nums sm:text-2xl">{money(t.v.pay)}</div>
-                <div className="text-xs text-muted-foreground tabular-nums sm:text-sm">{t.v.hours.toFixed(2)} h</div>
-              </div>
-            ))}
-          </div>
+          <PayTiles sum={sum} singleRate={singleRate} paysAdmin={paysAdmin} />
           {reportMissing.length && person ? (
             <RateMissingNotice>
               {person.name} has no {reportMissing.map((k) => rateName(k, person.role).replace(/ rate$/, '')).join(' or ')} rate, so this time is priced at $0.{' '}
@@ -379,36 +307,14 @@ export function PayrollPage() {
         </Card>
       ) : null}
 
-      <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-        <h2 className="text-base font-semibold">{report ? 'Generated Payroll Records' : 'Recent Payroll Records'}</h2>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="payroll-page-meta">
-          {loading ? <Spinner className="size-3.5" /> : null}
-          <span>
-            Page <strong className="text-foreground">{page}</strong> · <strong className="text-foreground">{size}</strong> per page
-            {report ? (
-              <>
-                {' '}
-                · <strong className="text-foreground">{rows.length}</strong> total
-              </>
-            ) : null}
-          </span>
-        </div>
-      </div>
+      <PayRecordsHeading title={report ? 'Generated Payroll Records' : 'Recent Payroll Records'} page={page} size={size} total={report ? rows.length : null} loading={loading} />
 
       <Card className="gap-0 overflow-hidden py-0">
         <Table data-testid="payroll-table">
           <TableHeader>
             <TableRow>
               <TableHead>
-                {report ? (
-                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => update({ sort: sortAsc ? 'desc' : null, page: null })}>
-                    Date {sortAsc ? <LuArrowUp className="size-3.5" /> : <LuArrowDown className="size-3.5" />}
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    Date <LuArrowDown className="size-3.5" aria-label="Newest first" />
-                  </span>
-                )}
+                <DateSortHead sortable={isReport} asc={sortAsc} onToggle={() => update({ sort: sortAsc ? 'desc' : null, page: null })} />
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
@@ -451,17 +357,10 @@ export function PayrollPage() {
                     )}
                   >
                     <TableRow className={cn(shaded[i] && 'bg-muted/80 hover:bg-muted')} data-testid="payroll-row">
-                      <TableCell className="whitespace-nowrap">{formatDateKey(r.dateKey, r.dateKey.slice(0, 4) === today.slice(0, 4) ? 'weekdayMedium' : 'medium')}</TableCell>
+                      <TableCell className="whitespace-nowrap">{payDateLabel(r.dateKey, today)}</TableCell>
                       <TableCell className="font-medium whitespace-nowrap">{r.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={r.seg.type === 'teaching' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300'}>
-                          {typeLabel(r)}
-                        </Badge>
-                        {!isShiftRow(r) ? (
-                          <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
-                            {r.students} student{r.students === 1 ? '' : 's'}
-                          </div>
-                        ) : null}
+                        <PayTypeBadge type={r.type} students={isShiftRow(r) ? null : r.students} />
                       </TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">{timeOf(r.seg.startMs)}</TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">{timeOf(r.seg.endMs)}</TableCell>
@@ -500,19 +399,13 @@ export function PayrollPage() {
             )}
           </TableBody>
         </Table>
-        <div className="flex items-center justify-between gap-2 border-t px-4 py-2.5">
-          <span className="text-xs text-muted-foreground">
-            {report ? `${pageCount} page${pageCount > 1 ? 's' : ''}` : 'Newest first'}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={!canPrev} onClick={() => update({ page: page - 1 > 1 ? String(page - 1) : null })}>
-              Prev
-            </Button>
-            <Button variant="outline" size="sm" disabled={!canNext} onClick={() => update({ page: String(page + 1) })}>
-              Next
-            </Button>
-          </div>
-        </div>
+        <PayPager
+          label={report ? `${pageCount} page${pageCount > 1 ? 's' : ''}` : 'Newest first'}
+          canPrev={canPrev}
+          canNext={canNext}
+          onPrev={() => update({ page: page - 1 > 1 ? String(page - 1) : null })}
+          onNext={() => update({ page: String(page + 1) })}
+        />
       </Card>
       <p className="mt-2 text-xs text-muted-foreground">
         {paysClasses

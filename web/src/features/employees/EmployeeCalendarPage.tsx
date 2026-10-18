@@ -10,7 +10,8 @@ import { boxRange, timeRange } from '@/lib/calendar'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { type DayCell, HoursCalendar } from './HoursCalendar'
 import { addDays, formatInstantTime } from '@shared/time'
-import { effectiveRates, priceShifts, useSessionsRange, useShifts } from '@/features/timeclock/api'
+import { effectiveRates, priceShifts } from '@shared/pay/shifts'
+import { useSessionsRange, useShifts } from '@/features/timeclock/api'
 import { useCompensationMap } from '@/features/timeclock/hooks'
 import { useStaffList as useStaffListForPay } from '@/features/data/hooks'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
@@ -164,7 +165,7 @@ function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teac
       cell.lines!.push({ label: boxRange(formatInstantTime(startMs, timezone), formatInstantTime(endMs, timezone)), tone })
       if (cell.minutes > 0) m.set(d, cell)
     }
-    for (const p of priceShifts({ shifts: shifts.filter((s) => s.status === 'closed'), sessions, settings, rules, timezone, ratesFor })) {
+    for (const p of priceShifts({ shifts: shifts.filter((s) => s.status === 'closed'), sessions, settings, rules, ratesFor })) {
       if (mode === 'clock') add(p.shift.dateKey, p.shift.clockInAt.toMillis(), p.shift.clockOutAt!.toMillis(), 'clock')
       // Unpaid time (Teaching only's gaps, and every clock-in under Classes taught) isn't paid time.
       else for (const seg of p.segments.filter((x) => x.type === mode && !x.unpaid)) add(p.shift.dateKey, seg.startMs, seg.endMs, mode)
