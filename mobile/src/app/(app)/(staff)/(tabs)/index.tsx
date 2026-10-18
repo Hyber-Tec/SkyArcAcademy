@@ -7,8 +7,10 @@ import { SkyArcLockup } from "@/components/brand/SkyArc";
 import { Card } from "@/components/Card";
 import { SkeletonCards } from "@/components/Skeleton";
 import { StatusBarScrim } from "@/components/TabHeader";
+import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
-import { useAcademyNow, useHoursOf, useSessionsBetween, useStaffList } from "@/features/data/hooks";
+import { useAcademyNow, useHoursOf, useRecentEvaluations, useSessionsBetween, useStaffList } from "@/features/data/hooks";
+import { ScoreRow } from "@/features/family/ScoreRow";
 import { ClassRow } from "@/features/schedule/ClassRow";
 import { groupClasses } from "@/features/schedule/classes";
 import { longDay, plural, timeRange } from "@/features/schedule/format";
@@ -23,8 +25,8 @@ function greeting(nowMin: number): string {
 
 /**
  * The day at a glance (the app opens here): the lockup, a greeting with the date, today's numbers, the way to scan
- * targets, and today's classes in time order (a coach's own, for a coach). Everything is live and in the academy's time
- * zone.
+ * targets, today's classes in time order (a coach's own, for a coach), and the latest scores. Everything is live and in
+ * the academy's time zone.
  */
 export default function TodayScreen() {
   const { actor, staff, settings, isCoach } = useBranch();
@@ -139,7 +141,28 @@ export default function TodayScreen() {
           </Card>
         )}
       </View>
+
+      <LatestScores today={today} />
     </TodayScroll>
+  );
+}
+
+/** The newest scores of the last two weeks across the academy, each opening its score, as on the website's Home. */
+function LatestScores({ today }: { today: string }) {
+  const recent = useRecentEvaluations(today);
+  if (!recent.loading && !recent.data.length) return null;
+  return (
+    <ListSection title="Latest scores" detail={recent.loading ? undefined : `${recent.data.length} in ${recent.days} days`} testID="today-latest-scores">
+      {recent.loading ? (
+        <ListRow title="Loading scores…" />
+      ) : (
+        recent.data
+          .slice(0, 6)
+          .map((e) => (
+            <ScoreRow key={e.id} evaluation={e} who={e.studentName} best={false} onPress={() => router.push({ pathname: "/score/[id]", params: { id: e.id } })} testID={`today-score-${e.id}`} />
+          ))
+      )}
+    </ListSection>
   );
 }
 

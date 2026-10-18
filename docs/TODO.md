@@ -24,8 +24,6 @@ From the App Store check of 2026-10-17 (`docs/publishing.md`, "Apple's checklist
 
 ## Product questions waiting for the owner
 
-- Should families see each score as soon as it's saved (with the shots played back), or only in the progress reports
-  the academy shares (today's rule, `docs/DECISIONS.md` §6, Q11)?
 - Should coaches see every class (other coaches' too, and a student's classes with other coaches), or only their own
   (today's rule)?
 - Should families get the academy's announcements (news, closed days)? Today announcements reach staff only.

@@ -9,6 +9,7 @@ import { TrialPage } from '@/pages/public/TrialPage'
 import { VerifyEmail } from '@/pages/public/VerifyEmail'
 import { RootRoute } from '@/pages/public/RootRoute'
 import { academyRoute, page } from './academyRoutes'
+import { PageTop } from './PageTop'
 import { RouteError } from './RouteError'
 
 const routes: RouteObject[] = [
@@ -33,4 +34,4 @@ const routes: RouteObject[] = [
 ]
 
 // Every page's errors land on one friendly page (or a reload, after a deploy).
-export const router = createBrowserRouter([{ errorElement: <RouteError />, children: routes }])
+export const router = createBrowserRouter([{ element: <PageTop />, errorElement: <RouteError />, children: routes }])

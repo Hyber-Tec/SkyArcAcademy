@@ -1,5 +1,5 @@
-# A step the flows run (not a test of its own): opens one tab of the family's app. TAB is home, classes, reports or
-# more, and LABEL its name on the tab bar.
+# A step the flows run (not a test of its own): opens one tab of the family's app. TAB is home, classes, scores,
+# reports or more, and LABEL its name on the tab bar.
 #   - runFlow:
 #       file: steps/family-tab.yaml
 #       env: { TAB: reports, LABEL: Reports }

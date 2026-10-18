@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { LuChartLine, LuFilePlus, LuPlus } from 'react-icons/lu'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { toPoint } from '@shared/reports/facts'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, per10 } from '@shared/shooting/evaluation'
+import { personalBestIds } from '@shared/shooting/progress'
 import { todayKey } from '@shared/time'
 import type { Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -32,8 +33,14 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const { data: reports } = useStudentReports(student.id)
   const [adding, setAdding] = useState(false)
   const [creating, setCreating] = useState(false)
+  // A link to one result (`?score=`, from Home's latest scores) shows it first; a pick in the list takes over.
+  const [params] = useSearchParams()
+  const asked = params.get('score')
+  const [picked, setPicked] = useState<string | null>(null)
   const scored = useMemo(() => evaluations.filter((e) => e.shots > 0), [evaluations])
   const points = useMemo(() => scored.map(toPoint), [scored])
+  // Personal bests, marked for staff as for the family.
+  const bests = useMemo(() => personalBestIds(scored), [scored])
   const today = todayKey(timezone)
 
   const summary = POSITIONS.map((pos) => {
@@ -81,7 +88,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             </div>
           ) : null}
         </div>
-        <ResultsPanel evaluations={evaluations} mode={mode} />
+        <ResultsPanel evaluations={evaluations} mode={mode} selectedId={picked ?? (asked && evaluations.some((e) => e.id === asked) ? asked : undefined)} onSelect={setPicked} bests={bests} />
       </section>
 
       {points.length >= 2 ? (

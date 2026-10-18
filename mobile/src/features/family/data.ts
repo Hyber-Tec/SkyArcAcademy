@@ -2,18 +2,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type DocumentData, type Query, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "@react-native-firebase/firestore";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { ProgressReportDoc } from "@shared/reports/types";
+import { type Evaluation, inOrder } from "@shared/shooting/evaluation";
 import type { DateKey } from "@shared/time";
 import type { BranchContact, BranchPublicProfile, Session, Student } from "@shared/types";
 import { useEffect, useEffectEvent, useMemo, useState, useSyncExternalStore } from "react";
-import type { SessionDoc, StudentDoc } from "@/features/data/hooks";
+import type { EvaluationDoc, SessionDoc, StudentDoc } from "@/features/data/hooks";
 import { db } from "@/lib/firebase";
 import { MAX_RETRIES, type QueryState, isRetryable, refreshTokenOnce, useDoc } from "@/lib/firestore";
 import { useBranch } from "@/state/BranchProvider";
 
 /**
  * What a family reads, as the website's family pages read it (web/src/features/family/data.ts): their linked students'
- * records, those students' classes and shared progress reports, one query per student as the rules require (a query
- * the rules would refuse fails whole), never the staff's records, evaluations or the Drive. Everything is live.
+ * records, those students' classes, scores and shared progress reports, one query per student as the rules require (a
+ * query the rules would refuse fails whole), and a score's own file by its ID; never the staff's records or the Drive's
+ * lists. Everything is live.
  */
 
 export type ReportDoc = ProgressReportDoc & { id: string };
@@ -148,6 +150,21 @@ export function useFamilyReports(ids: readonly string[]) {
   return { ...state, data };
 }
 
+/**
+ * The given students' scores (SIUS results and paper cards), newest first: every one, as the staff see them (the rules
+ * give a family its own children's, one student at a time).
+ */
+export function useFamilyEvaluations(ids: readonly string[]) {
+  const { branchId } = useBranch();
+  const list = stable(ids);
+  const state = useMerged<Evaluation>(list.length ? `family-evaluations-${branchId}-${list.join(",")}` : null, () =>
+    list.map((id) => ({ kind: "query", ref: query(col(branchId, COL.evaluations), where("studentId", "==", id)) })),
+  );
+  // The reverse of the charts' order (shared/src/shooting/evaluation.ts), so ties read the same way everywhere.
+  const data = useMemo<EvaluationDoc[]>(() => inOrder(state.data).reverse(), [state.data]);
+  return { ...state, data };
+}
+
 /** One progress report (the rules give a family only its own children's shared ones). */
 export function useReport(id: string | null) {
   const { branchId } = useBranch();
@@ -253,4 +270,4 @@ export async function recordReportView(branchId: string, reportId: string, email
   await AsyncStorage.setItem(openedKey(email), JSON.stringify([...ids])).catch(() => undefined);
 }
 
-export type { SessionDoc, StudentDoc };
+export type { EvaluationDoc, SessionDoc, StudentDoc };

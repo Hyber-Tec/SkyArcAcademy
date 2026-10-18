@@ -10,6 +10,7 @@ import { type DateKey, formatDateKey, nowMinutes, todayKey } from '@shared/time'
 import type { Availability, AvailabilityRange, DayConfig, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { TimeSelect } from '@/components/app/TimeSelect'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -45,6 +46,7 @@ export function DayEditDialog({
   availabilityByKey: Map<string, WithId<Availability>>
   dayConfigs: Map<DateKey, DayConfig>
 }) {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const { settings } = useBranch()
   const [isOpen, setIsOpen] = useState(true)
   const [openMin, setOpenMin] = useState(840)
@@ -80,7 +82,10 @@ export function DayEditDialog({
     if (!dateKey) return
     if (closeMin < openMin + 60) return toast.error('The day must be open at least one hour.')
     const live = sessions.filter((s) => !s.isDeleted)
-    if (!isOpen && live.length > 0 && !window.confirm(`Close this day? This will delete all ${live.length} classes on this day.`)) return
+    if (!isOpen && live.length > 0) {
+      const ok = await confirm({ title: 'Close this day?', description: `Its ${live.length === 1 ? 'class goes' : `${live.length} classes go`} to the Trash.`, confirmLabel: 'Close the day', destructive: true })
+      if (!ok) return
+    }
     if (isOpen) {
       // Shorter hours or less availability can leave booked sessions uncovered: they stay, as conflicts.
       const covered = (d: CoachDay | undefined, h: DayHours, s: Session) => !!d && !d.unavailable && rangesContain(effectiveRanges(d.ranges, h), s.startMin, s.endMin)
@@ -91,12 +96,14 @@ export function DayEditDialog({
       const hit = live.filter((s) => isCheckable(s) && isAhead(s, today, nowMin) && initial[s.coachId] && covered(initial[s.coachId], before, s) && !covered(rows[s.coachId], after, s))
       if (
         hit.length &&
-        !window.confirm(
-          `${hit.length} booked class${hit.length > 1 ? 'es' : ''} (${hit
+        !(await confirm({
+          title: 'Save anyway?',
+          description: `${hit.length} booked class${hit.length > 1 ? 'es' : ''} (${hit
             .slice(0, 3)
             .map((s) => `${s.studentName} with ${s.coachName}`)
-            .join(', ')}${hit.length > 3 ? '…' : ''}) will be outside the new hours or availability. ${hit.length > 1 ? 'They' : 'It'} will show as conflicts until moved, reassigned or canceled. Save anyway?`,
-        )
+            .join(', ')}${hit.length > 3 ? '…' : ''}) will be outside the new hours or availability. ${hit.length > 1 ? 'They' : 'It'} will show as conflicts until moved, reassigned or canceled.`,
+          confirmLabel: 'Save',
+        }))
       )
         return
     }
@@ -245,6 +252,7 @@ export function DayEditDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   )
 }

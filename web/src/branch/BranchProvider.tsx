@@ -1,6 +1,7 @@
 import { doc } from 'firebase/firestore'
 import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ACADEMY_ID } from '@shared/academy'
+import { ACADEMY_NAME } from '@shared/brand'
 import { COL, ROOT } from '@shared/paths'
 import { type Portal, type RestrictablePage, type Role, isAdminRole, portalOf } from '@shared/roles'
 import { type BusinessRules, resolveBusinessRules } from '@shared/settings/businessRules'
@@ -69,8 +70,11 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   const branchId = ACADEMY_ID
   const { user, email, ready, signOut } = useAuth()
 
-  const branchState = useDoc<Branch>(doc(db, ROOT.branches, branchId))
+  // The person's own member doc (theirs to read even while paused), then the academy's, read anew whenever their access
+  // changes: restored, or just given, the portal opens by itself.
   const memberState = useDoc<Member>(email ? doc(db, ROOT.branches, branchId, COL.members, email) : null)
+  const access = memberState.loading ? 'loading' : (memberState.data?.status ?? 'none')
+  const branchState = useDoc<Branch>(doc(db, ROOT.branches, branchId), access)
 
   // Preview state lives in this browser tab only.
   const [preview, setPreview] = useState<ViewAs | null>(loadViewAs)
@@ -125,21 +129,28 @@ export function BranchProvider({ children }: { children: ReactNode }) {
 
   // Until the account check is done, nothing here is known: never guess.
   if (!ready || branchState.loading || memberState.loading) return <FullPageSpinner />
+  // A paused member can't read the academy's document, so this comes first.
+  if (memberState.data && memberState.data.status !== 'active') return paused(email, branchState.data?.name ?? ACADEMY_NAME, signOut)
   if (!value) {
     if (branchState.error?.code === 'permission-denied' || !branchState.data) return <NoBranchAccess />
     return <FullPageMessage title="The academy couldn’t be loaded" description="Check your connection and try again." />
   }
   if (blocked === 'none') return <NoBranchAccess />
   if (blocked === 'paused') {
-    return (
-      <FullPageMessage
-        title="Your access is paused"
-        description={`The account ${email ?? ''} is paused at ${value.branch.name}. Ask the academy to restore your access.`}
-        actions={[{ label: 'Use another account', variant: 'outline', onClick: () => void signOut() }]}
-      />
-    )
+    return paused(email, value.branch.name, signOut)
   }
   return <BranchContext value={value}>{children}</BranchContext>
+}
+
+/** The page a paused member sees (their access turned off by the academy). */
+function paused(email: string | null, name: string, onSignOut: () => Promise<void> | void) {
+  return (
+    <FullPageMessage
+      title="Your access is paused"
+      description={`The account ${email ?? ''} is paused at ${name}. Ask the academy to restore your access; this page opens by itself once it does.`}
+      actions={[{ label: 'Use another account', variant: 'outline', onClick: () => void onSignOut() }]}
+    />
+  )
 }
 
 export function useBranch(): BranchContextValue {

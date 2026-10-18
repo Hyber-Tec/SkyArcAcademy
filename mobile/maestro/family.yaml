@@ -1,5 +1,6 @@
-# The family's app, as the sample parent (two children; the practice password): Home with the child switcher and a
-# class's sheet, Classes (upcoming and past), Reports and a report with its shots played back, and More (the
+# The family's app, as the sample parent (two children; the practice password): Home with the child switcher, a class's
+# sheet and the latest scores, Classes (upcoming and past), Scores (each child's figures, one child's, a result with its
+# shots played back, its original opened and closed), Reports and a report with its shots played back, and More (the
 # appearance, the delete-account dialog opened and canceled). It changes nothing but the report's "Viewed". Signs out,
 # in as the parent, then back in as the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
@@ -57,10 +58,26 @@ appId: com.skyarcacademy.app
           timeout: 15000
       - tapOn:
           id: "family-session-close"
+# The latest scores, and all of them a tap away (the Scores tab).
+- scrollUntilVisible:
+    element:
+      id: "family-home-scores"
+    direction: DOWN
 - scrollUntilVisible:
     element:
       id: "family-attendance"
     direction: DOWN
+- runFlow:
+    when:
+      visible:
+        id: "family-home-all-scores"
+    commands:
+      - tapOn:
+          id: "family-home-all-scores"
+      - extendedWaitUntil:
+          visible:
+            id: "family-scores"
+          timeout: 15000
 # Classes: what's coming, then what's past, and a class's sheet.
 - runFlow:
     file: steps/family-tab.yaml
@@ -88,6 +105,86 @@ appId: com.skyarcacademy.app
     id: "family-session-close"
 - tapOn:
     id: "family-classes-show-upcoming"
+# Scores: each child's figures (All), then one child's with the scores over time and where the shots went, and a result
+# opened: its shots played back as it opens, how it compares, and its original (a SIUS result's PDF or a card's photo)
+# opened and closed.
+- runFlow:
+    file: steps/family-tab.yaml
+    env:
+      TAB: scores
+      LABEL: Scores
+- extendedWaitUntil:
+    visible:
+      id: "family-scores-child-.*"
+    timeout: 30000
+- tapOn:
+    id: "family-child-sample-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "family-scores-summary"
+    timeout: 15000
+- tapOn:
+    id: "family-child-all"
+- scrollUntilVisible:
+    element:
+      id: "family-score-row-.*"
+    direction: DOWN
+- tapOn:
+    id: "family-score-row-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "score-total"
+    timeout: 20000
+# Its shots play as it opens: played again from the first, then paused.
+- runFlow:
+    when:
+      visible:
+        id: "replay-play"
+    commands:
+      - tapOn:
+          id: "replay-restart"
+      - extendedWaitUntil:
+          visible:
+            id: "replay-readout"
+            text: "(Series 1 · )?Shot [1-9] of.*"
+          timeout: 10000
+      - tapOn:
+          id: "replay-play"
+- scrollUntilVisible:
+    element:
+      id: "family-score-compare"
+    direction: DOWN
+# Its original, when it has one (a typed card hasn't).
+- scrollUntilVisible:
+    element:
+      id: "family-score-file"
+    direction: DOWN
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "family-score-file"
+    commands:
+      - tapOn:
+          id: "family-score-file"
+      - extendedWaitUntil:
+          visible:
+            id: "file-screen"
+          timeout: 20000
+      - tapOn:
+          id: "file-close"
+      - extendedWaitUntil:
+          visible:
+            id: "family-score-screen"
+          timeout: 10000
+- runFlow:
+    file: steps/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: "family-scores"
+    timeout: 15000
 # Reports: the shared reports, and one opened with its shots played back.
 - runFlow:
     file: steps/family-tab.yaml

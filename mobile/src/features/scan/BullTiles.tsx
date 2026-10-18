@@ -7,8 +7,11 @@ import { STATE_COLORS, scoreLabel } from "./CardView";
 
 const GAP = space.sm;
 
-/** The ten record bulls as tiles: each one's score, coloured by whether it's worth a look. Tapping opens its check. */
-export function BullTiles({ review, onBull }: { review: CardReview; onBull: (n: number) => void }) {
+/**
+ * The ten record bulls as tiles: each one's score, coloured by whether it's worth a look. Tapping opens its check
+ * (`onBull`). `plain`: to look at only (the family's), without the check's colours, a bull without a shot as 0.
+ */
+export function BullTiles({ review, onBull, plain = false }: { review: CardReview; onBull?: (n: number) => void; plain?: boolean }) {
   const colors = useColors();
   // Five to a row, sized from the width there is (a percentage width leaves the rows' height to guesswork).
   const [width, setWidth] = useState(0);
@@ -18,13 +21,32 @@ export function BullTiles({ review, onBull }: { review: CardReview; onBull: (n: 
       {review.bulls.map((b) => {
         const state = bullState(b, review.shotsPerBull);
         const values = b.shots.map((s) => s.value);
+        if (plain) {
+          const shown = values.length ? values : [0];
+          return (
+            <View
+              key={b.n}
+              testID={`score-tile-${b.n}`}
+              accessible
+              accessibilityLabel={`Bull ${b.n}: ${shown.join(" and ")}`}
+              style={[styles.tile, { width: tile, height: tile / 0.9, backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <T variant="tiny" tone="muted">
+                {b.n}
+              </T>
+              <T variant="subheading" style={[styles.score, shown.every((v) => v >= 10) ? null : { color: colors.mutedForeground }]} numberOfLines={1} adjustsFontSizeToFit>
+                {scoreLabel(shown)}
+              </T>
+            </View>
+          );
+        }
         return (
           <Pressable
             key={b.n}
             testID={`scan-tile-${b.n}`}
             accessibilityRole="button"
             accessibilityLabel={`Bull ${b.n}: ${values.length ? values.join(" and ") : "no shot"}`}
-            onPress={() => onBull(b.n)}
+            onPress={() => onBull?.(b.n)}
             style={({ pressed }) => [
               styles.tile,
               { width: tile, height: tile / 0.9, backgroundColor: pressed ? colors.accent : colors.card, borderColor: state === "ok" ? colors.border : STATE_COLORS[state] },

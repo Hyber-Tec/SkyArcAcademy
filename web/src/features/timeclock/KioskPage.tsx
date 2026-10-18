@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import { formatDuration, formatInstant, formatInstantTime } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { functions } from '@/lib/firebase'
@@ -32,6 +33,7 @@ const IDLE_MS = 30_000
  * Android tablet app calls the same functions.
  */
 export function KioskPage() {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const { branchId, branch, settings, timezone } = useBranch()
   const navigate = useNavigate()
   const pinLength = settings.timeClock.kiosk.pinLength
@@ -147,7 +149,7 @@ export function KioskPage() {
           size="icon"
           className="ml-2 text-neutral-300 hover:bg-white/10 hover:text-white"
           aria-label="Exit kiosk"
-          onClick={() => window.confirm('Exit kiosk mode?') && navigate(`/admin/home`)}
+          onClick={async () => (await confirm({ title: 'Exit kiosk mode?', description: 'Staff can’t clock in or out on this device until it’s back in kiosk mode.', confirmLabel: 'Exit' })) && navigate(`/admin/home`)}
         >
           <LuLogOut />
         </Button>
@@ -228,6 +230,7 @@ export function KioskPage() {
           </div>
         ) : null}
       </main>
+      {confirmDialog}
     </div>
   )
 }

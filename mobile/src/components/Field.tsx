@@ -56,7 +56,11 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, h
   );
 });
 
-/** A password field with a show/hide eye. */
+/**
+ * A password field with a show/hide eye. Shown, it stays a password to the keyboard on Android (no suggestions, nothing
+ * learned); on an iPhone it takes the person's usual keyboard, which is also how to get round a password keyboard that
+ * misbehaves.
+ */
 export const PasswordField = forwardRef<TextInput, Omit<FieldProps, "secureTextEntry" | "right">>(function PasswordField(props, ref) {
   const colors = useColors();
   const [shown, setShown] = useState(false);
@@ -66,6 +70,7 @@ export const PasswordField = forwardRef<TextInput, Omit<FieldProps, "secureTextE
       autoCapitalize="none"
       autoCorrect={false}
       {...props}
+      keyboardType={shown && Platform.OS === "android" ? "visible-password" : props.keyboardType}
       secureTextEntry={!shown}
       right={
         <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide password" : "Show password"} hitSlop={8} onPress={() => setShown((s) => !s)}>

@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type DateKey, diffDays, formatDateKey } from '@shared/time'
 import { cn } from '@/lib/utils'
 import { INK, RING_COLORS } from './paper'
@@ -70,10 +70,23 @@ export function TrendChart({
   label: string
   className?: string
 }) {
-  const W = 640
+  // Drawn at the width it's shown at, so its labels keep their size on a phone (a fixed width scaled down shrank them).
+  const box = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(640)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => {
+      const w = Math.round(e.contentRect.width)
+      if (w > 0) setShown(w)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const W = Math.max(280, shown)
   const H = height
   const L = 36
-  const R = 596
+  const R = W - 44
   const T = 14
   const B = H - 28
   const clip = useId()
@@ -125,7 +138,7 @@ export function TrendChart({
   const endLabels = ends.filter((e, i) => i === 0 || Math.abs(y(e.last.value) - y(ends[i - 1].last.value)) >= 13)
 
   return (
-    <div className={cn('relative', className)}>
+    <div ref={box} className={cn('relative', className)}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"

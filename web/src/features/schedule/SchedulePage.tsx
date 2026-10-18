@@ -21,6 +21,7 @@ import {
 } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useMembers, useStaffList, useStudentList } from '@/features/data/hooks'
@@ -91,6 +92,7 @@ function readPanelOpen(): boolean {
 }
 
 export function SchedulePage() {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const branch = useBranch()
   const { branchId, settings, timezone, actor } = branch
   const isMobile = useIsMobile()
@@ -431,13 +433,13 @@ export function SchedulePage() {
   }, [])
 
   const trashSession = useCallback(
-    (s: WithId<Session>) => {
-      if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      if (!window.confirm('Delete this class?')) return
+    async (s: WithId<Session>) => {
+      if (isLocked(s.dateKey)) return void toast.error('Past days can’t be changed.')
+      if (!(await confirm({ title: 'Delete this class?', description: 'It goes to the Trash, where you can restore it.', confirmLabel: 'Delete', destructive: true }))) return
       void run(() => deleteSession(ctx, s), 'Class moved to Trash')
       setSelection(null)
     },
-    [isLocked, run, ctx],
+    [isLocked, run, ctx, confirm],
   )
 
   // ------------------------------------------------------------- clipboard / hotkeys
@@ -491,15 +493,15 @@ export function SchedulePage() {
     pasteAt(selection.staffId, selection.dateKey, selection.startMin)
   }, [selection, pasteAt])
 
-  const removeSelected = useCallback(() => {
+  const removeSelected = useCallback(async () => {
     if (selection?.kind !== 'session') return
     const s = sessionById.get(selection.id)
     if (!s) return
-    if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-    if (!window.confirm('Delete this class?')) return
+    if (isLocked(s.dateKey)) return void toast.error('Past days can’t be changed.')
+    if (!(await confirm({ title: 'Delete this class?', description: 'It goes to the Trash, where you can restore it.', confirmLabel: 'Delete', destructive: true }))) return
     void run(() => deleteSession(ctx, s), 'Class moved to Trash')
     setSelection(null)
-  }, [selection, sessionById, isLocked, run, ctx])
+  }, [selection, sessionById, isLocked, run, ctx, confirm])
 
   const nav = useMemo(() => {
     const step = (dir: 1 | -1) => {
@@ -609,9 +611,14 @@ export function SchedulePage() {
       setEventDialog({ mode: 'create', dateKey, startMin, endMin: Math.min(startMin + settings.schedule.events.defaultMinutes, hoursOf(dateKey).closeMin) }),
     editEvent: (e) => setEventDialog({ mode: 'edit', event: e }),
     moveEvent: (e, startMin) => void run(() => moveEventTime(ctx, e, startMin)),
-    deleteEvent: (e) => {
-      if (!window.confirm(e.recurrence ? 'Delete this recurring event? The entire series is removed.' : 'Delete this event?')) return
-      void run(() => deleteEvent(ctx, e), 'Event deleted')
+    deleteEvent: async (e) => {
+      const ok = await confirm({
+        title: e.recurrence ? 'Delete this recurring event?' : 'Delete this event?',
+        description: e.recurrence ? 'The whole series is removed.' : undefined,
+        confirmLabel: 'Delete',
+        destructive: true,
+      })
+      if (ok) void run(() => deleteEvent(ctx, e), 'Event deleted')
     },
     editDay: (d) => setDayEdit(d),
     coachColor: (id) => staffMap.get(id)?.color,
@@ -877,6 +884,7 @@ export function SchedulePage() {
       <DayEditDialog dateKey={dayEdit} onClose={() => setDayEdit(null)} ctx={ctx} coaches={coaches} sessions={dayEdit ? data.sessionsByDate.get(dayEdit) ?? [] : []} availabilityByKey={data.availabilityByKey} dayConfigs={data.dayConfigs} />
       <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} coachFilter={coachFilter} />
       <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={today} />
+      {confirmDialog}
       <CoachOrderDialog open={orderOpen} onOpenChange={setOrderOpen} ctx={ctx} coaches={coaches} />
       <BellDialog state={bell} onClose={() => setBell(null)} />
       {data.error ? <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-lg bg-destructive px-3 py-2 text-sm text-white">{data.error.message}</div> : null}

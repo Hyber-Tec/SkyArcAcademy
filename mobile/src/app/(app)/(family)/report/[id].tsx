@@ -1,4 +1,4 @@
-import { DEFAULT_REPORT_OPTIONS, type EvaluationPoint } from "@shared/reports/types";
+import { DEFAULT_REPORT_OPTIONS } from "@shared/reports/types";
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, pointOf } from "@shared/shooting/evaluation";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowRight, Check, Crosshair, FileX2, Flag, MessageSquareQuote, Target } from "lucide-react-native";
@@ -13,7 +13,8 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { type ReportDoc, recordReportView, useReport } from "@/features/family/data";
-import { DistributionBar, INK, Sparkline, TrendChart, type TrendSeries } from "@/features/reports/charts";
+import { useFamily } from "@/features/family/FamilyProvider";
+import { DistributionBar, INK, Sparkline, TrendChart, trendSeries } from "@/features/reports/charts";
 import { evaluationsText, one, preparedOn, signed } from "@/features/reports/format";
 import { Comparison, Heading, PositionRows, type Tile, TileGrid } from "@/features/reports/ReportParts";
 import { TrendChip } from "@/features/reports/TrendChip";
@@ -33,8 +34,10 @@ export default function FamilyReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { branchId, actor, role, name } = useBranch();
   const colors = useColors();
+  const family = useFamily();
   const report = useReport(id ?? null);
-  const r = report.data;
+  // Only the family's own students' reports (a copy this phone kept from an earlier sign-in never shows).
+  const r = report.data && family.ids.includes(report.data.studentId) ? report.data : null;
   const visible = !!r && r.sharedWithParents === true;
 
   useEffect(() => {
@@ -72,16 +75,6 @@ export default function FamilyReportScreen() {
 /** The position with the most results (ties: the better average). */
 function mainPosition(r: ReportDoc): Position | null {
   return [...r.facts.positions].sort((a, b) => b.evaluations - a.evaluations || (b.average ?? 0) - (a.average ?? 0))[0]?.position ?? null;
-}
-
-/** The scores-over-time lines: one per position, whole scores per 10 shots. */
-function trendSeries(points: readonly EvaluationPoint[]): TrendSeries[] {
-  return POSITIONS.map((pos) => ({
-    key: pos,
-    label: POSITION_LABELS[pos],
-    color: POSITION_COLORS[pos],
-    points: points.filter((p) => p.position === pos).map((p) => ({ dateKey: p.dateKey, value: p.wholePer10, detail: p.source === "sius" ? `${one(p.per10)} decimal` : "paper card" })),
-  })).filter((s) => s.points.length);
 }
 
 function ReportBody({ r }: { r: ReportDoc }) {

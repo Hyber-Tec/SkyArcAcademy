@@ -31,8 +31,12 @@ export interface DocState<T> {
 }
 
 /** Live document. Pass `null` to wait (e.g. until an ID is known). */
-export function useDoc<T>(ref: DocumentReference<DocumentData> | null): DocState<T> {
-  const path = ref?.path ?? null
+/**
+ * A document, live. `again`: a value that, when it changes, listens anew (a listener the rules refused stays refused,
+ * so a document someone was just given access to needs a new one).
+ */
+export function useDoc<T>(ref: DocumentReference<DocumentData> | null, again = ''): DocState<T> {
+  const path = ref ? `${ref.path}#${again}` : null
   const [state, setState] = useState<DocState<T> & { path: string | null }>({
     data: null,
     loading: ref !== null,
@@ -49,9 +53,9 @@ export function useDoc<T>(ref: DocumentReference<DocumentData> | null): DocState
           data: snap.exists() ? ({ id: snap.id, ...(snap.data() as T) } as WithId<T>) : null,
           loading: false,
           error: null,
-          path: ref.path,
+          path,
         }),
-      (error) => setState({ data: null, loading: false, error, path: ref.path }),
+      (error) => setState({ data: null, loading: false, error, path }),
     )
     // The path identifies the reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps

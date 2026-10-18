@@ -230,7 +230,7 @@ export function AvailabilityCalendar({
     }
   }, [clipboard, selection, selectedDays, rangesOf, applyPlan, staffName])
 
-  const clear = useCallback(() => {
+  const clear = useCallback(async () => {
     if (!selection) return
     if (selection.kind === 'item') {
       const ranges = rangesOf(selection.date)
@@ -245,13 +245,13 @@ export function AvailabilityCalendar({
     }
     const withRanges = selectedDays.filter((d) => rangesOf(d).length > 0)
     if (!withRanges.length) return
-    if (withRanges.length > 1 && !window.confirm(`Remove availability on ${withRanges.length} days?`)) return
+    if (withRanges.length > 1 && !(await confirm({ title: `Remove availability on ${withRanges.length} days?`, confirmLabel: 'Remove', destructive: true }))) return
     void applyPlan(
       withRanges.map((d) => ({ date: d, ranges: [] })),
       `Removed ${staffName}’s availability on ${withRanges.length} day${withRanges.length > 1 ? 's' : ''}`,
       'Availability removed',
     )
-  }, [selection, selectedDays, rangesOf, applyPlan, staffName])
+  }, [selection, selectedDays, rangesOf, applyPlan, staffName, confirm])
 
   /** Drag a range onto another day: move it (or copy it with Alt/Option). */
   const dropRange = useCallback(
@@ -364,17 +364,22 @@ export function AvailabilityCalendar({
     window.addEventListener('keydown', key)
   }
 
-  const copyLastWeek = useCallback(() => {
+  const copyLastWeek = useCallback(async () => {
     const anchor = selection?.kind === 'item' ? selection.date : (selectedDays[0] ?? today)
     const weekStart = startOfWeek(anchor, settings.general.weekStartsOn)
     const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-    if (!window.confirm(`Copy the previous week’s availability into the week of ${formatDateKey(weekStart, 'monthDay')}? That week’s availability is replaced.`)) return
+    const ok = await confirm({
+      title: 'Copy last week?',
+      description: `The previous week’s availability goes into the week of ${formatDateKey(weekStart, 'monthDay')}, replacing what that week has.`,
+      confirmLabel: 'Copy',
+    })
+    if (!ok) return
     void applyPlan(
       days.map((d) => ({ date: d, ranges: rangesOf(addDays(d, -7)) })),
       `Copied last week’s availability for ${staffName}`,
       'Last week copied',
     )
-  }, [selection, selectedDays, today, settings.general.weekStartsOn, applyPlan, rangesOf, staffName])
+  }, [selection, selectedDays, today, settings.general.weekStartsOn, applyPlan, rangesOf, staffName, confirm])
 
   // Desktop keyboard: ⌘/Ctrl+C copy, ⌘/Ctrl+V paste, Delete clear, Enter edit, Escape deselect.
   useEffect(() => {

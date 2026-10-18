@@ -59,8 +59,8 @@ export interface EvalSeries {
 
 /**
  * `branches/{b}/evaluations/{id}`: one scored target, a SIUS result or a paper card. The Drive keeps the file; this
- * keeps the scores, and the progress reports are built from these. Staff read them; families see them only through a
- * shared report.
+ * keeps the scores, and the progress reports are built from these. Staff read and change them; families read their own
+ * children's (docs/DECISIONS.md §15).
  */
 export interface Evaluation extends AuditStamp {
   studentId: string

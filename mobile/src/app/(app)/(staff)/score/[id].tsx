@@ -1,8 +1,6 @@
-import { useImage } from "@shopify/react-native-skia";
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from "@shared/shooting/evaluation";
 import { canReplay } from "@shared/shooting/replay";
-import { offsetWords } from "@shared/shooting/target";
-import { type EditMode, FLAT_SIZE, cardEvaluation, editModeOf, savedReview, wasScanned } from "@shared/targets/flat";
+import { type EditMode, FLAT_SIZE, cardEvaluation, editModeOf, savedReview } from "@shared/targets/flat";
 import { type CardReview, reviewTotals } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { Stack, router, useLocalSearchParams, useNavigation } from "expo-router";
@@ -22,15 +20,13 @@ import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { type DriveFileDoc, type EvaluationDoc, useAcademyNow, useDriveFile, useEvaluation } from "@/features/data/hooks";
-import { useLocalCopy } from "@/features/drive/download";
+import { type DriveFileDoc, type EvaluationDoc, useAcademyNow, useEvaluation } from "@/features/data/hooks";
 import { BullEditor } from "@/features/scan/BullEditor";
 import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
-import { waitingCopy } from "@/features/scan/uploads";
-import { clock } from "@/features/schedule/format";
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from "@/features/scores/api";
-import { deleteScoreMessage, scorePer10, scoreTitle, scoreTotal } from "@/features/scores/format";
+import { deleteScoreMessage, scoreTitle } from "@/features/scores/format";
+import { ScoreHead, scoreFacts, useCardPicture } from "@/features/scores/ScoreParts";
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { toast } from "@/lib/toast";
@@ -98,16 +94,10 @@ export default function ScoreScreen() {
   const score = useEvaluation(id ?? null);
   const e = score.data;
   const mode: EditMode = e ? editModeOf(e) : "fixed";
-  const scanned = !!e && wasScanned(e);
-  const fileId = e?.fileId ?? null;
-  const file = useDriveFile(fileId);
+  // A scanned card's picture (its copy on this phone moments after it was saved, otherwise the Drive's), and the file.
+  const picture = useCardPicture(e ?? null);
+  const { scanned, flat, file } = picture;
   const f = file.data;
-  // A scanned card's picture: its copy still on this phone when it was saved moments ago (uploads.ts), otherwise the
-  // Drive's flattened copy, read through the Storage rules.
-  const waiting = useMemo(() => (scanned && fileId ? waitingCopy(fileId) : null), [scanned, fileId]);
-  const copy = useLocalCopy(scanned && !waiting && f && f.status === "ready" && !f.trashed ? { id: f.id, kind: f.kind, size: f.size } : null);
-  const image = useImage(waiting ?? copy.uri);
-  const flat = image && image.width() === FLAT_SIZE.width && image.height() === FLAT_SIZE.height ? image : null;
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -182,17 +172,8 @@ export default function ScoreScreen() {
 
   const sius = e.source === "sius";
   const totals = mode === "card" && draft.review ? reviewTotals(draft.review) : null;
-  const per10 = scorePer10(preview);
-  const where = offsetWords(preview.mpi);
-  const facts = [
-    `${preview.shots} shots`,
-    sius && e.innerTens !== null ? `${e.innerTens} inner ${e.innerTens === 1 ? "ten" : "tens"}` : null,
-    preview.groupMm !== null ? `group ${preview.groupMm}\u00a0mm` : null,
-    preview.mpi ? (where ? `sits ${where}` : "centred") : null,
-    totals && totals.missing ? `${totals.missing} missing (0)` : null,
-  ].filter(Boolean);
   const inner = width - space.lg * 2 - space.sm * 2;
-  const note = scanned && !flat ? pictureNote({ failed: !!copy.error || !!image, waiting: !!waiting, file: f, loading: file.loading }) : null;
+  const note = scanned && !flat ? pictureNote({ failed: picture.failed, waiting: picture.waiting, file: f, loading: file.loading }) : null;
   const target = Math.min(width - space.lg * 4, 380);
 
   return (
@@ -214,38 +195,13 @@ export default function ScoreScreen() {
           ) : null
         }
       >
-        <Card style={styles.head}>
-          <View style={styles.headTop}>
-            <View style={styles.grow}>
-              <T variant="label" numberOfLines={2}>
-                {e.studentName}
-              </T>
-              <T variant="small" tone="muted" testID="score-when">
-                {formatDateKey(draft.dateKey, "medium")}
-                {sius && e.timeMin !== null ? `, ${clock(e.timeMin, settings.general.timeFormat !== "24h")}` : ""}
-              </T>
-            </View>
-            {/* Per 10 shots, for results of another length (a card of ten already reads out of 100). */}
-            {preview.shots !== 10 ? (
-              <View style={styles.per10}>
-                <T variant="stat">{per10 ?? "–"}</T>
-                <T variant="tiny" tone="muted">
-                  per 10
-                </T>
-              </View>
-            ) : null}
-          </View>
-          <T variant="display" testID="score-total">
-            {scoreTotal(preview)}
-            {sius ? null : (
-              <T variant="heading" tone="muted">
-                {" "}
-                / {preview.shots * 10}
-              </T>
-            )}
-          </T>
-          <T tone="muted">{facts.join(" · ")}</T>
-        </Card>
+        <ScoreHead
+          evaluation={preview}
+          name={e.studentName}
+          dateKey={draft.dateKey}
+          hour12={settings.general.timeFormat !== "24h"}
+          facts={scoreFacts(preview, totals?.missing ?? 0)}
+        />
 
         {canReplay(preview) ? (
           <Card style={styles.center}>
@@ -340,6 +296,7 @@ export default function ScoreScreen() {
           multiline
           maxLength={2000}
           placeholder="Anything worth remembering about this result."
+          hint="The student and their parents see this note with the score."
           testID="score-note"
         />
 
@@ -368,10 +325,7 @@ export default function ScoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: { gap: space.xs },
-  headTop: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   grow: { flex: 1, gap: 2 },
-  per10: { alignItems: "flex-end" },
   center: { alignItems: "center" },
   inset: { padding: space.sm, gap: space.md },
   note: { padding: space.sm },

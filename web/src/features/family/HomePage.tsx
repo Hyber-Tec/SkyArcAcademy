@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
-import { LuArrowRight, LuCalendarClock, LuChartLine } from 'react-icons/lu'
+import { LuArrowRight, LuCalendarClock, LuChartLine, LuMessageSquareQuote, LuPencilLine, LuTarget } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { attendanceFacts } from '@shared/reports/facts'
+import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10 } from '@shared/shooting/evaluation'
+import { personalBestIds } from '@shared/shooting/progress'
 import { addDays, diffDays, formatDateKey, formatMinutes, formatTimeRange, nowMinutes, todayKey, weekdayOf, WEEKDAY_LABELS } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -11,9 +13,11 @@ import { untilText } from '@/features/coach/sessionUi'
 import { plural } from '@/features/home/parts'
 import { useFamilyReports } from '@/features/reports/data'
 import { type Report, one } from '@/features/reports/model'
+import { MiniTarget } from '@/features/scores/TargetPlot'
+import { BestBadge } from '@/features/students/scores/FeaturedResult'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
-import { type Family, andList, dayTitle, firstWord, hasEnded, useFamily, useFamilySessions, useIsNewReport } from './data'
+import { type Family, andList, dayTitle, firstWord, hasEnded, useFamily, useFamilyEvaluations, useFamilySessions, useIsNewReport } from './data'
 import { ClassDetails, ClassList, ContactCard, FamilyStatus, FamilyTrend, KidMark, NoteChip, NotLinked } from './FamilyWidgets'
 
 /** How far ahead Home looks for each child's next class (four weeks, as the coach's Home). */
@@ -51,8 +55,9 @@ function summary(f: Family, next: { kidId: string; session: WithId<Session> | nu
 }
 
 /**
- * Parent and Student → Home: a greeting, each child's next class, the rest of the week, the latest progress reports,
- * attendance over the last 30 days, and how to reach the academy. Two columns on computers, one on phones.
+ * Parent and Student → Home: a greeting, each child's next class, the rest of the week, the latest scores, the latest
+ * progress reports, attendance over the last 30 days, and how to reach the academy. Two columns on computers, one on
+ * phones.
  */
 export function FamilyHomePage() {
   const { timezone } = useBranch()
@@ -62,6 +67,7 @@ export function FamilyHomePage() {
   // The last 30 days (attendance) and the next four weeks (the next classes, the week ahead).
   const { data: sessions, loading } = useFamilySessions(family.ids, addDays(today, -29), addDays(today, AHEAD_DAYS - 1))
   const reports = useFamilyReports(family.ids)
+  const scores = useFamilyEvaluations(family.ids)
   const isNew = useIsNewReport()
   const [open, setOpen] = useState<WithId<Session> | null>(null)
 
@@ -100,6 +106,7 @@ export function FamilyHomePage() {
           <WeekAhead family={family} sessions={weekAhead} others={next.some((n) => !!n.session && n.session.dateKey <= weekEnd)} loading={loading || family.loading} today={today} weekEnd={weekEnd} now={now} onOpen={setOpen} />
         </div>
         <div className="min-w-0 space-y-6">
+          <LatestScores family={family} evaluations={scores.data} loading={scores.loading || family.loading} today={today} />
           <LatestReports family={family} reports={reports.data} loading={reports.loading || family.loading} isNew={isNew} />
           <Attendance family={family} sessions={sessions.filter((s) => hasEnded(s, now))} loading={loading || family.loading} />
           <ContactCard />
@@ -275,6 +282,110 @@ function WeekAhead({
         <p className="px-4 py-6 text-center text-sm text-muted-foreground">{others ? 'Nothing else booked in the next seven days.' : 'Nothing booked in the next seven days.'}</p>
       )}
     </section>
+  )
+}
+
+/**
+ * Each child's last few results (the student's own), newest first: the target in small, the day, the position, the
+ * score per 10 shots and a personal best's badge. Each opens on the Scores page.
+ */
+function LatestScores({ family, evaluations, loading, today }: { family: Family; evaluations: WithId<Evaluation>[]; loading: boolean; today: string }) {
+  const several = family.kids.length > 1
+  const base = `/${family.who}`
+  // Two each for brothers and sisters, so the card stays about as tall as the classes beside it.
+  const count = several ? 2 : 3
+  const latest = family.kids.map((k) => {
+    const list = evaluations.filter((e) => e.studentId === k.id)
+    return { kidId: k.id, list: list.slice(-count).reverse(), bests: personalBestIds(list) }
+  })
+  const none = latest.every((l) => !l.list.length)
+  const to = (kidId: string, id: string) => `${base}/scores?${new URLSearchParams(several ? { child: kidId, score: id } : { score: id })}`
+  return (
+    <section className="overflow-hidden rounded-xl border bg-card" aria-label="Latest scores" data-testid="latest-scores">
+      <CardHead title="Latest scores" aside={none ? null : <SeeAll to={`${base}/scores`}>All scores</SeeAll>} />
+      {loading ? (
+        <div className="space-y-2 p-4">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      ) : none ? (
+        <div className="flex items-start gap-3 px-4 py-5 text-sm">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <LuTarget className="size-4" />
+          </span>
+          <div>
+            <p className="font-medium">No scores yet</p>
+            <p className="mt-0.5 text-muted-foreground">Results show here after classes, once the coach adds them.</p>
+          </div>
+        </div>
+      ) : (
+        <ul className="divide-y">
+          {latest.map(({ kidId, list, bests }) =>
+            list.length ? (
+              <li key={kidId} className={cn(several && 'pt-2.5')}>
+                {several ? (
+                  <p className="flex items-center gap-2 px-4 pb-0.5 text-xs font-medium text-muted-foreground">
+                    <KidMark name={family.firstName(kidId)} tint={family.tint(kidId)} className="size-5 text-[10px]" />
+                    {family.firstName(kidId)}
+                  </p>
+                ) : null}
+                <ul className="py-1">
+                  {list.map((e) => (
+                    <li key={e.id}>
+                      <LatestScore e={e} best={bests.has(e.id)} to={to(kidId, e.id)} today={today} />
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ) : (
+              <li key={kidId}>
+                <p className="flex items-center gap-2 px-4 py-3.5 text-sm text-muted-foreground">
+                  <KidMark name={family.firstName(kidId)} tint={family.tint(kidId)} className="size-5 text-[10px]" />
+                  {family.firstName(kidId)}: no scores yet
+                </p>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function LatestScore({ e, best, to, today }: { e: WithId<Evaluation>; best: boolean; to: string; today: string }) {
+  const color = POSITION_COLORS[e.position]
+  const points = evaluationPoints(e)
+  const whole = per10(e.wholeTotal, e.shots)
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 px-4 py-1.5 transition-colors hover:bg-muted/40"
+      aria-label={`${formatDateKey(e.dateKey, 'medium')}, ${POSITION_LABELS[e.position]}: ${whole !== null ? one(whole) : 'no score'} per 10 shots${best ? ', a new personal best' : ''}${e.note ? ', with a coach’s note' : ''}`}
+      data-testid="latest-score"
+    >
+      {points.length ? (
+        <MiniTarget points={points} color={color} size={36} className="shrink-0" />
+      ) : (
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground" title="Typed in: no places on the target">
+          <LuPencilLine className="size-3.5" />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{dayTitle(e.dateKey, today, false)}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+          <span className="truncate">
+            {POSITION_LABELS[e.position]} · {SOURCE_LABELS[e.source]}
+          </span>
+          {best ? <BestBadge position={e.position} size="sm" /> : null}
+          {e.note ? <LuMessageSquareQuote className="size-3.5 shrink-0" aria-hidden /> : null}
+        </span>
+      </span>
+      <span className="shrink-0 text-right">
+        <span className="block text-lg leading-tight font-semibold tabular-nums">{whole !== null ? one(whole) : '—'}</span>
+        <span className="block text-[11px] leading-tight text-muted-foreground">per 10</span>
+      </span>
+    </Link>
   )
 }
 

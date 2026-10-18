@@ -22,7 +22,8 @@ const FONT_FAMILY = Platform.select({ ios: "Helvetica Neue", default: "sans-seri
  * The scanned card, flattened as it will be saved, with what the scan found drawn on it: each record bull's outer ring
  * in its state's colour and every counted shot as a pellet-sized circle, with a label of its score. Pinch to zoom in
  * (it stays sharp, and stays where it's left), drag to look around once zoomed, double-tap to zoom in or out; tapping
- * a bull opens its check.
+ * a bull opens its check (`onBull`). `plain`: to look at only (the family's), every bull in one colour and a bull
+ * without a shot labelled 0, as it counts.
  */
 export function CardView({
   image,
@@ -31,6 +32,7 @@ export function CardView({
   review,
   viewWidth,
   onBull,
+  plain = false,
   testID,
 }: {
   image: SkImage;
@@ -38,7 +40,8 @@ export function CardView({
   height: number;
   review: CardReview;
   viewWidth: number;
-  onBull: (n: number) => void;
+  onBull?: (n: number) => void;
+  plain?: boolean;
   testID?: string;
 }) {
   const viewHeight = Math.round((imageHeight * viewWidth) / imageWidth);
@@ -51,13 +54,13 @@ export function CardView({
     const cb = CARD_BULLS.find((x) => x.kind === "record" && x.n === b.n)!;
     const centre = bullCentreMm(cb);
     const at = flatPoint(centre.x, centre.y);
-    const state = bullState(b, review.shotsPerBull);
+    const state = plain ? "ok" : bullState(b, review.shotsPerBull);
     const shots = b.shots.filter((t) => t.x !== null && t.y !== null).map((t) => flatPoint(centre.x + (t.x as number), centre.y - (t.y as number)));
     return { b, at, state, shots };
   });
   const tapped = (x: number, y: number) => {
     const hit = bulls.find(({ at }) => (at.x - x) ** 2 + (at.y - y) ** 2 <= ring1 * ring1);
-    if (hit) onBull(hit.b.n);
+    if (hit) onBull?.(hit.b.n);
   };
   return (
     <ZoomCanvas
@@ -67,9 +70,9 @@ export function CardView({
       contentWidth={imageWidth}
       contentHeight={imageHeight}
       state={zoom}
-      onTap={tapped}
+      onTap={onBull ? tapped : undefined}
       overlay={bulls.map(({ b, at, state }) => (
-        <Badge key={b.n} zoom={zoom} x={at.x + ring1 * 0.72} y={at.y + ring1 * 0.72} text={`${b.n}: ${scoreLabel(b.shots.map((t) => t.value))}`} color={STATE_COLORS[state]} font={font} />
+        <Badge key={b.n} zoom={zoom} x={at.x + ring1 * 0.72} y={at.y + ring1 * 0.72} text={`${b.n}: ${plain && !b.shots.length ? "0" : scoreLabel(b.shots.map((t) => t.value))}`} color={STATE_COLORS[state]} font={font} />
       ))}
     >
       <SkiaImage image={image} x={0} y={0} width={imageWidth} height={imageHeight} fit="fill" />

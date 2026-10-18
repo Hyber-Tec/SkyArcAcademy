@@ -1,3 +1,5 @@
+import type { EvaluationPoint } from "@shared/reports/types";
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS } from "@shared/shooting/evaluation";
 import { type DateKey, diffDays } from "@shared/time";
 import { useState } from "react";
 import { type LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
@@ -49,6 +51,19 @@ export interface TrendSeries {
   label: string;
   color: string;
   points: { dateKey: DateKey; value: number; detail?: string }[];
+}
+
+/**
+ * The scores-over-time lines: one per position, whole scores per 10 shots (the reports' scale, where SIUS results and
+ * paper cards compare), a SIUS result's decimal in its readout.
+ */
+export function trendSeries(points: readonly Pick<EvaluationPoint, "position" | "dateKey" | "wholePer10" | "per10" | "source">[]): TrendSeries[] {
+  return POSITIONS.map((pos) => ({
+    key: pos,
+    label: POSITION_LABELS[pos],
+    color: POSITION_COLORS[pos],
+    points: points.filter((p) => p.position === pos).map((p) => ({ dateKey: p.dateKey, value: p.wholePer10, detail: p.source === "sius" ? `${one(p.per10)} decimal` : "paper card" })),
+  })).filter((s) => s.points.length);
 }
 
 /** Clean bounds around the values (scores per 10 shots, at most 100 when whole), at least 10 apart. */

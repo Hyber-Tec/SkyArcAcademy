@@ -37,17 +37,20 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        Scan · Students · More, and the screens that open over them (class/[id] and coach/[id] sheets,
                        student/[id], score/[id], file/[id], and the Scan screens)
   (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
-                       Reports · More, and what opens over them (session/[id] a class's sheet, report/[id] a progress
-                       report); FamilyProvider holds whose they are and the child a parent chose
+                       Scores · Reports · More, and what opens over them (session/[id] a class's sheet, score/[id] a
+                       score to look at, file/[id] its original, report/[id] a progress report); FamilyProvider holds
+                       whose they are and the child a parent chose
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
                        rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
                        may read), schedule (classes, the week strip, class cards), students, drive (downloading a Drive
-                       file through the Storage rules), scan (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
-                       back; playback.ts), access, account (deleting an account), family (what a family reads: their
-                       students, classes and shared reports; the child switcher; the class cards), reports (a progress
-                       report's figures and charts)
+                       file through the Storage rules; FileView, a file full screen, the staff's and the family's), scan
+                       (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
+                       back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
+                       MiniTarget, a list's small target), access, account (deleting an account), family (what a family
+                       reads: their students, classes, scores and shared reports; the child switcher; the class cards; a
+                       score's row and a student's figures), reports (a progress report's figures and charts)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SectionTitle,
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
@@ -102,7 +105,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.
 - **A coach's queries ask for what the rules give a coach** (their classes by `coachId`, their own staff record, never
   `students/{id}/private`): a query the rules would refuse fails whole (`src/features/data/hooks.ts`).
-- **A family's queries ask for one student at a time** (`where("studentId", "==", id)`, for each linked student), never
-  staff records, evaluations or the Drive: the coach's name comes from the class itself (`src/features/family/data.ts`).
+- **A family's queries ask for one student at a time** (`where("studentId", "==", id)`, for each linked student:
+  classes, scores, shared reports), never staff records or the Drive's lists: the coach's name comes from the class
+  itself, and a score's file is read by its ID, which the rules allow only for a score's own file in their child's
+  folder (`src/features/family/data.ts`). The family's screens show only their own students' records, whatever the
+  phone's copy still holds from another account.
 - **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). A new
   permission means new questions from both stores (docs/publishing.md).

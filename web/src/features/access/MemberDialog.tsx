@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { LuPlus } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { isReservedEmail } from '@shared/brand'
 import { emailKey } from '@shared/paths'
@@ -117,6 +118,15 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     })),
   ]
   const studentOptions = students.map((s) => ({ value: s.id, label: s.name, hint: s.grade ? gradeLabel(s.grade) : undefined }))
+  // The children a parent's request names ("Ava Patel, Ben Patel") that match a student's full name, offered to add with
+  // one click: the admin still chooses, as a parent's access to a child's records is theirs to grant.
+  const requested = useMemo(() => {
+    const names = (request?.studentNames ?? '')
+      .split(/,|;|\n|&|\band\b/i)
+      .map((n) => n.trim().toLowerCase().replace(/\s+/g, ' '))
+      .filter(Boolean)
+    return students.filter((st) => names.includes(st.nameLower))
+  }, [request?.studentNames, students])
   const staffRole = isStaffRole(role)
   // A new employee record is asked for its hourly rate, so payroll never prices their time at $0.
   const newStaff = staffRole && staffId === 'new'
@@ -278,6 +288,18 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
                   />
                   {request?.studentNames ? (
                     <FieldDescription>From the request: “{request.studentNames}”</FieldDescription>
+                  ) : null}
+                  {requested.some((st) => !studentIds.includes(st.id)) ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {requested
+                        .filter((st) => !studentIds.includes(st.id))
+                        .map((st) => (
+                          <Button key={st.id} type="button" variant="outline" size="xs" onClick={() => setStudentIds((ids) => [...ids, st.id])} data-testid="add-requested-child">
+                            <LuPlus /> Add {st.name}
+                            {st.grade ? <span className="text-muted-foreground">· {gradeLabel(st.grade)}</span> : null}
+                          </Button>
+                        ))}
+                    </div>
                   ) : null}
                 </Field>
               ) : null}

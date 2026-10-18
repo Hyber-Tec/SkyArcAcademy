@@ -7,6 +7,7 @@ import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { TimeSelect } from '@/components/app/TimeSelect'
 import { DatePicker } from '@/components/app/DatePicker'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -28,6 +29,7 @@ export type EventDialogState =
 const LETTERS: Record<Weekday, string> = { sunday: 'S', monday: 'M', tuesday: 'T', wednesday: 'W', thursday: 'T', friday: 'F', saturday: 'S' }
 
 export function EventDialog({ state, onClose, ctx }: { state: EventDialogState; onClose: () => void; ctx: ScheduleCtx }) {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const { settings } = useBranch()
   const [preset, setPreset] = useState('none')
   const [name, setName] = useState('')
@@ -263,7 +265,13 @@ export function EventDialog({ state, onClose, ctx }: { state: EventDialogState; 
             <Button
               variant="destructive"
               onClick={async () => {
-                if (!window.confirm(existing.recurrence ? 'Delete this recurring event? The entire series is removed.' : 'Delete this event?')) return
+                const ok = await confirm({
+                  title: existing.recurrence ? 'Delete this recurring event?' : 'Delete this event?',
+                  description: existing.recurrence ? 'The whole series is removed.' : undefined,
+                  confirmLabel: 'Delete',
+                  destructive: true,
+                })
+                if (!ok) return
                 await deleteEvent(ctx, existing)
                 toast.success('Event deleted')
                 onClose()
@@ -284,6 +292,7 @@ export function EventDialog({ state, onClose, ctx }: { state: EventDialogState; 
           </div>
         </DialogFooter>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   )
 }

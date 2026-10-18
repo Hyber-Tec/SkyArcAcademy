@@ -10,7 +10,7 @@ import { AcademyContact, DocList, DocSection, PublicDoc } from './publicDoc'
  * details come from its public profile (Settings → Academy). Set `EFFECTIVE` when the academy approves it
  * (docs/DEPLOY.md, launch); until then the page says it's a draft.
  */
-const UPDATED: DateKey = '2026-10-17'
+const UPDATED: DateKey = '2026-10-18'
 const EFFECTIVE: DateKey | null = null
 
 export function PrivacyPage() {
@@ -95,8 +95,8 @@ export function PrivacyPage() {
       <DocSection title="Who can see it">
         <DocList
           items={[
-            'Parents and guardians see only their own children’s information.',
-            'Students with their own login see only their own information.',
+            'Parents and guardians see only their own children’s information: their classes, their scores (with the result each came from) and the progress reports the academy shares.',
+            'Students with their own login see only their own information, the same way.',
             'Coaches see what they need to teach: students’ names, grades, levels, schedules and progress, and they record results. Contact details and private notes are kept to the academy’s admins.',
             'The academy’s owners and admins see what they need to run the academy. Pay information is seen only by the staff member it belongs to and the people who run payroll.',
             'Reports and results are never posted at public web addresses. They open only for people who are signed in and allowed to see them.',

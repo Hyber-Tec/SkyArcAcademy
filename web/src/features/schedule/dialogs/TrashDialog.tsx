@@ -6,6 +6,7 @@ import { COL } from '@shared/paths'
 import { formatDateKey, formatInstant, formatTimeRange } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -16,6 +17,10 @@ export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: bo
   const q = useMemo(() => (open ? query(branchCol(ctx.branchId, COL.sessions), where('isDeleted', '==', true)) : null), [open, ctx.branchId])
   const { data, loading } = useQuery<Session>(q, `trash-${ctx.branchId}`)
   const [busy, setBusy] = useState(false)
+  const { confirm, dialog: confirmDialog } = useConfirm()
+  const purgeOne = async (s: WithId<Session>) => {
+    if (await confirm({ title: 'Delete this class for good?', description: 'This can’t be undone.', confirmLabel: 'Delete for good', destructive: true })) void act(() => purgeSessions(ctx, [s]), 'Deleted permanently')
+  }
   const rows = data
     .filter((s) => !coachFilter || s.coachId === coachFilter)
     .sort((a, b) => (b.deletedAt?.toMillis?.() ?? 0) - (a.deletedAt?.toMillis?.() ?? 0))
@@ -47,7 +52,10 @@ export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: bo
               variant="destructive"
               size="sm"
               disabled={busy}
-              onClick={() => window.confirm(`Permanently delete all ${rows.length} classes in Trash? This can’t be undone.`) && void act(() => purgeSessions(ctx, rows), 'Trash emptied')}
+              onClick={async () => {
+                const ok = await confirm({ title: 'Empty the Trash?', description: `The ${rows.length === 1 ? 'class' : `${rows.length} classes`} in it are deleted for good. This can’t be undone.`, confirmLabel: 'Empty Trash', destructive: true })
+                if (ok) void act(() => purgeSessions(ctx, rows), 'Trash emptied')
+              }}
             >
               Empty Trash
             </Button>
@@ -66,7 +74,7 @@ export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: bo
                   icon: LuTrash2,
                   destructive: true,
                   separatorBefore: true,
-                  onSelect: () => window.confirm('Permanently delete this class? This can’t be undone.') && void act(() => purgeSessions(ctx, [s]), 'Deleted permanently'),
+                  onSelect: () => void purgeOne(s),
                 },
               )}
             >
@@ -91,7 +99,7 @@ export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: bo
                     variant="outline"
                     className="text-destructive"
                     disabled={busy}
-                    onClick={() => window.confirm('Permanently delete this class? This can’t be undone.') && void act(() => purgeSessions(ctx, [s]), 'Deleted permanently')}
+                    onClick={() => void purgeOne(s)}
                   >
                     Delete
                   </Button>
@@ -105,6 +113,7 @@ export function TrashDialog({ open, onOpenChange, ctx, coachFilter }: { open: bo
           {!loading && rows.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">No deleted classes.</p> : null}
         </div>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   )
 }

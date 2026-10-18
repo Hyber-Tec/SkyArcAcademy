@@ -4,9 +4,10 @@ The iPhone and Android app for Sky Arc, built with [Expo](https://expo.dev) (SDK
 HyberCRM's phone app. The **academy staff** (owners, admins and coaches) get five tabs, **Home, Schedule, Scan,
 Students and More**, each showing what the person's role may see. The website stays the main thing; the app helps the
 staff see the day and do a few things on the go, above all scanning paper targets. Parents and students get the
-**family's part**: four tabs, **Home, Classes, Reports and More**, with a parent's children's (or the student's own)
-classes and the progress reports the academy shared. It uses the same Firebase project (`skyarcacademy`), the same
-Cloud Functions and the same security rules as the website, and the business logic in `../shared`.
+**family's part**: five tabs, **Home, Classes, Scores, Reports and More**, with a parent's children's (or the student's
+own) classes, every score as the staff see it, and the progress reports the academy shared. It uses the same Firebase
+project (`skyarcacademy`), the same Cloud Functions and the same security rules as the website, and the business logic
+in `../shared`.
 
 How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-the-apps.md); publishing to the stores is
 [docs/publishing.md](../docs/publishing.md). Rules for changing the code: [AGENTS.md](AGENTS.md).
@@ -52,7 +53,8 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
   SIUS result also shows each shot as a dart, series by series, following the replay; a dart opens the shot large,
   with how far from the centre it hit and which way (`src/features/scores/ShotDarts.tsx`). A
   scanned card comes back on its picture, to change bull by bull as when it was checked; a typed card's bulls take new
-  scores; the position, the date and the note change; **Save changes** keeps them, with an audit entry
+  scores; the position, the date and the coach's note change (the note says the student and their parents see it with
+  the score); **Save changes** keeps them, with an audit entry
   (`src/features/scores/api.ts`), and **Delete this score** removes it (its file stays in the Drive). A SIUS result's
   scores stay as its PDF gives them.
 - **More:** the account, the coaches and the office with their contacts, the appearance (system, light, dark), the
@@ -61,13 +63,27 @@ How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-th
   a student themself; their data in `src/features/family/`, one query per student as the rules require):
   - **Home:** a greeting and the date; each child's next class (a parent's children in the same class share a card)
     with the coach, its status in plain words, the class's note ("Makeup for 10/15") and how soon it starts, or that
-    it's on now; the rest of this week, or next week's once this one has nothing left; the latest shared progress
-    report, "New" until someone in the family opens it; attendance over the last 30 days; and how to reach the academy
-    (its contact details from Settings → Academy, when it has given them). A parent with several children picks All or
-    one child, and the choice holds on every tab.
+    it's on now; the rest of this week, or next week's once this one has nothing left; the latest scores (each opens
+    its own screen, All scores the Scores tab); the latest shared progress report, "New" until someone in the family
+    opens it; attendance over the last 30 days; and how to reach the academy (its contact details from Settings →
+    Academy, when it has given them). A parent with several children picks All or one child, and the choice holds on
+    every tab.
   - **Classes:** what's coming (earliest first) or what's past (latest first), day by day, a few weeks more on request;
     a class opens a sheet with the coach, each child in it with their status and note, and the academy's phone and email
     for a change (families don't change classes in the app).
+  - **Scores:** every score of the child (SIUS results and paper cards), as the staff see them, read-only. For one
+    child: each position's average per 10 shots, best (with its day; a tap opens it) and number of results; the scores
+    over time (a tap reads a day's); and where the shots land, a position's latest results played back together on one
+    target, with each shot's score. Then every result, newest first, month by month: its shots on a small target in
+    the position's colour (a typed card's pencil), SIUS or paper, the day, the score per 10 shots in whole numbers with
+    a SIUS result's decimal beside it, "New best" on each that beat every earlier one in its position
+    (`@shared/shooting/progress`, as on the website) and a mark when the coach left a note. With All, each child's
+    figures and chart, then everyone's results with their names. A result opens its own screen (`score/[id]`): its
+    total and group, its shots played back as it opens, the coach's note, how it compares (in calm words) with the
+    child's average in the position, the result before it and the best so far, a SIUS result's shots series by series
+    (a dart opens a shot large), a scanned card on its picture with each bull's score (pinch or double-tap to zoom) or
+    a typed card's scores, and the original, the SIUS result's PDF or the card's photo, full screen (`file/[id]`,
+    through the Storage rules); one that's been removed says so.
   - **Reports:** the shared reports, newest first. A report opens on its own screen, as the website shows it to
     families (its options decide what shows): the period's figures, how the scores went, the coach's words, the scores
     over time (a tap reads a date's scores), the period's shots played back on the target result after result (the
@@ -189,9 +205,11 @@ emulator, against the practice copy:
 - `scan.yaml` (iPhone only for now): a made-up card that `npm run phone:test` draws (`scripts/practice-card.ts`, all
   tens) and puts in the simulator's Photos first, chosen in Scan, read, checked up close and saved for a sample student
   as a prone card. It adds that paper result and the card's copy to the practice copy.
-- `family.yaml`: signs out, in as the sample parent (two children), then Home (the child switcher, a class's sheet),
-  Classes (upcoming and past), Reports (a report with its shots played back) and More (the delete-account dialog,
-  opened and canceled), and back in as the owner. It changes nothing but the report's "Viewed".
+- `family.yaml`: signs out, in as the sample parent (two children), then Home (the child switcher, a class's sheet, the
+  latest scores and All scores), Classes (upcoming and past), Scores (each child's figures, one child's, a result with
+  its shots played back and its original opened and closed), Reports (a report with its shots played back) and More
+  (the delete-account dialog, opened and canceled), and back in as the owner. It changes nothing but the report's
+  "Viewed".
 - `screenshots/tab.yaml`: opens the tab `TAB` for the stores' screenshots (`npm run publish:screenshots`).
 - `steps/`: steps the flows run, not tests of their own: `tab.yaml` opens a tab (`TAB` and its name `LABEL`),
   `family-tab.yaml` one of the family's, `back.yaml` goes back a page.

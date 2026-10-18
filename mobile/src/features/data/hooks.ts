@@ -3,7 +3,7 @@ import { dayHours } from "@shared/availability";
 import type { DriveFile } from "@shared/drive/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type DateKey, nowMinutes, todayKey } from "@shared/time";
+import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
 import type { DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
 import { useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
@@ -129,6 +129,18 @@ export function useStudentEvaluations(studentId: string | null) {
   const state = useQuery<Evaluation>(studentId ? `evaluations-${branchId}-${studentId}` : null, () => query(col(branchId, COL.evaluations), where("studentId", "==", studentId)));
   const data = useMemo(() => state.data.slice().sort((a, b) => b.dateKey.localeCompare(a.dateKey) || (b.timeMin ?? 0) - (a.timeMin ?? 0) || a.id.localeCompare(b.id)), [state.data]);
   return { ...state, data };
+}
+
+/** The newest scores across the academy (staff): those of the last `days` days up to `today`, newest first. */
+export function useRecentEvaluations(today: DateKey, days = 14) {
+  const { branchId } = useBranch();
+  const from = addDays(today, -(days - 1));
+  const state = useQuery<Evaluation>(`recent-evaluations-${branchId}-${from}`, () => query(col(branchId, COL.evaluations), where("dateKey", ">=", from)));
+  const data = useMemo(
+    () => state.data.filter((e) => e.shots > 0).sort((a, b) => b.dateKey.localeCompare(a.dateKey) || (b.timeMin ?? 0) - (a.timeMin ?? 0) || a.id.localeCompare(b.id)),
+    [state.data],
+  );
+  return { ...state, data, days };
 }
 
 /** One scored target (a SIUS result or a paper card). */

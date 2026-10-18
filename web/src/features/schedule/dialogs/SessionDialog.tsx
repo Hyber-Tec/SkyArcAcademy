@@ -18,6 +18,7 @@ import { TimeSelect } from '@/components/app/TimeSelect'
 import { DatePicker } from '@/components/app/DatePicker'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -53,6 +54,7 @@ export function SessionDialog({
   /** Why the session being edited may not happen as booked. */
   conflicts?: Conflict[]
 }) {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const { branchId, settings, rules } = useBranch()
   const [form, setForm] = useState<SessionDraft | null>(null)
   const [busy, setBusy] = useState(false)
@@ -294,7 +296,7 @@ export function SessionDialog({
               <Button
                 variant="destructive"
                 onClick={async () => {
-                  if (!window.confirm('Delete this class?')) return
+                  if (!(await confirm({ title: 'Delete this class?', description: 'It goes to the Trash, where you can restore it.', confirmLabel: 'Delete', destructive: true }))) return
                   await onDelete(existing)
                   onClose()
                 }}
@@ -315,6 +317,7 @@ export function SessionDialog({
           </div>
         </DialogFooter>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   )
 }

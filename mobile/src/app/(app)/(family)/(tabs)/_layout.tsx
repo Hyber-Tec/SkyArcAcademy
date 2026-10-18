@@ -2,8 +2,9 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useColors } from "@/theme";
 
 /**
- * The family's four tabs, as the website's family portal (owner, 2026-10-17: Home first, then Classes, Reports and
- * More): a house, a calendar, a chart and three dots, with every tab's name on Android too.
+ * The family's five tabs, as the website's family portal (owner, 2026-10-17: Home first, then Classes, Reports and
+ * More; 2026-10-18: every score, not only the reports): a house, a calendar, a target, a chart and three dots, with
+ * every tab's name on Android too.
  */
 export default function FamilyTabs() {
   const colors = useColors();
@@ -16,6 +17,10 @@ export default function FamilyTabs() {
       <NativeTabs.Trigger name="classes" testID="family-tab-classes">
         <NativeTabs.Trigger.Label>Classes</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "calendar", selected: "calendar" }} md="calendar_month" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="scores" testID="family-tab-scores">
+        <NativeTabs.Trigger.Label>Scores</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: "target", selected: "target" }} md="track_changes" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="reports" testID="family-tab-reports">
         <NativeTabs.Trigger.Label>Reports</NativeTabs.Trigger.Label>

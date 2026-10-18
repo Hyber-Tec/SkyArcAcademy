@@ -6,7 +6,7 @@ import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
@@ -58,6 +58,7 @@ export function SiusEditDialog({ evaluation: e, onClose }: { evaluation: WithId<
           <Field>
             <FieldLabel htmlFor="sius-note">Coach’s note</FieldLabel>
             <Textarea id="sius-note" value={note} maxLength={2000} rows={3} onChange={(ev) => setNote(ev.target.value)} placeholder="Anything worth remembering about this result." />
+            <FieldDescription>The student and their parents see this note with the score.</FieldDescription>
           </Field>
         </FieldGroup>
         <DialogFooter>

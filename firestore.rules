@@ -78,6 +78,12 @@ service cloud.firestore {
       return member(b).get('studentIds', []);
     }
 
+    // A parent's own children, or the student themself.
+    function isFamilyOf(b, studentId) {
+      return (hasRole(b, 'parent') && studentId in myStudentIds(b))
+        || (hasRole(b, 'student') && studentId == myStudentId(b));
+    }
+
     // -------------------------------------------------------------- helpers
 
     function changed() {
@@ -404,7 +410,9 @@ service cloud.firestore {
       // The Drive (shared/src/drive/types.ts): one folder per student at the top, plus any folders staff make.
       // Staff (admins and coaches alike: coaches scan cards and add results too, the owner's call of 2026-10-17) open
       // it, add, rename, move and trash. Only admins empty the Trash; anyone on staff clears a failed upload. Families
-      // never see it.
+      // never browse it: they read only a score's file in their own child's folder (a SIUS result's PDF, a paper card's
+      // picture), out of the Trash, as storage.rules lets them read its bytes. A file stops being a score's file
+      // (`evaluationId` cleared) when the score is deleted or the file moves to another student.
       function byMe(actor) {
         return actor is map && actor.email == emailKey();
       }
@@ -444,7 +452,12 @@ service cloud.firestore {
       }
 
       match /driveFiles/{fileId} {
-        allow read: if isStaff(b);
+        function familyResult(d) {
+          return d.get('evaluationId', null) is string && d.get('trashed', false) == false && d.status == 'ready'
+            && d.get('studentId', null) is string && isFamilyOf(b, d.studentId);
+        }
+
+        allow read: if isStaff(b) || familyResult(resource.data);
         // The record comes first (status uploading), then the bytes (storage.rules checks the record).
         allow create: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.status == 'uploading'
@@ -462,7 +475,8 @@ service cloud.firestore {
       // ------------------------------------------------------ scores and reports
 
       // Evaluations: one scored target each (a SIUS result or a paper card). Staff (admins and coaches) read, add,
-      // correct and delete them, each change in the audit log.
+      // correct and delete them, each change in the audit log. Families read their own children's (the owner,
+      // 2026-10-17: every score, not only the reports), one student at a time.
       match /evaluations/{evaluationId} {
         function validEvaluation(d) {
           return d.studentId is string && d.studentName is string
@@ -475,7 +489,7 @@ service cloud.firestore {
             && d.note is string && d.note.size() <= 2000;
         }
 
-        allow read: if isStaff(b);
+        allow read: if isStaff(b) || isFamilyOf(b, resource.data.studentId);
         allow create, update: if isStaff(b) && validEvaluation(request.resource.data);
         allow delete: if isStaff(b);
       }
