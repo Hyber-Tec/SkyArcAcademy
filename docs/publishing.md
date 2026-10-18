@@ -17,8 +17,9 @@ and [What Apple and Google will check](#what-apple-and-google-will-check).
 **Done:**
 - **Who uses the app**: the academy's owners, admins and coaches, with the same five tabs (Home, Schedule, Scan,
   Students, More). A coach sees their own classes and every student without the families' contact details, scans cards,
-  and corrects or deletes scores. Parents and students who sign in get the family's four tabs (Home, Classes, Reports,
-  More): their children's or their own classes, and the progress reports the academy shared.
+  and corrects or deletes scores. Parents and students who sign in get the family's five tabs (Home, Classes, Scores,
+  Reports, More): their children's or their own classes, every score (read-only, with the result it came from), and the
+  progress reports the academy shared.
 - **Firebase**: the iPhone app (`1:1025403274020:ios:e9806988e82e53cb6ae9b1`) and the Android app
   (`1:1025403274020:android:bbcc3273a22750b66ae9b1`) are registered in the skyarcacademy project, the Android one with
   the standard debug key's SHA-1 and SHA-256, so Google sign-in works in builds made on a Mac. Their files go in

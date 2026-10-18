@@ -28,8 +28,8 @@ for later.
 
 An **owner**, an **admin** or a **coach** who signs in gets the staff's five tabs (Home, Schedule, Scan, Students,
 More); a coach sees their own classes, every student without the family's contacts, and can
-scan cards and change scores. A **parent** or a **student** who signs in gets the family's four tabs (Home, Classes,
-Reports, More): a parent their children's classes and shared progress reports, a student their own. An email the
+scan cards and change scores. A **parent** or a **student** who signs in gets the family's five tabs (Home, Classes,
+Scores, Reports, More): a parent their children's classes, scores and shared progress reports, a student their own. An email the
 academy hasn't added sees "No access yet".
 
 On the **real Sky Arc**, sign in as yourself: with **Google** (the account you use on the website), or the email and

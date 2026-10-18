@@ -348,4 +348,31 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   the app or on the website in the iPhone Simulator, typed key by key on the on-screen keyboard, with the English and
   the Korean keyboards. The app doesn't change the keyboard; iPhone users report the same in other apps' password
   fields, where iOS picks the keyboard itself (Apple's English one; never a third-party one). Which keyboard the owner
-  uses is a question for them; meanwhile the eye that shows the password lets their usual keyboard type it.
+  uses is a question for them; meanwhile the eye that shows the password lets their usual keyboard type it. (The owner,
+  2026-10-18: it didn't happen again; maybe it was a glitch.)
+
+## 15. Families see every score (2026-10-18)
+
+- **Parents and students see every score, not only the reports** ("reports ... you probably going to have one or two
+  ... but you're going to have a bunch of score"), on the website and in the phone app: each SIUS result and paper card
+  as staff see it, read-only: the shots played back on the target, the series, the scores over time, personal bests,
+  and the file the score came from (the SIUS result's PDF, the paper card's picture). A **Scores** page on the website
+  and a Scores tab in the app sit between Classes and Reports, and Home shows the latest scores. A result that beat
+  every earlier one in its position is marked **"New best"**, for staff as for families. Until now families saw results
+  only in the reports the academy shares (§6 Q11, which still holds for reports); the Drive itself stays staff-only.
+- **The coach's note on a score is the family's to read too**, as a class's note already is; the forms say so.
+- **Within the rules**: a family reads its own children's scores, one student at a time, and only the files those
+  scores came from (a score's file in the child's folder, out of the Trash), never the rest of the Drive. A score's
+  file stops being one when the score is deleted or the file moves to another student. Storage rules may read only two
+  documents per request, so the file's own record carries what the rule needs. A family can read the whole record of
+  its own child's score (the rules can't hide a field): that includes the PDF reader's notes (a series that doesn't add
+  up) and which staff email added it, which the pages don't show; never anything about another student.
+- **The rest is unchanged**: staff add, correct and delete scores; reports stay the academy's summaries to share.
+- **Staff see the latest scores on Home** (owners, admins and coaches, on the website and in the app): the newest
+  results of the last two weeks across the academy, each with its target in small, opening that result.
+- **Signing out of the phone app forgets the files it downloaded** (SIUS PDFs, card photos), and the family's screens
+  show only their own students' records, so whoever signs in next on a shared phone never sees the last person's.
+- **Confirmations are the app's own dialogs**, never the browser's pop-up (deleting a class, emptying the Trash,
+  removing a kiosk PIN, leaving kiosk mode and the rest), with words that say what will happen.
+- **Approving a parent's request** offers the children the request names, when a student has that exact name, as one
+  click to add (the admin still chooses: a parent's access to a child's records is theirs to grant).
