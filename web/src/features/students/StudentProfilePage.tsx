@@ -111,9 +111,10 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
           onNewSession={() => newSession()}
           onOpenSession={openSession}
         />
-        <div className="min-w-0">
-          {/* Phones: the four tabs share the width, without icons, so none is cut off. */}
-          <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-flex" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} role="tablist" aria-label="Student">
+        <div className="@container min-w-0">
+          {/* A narrow column (a phone, or a tablet beside the student's card): the tabs share the width, without icons, so
+              none is cut off. */}
+          <div className="grid gap-1 rounded-xl bg-muted p-1 @lg:inline-flex" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} role="tablist" aria-label="Student">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -122,11 +123,11 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
                 aria-selected={active === t.key}
                 onClick={() => go(t.key)}
                 className={cn(
-                  'inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-lg px-1 text-sm font-medium whitespace-nowrap transition sm:shrink-0 sm:px-3.5 [&_svg]:size-4',
+                  'inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-lg px-1 text-sm font-medium whitespace-nowrap transition @lg:shrink-0 @lg:px-3.5 [&_svg]:size-4',
                   active === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <t.icon className="hidden sm:block" />
+                <t.icon className="hidden @lg:block" />
                 {t.label}
               </button>
             ))}

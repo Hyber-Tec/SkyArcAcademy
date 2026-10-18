@@ -48,7 +48,7 @@ export function NoBranchAccess() {
       description={
         <>
           You’re signed in as {account}, which {name} hasn’t given access. If the academy invited you, sign in with the
-          address the invitation was sent to.
+          address the invitation was sent to. Once the academy adds this address, this page opens by itself.
         </>
       }
       actions={[otherAccount, ...(signupOpen(profile) ? [{ label: 'Request access', to: '/join' }] : [])]}

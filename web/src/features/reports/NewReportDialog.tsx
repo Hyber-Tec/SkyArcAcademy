@@ -8,7 +8,7 @@ import { studentLabel } from '@shared/people'
 import { PRESET_LABELS, periodLabel, presetPeriod } from '@shared/reports/period'
 import type { ReportPreset } from '@shared/reports/types'
 import { POSITIONS, POSITION_LABELS } from '@shared/shooting/evaluation'
-import { type DateKey, formatDateKey, todayKey } from '@shared/time'
+import { type DateKey, addDays, formatDateKey, todayKey } from '@shared/time'
 import type { Session } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { DatePicker } from '@/components/app/DatePicker'
@@ -28,6 +28,13 @@ import { type Report, errorMessage } from './model'
  * Reports → New report: pick a student and a period, see what the report will cover, and create a draft from the
  * student's evaluations and classes. The draft opens for review before anyone shares it.
  */
+/** The latest day with a scored result, or null. */
+function lastScoredDay(evaluations: readonly { dateKey: DateKey; shots: number }[]): DateKey | null {
+  let last: DateKey | null = null
+  for (const e of evaluations) if (e.shots > 0 && (!last || e.dateKey > last)) last = e.dateKey
+  return last
+}
+
 export function NewReportDialog({
   open,
   onOpenChange,
@@ -71,6 +78,10 @@ export function NewReportDialog({
   const attended = sessions.data.filter((s) => !s.isDeleted && s.status === 'present').length
   const byPosition = POSITIONS.map((p) => ({ p, n: inPeriod.filter((e) => e.position === p).length })).filter((x) => x.n)
   const ready = !!student && !evalsLoading && inPeriod.length > 0
+  // When the period has none: the student's last scored result, to offer a period that reaches it.
+  const lastScored = lastScoredDay(evaluations)
+  // (A day of its own: a helper given `today` would make the compiler distrust the period, which is built from it.)
+  const reach90 = lastScored !== null && lastScored >= addDays(todayKey(timezone), -89)
 
   const close = (o: boolean) => {
     onOpenChange(o)
@@ -171,14 +182,32 @@ export function NewReportDialog({
             ) : (
               <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
                 <LuCircleAlert className="mt-0.5 size-4 shrink-0" />
-                <span>
-                  No scored evaluations in this period.
-                  {preset !== 'last_90' ? (
-                    <button type="button" className="ml-1 font-medium underline underline-offset-2" onClick={() => setChosen('last_90')}>
-                      Use the last 90 days
-                    </button>
-                  ) : null}
-                </span>
+                {!lastScored ? (
+                  <span>
+                    {student?.firstName || 'This student'} has no scores yet. A report needs at least one: add paper scores on their page, or drop a SIUS
+                    result in their Drive folder.
+                  </span>
+                ) : (
+                  <span>
+                    No scored evaluations in this period.
+                    {preset !== 'last_90' && reach90 ? (
+                      <button type="button" className="ml-1 font-medium underline underline-offset-2" onClick={() => setChosen('last_90')}>
+                        Use the last 90 days
+                      </button>
+                    ) : !reach90 ? (
+                      <button
+                        type="button"
+                        className="ml-1 font-medium underline underline-offset-2"
+                        onClick={() => {
+                          setCustom({ from: lastScored, to: today })
+                          setChosen('custom')
+                        }}
+                      >
+                        Start it on {formatDateKey(lastScored, 'monthDay')}, their last score
+                      </button>
+                    ) : null}
+                  </span>
+                )}
               </div>
             )}
           </div>

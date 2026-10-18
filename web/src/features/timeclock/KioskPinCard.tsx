@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import type { Staff, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { Badge } from '@/components/ui/badge'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ const setKioskPin = httpsCallable<{ branchId: string; staffId: string; pin: stri
 
 /** Admin sets or removes an employee's kiosk PIN (hashed and checked for uniqueness on the server). */
 export function KioskPinCard({ staff }: { staff: WithId<Staff> }) {
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const { branchId, settings } = useBranch()
   const len = settings.timeClock.kiosk.pinLength
   const [pin, setPin] = useState('')
@@ -54,11 +56,12 @@ export function KioskPinCard({ staff }: { staff: WithId<Staff> }) {
           {busy ? <Spinner /> : null} {staff.hasKioskPin ? 'Change PIN' : 'Set PIN'}
         </Button>
         {staff.hasKioskPin ? (
-          <Button variant="ghost" disabled={busy} onClick={() => window.confirm('Remove this kiosk PIN?') && void save(null)}>
+          <Button variant="ghost" disabled={busy} onClick={async () => (await confirm({ title: 'Remove this kiosk PIN?', description: `${staff.name} can’t clock in at the kiosk until a new one is set.`, confirmLabel: 'Remove', destructive: true })) && void save(null)}>
             Remove
           </Button>
         ) : null}
       </CardContent>
+      {confirmDialog}
     </Card>
   )
 }

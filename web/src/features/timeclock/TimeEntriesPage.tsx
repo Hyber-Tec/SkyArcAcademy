@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { type DateKey, formatDateKey, formatDuration, formatInstantTime } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { useConfirm } from '@/components/app/useConfirm'
 import { OptionPicker } from '@/components/app/OptionPicker'
 import { PageHeader } from '@/components/app/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -23,6 +24,11 @@ const SOURCE_LABEL: Record<ClockShift['source'], string> = { kiosk: 'Kiosk', adm
 
 /** Worked times (TE "Log Hours" + the Payroll page's edit/delete): add, fix and remove shifts. */
 export function TimeEntriesPage() {
+  const { confirm, dialog: confirmDialog } = useConfirm()
+  const removeShift = async (s: Parameters<typeof deleteShift>[2]) => {
+    if (await confirm({ title: 'Delete this time entry?', description: `${s.staffName}’s entry of ${formatDateKey(s.dateKey, 'weekdayMedium')}.`, confirmLabel: 'Delete', destructive: true }))
+      void deleteShift(branchId, actor, s).then(() => toast.success('Deleted'))
+  }
   const { branchId, actor, timezone } = useBranch()
   const navigate = useNavigate()
   const { data: staff } = useStaffList()
@@ -88,7 +94,7 @@ export function TimeEntriesPage() {
                     icon: LuTrash2,
                     destructive: true,
                     disabled: locked(s.dateKey),
-                    onSelect: () => window.confirm('Delete this time entry?') && void deleteShift(branchId, actor, s).then(() => toast.success('Deleted')),
+                    onSelect: () => void removeShift(s),
                   },
                   { label: 'Open employee profile', icon: LuUserRound, separatorBefore: true, onSelect: () => navigate(`/admin/employees/directory/${s.staffId}`) },
                   { label: 'Clock in/out calendar', icon: LuCalendarClock, onSelect: () => navigate(`/admin/employees/calendar?staff=${s.staffId}&mode=clock`) },
@@ -131,7 +137,7 @@ export function TimeEntriesPage() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label="Delete"
-                          onClick={() => window.confirm('Delete this time entry?') && void deleteShift(branchId, actor, s).then(() => toast.success('Deleted'))}
+                          onClick={() => void removeShift(s)}
                         >
                           <LuTrash2 />
                         </Button>
@@ -152,6 +158,7 @@ export function TimeEntriesPage() {
         </Table>
       </Card>
       <ShiftDialog state={dialog} onClose={() => setDialog(null)} staff={staff.map((s) => ({ id: s.id, name: s.name }))} isLocked={locked} defaultStaff={staffId} />
+      {confirmDialog}
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { COL } from '@shared/paths'
 import { type DateKey, type Weekday, WEEKDAY_SHORT, addDays, formatDateKey, orderedWeekdays, startOfWeek, weekDays, weekdayOf } from '@shared/time'
 import type { DayConfig, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -41,6 +42,7 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
   const [to, setTo] = useState(addDays(startOfWeek(anchor, weekStartsOn), 7))
   const [selected, setSelected] = useState<Weekday[]>([])
   const [busy, setBusy] = useState(false)
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   useEffect(() => {
     if (!open) return
@@ -55,7 +57,12 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
   async function run() {
     const targetDays = weekDays(to, weekStartsOn)
     const label = `${formatDateKey(startOfWeek(from, weekStartsOn), 'monthDay')} → ${formatDateKey(targetDays[0], 'monthDay')}`
-    if (!window.confirm(`Duplicate ${selected.length} day${selected.length > 1 ? 's' : ''} (${label})? Classes already on those days in the target week move to Trash.`)) return
+    const ok = await confirm({
+      title: `Duplicate ${selected.length} day${selected.length > 1 ? 's' : ''}?`,
+      description: `${label}. Classes already on those days in the target week move to the Trash.`,
+      confirmLabel: 'Duplicate',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       const srcDays = weekDays(from, weekStartsOn)
@@ -140,6 +147,7 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
           </Button>
         </DialogFooter>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   )
 }

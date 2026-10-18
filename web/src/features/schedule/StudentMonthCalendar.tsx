@@ -127,7 +127,8 @@ export function StudentMonthCalendar({
                       past && 'opacity-70',
                       highlightSessionId === s.id && 'outline-1 outline-foreground outline-dashed',
                     )}
-                    style={{ backgroundColor: st.bg, borderColor: st.border, color: st.text, borderLeft: s.note ? '3px solid #335586' : undefined }}
+                    // Longhands only: a `borderLeft` shorthand next to `borderColor` leaves the wrong colour after a status change.
+                    style={{ backgroundColor: st.bg, borderColor: st.border, color: st.text, ...(s.note ? { borderLeftWidth: 3, borderLeftColor: '#335586' } : null) }}
                     title={`${s.coachName}${s.note ? `\nNote: ${s.note}` : ''}`}
                   >
                     {compact ? (
