@@ -376,3 +376,15 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   removing a kiosk PIN, leaving kiosk mode and the rest), with words that say what will happen.
 - **Approving a parent's request** offers the children the request names, when a student has that exact name, as one
   click to add (the admin still chooses: a parent's access to a child's records is theirs to grant).
+
+## 16. The academy's news for families (2026-10-18)
+
+- **An announcement can be shown to families too** (the owner's open question, built to try: "if there's something I
+  don't like I'm going to tell you to delete"): a "Families too" switch in the editor, off unless the admin turns it on.
+  Parents and students see those posts on their Home and a News page (the website) or screen (the app), marked "New"
+  until they open them; archived posts leave their view. Comments stay with staff: families neither read nor write them.
+  Families aren't notified yet (they have no inbox on the website, and push isn't on); the "New" mark is the signal.
+- **Within the rules**: a family lists only posts shown to families and not archived (the query must ask for both), and
+  writes only its own read receipt. A family reads a score's file record one at a time by its ID, never as a list (a
+  query could have left the Trash check unasked; found while writing these rules).
+

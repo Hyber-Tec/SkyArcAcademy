@@ -26,7 +26,8 @@ From the App Store check of 2026-10-17 (`docs/publishing.md`, "Apple's checklist
 
 - Should coaches see every class (other coaches' too, and a student's classes with other coaches), or only their own
   (today's rule)?
-- Should families get the academy's announcements (news, closed days)? Today announcements reach staff only.
+- Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
+  Should families also be notified (email, or the phone app's push once it's on)?
 
 ## Later: agreed, not now
 
