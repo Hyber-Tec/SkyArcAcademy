@@ -1,6 +1,7 @@
-# A coach's app: the same five tabs as the office's, with what a coach may see. Home counts their hours, Students lists
-# every student, a student's page has no family contacts, and More has no list of coaches. Signs in as the sample coach
-# (same practice password), then back in as the owner the other flows expect.
+# A coach's app: Home, Schedule, Availability, Scan and More (Students first in More), with what a coach may see. Home
+# counts their hours; Availability takes a day through every state (not available, cleared, times, cleared); Students
+# lists every student, a student's page has no family contacts, and More has no list of coaches. Signs in as the sample coach (same
+# practice password), then back in as the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
 #   maestro test -e EMAIL=owner@example.test -e PASSWORD=… maestro/coach.yaml
 appId: com.skyarcacademy.app
@@ -28,12 +29,66 @@ appId: com.skyarcacademy.app
       id: "today-stats"
     timeout: 30000
 - assertVisible: "hours?"
-# Students: everyone, as for the office.
+# Availability: a Tuesday 9 to 15 days ahead (unlocked, inside the notice window; the sample coach doesn't work
+# Tuesdays, so it's unset and has no classes). Not available, cleared, available from its opening hours, cleared: every
+# state, and back to the sample data as it was.
 - runFlow:
     file: steps/tab.yaml
     env:
-      TAB: students
-      LABEL: Students
+      TAB: availability
+      LABEL: Availability
+- extendedWaitUntil:
+    visible:
+      id: "availability-calendar"
+    timeout: 30000
+- evalScript: "${output.day = (function () { var d = new Date(Date.now() + 9 * 86400000); while (d.getDay() !== 2) d = new Date(d.getTime() + 86400000); var m = d.getMonth() + 1, n = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (n < 10 ? '0' : '') + n; })()}"
+# The day opens by its link, as Home's to-do opens it: its sheet.
+- runFlow:
+    file: steps/availability-day.yaml
+- tapOn:
+    id: "availability-mode-off"
+- assertVisible:
+    id: "availability-off-note"
+- tapOn:
+    id: "availability-save"
+# (Already marked from an earlier run, it closes without a message: nothing changed.)
+- extendedWaitUntil:
+    notVisible:
+      id: "availability-mode"
+    timeout: 15000
+- runFlow:
+    file: steps/availability-day.yaml
+- assertVisible:
+    id: "availability-off-note"
+- tapOn:
+    id: "availability-remove"
+- extendedWaitUntil:
+    visible: "Day cleared"
+    timeout: 15000
+- runFlow:
+    file: steps/availability-day.yaml
+- assertVisible:
+    id: "start"
+- tapOn:
+    id: "availability-save"
+- extendedWaitUntil:
+    visible: "Availability saved"
+    timeout: 15000
+- runFlow:
+    file: steps/availability-day.yaml
+- tapOn:
+    id: "availability-remove"
+- extendedWaitUntil:
+    visible: "Day cleared"
+    timeout: 15000
+# Students, from More: everyone, as for the office.
+- runFlow:
+    file: steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- tapOn:
+    id: "more-students"
 - extendedWaitUntil:
     visible:
       id: "students-filter-all"
@@ -49,12 +104,9 @@ appId: com.skyarcacademy.app
     id: "student-family"
 - runFlow:
     file: steps/back.yaml
-# More: no coaches' list (the office's), then signing out.
 - runFlow:
-    file: steps/tab.yaml
-    env:
-      TAB: more
-      LABEL: More
+    file: steps/back.yaml
+# More: no coaches' list (the office's), then signing out.
 - assertNotVisible:
     id: "more-coaches"
 - scrollUntilVisible:

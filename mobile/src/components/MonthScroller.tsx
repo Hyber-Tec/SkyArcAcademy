@@ -32,8 +32,8 @@ export interface MonthScrollerProps {
   /** How far back (a far jump only) and ahead the calendar goes at most, in months (defaults 120 and 60). */
   maxMonthsBefore?: number;
   maxMonthsAfter?: number;
-  /** `full`: bordered cells (availability). `compact`: small days without lines (date pickers). */
-  variant?: "full" | "compact";
+  /** `full`: bordered cells. `clean`: the full month titles without lines (the coach's availability). `compact`: small days without lines (date pickers). */
+  variant?: "full" | "clean" | "compact";
   /** First and last day of the months on screen, for loading their data. */
   onVisibleRangeChange?: (from: DateKey, to: DateKey) => void;
   /** Month title; defaults to "October 2026" with the year muted. */
@@ -44,8 +44,8 @@ export interface MonthScrollerProps {
 }
 
 const STEP = 6;
-const TITLE_HEIGHT = { full: 52, compact: 36 } as const;
-const MONTH_GAP = { full: 12, compact: 8 } as const;
+const TITLE_HEIGHT = { full: 52, clean: 56, compact: 36 } as const;
+const MONTH_GAP = { full: 12, clean: 16, compact: 8 } as const;
 
 /** Weeks a month spans, from its first day's weekday. */
 function weeksIn(month: DateKey, weekStartsOn: Weekday): number {
@@ -209,7 +209,7 @@ interface MonthBlockProps {
   titleHeight: number;
   gap: number;
   inset: number;
-  variant: "full" | "compact";
+  variant: "full" | "clean" | "compact";
   signature: string;
   renderDay: MonthScrollerProps["renderDay"];
   title?: ReactNode;
@@ -229,7 +229,7 @@ const MonthBlock = memo(
     return (
       <View style={{ paddingHorizontal: inset, paddingBottom: gap }} testID={`month-${month.slice(0, 7)}`}>
         <View style={[styles.title, { height: titleHeight }]} accessibilityRole="header">
-          {title ?? <MonthTitle month={month} compact={!full} />}
+          {title ?? <MonthTitle month={month} compact={variant === "compact"} />}
         </View>
         {weeks.map((week, w) => (
           <View key={w} style={styles.week}>

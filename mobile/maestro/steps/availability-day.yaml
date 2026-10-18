@@ -1,0 +1,14 @@
+# A step the flows run (not a test of its own): opens a day of the coach's availability by its link (the day in
+# output.day, YYYY-MM-DD): its sheet, as Home's to-do opens it.
+appId: com.skyarcacademy.app
+---
+- openLink: "skyarc://availability-day?date=${output.day}"
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
+- extendedWaitUntil:
+    visible:
+      id: "availability-mode"
+    timeout: 15000
