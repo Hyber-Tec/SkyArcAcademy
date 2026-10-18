@@ -26,10 +26,11 @@ for later.
 
 ## Who is who in the app
 
-An **owner**, an **admin** or a **coach** who signs in gets the staff's five tabs (Home, Schedule, Scan, Students,
-More); a coach sees their own classes, every student without the family's contacts, and can
-scan cards and change scores. A **parent** or a **student** who signs in gets the family's five tabs (Home, Classes,
-Scores, Reports, More): a parent their children's classes, scores and shared progress reports, a student their own. An email the
+An **owner** or an **admin** who signs in gets the office's five tabs (Home, Schedule, Scan, Students, More). A **coach**
+gets Home, Schedule, Availability, Scan and More (Students is More's first row, with News, the Drive, Reports and
+Payroll): their own classes, their availability, every student without the family's contacts, scanning cards and
+changing scores. A **parent** or a **student** who signs in gets the family's five tabs (Home, Classes, Scores, Reports,
+More): a parent their children's classes, scores and shared progress reports, a student their own. An email the
 academy hasn't added sees "No access yet".
 
 On the **real Sky Arc**, sign in as yourself: with **Google** (the account you use on the website), or the email and

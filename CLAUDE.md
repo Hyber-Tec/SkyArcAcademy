@@ -65,8 +65,9 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - **Single academy.** No multi-branch or super-admin UI (see the brief for how to handle HyberCRM's branch model).
 - **Web first.** The website is the main thing; the phone app (`mobile/`, Expo, iOS first) helps the office see things
   and do a few things (owner, 2026-10-16). Its part for owners and admins came first; coaches have it too since
-  2026-10-17 (the same tabs, with what a coach may see), and parents and students have theirs since then too (Home,
-  Classes, Scores, Reports, More).
+  2026-10-17, and parents and students have theirs since then too (Home, Classes, Scores, Reports, More). **Coaches,
+  parents and students can do on the phone what they do on the website** (owner, 2026-10-18: coaches are "the main one
+  who's using the phone"); the office keeps the rest on the website.
 - **Don't design the landing page.** Homepage is a minimal placeholder (logo, Login, Book a Trial).
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
@@ -96,7 +97,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 | Path | What |
 |---|---|
 | `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports), `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
-| `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Home, Schedule, Scan, Students, More) for owners, admins and coaches, and the family's (Home, Classes, Scores, Reports, More) for parents and students. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
+| `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Home, Schedule, Scan, Students, More for owners and admins; Home, Schedule, Availability, Scan, More for coaches) and the family's (Home, Classes, Scores, Reports, More) for parents and students. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
 | `shared/` | Pure TypeScript used by the website, the functions and the phone app: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `targets/` (reading a photo of the academy's paper card: its bulls, the holes and their scores, and the review before saving; tested on made-up photos of the card), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
 | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json` | Security rules and indexes. The Realtime Database stays deny-all until a feature needs it. |
@@ -131,6 +132,8 @@ Carried over from HyberCRM, adapted to one academy:
 - **Time:** the academy's IANA time zone only, never the browser's. Wall-clock `dateKey` (`YYYY-MM-DD`) + `startMin`/`endMin`, plus absolute `startAt`/`endAt`.
 - **Audit:** every schedule, availability, people, pay and settings change writes an append-only `auditLog` entry in the same batch.
 - **Schedule UI:** keep HyberCRM's structure (coaches as rows, time across, Day / Week / Month, the side rail).
+- **Availability:** a coach's day holds times, or "not available" (an answer), or nothing (still to set). Only open days
+  with nothing set count as days to set (the reminders, Home's to-do); write through `shared/src/availabilityWrites.ts`.
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say
   what will happen.
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.

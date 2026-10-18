@@ -181,7 +181,8 @@ left alone. (Done on 2026-10-15.)
 Until the academy's real data arrives (A1–A4 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
 tried with real-looking weeks. `npm run seed:sample` adds:
 
-- a manager and four coaches with pay rates, availability and four weeks of time entries;
+- a manager and four coaches with pay rates, availability (their days off ahead marked not available, except one coach
+  who hasn't answered yet, so the days still to set show) and four weeks of time entries;
 - the students' shooting: about 100 results, most as synthetic SIUS PDFs in their Drive folders (uploaded to
   Storage), a few typed paper cards, a few scanned ones with a made-up picture of the card (to try correcting a card on
   the website), and progress reports (shared with each family that has a sign-in, and one draft);

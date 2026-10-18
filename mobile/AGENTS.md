@@ -34,8 +34,16 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        unconfirmed email → verify-email; otherwise (app)/, which reads the academy's member doc for the
                        person's email (BranchProvider) and opens the part of their one role.
   (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Home · Schedule ·
-                       Scan · Students · More, and the screens that open over them (class/[id] and coach/[id] sheets,
-                       student/[id], score/[id], file/[id], and the Scan screens)
+                       Scan · Students · More for the office, Home · Schedule · Availability · Scan · More for coaches
+                       (their Students is More's first row); More's pages (more/: students, coaches, payroll, account,
+                       notifications, security); and the screens that open over the tabs (class/[id], coach/[id] and
+                       availability-day sheets, student/[id] and student/calendar, score/[id], file/[id], news/ the
+                       academy's announcements (the list, news/[id] a post with its comments, news/attachment a post's
+                       file), inbox the person's notifications (Home's bell), drive/ the Drive (the top, drive/[id] a
+                       folder), reports/ every progress report and report/[id] one, with sharing a draft, and the Scan
+                       screens). Its layout anchors (tabs), so a link straight to one of these has the tabs beneath.
+                       Addresses the family's part also has ("/reports") are named with their group from inside a tab
+                       ("/(app)/(staff)/reports"): from there the router would pick the family's.
   (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
                        Scores · Reports · More, and what opens over them (session/[id] a class's sheet, score/[id] a
                        score to look at, file/[id] its original, report/[id] a progress report, news/ the academy's
@@ -49,15 +57,26 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        file through the Storage rules; FileView, a file full screen, the staff's and the family's), scan
                        (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
-                       MiniTarget, a list's small target), access, account (deleting an account), family (what a family
-                       reads: their students, classes, scores and shared reports, and the academy's news (news.ts); the
-                       child switcher; the class cards; a score's row, a post's row and a student's figures), reports (a
-                       progress report's figures and charts), announcements (a post's content, read from the website's
-                       editor's HTML into blocks (html.ts) and drawn with the app's own text (RichText); its dates and
-                       what it holds)
+                       CompareCard, a score side by side with another of its position; MiniTarget, a list's small
+                       target), access, account (deleting an account), family (what a family reads: their students,
+                       classes, scores and shared reports, and the academy's news (news.ts); the child switcher; the
+                       class cards; the Classes tab's months (ClassMonth), each child in their colour (tints.ts); a
+                       score's row, a post's row and a student's figures), reports (a progress report's figures and
+                       charts), announcements (a post's content, read from the website's editor's HTML into blocks
+                       (html.ts) and drawn with the app's own text (RichText); its dates and what it holds; PostParts,
+                       a post as both portals show it; the staff's posts and what they've read (staffNews.ts) and a
+                       post's comments (comments.ts, PostComments)), notifications (the person's inbox and Home's
+                       bell), home (a coach's to-do and time clock on Home), availability (a coach's days: the clean
+                       month calendar's day (CalendarDay), the day sheet (DayEditor: available or not, the time wheels,
+                       Repeat), Copy last week, and the writes with the website's checks (api.ts, from
+                       `@shared/availabilityWrites`)), pay (a coach's pay lines from `@shared/pay/lines`, the period
+                       chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
+                       reports (also the staff's list, a report's staff card and sharing), account (also a coach's
+                       details, notification switches and the sign-in methods, SignInSecurity, for every role)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SectionTitle,
-                       SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
+                       SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, TimeWheel, FactRow, SwitchRow,
+                       DateField, ContactButtons, SwipeToDelete, ActionSheet, ToastHost,
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
@@ -112,6 +131,19 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.
 - **A coach's queries ask for what the rules give a coach** (their classes by `coachId`, their own staff record, never
   `students/{id}/private`): a query the rules would refuse fails whole (`src/features/data/hooks.ts`).
+- **A coach's availability** is the website's: one record a day (`availability/{staffId}_{dateKey}`), holding times or
+  "not available" (an answer: the day no longer counts as one to set), removed when the day is cleared, written through
+  `@shared/availabilityWrites` with the audit entry; days inside the lock window are the admin's (the rules refuse
+  them). A save asks first when booked classes would be left outside the new times, then returns at once (the server
+  confirms in the background) and waits for the question's alert to leave before closing the sheet.
+- **Circles** (a day, a dot, an avatar with a fill) take `radius.full`: with a radius of exactly half their size,
+  Android drew some fills as squares.
+- **The staff's announcements and notifications** are the website's queries: a coach's posts are the two the rules can
+  check (`where("audienceType", "==", "all")` and `where("audienceKeys", "array-contains", email)`, merged), the
+  office's every post not archived; their own read receipts (collection group `reads` by email: a coach opening a post
+  writes theirs once, owners and admins none, as on the website); a post's comments (the staff's only); and their
+  notifications (`recipientKey` = their email, the newest 100). Marking a notification read stamps the phone's time, so
+  it shows read at once, offline too (`src/features/announcements/staffNews.ts`, `src/features/notifications/inbox.ts`).
 - **A family's queries ask for one student at a time** (`where("studentId", "==", id)`, for each linked student:
   classes, scores, shared reports), never staff records or the Drive's lists: the coach's name comes from the class
   itself, and a score's file is read by its ID, which the rules allow only for a score's own file in their child's
