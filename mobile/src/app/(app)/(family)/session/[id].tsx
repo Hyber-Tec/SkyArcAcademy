@@ -34,7 +34,8 @@ export default function FamilyClassSheet() {
   const { today, nowMin } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
   const session = useFamilySession(id ?? null);
-  const s = session.data;
+  // Only the family's own students' classes (a copy this phone kept from an earlier sign-in never shows).
+  const s = session.data && family.ids.includes(session.data.studentId) ? session.data : null;
   // The family's classes that day: brothers and sisters in the same class show together.
   const day = useFamilySessions(s ? family.ids : [], s?.dateKey ?? today, s?.dateKey ?? today);
   const group = useMemo(() => {

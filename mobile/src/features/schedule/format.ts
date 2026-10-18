@@ -24,6 +24,8 @@ export const longDay = (key: DateKey) => format(key, { weekday: "long", month: "
 export const shortDay = (key: DateKey) => format(key, { weekday: "short", month: "short", day: "numeric" });
 /** "Oct 5". */
 export const monthDay = (key: DateKey) => format(key, { month: "short", day: "numeric" });
+/** "October 2026" (the month a date is in). */
+export const monthYear = (key: DateKey) => format(key, { month: "long", year: "numeric" });
 /** "Monday". */
 export const weekdayName = (key: DateKey) => format(key, { weekday: "long" });
 /** "M". */

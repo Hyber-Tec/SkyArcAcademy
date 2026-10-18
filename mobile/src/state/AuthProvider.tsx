@@ -18,6 +18,7 @@ import { callable } from "@/lib/api";
 import { env } from "@/lib/env";
 import { auth } from "@/lib/firebase";
 import { signInWithGoogle, signOutOfGoogle } from "@/lib/googleSignIn";
+import { forgetLocalFiles } from "@/lib/localFiles";
 
 export type VerificationResult = "sent" | "throttled" | "verified";
 
@@ -133,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await signOutOfGoogle();
     await fbSignOut(auth);
+    forgetLocalFiles();
   }, []);
 
   const value = useMemo<AuthState>(

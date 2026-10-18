@@ -5,8 +5,8 @@ import { useColors } from "@/theme";
 
 /**
  * The family's part of the app (parents and students, who see much the same: a parent their children, a student
- * themself): four tabs, and what opens over them (a class's sheet, a progress report). Every screen loads its record by
- * ID, so links and the back gesture always work.
+ * themself): five tabs, and what opens over them (a class's sheet, a score, its original file, a progress report).
+ * Every screen loads its record by ID, so links and the back gesture always work.
  */
 export default function FamilyLayout() {
   const colors = useColors();
@@ -30,6 +30,8 @@ export default function FamilyLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="session/[id]" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
+        <Stack.Screen name="score/[id]" options={page} />
+        <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
         <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
       </Stack>
     </FamilyProvider>
