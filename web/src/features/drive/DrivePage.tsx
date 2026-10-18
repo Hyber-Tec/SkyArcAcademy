@@ -37,7 +37,6 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { useStudentEvaluations } from '@/features/scores/hooks'
@@ -52,6 +51,7 @@ import { type DroppedEntry, useFileDropZone, useWindowDropGuard } from './dropzo
 import { FilePreview, downloadFile } from './FilePreview'
 import { MoveDialog } from './MoveDialog'
 import { FolderGlyph } from './parts'
+import { ResultsDropArea } from './ResultsDropArea'
 import { readSiusFiles } from './sius'
 import { type ResultUpload, plannedFile, saveResults, sendAll, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
 import { useDriveIndex } from './useDriveIndex'
@@ -72,9 +72,10 @@ function resultName(dateKey: string, position: Position | null, total: number | 
 }
 
 /**
- * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. SIUS
- * PDFs dragged in are read on the spot; whoever adds them confirms whose result each is and its position, and each is
- * filed in the student's folder, named by its date, with its scores saved for the reports. Admins and coaches add,
+ * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. Its
+ * first section is the drop area for SIUS PDFs (dropped there or anywhere on the page, or chosen with its button):
+ * they're read on the spot; whoever adds them confirms whose result each is and its position, and each is filed in
+ * the student's folder, named by its date, with its scores saved for the reports. Admins and coaches add,
  * rename, move and trash alike (the owner's call, 2026-10-17); only admins open the Trash, to restore or delete for
  * good. Families never see the Drive.
  */
@@ -173,6 +174,8 @@ export function DrivePage() {
 
   async function intake(raw: DroppedEntry[], baseId: string | null) {
     if (!canWrite) return refuseDrop()
+    // One drop is read at a time: a second one meanwhile would replace the first one's results.
+    if (reading) return void toast.info('Still reading the PDFs from before. Add these once their results open.')
     const entries = raw.slice(0, MAX_FILES_PER_DROP)
     const refused: { name: string; reason: string }[] = []
     if (raw.length > MAX_FILES_PER_DROP) refused.push({ name: `${raw.length - MAX_FILES_PER_DROP} more files`, reason: `Up to ${MAX_FILES_PER_DROP} files at a time.` })
@@ -183,35 +186,41 @@ export function DrivePage() {
       else refused.push({ name: plan.name, reason: plan.reason })
     }
     // PDFs are read first: SIUS results go to the review, everything else straight in.
-    const pdfs = accepted.filter((a) => a.plan.kind === 'pdf')
+    let pdfs = accepted.filter((a) => a.plan.kind === 'pdf')
     let read: Awaited<ReturnType<typeof readSiusFiles>> = []
     if (pdfs.length) {
       setReading({ done: 0, total: pdfs.length })
-      read = await readSiusFiles(pdfs.map((a) => a.entry.file), timezone, (done) => setReading({ done, total: pdfs.length }))
-      setReading(null)
+      try {
+        read = await readSiusFiles(pdfs.map((a) => a.entry.file), timezone, (done) => setReading({ done, total: pdfs.length }))
+      } catch {
+        // The reader didn't load (offline?): the PDFs wait for another try rather than going in unread.
+        toast.error(pdfs.length === 1 ? 'Couldn’t read the PDF' : 'Couldn’t read the PDFs', { description: `Check the connection, then add ${pdfs.length === 1 ? 'it' : 'them'} again.` })
+        pdfs = []
+      } finally {
+        setReading(null)
+      }
     }
     const sius = pdfs.flatMap((a, i) => (read[i] ? [{ ...a, sius: read[i]! }] : []))
-    const plain = [...pdfs.filter((_, i) => !read[i]), ...accepted.filter((a) => a.plan.kind !== 'pdf')]
-    if (plain.length) void uploadPlain(plain, baseId)
+    const notResults = pdfs.filter((_, i) => !read[i])
+    const plain = [...notResults, ...accepted.filter((a) => a.plan.kind !== 'pdf')]
+    if (plain.length) void uploadPlain(plain, baseId, notResults.map((a) => a.plan.name))
     if (sius.length) {
       const fixed = index.studentOf(baseId)
       setResults({
         baseId,
         fixedStudentId: fixed,
-        rows: sius.map((a, i) => ({
-          key: `${i}-${a.entry.file.name}`,
-          file: a.entry.file,
-          plan: a.plan,
-          sius: a.sius,
-          studentId: fixed ?? suggestStudent(a.entry.file.name, index.students),
-          position: positionFromName(a.entry.file.name),
-        })),
+        rows: sius.map((a, i) => {
+          const guess = fixed ? null : suggestStudent(a.entry.file.name, index.students)
+          const position = positionFromName(a.entry.file.name)
+          return { key: `${i}-${a.entry.file.name}`, file: a.entry.file, plan: a.plan, sius: a.sius, studentId: fixed ?? guess, position, studentGuessed: !!guess, positionGuessed: !!position }
+        }),
       })
     }
     if (refused.length) setDialog({ kind: 'refused', refused, added: plain.length + sius.length })
   }
 
-  async function uploadPlain(items: { entry: DroppedEntry; plan: { name: string; kind: string; mime: string } }[], baseId: string | null) {
+  /** Uploads files as they are; `notResults` names the PDFs among them that were read and aren't SIUS results. */
+  async function uploadPlain(items: { entry: DroppedEntry; plan: { name: string; kind: string; mime: string } }[], baseId: string | null, notResults: string[] = []) {
     const key = (path: string[]) => path.map(cleanFolderName).join('/')
     try {
       const chains = new Map(items.filter((a) => a.entry.path.length).map((a) => [key(a.entry.path), a.entry.path]))
@@ -221,10 +230,29 @@ export function DrivePage() {
       await writeRecords(branchId, actor, index, ups, chains.size ? [] : [baseId])
       const failures = await sendAll(branchId, ups)
       if (failures.length) toast.error(failures.length === 1 ? 'One file didn’t upload' : `${failures.length} files didn’t upload`, { description: failures.slice(0, 3).join(' ') })
-      else toast.success(ups.length === 1 ? `Uploaded “${ups[0].record.name}”` : `Uploaded ${ups.length} files`)
+      else {
+        // A PDF that isn't a SIUS result is still kept, and whoever dropped it is told why it has no scores.
+        const why = !notResults.length
+          ? undefined
+          : ups.length === 1
+            ? 'It isn’t a SIUS result, so it’s kept as a file, without scores.'
+            : notResults.length === 1
+              ? `“${notResults[0]}” isn’t a SIUS result, so it’s kept as a file, without scores.`
+              : `${notResults.length} of the PDFs aren’t SIUS results, so they’re kept as files, without scores.`
+        toast.success(ups.length === 1 ? `Uploaded “${ups[0].record.name}”` : `Uploaded ${ups.length} files`, { description: why, duration: why ? 8000 : undefined })
+      }
     } catch (e) {
       toast.error('Couldn’t upload', { description: (e as Error).message })
     }
+  }
+
+  /** Where a result is filed: the folder it was dropped in when that's the student's own (or inside it), else the student's folder. */
+  const resultFolder = (baseId: string | null, studentId: string) => (baseId && index.studentOf(baseId) === studentId ? baseId : studentFolderId(studentId))
+  /** "Mia Larkin’s folder", or "Mia Larkin / Matches" inside it. */
+  const resultWhere = (baseId: string | null, studentId: string) => {
+    const path = index.pathOf(resultFolder(baseId, studentId)).map((c) => c.name)
+    if (path.length > 1) return path.join(' / ')
+    return `${path[0] ?? index.students.find((s) => s.id === studentId)?.name ?? 'the student'}’s folder`
   }
 
   async function confirmResults(list: ResultRow[]) {
@@ -241,7 +269,7 @@ export function DrivePage() {
     const uploads: ResultUpload[] = fresh.map((r) => {
       const reading = r.sius.reading
       const studentId = r.studentId as string
-      const folderId = results.baseId && index.studentOf(results.baseId) === studentId ? results.baseId : studentFolderId(studentId)
+      const folderId = resultFolder(results.baseId, studentId)
       const up = plannedFile(branchId, r.file, { ...r.plan, name: resultName(reading.dateKey, r.position, reading.sightersOnly ? null : reading.total) }, folderId, studentId, { originalName: r.file.name })
       const evaluation =
         reading.sightersOnly || !r.position
@@ -268,6 +296,7 @@ export function DrivePage() {
             }
       return { up, evaluation }
     })
+    const baseId = results.baseId
     setResults(null)
     if (skipped) toast.info(skipped === 1 ? 'One result was already in the Drive, so it wasn’t added again.' : `${skipped} results were already in the Drive, so they weren’t added again.`)
     if (!uploads.length) return
@@ -278,7 +307,16 @@ export function DrivePage() {
       else {
         const extra = uploads.length - scored
         const sighters = `${extra === 1 ? 'one file' : `${extra} files`} with sighters only`
-        toast.success(scored ? `${scored === 1 ? 'One result' : `${scored} results`} added${extra ? `, plus ${sighters}` : ''}` : `Added ${sighters}`)
+        const who = [...new Set(uploads.map((u) => u.up.record.studentId as string))]
+        const one = who.length === 1 ? who[0] : null
+        const name = one ? (studentName.get(one) ?? '') : ''
+        const added = scored ? `${scored === 1 ? 'One result' : `${scored} results`} added${one && name ? ` for ${name}` : ''}${extra ? `, plus ${sighters}` : ''}` : `Added ${sighters}`
+        // One student's results: their scores are a click away.
+        toast.success(added, {
+          description: one ? `Filed in ${resultWhere(baseId, one)}.` : `Filed in ${who.length} students’ folders.`,
+          action: one && scored ? { label: 'Open scores', onClick: () => navigate(`/${portal}/students/${one}/scores`) } : undefined,
+          duration: one && scored ? 10_000 : undefined,
+        })
       }
     } catch (e) {
       toast.error('Couldn’t add the results', { description: (e as Error).message })
@@ -439,11 +477,8 @@ export function DrivePage() {
 
   return (
     <div className="relative -m-4 min-h-[calc(100svh-3.5rem)] p-4 sm:-m-6 sm:p-6" {...pageDrop.handlers}>
-      {pageDrop.dragOver ? (
-        <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-brand/60 bg-brand/5 text-sm font-medium text-brand-text">
-          Drop files to upload {folder ? `into “${folder.name}”` : 'to the Drive'}
-        </div>
-      ) : null}
+      {/* The whole page takes a drop; the drop area at the top (kept in view meanwhile) says what happens to it. */}
+      {pageDrop.dragOver ? <div className="pointer-events-none absolute inset-2 z-30 rounded-2xl border-2 border-dashed border-brand/60 bg-brand/5" /> : null}
 
       <nav className="mb-3 flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground" aria-label="Where you are">
         {cwd ? (
@@ -500,6 +535,17 @@ export function DrivePage() {
         </div>
       </div>
 
+      {canWrite ? (
+        <ResultsDropArea
+          studentName={studentHere ? (index.students.find((s) => s.id === studentHere)?.name ?? null) : null}
+          folderName={folder?.name ?? null}
+          dragging={pageDrop.dragOver}
+          reading={reading}
+          disabled={!ready}
+          onFiles={(files) => void intake(files.map((file) => ({ file, path: [] })), cwd)}
+        />
+      ) : null}
+
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-md" role="search">
           <LuSearch className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -547,11 +593,6 @@ export function DrivePage() {
         <p className="mb-2 text-sm text-muted-foreground">
           {hits.length ? `${countLabel(hits.length, 'result')} in the Drive for “${query_}”${hits.length > SEARCH_LIMIT ? ` (the first ${SEARCH_LIMIT} are shown)` : ''}` : null}
         </p>
-      ) : null}
-      {reading ? (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm" role="status">
-          <Spinner /> Reading {reading.total === 1 ? 'the PDF' : `the PDFs (${reading.done} of ${reading.total})`}…
-        </div>
       ) : null}
       {canWrite && selectedRows.length ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm" role="toolbar" aria-label="Selection">
@@ -619,7 +660,16 @@ export function DrivePage() {
           }}
         />
       ) : null}
-      {results ? <AddResultsDialog rows={results.rows} students={index.students} fixedStudentId={results.fixedStudentId} onConfirm={confirmResults} onClose={() => setResults(null)} /> : null}
+      {results ? (
+        <AddResultsDialog
+          rows={results.rows}
+          students={index.students}
+          fixedStudentId={results.fixedStudentId}
+          whereOf={(studentId) => resultWhere(results.baseId, studentId)}
+          onConfirm={confirmResults}
+          onClose={() => setResults(null)}
+        />
+      ) : null}
       {dialog?.kind === 'newFolder' ? (
         <NameDialog
           title="New folder"

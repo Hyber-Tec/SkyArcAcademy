@@ -12,10 +12,17 @@ type PdfJs = typeof import('pdfjs-dist')
 let loading: Promise<PdfJs> | null = null
 
 function pdfjs(): Promise<PdfJs> {
-  loading ??= Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(([lib, worker]) => {
-    lib.GlobalWorkerOptions.workerSrc = worker.default
-    return lib
-  })
+  loading ??= Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(
+    ([lib, worker]) => {
+      lib.GlobalWorkerOptions.workerSrc = worker.default
+      return lib
+    },
+    (e: unknown) => {
+      // Not kept: the next drop tries to load it again (the connection may be back).
+      loading = null
+      throw e
+    },
+  )
   return loading
 }
 

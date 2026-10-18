@@ -1,12 +1,10 @@
 import type { IconType } from 'react-icons'
 import { LuFile, LuFileSpreadsheet, LuFileText, LuFileVideo, LuImage, LuPresentation } from 'react-icons/lu'
 import { type FileCategory, categoryOf } from '@shared/drive/files'
-import { actorName } from '@shared/drive/model'
 import type { DriveActor } from '@shared/drive/types'
-import { formatInstant } from '@shared/time'
 import { cn } from '@/lib/utils'
 
-/** The Drive's small pieces: folder and file icons, the owner chip and the "Updated" text. */
+/** The Drive's small pieces: folder and file icons and the owner chip (the "Updated" text is @shared/drive/model's). */
 
 export function FolderGlyph({ student = false, className }: { student?: boolean; className?: string }) {
   return (
@@ -59,13 +57,4 @@ export function PersonChip({ person, className }: { person: DriveActor | null | 
       <span className="truncate">{full}</span>
     </span>
   )
-}
-
-/** "Oct 16, 2026 by Paige". */
-export function updatedText(at: unknown, by: DriveActor | null | undefined, timezone: string): string {
-  const ms = (at as { toMillis?: () => number } | null)?.toMillis?.() ?? 0
-  if (!ms) return ''
-  const day = formatInstant(ms, timezone, { month: 'short', day: 'numeric', year: 'numeric' })
-  const who = actorName(by)
-  return who ? `${day} by ${who}` : day
 }

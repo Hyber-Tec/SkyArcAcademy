@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LuChevronRight, LuHardDrive } from 'react-icons/lu'
-import type { DriveIndex } from '@shared/drive/model'
+import { type DriveIndex, moveRefusal } from '@shared/drive/model'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -30,14 +30,7 @@ export function MoveDialog({
   const count = folderIds.length + fileIds.length
   const name = count === 1 ? (index.folderOf(folderIds[0])?.name ?? index.fileOf(fileIds[0])?.name ?? 'the item') : `${count} items`
   const crumbs = index.pathOf(at)
-  const homes = new Set([...folderIds.map((id) => index.folderOf(id)?.parentId ?? null), ...fileIds.map((id) => index.fileOf(id)?.folderId ?? null)])
-  const refusal = !index.canMoveInto(folderIds, at)
-    ? folderIds.some((id) => index.folderOf(id)?.studentId)
-      ? 'A student’s folder stays at the top.'
-      : 'A folder can’t go inside itself.'
-    : homes.size === 1 && homes.has(at)
-      ? 'It’s already here.'
-      : null
+  const refusal = moveRefusal(index, folderIds, fileIds, at)
   const move = async () => {
     setBusy(true)
     setError(null)
