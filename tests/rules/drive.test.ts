@@ -122,6 +122,12 @@ describe('Drive records', () => {
     await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFiles/fs2`)))
     await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/driveFolders/student-s1`)))
     await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/driveFiles`)))
+    // Never a list, however it's asked (the Trash check can't be left out).
+    await assertFails(getDocs(query(collection(db('parent@a.test'), `branches/${A}/driveFiles`), where('studentId', '==', 's1'))))
+    await assertFails(
+      getDocs(query(collection(db('parent@a.test'), `branches/${A}/driveFiles`), where('studentId', '==', 's1'), where('status', '==', 'ready'), where('evaluationId', '==', 'e1'))),
+    )
+    await assertSucceeds(getDocs(query(collection(db('admin@a.test'), `branches/${A}/driveFiles`), where('studentId', '==', 's1'))))
     await assertFails(getDoc(doc(db('admin@b.test'), `branches/${A}/driveFiles/f1`)))
   })
 

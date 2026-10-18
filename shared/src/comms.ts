@@ -26,6 +26,11 @@ export interface Announcement extends AuditStamp {
   audienceType: AnnouncementAudience
   /** Member email keys when the audience is "members". */
   audienceKeys: string[]
+  /**
+   * Parents and students see it too, on their Home in the portal and the app (the owner's question of 2026-10-17;
+   * docs/DECISIONS.md §16). Off unless the admin turns it on; comments stay with staff. Absent on older posts: off.
+   */
+  families?: boolean
   commentsEnabled: boolean
   pinned: boolean
   pinnedAt: TimestampLike | null
@@ -99,6 +104,11 @@ export function announcementCategories(defaults: readonly string[], used: readon
 /** Who may see a post in the coach portal. */
 export function isInAudience(a: Pick<Announcement, 'audienceType' | 'audienceKeys'>, memberKey: string): boolean {
   return a.audienceType === 'all' || (a.audienceKeys ?? []).includes(memberKey)
+}
+
+/** Whether parents and students see a post (shown to families, and not archived). */
+export function isForFamilies(a: Pick<Announcement, 'families' | 'archived'>): boolean {
+  return a.families === true && !a.archived
 }
 
 // ------------------------------------------------------------ notifications

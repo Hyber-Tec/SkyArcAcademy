@@ -559,6 +559,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       category: 'General',
       audienceType: 'all',
       audienceKeys: [],
+      families: false,
       commentsEnabled: false,
       pinned: false,
       pinnedAt: null,
@@ -593,17 +594,20 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     text: 'Looks great, thank you!',
     createdAt: daysAgo(19, 1110),
   })
+  // The match and the closed day are shown to families too (parents and students), the staff's welcome isn't.
   post('a-match', 6, {
     title: 'Fall junior match: sign-ups are open',
     category: 'Tournaments',
-    contentHtml: '<p>The fall junior match is next month. Please remind your Marksman and higher students to sign up by the end of next week.</p>',
-    contentText: 'The fall junior match is next month. Please remind your Marksman and higher students to sign up by the end of next week.',
+    contentHtml: '<p>The fall junior match is next month. Marksman and higher students can sign up at the front desk until the end of next week.</p>',
+    contentText: 'The fall junior match is next month. Marksman and higher students can sign up at the front desk until the end of next week.',
+    families: true,
   })
   post('a-thanksgiving', 2, {
     title: 'Closed on Thanksgiving Day',
     category: 'Updates',
     contentHtml: '<p>The academy is closed on Thanksgiving Day. Classes that day move to makeups; check your schedule.</p>',
     contentText: 'The academy is closed on Thanksgiving Day. Classes that day move to makeups; check your schedule.',
+    families: true,
   })
 
   // Events -------------------------------------------------------------------------

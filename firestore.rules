@@ -342,9 +342,21 @@ service cloud.firestore {
       // ------------------------------------------------------ communication
 
       // Coaches see posts for everyone plus posts addressed to them; admins see all.
-      function seesAnnouncement(data) {
+      // Staff see a post by its audience; parents and students see the posts shown to families, once they're not
+      // archived (docs/DECISIONS.md §16). Comments are staff's only.
+      function staffSeesAnnouncement(data) {
         return isAdmin(b)
           || (isCoach(b) && (data.audienceType == 'all' || emailKey() in data.audienceKeys));
+      }
+
+      // `archived` read directly (no default): a query must ask for unarchived posts to be allowed.
+      function familySeesAnnouncement(data) {
+        return (hasRole(b, 'parent') || hasRole(b, 'student'))
+          && data.get('families', false) == true && data.archived == false;
+      }
+
+      function seesAnnouncement(data) {
+        return staffSeesAnnouncement(data) || familySeesAnnouncement(data);
       }
 
       match /announcements/{announcementId} {
@@ -356,7 +368,8 @@ service cloud.firestore {
           return data.title is string && data.title.size() > 0 && data.title.size() <= 200
             && data.audienceType in ['all', 'members']
             && data.audienceKeys is list
-            && (data.audienceType == 'all' || data.audienceKeys.size() > 0);
+            && (data.audienceType == 'all' || data.audienceKeys.size() > 0)
+            && data.get('families', false) is bool;
         }
 
         allow read: if seesAnnouncement(resource.data);
@@ -382,8 +395,8 @@ service cloud.firestore {
         }
 
         match /comments/{commentId} {
-          allow read: if seesAnnouncement(post());
-          allow create: if seesAnnouncement(post())
+          allow read: if staffSeesAnnouncement(post());
+          allow create: if staffSeesAnnouncement(post())
             && (isAdmin(b) || post().commentsEnabled == true)
             && request.resource.data.authorKey == emailKey()
             && request.resource.data.createdAt == request.time
@@ -457,7 +470,9 @@ service cloud.firestore {
             && d.get('studentId', null) is string && isFamilyOf(b, d.studentId);
         }
 
-        allow read: if isStaff(b) || familyResult(resource.data);
+        // A family opens one record by its ID (never a list: a query could leave the Trash check unasked).
+        allow get: if isStaff(b) || familyResult(resource.data);
+        allow list: if isStaff(b);
         // The record comes first (status uploading), then the bytes (storage.rules checks the record).
         allow create: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.status == 'uploading'
