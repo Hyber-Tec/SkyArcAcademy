@@ -17,7 +17,7 @@ import { ItemMenuButton } from '@/components/app/ItemMenu'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
@@ -397,6 +397,7 @@ function CardEditor({ e, mode, back }: { e: WithId<Evaluation>; mode: 'admin' | 
               <Field>
                 <FieldLabel htmlFor="card-note">Coach’s note</FieldLabel>
                 <Textarea id="card-note" value={draft.note} maxLength={2000} rows={3} onChange={(ev) => change({ note: ev.target.value })} placeholder="Anything worth remembering about this card." />
+                <FieldDescription>The student and their parents see this note with the score.</FieldDescription>
               </Field>
             </FieldGroup>
           </section>

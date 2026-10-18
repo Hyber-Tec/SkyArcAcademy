@@ -2,6 +2,7 @@ import { type DocumentData, type Query, onSnapshot, query, where } from 'firebas
 import { useEffect, useMemo, useState } from 'react'
 import { COL } from '@shared/paths'
 import type { ProgressReportDoc } from '@shared/reports/types'
+import { type Evaluation, inOrder } from '@shared/shooting/evaluation'
 import { type DateKey, addDays, formatDateKey } from '@shared/time'
 import type { BranchContact, Session, Student, WithId } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -103,6 +104,18 @@ export function useFamilySessions(ids: string[], from: DateKey, to: DateKey, opt
     () => res.data.filter((s) => !s.isDeleted).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)),
     [res.data],
   )
+  return { data, loading: res.loading }
+}
+
+/**
+ * The given students' scores (SIUS results and paper cards), oldest first as every chart reads them, live. One query
+ * per student, as the rules require (a family reads only their own children's, one at a time).
+ */
+export function useFamilyEvaluations(ids: string[]) {
+  const { branchId } = useBranch()
+  const queries = useMemo(() => ids.map((id) => query(branchCol(branchId, COL.evaluations), where('studentId', '==', id))), [branchId, ids])
+  const res = useMergedQueries<Evaluation>(queries, `family-evaluations-${branchId}-${ids.join(',')}`)
+  const data = useMemo(() => inOrder(res.data), [res.data])
   return { data, loading: res.loading }
 }
 

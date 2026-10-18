@@ -13,6 +13,7 @@ import type { ClockShift } from '@/features/timeclock/api'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { ClockOutDialog } from './ClockOutDialog'
 import { InBuildingCard } from './InBuildingCard'
+import { LatestScoresCard } from './LatestScoresCard'
 import { NeedsYouCard } from './NeedsYouCard'
 import { TodayCard } from './TodayCard'
 import { useAttention } from './attention'
@@ -26,8 +27,8 @@ function greeting(minutes: number) {
 
 /**
  * Admin → Home (Round 3, option 1 "Today"): a calm agenda of today's sessions
- * with a red "now" line, and a side rail with what needs the admin and who is
- * in the building.
+ * with a red "now" line, the latest scores, and a side rail with what needs the
+ * admin and who is in the building.
  */
 export function AdminHomePage() {
   const { branchId, timezone, actor } = useBranch()
@@ -84,7 +85,7 @@ export function AdminHomePage() {
       </div>
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        <div className="order-2 lg:order-1">
+        <div className="order-2 space-y-6 lg:order-1">
           <TodayCard
             sessions={sessions}
             loading={loading}
@@ -95,6 +96,7 @@ export function AdminHomePage() {
             colorOf={(id) => colors.get(id) ?? null}
             onEdit={sessionDialog.openEdit}
           />
+          <LatestScoresCard portal="admin" />
         </div>
         <div className="order-1 space-y-6 lg:order-2">
           <NeedsYouCard attention={attention} onFixClock={setFixing} />

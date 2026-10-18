@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { addDays, formatDateKey, formatMinutes } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
+import { LatestScoresCard } from '@/features/home/LatestScoresCard'
 import { plural } from '@/features/home/parts'
 import { NOT_LINKED } from '../hooks'
 import { ClockCard, ClockStrip } from './ClockCard'
@@ -105,6 +106,7 @@ export function CoachHomePage() {
             <NextUpCard t={t} />
             <TodaySessionsCard t={t} />
             <WeekCard t={t} />
+            <LatestScoresCard portal="coach" />
           </div>
           <div className="space-y-6">
             <ClockCard t={t} />
@@ -123,6 +125,7 @@ export function CoachHomePage() {
         <ToDoCard t={t} />
         <TodaySessionsCard t={t} />
         <WeekCard t={t} />
+        <LatestScoresCard portal="coach" />
       </div>
     </div>
   )

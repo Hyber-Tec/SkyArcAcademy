@@ -20,6 +20,7 @@ export function CardPicture({
   review,
   selected,
   onBull,
+  label = 'The card. Choose a bull to check it up close; zoom with the wheel, a pinch, or the + and − keys, and 0 to see it whole.',
   className,
   style,
 }: {
@@ -28,6 +29,8 @@ export function CardPicture({
   /** The bull open up close, ringed. */
   selected: number | null
   onBull: (n: number) => void
+  /** What a screen reader says it is and does (a family's card only shows). */
+  label?: string
   className?: string
   style?: CSSProperties
 }) {
@@ -100,7 +103,7 @@ export function CardPicture({
       }}
       cursorAt={(c) => (bullAt(c) !== null ? 'pointer' : null)}
       touchAtRest="page"
-      label="The card. Choose a bull to check it up close; zoom with the wheel, a pinch, or the + and − keys, and 0 to see it whole."
+      label={label}
       className={className}
       style={style}
       testId="card-picture"

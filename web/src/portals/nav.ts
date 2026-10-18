@@ -10,6 +10,7 @@ import {
   LuMegaphone,
   LuSettings,
   LuShieldCheck,
+  LuTarget,
   LuUserCog,
   LuUsers,
   LuWallet,
@@ -101,19 +102,22 @@ export const COACH_NAV: PortalNav = {
 }
 
 /**
- * Parents and students: one portal design, the same four places (a parent sees their children, a student
- * themself). Profile holds the person's own pages (account, sign-in, appearance, contact and help).
+ * Parents and students: one portal design, the same five places (a parent sees their children, a student
+ * themself). Scores holds every result, Reports the few the academy writes up (the owner, 2026-10-18). Profile holds
+ * the person's own pages (account, sign-in, appearance, contact and help).
  */
 export const FAMILY_NAV: PortalNav = {
   main: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
   ],
   secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
   mobileTabs: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound },
   ],

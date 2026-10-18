@@ -171,6 +171,7 @@ export function PaperScoreDialog({
           <Field>
             <FieldLabel htmlFor="paper-note">Coach’s note (optional)</FieldLabel>
             <Textarea id="paper-note" value={note} maxLength={2000} rows={2} onChange={(e) => setNote(e.target.value)} placeholder="Anything worth remembering about this card." />
+            <FieldDescription>The student and their parents see this note with the score.</FieldDescription>
           </Field>
         </FieldGroup>
         <DialogFooter>

@@ -238,8 +238,8 @@ export function ClassDetails({ session: s, family, now, onClose }: { session: Wi
   )
 }
 
-/** Everyone, or one child (parents with more than one child). */
-export function KidFilter({ family, value, onChange }: { family: Family; value: string; onChange: (id: string) => void }) {
+/** Everyone, or one child (parents with more than one child); one child at a time without `everyone` (Scores). */
+export function KidFilter({ family, value, onChange, everyone = true }: { family: Family; value: string; onChange: (id: string) => void; everyone?: boolean }) {
   if (family.kids.length < 2) return null
   const chip = (id: string, label: React.ReactNode) => (
     <Button
@@ -255,7 +255,7 @@ export function KidFilter({ family, value, onChange }: { family: Family; value: 
   )
   return (
     <div className="flex flex-wrap gap-1.5" role="group" aria-label="Whose">
-      {chip('all', 'Everyone')}
+      {everyone ? chip('all', 'Everyone') : null}
       {family.kids.map((k) =>
         chip(
           k.id,
@@ -332,8 +332,8 @@ export function NotLinked({ family }: { family: Family }) {
           <EmptyTitle>{family.who === 'parent' ? 'No children linked yet' : 'Your account isn’t linked yet'}</EmptyTitle>
           <EmptyDescription>
             {family.who === 'parent'
-              ? `Once ${branch.name} links your child to your account, their classes and progress reports show here.`
-              : `Once ${branch.name} links your account to your student record, your classes and progress reports show here.`}
+              ? `Once ${branch.name} links your child to your account, their classes, scores and progress reports show here.`
+              : `Once ${branch.name} links your account to your student record, your classes, scores and progress reports show here.`}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
