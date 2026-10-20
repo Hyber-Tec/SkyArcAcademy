@@ -311,7 +311,7 @@ export interface ClockShift {
 
 // -------------------------------------------------------------------- audit
 
-export type AuditCategory = 'schedule' | 'event' | 'availability' | 'people' | 'pay' | 'announcements' | 'settings' | 'access' | 'drive' | 'reports'
+export type AuditCategory = 'schedule' | 'event' | 'availability' | 'people' | 'pay' | 'announcements' | 'settings' | 'access' | 'drive' | 'reports' | 'website'
 
 export interface AuditChange {
   field: string

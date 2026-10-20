@@ -28,6 +28,12 @@ export const COL = {
   /** Scored targets: SIUS results and paper cards (shared/src/shooting/evaluation.ts). */
   evaluations: 'evaluations',
   progressReports: 'progressReports',
+  /** The public website (shared/src/website): its photos, the news copied from announcements, the messages sent. */
+  websitePhotos: 'websitePhotos',
+  websitePosts: 'websitePosts',
+  websiteMessages: 'websiteMessages',
+  /** Server only: how many messages a sender sent lately. */
+  websiteLimits: 'websiteLimits',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]
@@ -43,6 +49,7 @@ export const USER_COL = {
 /** Sub-documents with fixed IDs. */
 export const DOC = {
   publicProfile: 'profile', // branches/{b}/public/profile
+  websiteContent: 'website', // branches/{b}/public/website
   privateProfile: 'profile', // students/{id}/private/profile
   compensation: 'compensation', // staff/{id}/private/compensation
   staffNotes: 'notes', // staff/{id}/private/notes

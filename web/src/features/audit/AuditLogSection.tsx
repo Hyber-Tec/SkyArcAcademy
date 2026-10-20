@@ -23,6 +23,7 @@ const CATEGORIES: { value: AuditCategory | 'all'; label: string }[] = [
   { value: 'announcements', label: 'Announcements' },
   { value: 'drive', label: 'Drive' },
   { value: 'reports', label: 'Reports' },
+  { value: 'website', label: 'Website' },
   { value: 'settings', label: 'Settings' },
   { value: 'access', label: 'Access' },
 ]

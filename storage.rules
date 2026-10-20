@@ -35,6 +35,14 @@ service firebase.storage {
       allow write: if isAdmin(b) && (request.resource == null || request.resource.size < 20 * 1024 * 1024);
     }
 
+    // The public website's pictures (shared/src/website/images.ts): anyone reads them, as the website shows them by
+    // plain address. Admins add them from the CRM's Website page and the announcement editor, already resized.
+    match /branches/{b}/website/{rest=**} {
+      allow read: if true;
+      allow write: if isAdmin(b) && (request.resource == null
+        || (request.resource.size <= 8 * 1024 * 1024 && request.resource.contentType.matches('image/(webp|jpeg)')));
+    }
+
     // The Drive's files (shared/src/drive): results and target photos of minors, read through these rules (getBlob),
     // never through download links. Staff read them all; a family reads only a score's file in their own child's folder
     // (a SIUS result's PDF, a paper card's picture), out of the Trash. The record says both: its `evaluationId` is

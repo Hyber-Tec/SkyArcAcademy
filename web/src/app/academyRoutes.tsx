@@ -18,6 +18,7 @@ const adminRoutes: RouteObject[] = [
     path: 'announcements/:announcementId/edit',
     lazy: page(() => import('@/features/announcements/AnnouncementEditorPage'), 'AnnouncementEditorPage'),
   },
+  { path: 'website/:tab?', lazy: page(() => import('@/features/website/WebsitePage'), 'WebsitePage') },
   { path: 'schedule/*', lazy: page(() => import('@/features/schedule/SchedulePage'), 'SchedulePage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'StudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },

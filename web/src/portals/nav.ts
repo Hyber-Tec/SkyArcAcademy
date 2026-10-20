@@ -4,6 +4,7 @@ import {
   LuCalendarDays,
   LuChartLine,
   LuCircleUserRound,
+  LuGlobe,
   LuGraduationCap,
   LuHardDrive,
   LuHouse,
@@ -52,6 +53,7 @@ export const ADMIN_NAV: PortalNav = {
   main: [
     { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
+    { key: 'website', label: 'Website', to: 'website', icon: LuGlobe },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
     { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },

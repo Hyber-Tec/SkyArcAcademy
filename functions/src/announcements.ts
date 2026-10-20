@@ -4,6 +4,7 @@ import { logger } from 'firebase-functions'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { db, LIGHT } from './app'
 import { sendNotifications, coachRecipients } from './notify'
+import { syncWebsitePost } from './website'
 import type { Announcement } from '@shared/comms'
 import { COL, ROOT } from '@shared/paths'
 
@@ -15,12 +16,19 @@ const postPath = (branchId: string, id: string) => `${ROOT.branches}/${branchId}
 /**
  * Publishing with "Notify" (or saving with "Notify again") puts the post in the
  * audience's inbox, honoring each coach's Announcements preference. Deleting a
- * post removes its read receipts, comments and uploaded files.
+ * post removes its read receipts, comments and uploaded files. A post shown "On
+ * the website" gets its public copy kept up to date (website.ts).
  */
 export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGHT }, async (event) => {
   const { branchId, announcementId } = event.params
   const before = event.data?.before.data() as Announcement | undefined
   const after = event.data?.after.data() as Announcement | undefined
+
+  try {
+    await syncWebsitePost(branchId, announcementId, before, after)
+  } catch (e) {
+    logger.error('Could not update the website’s copy of an announcement', { branchId, announcementId, error: String(e) })
+  }
 
   if (!after) {
     if (!before) return
