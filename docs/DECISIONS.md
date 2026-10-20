@@ -482,4 +482,24 @@ homepage now … I'll actually test and verify from the live website".
 - **Languages**: the site's Korean is a draft the owner reviews by hand ("when we trying to create something with
   Korean from AI it's not really accurate"); more languages come later, even after launch (`docs/TODO.md`). What the
   academy writes in the CRM (news, captions, coaches) shows as written.
+- **The owner's first review of the live site (2026-10-20)**:
+  - *One path, four levels*: each level's first line rests level with the panel's ("they're starting at the same
+    point"), and the page glides to a level "like a magnet" when the reader stops between two: on to the one they were
+    heading for, back if they hardly moved. It follows the wheel, the trackpad, touch and the page keys; the arrow keys
+    move freely, and nothing moves by itself with reduced motion.
+  - *Programs* in the header goes to the Programs page; its menu opens on hover ("I'm okay with having drop-downs …
+    but program just make me move to programs").
+  - *Unconfirmed facts are left out, not marked*: the trials' price and length, tuition, the youngest age and coaching
+    in Korean aren't on the pages until the academy confirms them (the owner, of the "Placeholder" note: "if we can get
+    rid of it, please get rid of it"). Photos still to come stay marked.
+  - *Contact*: the phone and email the site shows are Settings → Academy's (the academy's own Gmail, never
+    HyberTec's); an address or an email never breaks across lines.
+  - *Official logos*: SIUS's own logo where the site names its scoring system ("so that you look more official and
+    professional"). Another organisation's logo only where the academy belongs to it and the organisation allows it
+    (the NCAA's rules don't let a club use its logo).
+  - *The closing banner*, on every page, shows a photo the academy chooses on the Website page, melting into the black
+    ("smoothly blends with a black background"). A photo can be **Pages only**: used in a spot (a banner, a coach's
+    portrait), kept out of the gallery.
+  - More pictures and fewer words where the text was a list: the two advanced pathways (the Sporter ranks on their
+    score scale; where Precision leads) and the three placement steps (each step's parts with icons).
 
