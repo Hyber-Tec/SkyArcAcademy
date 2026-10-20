@@ -17,9 +17,9 @@ Sky Arc features (class slots, makeups, trials) come next, in the order of
 - **Production:** https://skyarcacademy.web.app, deployed by GitHub from `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)).
   Until the academy's real data arrives it holds fictional sample data (`npm run seed:sample`; remove it with
   `npm run seed:sample -- --remove`).
-- **Phone app:** [`mobile/`](mobile/README.md), the academy office's app (iPhone first, Android too): on a simulator or
-  your iPhone with one command ([`docs/running-the-apps.md`](docs/running-the-apps.md)); the stores later
-  ([`docs/publishing.md`](docs/publishing.md)).
+- **Phone app:** [`mobile/`](mobile/README.md), the app of the academy's families, coaches and office (iPhone first,
+  Android too): on a simulator or your iPhone with one command ([`docs/running-the-apps.md`](docs/running-the-apps.md));
+  the App Store first, then Google Play ([`docs/publishing.md`](docs/publishing.md)).
 - **Open questions:** [`docs/QUESTIONS.md`](docs/QUESTIONS.md).
 
 ## Development

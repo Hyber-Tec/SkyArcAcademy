@@ -229,9 +229,10 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
    (`docs/DECISIONS.md` §18); `APP_URL` in `shared/src/brand.ts` also sets the site's canonical addresses, sitemap and
    robots.txt (built from it) and the `https://skyarcacademy.web.app` addresses in `web/index.html`; submit the
    sitemap in Google Search Console.
-7. **Privacy policy:** approved by the academy (A10 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
-   `web/src/pages/public/PrivacyPage.tsx` to the date it takes effect, and check the academy's contact details in
-   Settings → Academy (the policy shows them). Families are invited and trial booking opens only after this.
+7. **Privacy policy:** in effect since 2026-10-20 (`web/src/site/pages/Legal.tsx`). It names the website by
+   `APP_DOMAIN` (`shared/src/brand.ts`), so it follows the move; check the academy's contact details in Settings →
+   Academy (the policy and Help show them), and update the stores' privacy policy and support addresses if they still
+   point at skyarcacademy.web.app (both keep working there).
 
 ## Manual deploy (only when GitHub Actions is down)
 

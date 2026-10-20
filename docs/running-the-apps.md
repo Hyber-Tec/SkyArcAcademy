@@ -6,8 +6,7 @@ Written for someone who has never done mobile development and remembers nothing 
 written out, and every step that only a person can do (unlock a phone, tap Trust) says so.
 
 The website needs none of this: GitHub deploys it from `main` (docs/DEPLOY.md), and you open it at
-https://skyarcacademy.web.app. Nothing here goes to TestFlight or the App Store; that's [docs/publishing.md](publishing.md),
-for later.
+https://skyarcacademy.web.app. Nothing here goes to TestFlight or the App Store; that's [docs/publishing.md](publishing.md).
 
 ## Before anything else: the three things to know
 
@@ -256,7 +255,7 @@ If the Firebase CLI cannot be used, the two Firebase files can be downloaded by 
 | | |
 | --- | --- |
 | `mobile/` | The app's code. How it is built: [mobile/README.md](../mobile/README.md). |
-| `scripts/phone.mjs` | The commands above. `scripts/publish.mjs`: the publishing commands ([docs/publishing.md](publishing.md)). |
+| `scripts/phone.mjs` | The commands above. `scripts/publish.mjs`: the publishing commands ([docs/publishing.md](publishing.md)); `scripts/review-logins.ts`: the stores' reviewers' logins. |
 | `mobile/release.json` | The version and build number the app shows and the stores get. |
 | `mobile/firebase/GoogleService-Info.plist`, `mobile/firebase/google-services.json` | The skyarcacademy project's Firebase settings for the iPhone and Android apps. Never in git (they hold the project's API key); `npm run phone:setup` downloads them. |
 | `mobile/.expo/practice-login.json` | The practice logins' password, on this Mac only. |

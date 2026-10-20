@@ -184,7 +184,7 @@ still signed in holds an account they no longer know.
 - The Firebase project has the app registered: the iOS app and the Android app `com.skyarcacademy.app`, the Android
   one with the SHA-1 and SHA-256 of the standard debug key that every `expo prebuild` project signs its builds with.
   Google Play's upload key and app signing key need adding when the first store build comes
-  ([docs/publishing.md](../docs/publishing.md), part 4).
+  ([docs/publishing/google-play/testing.md](../docs/publishing/google-play/testing.md), step 5).
 - Their files, `GoogleService-Info.plist` and `google-services.json`, go in `mobile/firebase/` (git-ignored: they
   hold the project's API key); `npm run phone:setup` downloads them with the Firebase CLI. EAS builds would get them
   from the file environment variables `GOOGLE_SERVICES_PLIST` and `GOOGLE_SERVICES_JSON`.
