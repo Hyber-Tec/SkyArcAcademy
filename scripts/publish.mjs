@@ -17,10 +17,10 @@
  *
  * What the commands need, in mobile/.publish/ (git-ignored; back the folder up, it holds keys nothing can replace):
  *   AuthKey_<KEY ID>.p8 and appstore.json { "keyId", "issuerId", "appleId" }   an App Store Connect API key, and the
- *                                                                            app's numeric Apple ID (docs/publishing.md, part 1)
+ *                                                                            app's numeric Apple ID (docs/publishing/apple/app-store.md, steps 4–7)
  *   upload.keystore and keystore.json                                          Google Play's upload key: made here on the first Android run
  *   play-service-account.json                                                  a Google Cloud service account allowed to publish
- *                                                                            in the Play Console (docs/publishing.md, part 4)
+ *                                                                            in the Play Console (docs/publishing/google-play/testing.md, part 4)
  *
  * The native project is prepared by scripts/phone.mjs (`prepare`), exactly as for a phone: the same packages,
  * Firebase files, team and fingerprint. Logs go to mobile/.expo/logs/ as the phone commands' do.
@@ -201,8 +201,8 @@ function explainXcodeProblem(log) {
     [/Cloud signing permission error|cloud-managed distribution certificates/i, `Apple refused to sign with HyberTec's cloud-managed App Store certificate: the Apple ID signed in to Xcode (Xcode → Settings… → Accounts) must be the Account Holder or an Admin of HyberTec LLC's team, or have "Access to Cloud Managed Distribution Certificate" ticked on its user in App Store Connect → Users and Access. Then run this again.`],
     [/Apple Distribution|distribution certificate|No signing certificate "iOS Distribution"|no.*Distribution.*certificate/i, `Xcode couldn't get an App Store signing certificate ("Apple Distribution") for HyberTec LLC. In Xcode: Settings… → Accounts → the Apple ID → HyberTec LLC → Manage Certificates… → + → Apple Distribution → Done. Then run this again.`],
     [/No profiles for|requires a provisioning profile|provisioning profile/i, `Xcode couldn't set up the App Store signing. Check that Xcode → Settings… → Accounts lists the Apple ID with HyberTec LLC's team, then run this again.`],
-    [/authentication|Unable to authenticate|invalid API key|AuthKey|issuer/i, "App Store Connect refused the API key. Check mobile/.publish/appstore.json (keyId, issuerId) and that AuthKey_<keyId>.p8 is the key downloaded for it (docs/publishing.md, part 1)."],
-    [/Bundle ID .* not (found|registered)|No App ID|application identifier .* not found/i, `App Store Connect has no app with the bundle id ${APP_ID} yet: create it first (docs/publishing.md, part 2, step 1), then run this again.`],
+    [/authentication|Unable to authenticate|invalid API key|AuthKey|issuer/i, "App Store Connect refused the API key. Check mobile/.publish/appstore.json (keyId, issuerId) and that AuthKey_<keyId>.p8 is the key downloaded for it (docs/publishing/apple/app-store.md, steps 4–5)."],
+    [/Bundle ID .* not (found|registered)|No App ID|application identifier .* not found/i, `App Store Connect has no app with the bundle id ${APP_ID} yet: create it first (docs/publishing/apple/app-store.md, step 6), then run this again.`],
   ];
   const match = known.find(([pattern]) => pattern.test(text));
   return [...(match ? [match[1]] : ["The lines above say what went wrong."]), `The whole log: ${relative(log)}. Or ask Claude Code: "npm run publish:iphone fails", with that file.`];
@@ -217,7 +217,7 @@ const API_KEY_STEPS = [
   "  3. Move the downloaded AuthKey_XXXXXXXXXX.p8 into mobile/.publish/ (make the folder if it isn't there).",
   '  4. Create mobile/.publish/appstore.json with the Key ID, the Issuer ID (top of that page) and the app\'s Apple ID (App Store Connect → the app → App Information):',
   '     { "keyId": "XXXXXXXXXX", "issuerId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "appleId": "1234567890" }',
-  "  Then run this again. docs/publishing.md, part 1, has the same steps in more detail.",
+  "  Then run this again. docs/publishing/apple/app-store.md, steps 4–7, has the same steps in more detail.",
 ];
 
 /** The App Store Connect API key and the app's Apple ID from mobile/.publish, or null on a dry run without them. */
@@ -242,7 +242,7 @@ function appStoreCredentials() {
   if (!keyId || !issuerId) stop(["mobile/.publish/appstore.json needs keyId and issuerId:", ...API_KEY_STEPS]);
   const key = secret(`AuthKey_${keyId}.p8`);
   if (!fs.existsSync(key)) stop([`The key file for ${keyId} is missing: it should be ${relative(key)} (the .p8 downloaded when the key was made; if it is lost, make a new key).`, ...API_KEY_STEPS]);
-  if (!appleId && !dryRun) stop(['mobile/.publish/appstore.json needs "appleId": the app\'s numeric Apple ID, from App Store Connect → the app → App Information → General Information. Create the app there first if it isn\'t (docs/publishing.md, part 2, step 1).']);
+  if (!appleId && !dryRun) stop(['mobile/.publish/appstore.json needs "appleId": the app\'s numeric Apple ID, from App Store Connect → the app → App Information → General Information. Create the app there first if it isn\'t (docs/publishing/apple/app-store.md, steps 6–7).']);
   return { keyId, issuerId, appleId, key };
 }
 
@@ -396,11 +396,12 @@ function freshJsBundle() {
 }
 
 const SERVICE_ACCOUNT_STEPS = [
-  "  1. Google Cloud console (https://console.cloud.google.com), project skyarcacademy → IAM & Admin → Service Accounts → Create service account,",
+  "  1. Turn on Google's publishing API: https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com?project=skyarcacademy → Enable.",
+  "  2. Google Cloud console (https://console.cloud.google.com), project skyarcacademy → IAM & Admin → Service Accounts → Create service account,",
   '     name "play-publisher", no roles → Done. Open it → Keys → Add key → Create new key → JSON. A .json file downloads.',
-  "  2. Play Console → Users and permissions → Invite new users → the service account's email (it ends in iam.gserviceaccount.com) →",
+  "  3. Play Console → Users and permissions → Invite new users → the service account's email (it ends in iam.gserviceaccount.com) →",
   '     App permissions → Sky Arc → tick "Release apps to testing tracks" and "Release to production, exclude devices, and use Play App Signing" → Invite user.',
-  "  3. Move the downloaded .json to mobile/.publish/play-service-account.json. Then run this again. (docs/publishing.md, part 4)",
+  "  4. Move the downloaded .json to mobile/.publish/play-service-account.json. Then run this again. (docs/publishing/google-play/testing.md, part 4)",
 ];
 
 /** The service account that may publish, from mobile/.publish, or null on a dry run without one. */
@@ -452,7 +453,7 @@ async function play(token, method, url, { body, contentType = "application/json"
   if (!r.ok) {
     const message = json.error?.message ?? json.raw ?? `HTTP ${r.status}`;
     const hint = /not found|does not exist|Package not found/i.test(message)
-      ? `Google Play doesn't know ${APP_ID} under this account yet: the app's very first bundle has to be uploaded by hand in the Play Console (docs/publishing.md, part 4, "The first upload"). After that, this command does every upload.`
+      ? `Google Play doesn't know ${APP_ID} under this account yet: the app's very first bundle has to be uploaded by hand in the Play Console (docs/publishing/google-play/testing.md, part 2). After that, this command does every upload.`
       : /Only releases with status draft/i.test(message)
         ? "Google takes only draft releases until the app's first release has been published: run the command again with --draft, then finish the release in the Play Console."
         : /permission|forbidden|403|not authorized/i.test(message)
@@ -478,7 +479,7 @@ async function android() {
   const prepared = prepareNative("android");
   const env = { ...process.env, ...prepared.env };
   const prints = keyFingerprints(java, key);
-  note(`The upload key's certificate: SHA-1 ${prints.sha1}, SHA-256 ${prints.sha256} (Firebase → Project settings → the Android app → Add fingerprint takes these, for Google sign-in: docs/publishing.md, part 4).`);
+  note(`The upload key's certificate: SHA-1 ${prints.sha1}, SHA-256 ${prints.sha256} (Firebase → Project settings → the Android app → Add fingerprint takes these, for Google sign-in: docs/publishing/google-play/testing.md, step 5).`);
 
   step(`Building ${APP_NAME} ${release.version} (build ${release.build}) for Google Play, signed with the upload key (5 to 15 minutes)`);
   const androidDir = path.join(mobile, "android");

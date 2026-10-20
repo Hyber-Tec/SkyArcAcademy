@@ -1,0 +1,12 @@
+# Opens one tab of the family's app, for the stores' screenshots (npm run publish:screenshots, scripts/phone.mjs): TAB
+# is home, classes, scores, reports or more, and LABEL its name on the tab bar. Starts from the family's signed-in app.
+#   maestro test -e TAB=scores -e LABEL=Scores maestro/screenshots/family-tab.yaml
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    file: ../steps/family-tab.yaml
+    env:
+      TAB: ${TAB}
+      LABEL: ${LABEL}
+- waitForAnimationToEnd:
+    timeout: 5000
