@@ -5,6 +5,9 @@
 @import "./styles/theme.css";
 @import "./features/reports/report.css";
 
+/* The public website (src/site) has its own stylesheet. */
+@source not "./site";
+
 /* Rich text (announcements): editor and rendered posts share these styles. */
 @layer components {
   .rich-content {

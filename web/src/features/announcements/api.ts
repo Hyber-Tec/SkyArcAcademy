@@ -27,6 +27,8 @@ import {
 import { COL, branchColPath } from '@shared/paths'
 import type { Role } from '@shared/roles'
 import type { WithId } from '@shared/types'
+import { postSlug } from '@shared/website/posts'
+import type { AnnouncementWebsite } from '@shared/website/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { type Actor, addAudit } from '@/lib/audit'
 import { db, storage } from '@/lib/firebase'
@@ -120,22 +122,36 @@ export interface AnnouncementInput {
   audienceKeys: string[]
   /** Parents and students see it too (on their Home), whoever the staff audience is. */
   families: boolean
+  /** On the website's News too (null: it never was, and isn't now). */
+  website: AnnouncementWebsite | null
   commentsEnabled: boolean
   attachments: AnnouncementAttachment[]
   /** Create: notify the audience. Edit: notify them again. */
   notify: boolean
 }
 
-function contentFields(input: AnnouncementInput) {
+/**
+ * "On the website", as saved: nothing until a post first goes on the website; from then on it keeps its address on
+ * the site (`/news/{slug}`), made once from the title and never changed, even when it's switched off and on again.
+ */
+export function websiteField(w: AnnouncementWebsite | null, title: string, id: string): AnnouncementWebsite | undefined {
+  if (!w || (!w.on && !w.slug)) return undefined
+  return { on: w.on, category: w.category, cover: w.cover ?? null, slug: w.slug || postSlug(title, id) }
+}
+
+function contentFields(input: AnnouncementInput, id: string) {
   const contentHtml = sanitizeHtml(input.contentHtml)
+  const title = input.title.trim()
+  const website = websiteField(input.website, title, id)
   return {
-    title: input.title.trim(),
+    title,
     contentHtml,
     contentText: stripHtmlToText(contentHtml),
     category: input.category.trim() || 'General',
     audienceType: input.audienceType,
     audienceKeys: input.audienceType === 'members' ? [...new Set(input.audienceKeys)] : [],
     families: input.families,
+    ...(website ? { website } : {}),
     commentsEnabled: input.commentsEnabled,
     attachments: input.attachments,
   }
@@ -143,7 +159,7 @@ function contentFields(input: AnnouncementInput) {
 
 export async function createAnnouncement(branchId: string, actor: Actor, id: string, input: AnnouncementInput) {
   const batch = writeBatch(db)
-  const fields = contentFields(input)
+  const fields = contentFields(input, id)
   batch.set(announcementRef(branchId, id), {
     ...fields,
     pinned: false,
@@ -164,14 +180,17 @@ export async function createAnnouncement(branchId: string, actor: Actor, id: str
     category: 'announcements',
     entityType: 'announcement',
     entityId: id,
-    summary: `Published “${fields.title}”`,
+    summary: `Published “${fields.title}”${fields.website?.on ? ', also on the website' : ''}`,
   })
   await batch.commit()
 }
 
-export async function updateAnnouncement(branchId: string, actor: Actor, id: string, input: AnnouncementInput) {
+/** `wasOnWebsite`: the post was on the website before this edit (the audit entry says when that changes). */
+export async function updateAnnouncement(branchId: string, actor: Actor, id: string, input: AnnouncementInput, wasOnWebsite = false) {
   const batch = writeBatch(db)
-  const fields = contentFields(input)
+  const fields = contentFields(input, id)
+  const onWebsite = fields.website?.on === true
+  const website = onWebsite === wasOnWebsite ? '' : onWebsite ? ', put it on the website' : ', took it off the website'
   batch.update(announcementRef(branchId, id), {
     ...fields,
     ...(input.notify ? { notifyRequestedAt: serverTimestamp() } : {}),
@@ -183,7 +202,7 @@ export async function updateAnnouncement(branchId: string, actor: Actor, id: str
     category: 'announcements',
     entityType: 'announcement',
     entityId: id,
-    summary: `Edited “${fields.title}”${input.notify ? ' and notified the audience again' : ''}`,
+    summary: `Edited “${fields.title}”${website}${input.notify ? ' and notified the audience again' : ''}`,
   })
   await batch.commit()
 }

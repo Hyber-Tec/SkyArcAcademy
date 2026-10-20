@@ -9,6 +9,7 @@ import {
   LuCornerDownRight,
   LuExternalLink,
   LuEye,
+  LuGlobe,
   LuMegaphone,
   LuMessageSquare,
   LuPaperclip,
@@ -69,8 +70,13 @@ function useListPath(mode: Mode) {
 
 function audienceLabel(a: Announcement) {
   const n = a.audienceKeys?.length ?? 0
-  const staff = a.audienceType === 'all' ? 'All coaches' : `${n} ${n === 1 ? 'person' : 'people'}`
+  const staff = a.audienceType === 'all' ? 'All coaches' : n ? `${n} ${n === 1 ? 'person' : 'people'}` : 'Admins only'
   return a.families ? `${staff} · families` : staff
+}
+
+/** Where a post on the website can be read (`/news/{slug}`), or null when it isn't there. */
+function websiteHref(a: Announcement): string | null {
+  return a.website?.on && a.website.slug ? `/news/${a.website.slug}` : null
 }
 
 function postedAt(a: Announcement, timezone: string) {
@@ -308,6 +314,7 @@ function AnnouncementCard({
         { kind: 'label', label: a.title || '(Untitled)' },
         { label: 'Open', icon: LuMegaphone, onSelect: () => navigate(to) },
         { label: 'Open in new tab', icon: LuExternalLink, onSelect: () => window.open(to, '_blank', 'noopener') },
+        !!websiteHref(a) && { label: 'View on the website', icon: LuGlobe, onSelect: () => window.open(websiteHref(a)!, '_blank', 'noopener') },
         admin && { label: 'Edit', icon: LuPencil, separatorBefore: true, onSelect: onEdit },
         admin && !a.archived && { label: a.pinned ? 'Unpin' : 'Pin to top', icon: a.pinned ? LuPinOff : LuPin, onSelect: onPin },
         admin && { label: a.archived ? 'Restore from archive' : 'Archive', icon: a.archived ? LuArchiveRestore : LuArchive, onSelect: onArchive },
@@ -350,6 +357,22 @@ function AnnouncementCard({
           <span className="inline-flex items-center gap-1">
             <LuUsers className="size-3.5" /> {audienceLabel(a)}
           </span>
+          {websiteHref(a) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={websiteHref(a)!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative z-10 inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <LuGlobe className="size-3.5" /> On the website
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>View on the website</TooltipContent>
+            </Tooltip>
+          ) : null}
           {a.commentCount ? (
             <span className="inline-flex items-center gap-1">
               <LuMessageSquare className="size-3.5" /> {a.commentCount}
@@ -451,6 +474,11 @@ function PostView({ mode }: { mode: Mode }) {
             <Badge variant="secondary" className="font-normal">
               <LuTag /> {a.category || 'General'}
             </Badge>
+            {a.website?.on ? (
+              <Badge variant="outline" className="font-normal">
+                <LuGlobe /> On the website
+              </Badge>
+            ) : null}
           </div>
           {admin ? (
             <div className="flex flex-wrap items-center gap-1">
@@ -490,6 +518,11 @@ function PostView({ mode }: { mode: Mode }) {
           <span className="inline-flex items-center gap-1.5">
             <LuMessageSquare className="size-4" /> {a.commentCount ?? 0} {(a.commentCount ?? 0) === 1 ? 'comment' : 'comments'}
           </span>
+          {websiteHref(a) ? (
+            <a href={websiteHref(a)!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-medium text-foreground underline-offset-2 hover:underline">
+              <LuGlobe className="size-4" /> View on the website <LuExternalLink className="size-3.5" />
+            </a>
+          ) : null}
         </div>
         <Separator className="my-5" />
         <HtmlContent html={a.contentHtml} />

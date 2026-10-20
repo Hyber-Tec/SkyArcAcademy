@@ -7,6 +7,7 @@ import { ActivityToasts } from '@/features/audit/ActivityToasts'
 import { useUnreadNewsCount } from '@/features/family/news'
 import { useAttention } from '@/features/home/attention'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
+import { useNewWebsiteMessageCount } from '@/features/website/api'
 import { useBranch } from '@/branch/BranchProvider'
 import { SkyArcLockup, SkyArcMark } from '@/components/app/SkyArcMark'
 import { UserMenu } from '@/components/app/UserMenu'
@@ -44,15 +45,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLeaves } from './nav'
 
-/** Live counts shown next to nav entries, by nav key (Home: needs attention; coach Announcements and families' News: unread). */
+/**
+ * Live counts shown next to nav entries, by nav key (Home: needs attention; coach Announcements and families' News:
+ * unread; Website: messages from the website not yet marked done).
+ */
 const NavBadges = createContext<Record<string, number>>({})
 
 function NavBadgesProvider({ portal, children }: { portal: Portal; children: React.ReactNode }) {
   const attention = useAttention(portal === 'admin')
   const unread = useUnreadAnnouncementCount(portal === 'coach')
   const news = useUnreadNewsCount(portal === 'parent' || portal === 'student')
+  const website = useNewWebsiteMessageCount(portal === 'admin')
   const total = portal === 'admin' ? attention.total : 0
-  const value = useMemo(() => ({ home: total, announcements: unread, news }), [total, unread, news])
+  const value = useMemo(() => ({ home: total, announcements: unread, news, website }), [total, unread, news, website])
   // Installed app icon: unread announcements in the coach portal (TE's News count).
   useEffect(() => {
     if (portal !== 'coach') return

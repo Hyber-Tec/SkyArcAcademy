@@ -1,5 +1,6 @@
 import type { Role } from './roles'
 import type { AuditStamp, TimestampLike } from './types'
+import type { AnnouncementWebsite } from './website/types'
 
 // ------------------------------------------------------------ announcements
 
@@ -31,6 +32,8 @@ export interface Announcement extends AuditStamp {
    * docs/DECISIONS.md §16). Off unless the admin turns it on; comments stay with staff. Absent on older posts: off.
    */
   families?: boolean
+  /** Shown on the public website's News too (docs/DECISIONS.md §18). Absent on older posts: off. */
+  website?: AnnouncementWebsite
   commentsEnabled: boolean
   pinned: boolean
   pinnedAt: TimestampLike | null
@@ -126,6 +129,7 @@ export type NotificationType =
   | 'session_reassigned_out'
   | 'session_no_show'
   | 'report_shared'
+  | 'website_message'
 
 /** `branches/{b}/notifications/{id}`: the in-app inbox (written by Cloud Functions). */
 export interface AppNotification {
@@ -135,7 +139,7 @@ export interface AppNotification {
   body: string
   /** In-app path below the branch, e.g. "coach/announcements/abc". */
   link: string
-  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; reportId?: string | null }
+  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; reportId?: string | null; messageId?: string | null }
   createdAt: TimestampLike
   readAt: TimestampLike | null
 }
@@ -153,6 +157,7 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   session_reassigned_out: { label: 'Class Reassigned', color: '#D97706' },
   session_no_show: { label: 'No Show', color: '#DC2626' },
   report_shared: { label: 'Progress Report', color: '#C80000' },
+  website_message: { label: 'From the Website', color: '#0A0A0A' },
 }
 
 export function notificationMeta(type: string): { label: string; color: string } {

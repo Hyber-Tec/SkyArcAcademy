@@ -21,10 +21,10 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 
 | Target | From | Notes |
 |---|---|---|
-| Hosting | `web/dist` (built in CI) | Every address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
+| Hosting | `web/dist` (built in CI) | The public website's pages are files of their own (`index.html`, `programs.html`, `ko/…`; a news post `/news/…` is `news-post.html`, by a rewrite), with `sitemap.xml` and `robots.txt`. Every other address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
-| Storage rules | `storage.rules` | Announcement files and the Drive's files (staff only, read through the rules). See "Storage" below. |
+| Storage rules | `storage.rules` | Announcement files and the Drive's files (staff only, read through the rules), and the website's pictures (anyone reads them). See "Storage" below. |
 | Cloud Functions | `functions/` (built by the predeploy step) | Gen 2, `us-central1`, running as `functions@`. See "Cloud Functions" below. |
 
 ## How GitHub signs in to Google Cloud (no keys)
@@ -90,6 +90,9 @@ The web config (API key, app ID, …) is never committed (CLAUDE.md, "Secrets").
   location can't change.
 - Progress reports (SIUS PDFs, target photos) live here. Files concern minors: the app reads them through the
   Storage rules (`getBlob`), never through `getDownloadURL` links, which bypass the rules.
+- The public website's pictures are the exception, on purpose: `branches/skyarc/website/` (the Website page's photos
+  and the news covers, resized in the browser) is readable by anyone, and the site shows them by plain address
+  (`https://firebasestorage.googleapis.com/v0/b/…/o/…?alt=media`), with no token. Only admins write there.
 - `getBlob` in the browser needs CORS on the bucket: `storage.cors.json` allows GET from the app's addresses and the
   local dev servers. Applied on 2026-10-15; apply it again after changing the file:
   `gcloud storage buckets update gs://skyarcacademy.firebasestorage.app --cors-file=storage.cors.json`.
@@ -121,7 +124,8 @@ Set up on 2026-10-15. HyberTec's organization shapes three things here:
   labeled `deployment-callable` instead, which the organization allows (`run.managed.requireInvokerIam` is off).
   The Firebase CLI tries to add `allUsers` only when it creates a callable, so the deploy that adds a new callable
   reports "set invoker" for it; `scripts/deploy.sh` then opens the callables and deploys once more, and that run
-  succeeds.
+  succeeds. One callable needs no sign-in at all: `websiteMessage`, the public website's trial request and contact
+  form, which checks what it gets, drops bots and limits each sender itself (`functions/src/website.ts`).
 
 The email app password is the Secret Manager secret **`GMAIL_APP_PASSWORD`**: the Google app password of the sending
 Gmail account (`SENDER_EMAIL` in `shared/src/brand.ts`). It was set on 2026-10-16, and Firebase manages the secret since
@@ -221,7 +225,11 @@ The academy owns skyarcacademy.com, and moving the app there is the last step be
    it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
    `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
 5. **Sample data:** removed (see above).
-6. **Privacy policy:** approved by the academy (A10 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
+6. **The public website:** real testimonials on the Website page, or the section shows samples marked "Sample"
+   (`docs/DECISIONS.md` §18); `APP_URL` in `shared/src/brand.ts` also sets the site's canonical addresses, sitemap and
+   robots.txt (built from it) and the `https://skyarcacademy.web.app` addresses in `web/index.html`; submit the
+   sitemap in Google Search Console.
+7. **Privacy policy:** approved by the academy (A10 in `docs/QUESTIONS.md`): set `EFFECTIVE` in
    `web/src/pages/public/PrivacyPage.tsx` to the date it takes effect, and check the academy's contact details in
    Settings → Academy (the policy shows them). Families are invited and trial booking opens only after this.
 

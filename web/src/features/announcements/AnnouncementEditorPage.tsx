@@ -4,6 +4,7 @@ import { LuArrowLeft, LuFileText, LuPaperclip, LuSearch, LuX } from 'react-icons
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { type Announcement, type AnnouncementAttachment, type AnnouncementAudience, announcementCategories } from '@shared/comms'
+import type { AnnouncementWebsite } from '@shared/website/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ConfirmDialog } from '@/components/app/ConfirmDialog'
 import { OptionPicker } from '@/components/app/OptionPicker'
@@ -31,7 +32,9 @@ import {
   uploadAnnouncementFile,
   useAllAnnouncements,
 } from './api'
+import { useCoverUpload } from './cover'
 import { hasContent } from './html'
+import { WebsiteOptions } from './WebsiteOptions'
 
 interface Draft {
   title: string
@@ -41,6 +44,8 @@ interface Draft {
   audienceType: AnnouncementAudience
   audienceKeys: string[]
   families: boolean
+  /** On the website's News: null until it's first switched on (from then on the post keeps its address there). */
+  website: AnnouncementWebsite | null
   commentsEnabled: boolean
   notify: boolean
 }
@@ -53,6 +58,7 @@ const EMPTY: Draft = {
   audienceType: 'all',
   audienceKeys: [],
   families: false,
+  website: null,
   commentsEnabled: false,
   notify: true,
 }
@@ -81,6 +87,7 @@ export function AnnouncementEditorPage() {
         audienceType: a.audienceType,
         audienceKeys: a.audienceKeys ?? [],
         families: a.families === true,
+        website: a.website ?? null,
         commentsEnabled: a.commentsEnabled,
         // "Notify again" always starts off.
         notify: false,
@@ -107,6 +114,12 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
   const [uploading, setUploading] = useState(0)
   const [search, setSearch] = useState('')
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
+  const setWebsite = (patch: Partial<AnnouncementWebsite>) =>
+    setDraft((d) => ({ ...d, website: { ...(d.website ?? { on: false, category: 'announcements', cover: null, slug: '' }), ...patch } }))
+  const cover = useCoverUpload(branchId, id, (img) => setWebsite({ cover: img }))
+  const onWebsite = draft.website?.on === true
+  // With nobody on the staff picked, a post for families or the website is still allowed: in the CRM, admins see it.
+  const nobody = draft.audienceType === 'members' && draft.audienceKeys.length === 0
 
   const { data: posts } = useAllAnnouncements()
   const categories = useMemo(
@@ -138,15 +151,26 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
   }
 
   function publish() {
-    if (draft.audienceType === 'members' && draft.audienceKeys.length === 0) return setError('Please select at least one person.')
+    if (nobody && !draft.families && !onWebsite) return setError('Please select at least one person, or show it to families or on the website.')
+    if (onWebsite && cover.working?.error) return setError('The cover picture didn’t upload. Choose it again, or remove it.')
     setError(null)
     setConfirming(true)
   }
 
   async function save() {
-    const input: AnnouncementInput = { ...draft }
+    let input: AnnouncementInput = { ...draft }
+    // A cover still uploading is waited for: the website must never name a picture whose files aren't there.
+    if (onWebsite && draft.website) {
+      try {
+        const img = await cover.wait()
+        if (img) input = { ...input, website: { ...draft.website, cover: img } }
+      } catch {
+        toast.error('The cover picture didn’t upload. Choose it again, or remove it.')
+        return
+      }
+    }
     try {
-      if (editing) await updateAnnouncement(branchId, actor, id, input)
+      if (editing) await updateAnnouncement(branchId, actor, id, input, initial.website?.on === true)
       else await createAnnouncement(branchId, actor, id, input)
       toast.success(editing ? 'Changes saved.' : 'Announcement published.')
       navigate(list)
@@ -315,6 +339,9 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
                     Selected: <span className="font-semibold text-foreground">{draft.audienceKeys.length}</span>
                   </span>
                 </div>
+                {nobody && (draft.families || onWebsite) ? (
+                  <p className="text-sm text-muted-foreground">Nobody selected: in the CRM, only admins see this announcement.</p>
+                ) : null}
                 <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">
                   {shownCoaches.map((t) => {
                     const checked = draft.audienceKeys.includes(t.key)
@@ -348,6 +375,16 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
               onChange={(families) => set({ families })}
             />
             <OptionRow
+              id="ann-website"
+              label="On the website"
+              description="Shown on the website’s News, where anyone can read it. Only include children’s names or photos with their parents’ permission."
+              checked={onWebsite}
+              onChange={(on) => setWebsite({ on })}
+            />
+            {onWebsite && draft.website ? (
+              <WebsiteOptions value={draft.website} onChange={setWebsite} title={draft.title} announcementId={id} html={draft.contentHtml} cover={cover} />
+            ) : null}
+            <OptionRow
               id="ann-comments"
               label="Allow comments"
               description="Let coaches leave comments on this announcement."
@@ -380,10 +417,8 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
         title={editing ? 'Save changes?' : 'Publish announcement?'}
         description={
           <>
-            {editing
-              ? `Your edits to “${draft.title.trim()}” will be saved immediately.`
-              : `This will immediately send “${draft.title.trim()}” to ${draft.audienceType === 'all' ? `all ${audienceSize} coaches` : `${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`}${draft.families ? ', and show it to parents and students' : ''}.`}
-            {draft.notify ? (
+            {editing ? editText(draft, initial.website?.on === true) : publishText(draft, audienceSize)}
+            {draft.notify && !nobody ? (
               <span className={cn('mt-2 block', editing && 'text-red-600 dark:text-red-400')}>
                 {editing ? 'The audience will be notified again.' : 'They’ll also get a notification.'}
               </span>
@@ -408,4 +443,30 @@ function OptionRow({ id, label, description, checked, onChange }: { id: string; 
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   )
+}
+
+/** "A, B and C". */
+function joinAnd(parts: string[]): string {
+  return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
+}
+
+/** What publishing does, in a sentence: who gets it, and where else it shows. */
+function publishText(draft: Draft, audienceSize: number): string {
+  const title = `“${draft.title.trim()}”`
+  const parts: ((what: string) => string)[] = []
+  if (draft.audienceType === 'all') parts.push((what) => `send ${what} to all ${audienceSize} coaches`)
+  else if (audienceSize) parts.push((what) => `send ${what} to ${audienceSize} selected ${audienceSize === 1 ? 'person' : 'people'}`)
+  if (draft.families) parts.push((what) => `show ${what} to parents and students`)
+  if (draft.website?.on) parts.push((what) => `put ${what} on the website’s News, where anyone can read it`)
+  const staffNone = draft.audienceType === 'members' && !audienceSize
+  return `This will immediately ${joinAnd(parts.map((p, i) => p(i === 0 ? title : 'it')))}.${staffNone ? ' In the CRM, only admins see it.' : ''}`
+}
+
+function editText(draft: Draft, wasOnWebsite: boolean): string {
+  const saved = `Your edits to “${draft.title.trim()}” will be saved immediately.`
+  const on = draft.website?.on === true
+  if (on && wasOnWebsite) return `${saved} The website’s News shows them too.`
+  if (on) return `${saved} It also goes on the website’s News, where anyone can read it.`
+  if (wasOnWebsite) return `${saved} It comes off the website’s News.`
+  return saved
 }

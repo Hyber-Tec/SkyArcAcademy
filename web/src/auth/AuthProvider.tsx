@@ -24,6 +24,7 @@ import { type SignInMethods, signInMethods } from '@shared/auth'
 import { COL, DOC, ROOT, emailKey } from '@shared/paths'
 import type { BranchPublicProfile, Member, WithId } from '@shared/types'
 import { auth, db, functions, googleProvider } from '@/lib/firebase'
+import { noteSignedIn } from '@/lib/signedInHint'
 
 /** The signed-in person's place in the academy, when they have one. */
 export interface Membership {
@@ -141,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onAuthStateChanged(auth, (u) => {
         setUser(u)
         setStatus(u ? 'signedIn' : 'signedOut')
+        noteSignedIn(!!u)
         setVerified(!!u?.emailVerified)
         setProviders(u?.providerData.map((p) => p.providerId) ?? [])
         setAccess(null)
