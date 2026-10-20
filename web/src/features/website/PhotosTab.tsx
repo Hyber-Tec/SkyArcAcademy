@@ -265,7 +265,7 @@ function UploadCard({ upload, onRemove }: { upload: PhotoUpload; onRemove: () =>
           </>
         ) : (
           <p className="text-xs text-muted-foreground">
-            {WEBSITE_ALBUM_LABELS[upload.album]} album · on the website as soon as it’s up
+            {upload.album === 'pages' ? 'For the pages only' : `${WEBSITE_ALBUM_LABELS[upload.album]} album`} · on the website as soon as it’s up
           </p>
         )}
       </div>

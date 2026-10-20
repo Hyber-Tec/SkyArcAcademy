@@ -192,6 +192,8 @@ describe('website photos', () => {
       await assertSucceeds(deleteDoc(doc(d, `${PHOTOS}/${id}`)))
     }
     await assertSucceeds(updateDoc(doc(db('admin@a.test'), `${PHOTOS}/shown`), { album: 'competition', focus: '50% 30%', format: 'jpeg' }))
+    // A photo for the pages only (a banner, a portrait): on the website, not in the gallery.
+    await assertSucceeds(updateDoc(doc(db('admin@a.test'), `${PHOTOS}/shown`), { album: 'pages' }))
     await assertSucceeds(deleteDoc(doc(db('admin@a.test'), `${PHOTOS}/hidden`)))
   })
 
