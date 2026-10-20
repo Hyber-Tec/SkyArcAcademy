@@ -12,12 +12,21 @@
   "hosting": {
     "public": "web/dist",
     "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.DS_Store",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/news/**",
+        "destination": "/news-post.html"
+      },
+      {
+        "source": "/ko/news/**",
+        "destination": "/ko/news-post.html"
+      },
       {
         "regex": "^/(?:[^a].*|a(?:[^s].*)?|as(?:[^s].*)?|ass(?:[^e].*)?|asse(?:[^t].*)?|asset(?:[^s].*)?|assets(?:[^/].*)?)?$",
         "destination": "/app.html"

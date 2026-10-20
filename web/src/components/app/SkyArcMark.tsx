@@ -46,6 +46,14 @@ export function SkyArcMark({ tone = 'black', className }: { tone?: 'black' | 'wh
   )
 }
 
+/**
+ * The official reticle alone, white with its red dot (`public/brand/skyarc-mark-white.svg`), for dark backgrounds and
+ * photos: a watermark or a banner (the public website's dark sections). Decoration only: screen readers skip it.
+ */
+export function SkyArcReticle({ className }: { className?: string }) {
+  return <img src="/brand/skyarc-mark-white.svg" alt="" aria-hidden="true" className={cn('inline-block aspect-square', className)} />
+}
+
 const LOGO = { black: '/brand/skyarc-logo.svg', white: '/brand/skyarc-logo-white.svg' }
 const WORDMARK = { black: '/brand/skyarc-wordmark.svg', white: '/brand/skyarc-wordmark-white.svg' }
 
