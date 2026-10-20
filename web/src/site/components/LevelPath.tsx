@@ -1,5 +1,5 @@
 import { AnimatePresence, type MotionValue, animate, motion, useInView, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform } from 'motion/react'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LuArrowRight, LuCheck } from 'react-icons/lu'
 import { PELLET_MM, ringRadiusMm, wholeScore } from '@shared/shooting/target'
 import { cn } from '@/lib/utils'
@@ -181,7 +181,7 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
         <span className="text-[12.5px] leading-tight font-semibold text-ink">{t(PRECISION.name)}</span>
         <span className="text-right text-[11px] leading-tight text-stone">{t(T.path.separate)}</span>
       </div>
-      <div className="relative flex flex-1 gap-2.5">
+      <div className="relative flex flex-1 gap-3">
         {/* The axis */}
         <div className="relative w-7 shrink-0" aria-hidden="true">
           {[150, 175, 200, 225, 250, 275, 300].map((v) => (
@@ -198,7 +198,7 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
                 <li
                   key={b.rank.name.en}
                   className={cn(
-                    'flex min-h-0 flex-1 items-center justify-between gap-2 rounded-lg px-2.5 transition-[opacity,box-shadow] duration-500',
+                    'flex min-h-0 flex-1 items-center justify-between gap-1.5 rounded-lg px-2 transition-[opacity,box-shadow] duration-500 xl:gap-2 xl:px-2.5',
                     LEVEL_FILL[b.level],
                     on ? 'opacity-100 shadow-[0_0_0_1.5px_rgb(10_10_10/0.9)]' : 'opacity-40',
                   )}
@@ -210,7 +210,7 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
             })}
           </ol>
           {/* The marker: the drawn group's 3×10 score */}
-          <motion.div className="pointer-events-none absolute -left-2.5 h-0 w-4" style={{ bottom }} aria-hidden="true">
+          <motion.div className="pointer-events-none absolute -left-2 h-0 w-4" style={{ bottom }} aria-hidden="true">
             <div className="absolute top-0 left-0 size-3 -translate-y-1/2 rounded-full bg-red ring-2 ring-white" />
             <div className="absolute top-0 left-2 h-[2px] w-3 -translate-y-1/2 rounded-full bg-red" />
           </motion.div>
@@ -324,7 +324,7 @@ function PathPanel({ level, active }: { level: MotionValue<number>; active: numb
           </AnimatePresence>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-4 xl:gap-5">
+      <div className="mt-4 grid grid-cols-2 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:gap-5">
         <div className="rounded-[22px] bg-warm p-3">
           <GroupTarget level={level} title={t(T.path.targetTitle)} />
         </div>
@@ -336,11 +336,34 @@ function PathPanel({ level, active }: { level: MotionValue<number>; active: numb
   )
 }
 
-function Chapter({ level: lv, index, active, wide, visual }: { level: Level; index: number; active: boolean; wide: boolean; visual?: ReactNode }) {
+function Chapter({
+  level: lv,
+  index,
+  active,
+  wide,
+  visual,
+  ref,
+  style,
+}: {
+  level: Level
+  index: number
+  active: boolean
+  wide: boolean
+  visual?: ReactNode
+  ref?: Ref<HTMLElement>
+  style?: CSSProperties
+}) {
   const { t, href } = useSite()
   const reduce = useReduced()
   return (
-    <article className={cn('flex flex-col justify-center transition-opacity duration-500', wide ? 'min-h-[72svh] py-10' : 'py-0', wide && !active && !reduce && 'opacity-35')} aria-current={wide && active ? 'step' : undefined}>
+    <article
+      ref={ref}
+      style={style}
+      // Wide: its first line level with the panel's (the panel's border and padding) where it comes to rest.
+      className={cn('flex flex-col transition-opacity duration-500', wide ? 'pt-[21px] xl:pt-[25px]' : 'py-0', wide && index < LEVELS.length - 1 && 'pb-10', wide && !active && !reduce && 'opacity-35')}
+      data-level={wide ? index : undefined}
+      aria-current={wide && active ? 'step' : undefined}
+    >
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="font-mono text-[13px] text-stone">{String(index + 1).padStart(2, '0')} / 04</span>
         <span className="rounded-full bg-warm-2 px-2.5 py-1 text-[12px] font-medium text-ink">{t(lv.stage)}</span>
@@ -430,35 +453,175 @@ export function LevelVisual({ index, className }: { index: number; className?: s
   )
 }
 
+/** The keys that move the page by a screen. */
+const PAGE_KEYS = ['PageDown', 'PageUp', ' ']
+
+/** 0 → 1 with a pause at both ends: the group rests on a level near its place and moves in the middle of the way. */
+const between = (f: number) => {
+  const x = Math.min(1, Math.max(0, (f - 0.22) / 0.56))
+  return x * x * (3 - 2 * x)
+}
+
+/**
+ * The magnet: when a reader stops scrolling between two levels on a wide screen, the page glides on to the level they
+ * were heading for (back to the one they left if they hardly moved), so a level always comes to rest lined up with the
+ * panel. A little above the first level it draws the reader in; past the last it lets go. Only after the reader's own
+ * wheel, trackpad or touch, or a page key (Page Down, Space), which settles on the nearest level; the arrow keys keep
+ * their small steps, and the page finding its place again on Back is left alone. Never with reduced motion, and any
+ * new scroll takes over at once.
+ */
+function useMagnet(on: boolean, chapters: RefObject<(HTMLElement | null)[]>, top: number) {
+  useEffect(() => {
+    if (!on || !top) return
+    const wide = window.matchMedia('(min-width: 1024px)')
+    let timer = 0
+    let frame = 0
+    let lastY = window.scrollY
+    let heading = 0
+    // What moved the page last: the reader's wheel, trackpad or touch, a page key, or something else (left alone).
+    let by: 'hand' | 'page' | null = null
+    const stop = () => {
+      cancelAnimationFrame(frame)
+      frame = 0
+    }
+    const glide = (to: number) => {
+      const from = window.scrollY
+      const d = to - from
+      if (Math.abs(d) < 2) return
+      const ms = Math.min(900, Math.max(450, 420 + Math.abs(d) * 0.45))
+      const t0 = performance.now()
+      const step = (now: number) => {
+        const p = Math.min(1, (now - t0) / ms)
+        // Eases in and out: the page starts moving gently from where the reader left it, and settles.
+        const e = p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2
+        window.scrollTo({ top: from + d * e, behavior: 'instant' })
+        frame = p < 1 ? requestAnimationFrame(step) : 0
+        lastY = window.scrollY
+      }
+      frame = requestAnimationFrame(step)
+    }
+    const settle = () => {
+      if (!wide.matches || !by || frame) return
+      // Where the page rests with each level lined up with the panel.
+      const rest = chapters.current.map((c) => (c ? c.getBoundingClientRect().top + window.scrollY - top : NaN))
+      if (rest.length < 2 || rest.some(Number.isNaN)) return
+      const y = window.scrollY
+      const last = rest.length - 1
+      if (y < rest[0]) {
+        // Just above the first level: the hand heading down is drawn in; a page key settles on it if it's nearest.
+        const reach = (rest[1] - rest[0]) * (by === 'page' ? 0.5 : 0.25)
+        if ((by === 'page' || heading > 0) && rest[0] - y < reach) glide(rest[0])
+      } else if (y < rest[last] - 1) {
+        let k = 0
+        while (k + 1 < last && rest[k + 1] <= y) k++
+        const f = (y - rest[k]) / (rest[k + 1] - rest[k])
+        const way = by === 'hand' ? heading : 0
+        const onward = way > 0 ? f > 0.1 : way < 0 ? f > 0.9 : f >= 0.5
+        glide(rest[onward ? k + 1 : k])
+      }
+    }
+    const onScroll = () => {
+      if (frame) return
+      const y = window.scrollY
+      if (y !== lastY) heading = Math.sign(y - lastY)
+      lastY = y
+      clearTimeout(timer)
+      timer = window.setTimeout(settle, 140)
+    }
+    const takeOver = (e: Event) => {
+      by = e.type !== 'keydown' ? 'hand' : PAGE_KEYS.includes((e as KeyboardEvent).key) ? 'page' : null
+      if (frame) stop()
+    }
+    const inputs = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    window.addEventListener('scroll', onScroll, { passive: true })
+    for (const type of inputs) window.addEventListener(type, takeOver, { passive: true })
+    return () => {
+      stop()
+      clearTimeout(timer)
+      window.removeEventListener('scroll', onScroll)
+      for (const type of inputs) window.removeEventListener(type, takeOver)
+    }
+  }, [on, chapters, top])
+}
+
 /**
  * The home's "One path, four levels": on wide screens the panel stays put while the four levels scroll past, and the
- * group tightens and climbs the ranks with them; on phones and tablets each level has its own small panel.
+ * group tightens and climbs the ranks with them; each level comes to rest with its first line level with the panel's
+ * (the magnet above). On phones and tablets each level has its own small panel.
  */
 export function LevelPath() {
   const { t } = useSite()
   const reduce = useReduced()
-  const column = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({ target: column, offset: ['start 55%', 'end 55%'] })
-  // It rests on each level while that level is in the middle of the screen, and moves between them at the edges.
-  const raw = useTransform(scrollYProgress, [0, 0.17, 0.33, 0.42, 0.58, 0.67, 0.83, 1], [0, 0, 1, 1, 2, 2, 3, 3])
+  const panel = useRef<HTMLDivElement>(null)
+  const chapters = useRef<(HTMLElement | null)[]>([])
+  // The panel's place on screen (centred below the header) and its height, which set where the levels rest.
+  const [fit, setFit] = useState({ top: 0, height: 0 })
+  const raw = useMotionValue(0)
   const eased = useSpring(raw, { stiffness: 90, damping: 22, mass: 0.6 })
-  const stepped = useTransform(scrollYProgress, (p) => Math.min(3, Math.max(0, Math.floor(p * 4))))
-  const level = reduce ? stepped : eased
+  const level = reduce ? raw : eased
   const [active, setActive] = useState(0)
   useMotionValueEvent(level, 'change', (v) => setActive(Math.min(3, Math.max(0, Math.round(v)))))
+
+  // The level from where the chapters stand against the panel's top: 0 while Launchpad is level with it, 1 once
+  // Foundations is, and in between on the way.
+  const place = useCallback(() => {
+    const line = panel.current?.getBoundingClientRect().top
+    if (line === undefined) return
+    const tops = chapters.current.map((c) => c?.getBoundingClientRect().top ?? Infinity)
+    let k = -1
+    while (k + 1 < tops.length && tops[k + 1] <= line + 1) k++
+    if (k < 0 || k === tops.length - 1) raw.set(Math.max(0, k))
+    else {
+      const f = (line - tops[k]) / Math.max(1, tops[k + 1] - tops[k])
+      raw.set(k + (reduce ? Number(f >= 0.5) : between(f)))
+    }
+  }, [raw, reduce])
+  const { scrollY } = useScroll()
+  useMotionValueEvent(scrollY, 'change', place)
+
+  useLayoutEffect(() => {
+    const el = panel.current
+    if (!el) return
+    const measure = () => {
+      const header = document.querySelector('header')?.getBoundingClientRect().height ?? 76
+      const height = el.offsetHeight
+      setFit({ top: Math.round(Math.max(header + 24, header + (window.innerHeight - header - height) / 2)), height })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+  useEffect(place, [fit, place])
+  useMagnet(!reduce, chapters, fit.top)
 
   return (
     <>
       {/* Wide screens: the panel beside the levels */}
       <div className="mt-14 hidden grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-12 lg:grid xl:gap-16">
         <div className="relative">
-          <div className="sticky top-[calc(50svh-290px)] [@media(max-height:760px)]:top-[96px]">
+          <div ref={panel} className={cn('sticky', !fit.top && 'top-[calc(50svh-290px)]')} style={fit.top ? { top: fit.top } : undefined}>
             <PathPanel level={level} active={active} />
           </div>
         </div>
-        <div ref={column}>
+        <div>
           {LEVELS.map((lv, i) => (
-            <Chapter key={lv.id} level={lv} index={i} active={i === active} wide />
+            <Chapter
+              key={lv.id}
+              ref={(el) => {
+                chapters.current[i] = el
+              }}
+              level={lv}
+              index={i}
+              active={i === active}
+              wide
+              // A screen apart; the last as tall as the panel, so the two leave together.
+              style={{ minHeight: i < LEVELS.length - 1 ? `max(72svh, ${fit.height + 140}px)` : fit.height || undefined }}
+            />
           ))}
         </div>
       </div>

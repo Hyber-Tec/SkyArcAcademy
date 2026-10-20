@@ -52,7 +52,7 @@ export function News() {
               }}
             >
               {cats.length > 2 ? (
-                <div className="no-scrollbar -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+                <div className="no-scrollbar scroll-fade -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
                   <TabsList className="h-auto w-max gap-1 rounded-full border border-line bg-warm p-1.5 group-data-horizontal/tabs:h-auto">
                     {cats.map((c) => {
                       const n = c === 'all' ? all.length : all.filter((p) => p.category === c).length

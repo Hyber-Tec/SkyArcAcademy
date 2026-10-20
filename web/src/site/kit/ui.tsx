@@ -96,9 +96,10 @@ export function TestimonialsColumns({ items, className, durations }: { items: Re
   }
   const fade = 'relative justify-center overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]'
   const layout = (n: number, show: string) => (
-    <div className={cn(fade, 'gap-5', show)} style={{ maxHeight: n === 1 ? 560 : 680 }}>
+    <div className={cn(fade, 'gap-1', show)} style={{ maxHeight: n === 1 ? 560 : 680 }}>
       {split(n).map((col, i) => (
-        <Marquee key={i} vertical repeat={2} duration={pace(n, i)} gap="1.25rem" className="w-full max-w-sm">
+        // Padded at the sides so the cards' shadows aren't cut off by the column.
+        <Marquee key={i} vertical repeat={2} duration={pace(n, i)} gap="1.25rem" className="w-full max-w-[25.5rem] px-3">
           {col}
         </Marquee>
       ))}

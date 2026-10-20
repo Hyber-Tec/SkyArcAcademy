@@ -1,12 +1,12 @@
 import { LuCheck, LuCompass, LuHeartHandshake, LuShieldCheck, LuSprout, LuTarget, LuUsers } from 'react-icons/lu'
 import { cn } from '@/lib/utils'
 import { useSiteData } from '@/site/data'
-import { ABOUT, l } from '@/site/kit/content'
+import { ABOUT, keepWhole, l } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { PlacePhoto } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
 import { BookButton, Container, SectionHead } from '../components/bits'
-import { CoachPortrait, FinalCta, PageHero, VisitUs, crmLang } from '../components/blocks'
+import { CoachPortrait, FinalCta, FocusChips, PageHero, VisitUs, crmLang } from '../components/blocks'
 
 const STORY_PHOTO = l('Photo needed: an athlete in focus', '사진 필요: 집중하는 선수')
 const HERO_PHOTO = l('Photo needed: coaching on the range', '사진 필요: 사대에서의 코칭')
@@ -17,7 +17,7 @@ function Mission() {
   const { t } = useSite()
   return (
     <section className="py-20 sm:py-28" aria-labelledby="mission-title">
-      <Container className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <Container className="grid items-center gap-12 lg:grid-cols-[1.08fr_1fr] lg:gap-14">
         <div>
           <SectionHead kicker={t(ABOUT.mission.eyebrow)} title={<span id="mission-title">{t(ABOUT.mission.title)}</span>} />
           <div className="mt-6 space-y-5">
@@ -90,9 +90,18 @@ function Values() {
             )
           })}
         </div>
-        <Reveal className="mt-6 grid gap-px overflow-hidden rounded-[22px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {ABOUT.principles.map((p) => (
-            <div key={p.title.en} className="bg-warm px-5 py-4">
+        <Reveal className="mt-6 grid gap-x-4 rounded-[22px] border border-line bg-warm sm:grid-cols-2 lg:grid-cols-4">
+          {ABOUT.principles.map((p, i) => (
+            <div
+              key={p.title.en}
+              className={cn(
+                'relative py-4 pr-5 pl-6 sm:pl-7',
+                // Dividers: between the rows on phones, and in the middle of the gaps between columns.
+                i > 0 && 'max-sm:border-t max-sm:border-line',
+                i % 2 === 1 && 'sm:max-lg:before:absolute sm:max-lg:before:inset-y-4 sm:max-lg:before:-left-2 sm:max-lg:before:w-px sm:max-lg:before:bg-line',
+                i > 0 && 'lg:before:absolute lg:before:inset-y-4 lg:before:-left-2 lg:before:w-px lg:before:bg-line',
+              )}
+            >
               <p className="flex items-center gap-2 text-[14.5px] font-semibold text-ink">
                 <LuCheck className="size-4" aria-hidden="true" />
                 {t(p.title)}
@@ -174,7 +183,7 @@ function Team() {
                 {p.credentials.map((c) => (
                   <li key={c} className="flex gap-2.5 text-[14px] leading-snug text-ink/85">
                     <LuCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                    {c}
+                    {keepWhole(c)}
                   </li>
                 ))}
               </ul>
@@ -186,8 +195,8 @@ function Team() {
                     <CoachPortrait person={p} compact className="aspect-[4/5] w-28 shrink-0 rounded-[20px] sm:w-44" />
                     <div className="min-w-0 flex-1 pt-1">
                       <h3 className="text-[24px] leading-tight font-semibold tracking-tight text-ink">{p.name}</h3>
-                      <p className="mt-0.5 text-[14.5px] text-stone">{p.role}</p>
-                      {p.focus ? <p className="mt-3 inline-block rounded-2xl bg-warm-2 px-3 py-1.5 text-[12.5px] leading-snug font-medium text-ink/80">{p.focus}</p> : null}
+                      <p className="mt-0.5 text-[14.5px] text-balance text-stone">{p.role}</p>
+                      {p.focus ? <FocusChips focus={p.focus} className="mt-3" /> : null}
                       <div className="mt-4 hidden sm:block">{credentials}</div>
                     </div>
                   </div>

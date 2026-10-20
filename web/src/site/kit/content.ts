@@ -1,8 +1,9 @@
 /**
  * The website's words, in English and Korean, taken from the academy's earlier site and tidied. Nothing here is
- * invented as a fact: missing content is marked as a placeholder (`todo`). What the academy changes itself comes from
- * the CRM's Website page instead (photos, coaches, testimonials, hours, Instagram, news; site/data.tsx), and its email
- * and phone from Settings → Academy. The Korean is a draft the owner reviews (docs/TODO.md).
+ * invented as a fact: what the academy hasn't confirmed yet (the trials' price and length, tuition, the youngest age)
+ * is left out until it does, and photos still to come show a marked placeholder. What the academy changes itself comes
+ * from the CRM's Website page instead (photos, coaches, testimonials, hours, Instagram, news; site/data.tsx), and its
+ * email and phone from Settings → Academy. The Korean is a draft the owner reviews (docs/TODO.md).
  */
 export type Lang = 'en' | 'ko'
 export interface L {
@@ -10,6 +11,17 @@ export interface L {
   ko: string
 }
 export const l = (en: string, ko: string): L => ({ en, ko })
+
+/**
+ * Keeps together what reads as one: a range ("Monday–Thursday", "250–275", "4:30–8 PM") and a hyphenated word
+ * ("hands-on"), with a word joiner after the dash; a dash never starting a line ("sport—from"); and names that are one
+ * name ("Sky Arc", "Marine Corps", "Junior Olympic"), with a no-break space.
+ */
+export const keepWhole = (s: string) =>
+  s
+    .replace(/([\p{L}\p{N}][–-])(?=[\p{L}\p{N}])/gu, '$1\u2060')
+    .replace(/([\p{L}\p{N}.,])—/gu, '$1\u2060—')
+    .replace(/\b(Sky Arc|Marine Corps|Junior Olympic)\b/g, (m) => m.replace(' ', '\u00a0'))
 
 export const ACADEMY = {
   name: 'Sky Arc Sports Academy',
@@ -75,13 +87,13 @@ export const HOME = {
       '안전한 지도와 탄탄한 기본기, 첫 발부터 대회까지 이어지는 분명한 성장 경로로 침착하고 유능한 선수를 키웁니다.',
     ),
   },
-  /** Facts from their own site only. */
+  /** Facts from their own site only. SIUS (the scoring system the academy uses) shows as its own logo. */
   facts: [
     { value: '10m', label: l('Olympic-style air rifle', '올림픽 종목 공기소총') },
     { value: '4', label: l('levels, from first shot to competition', '첫 발부터 대회까지 4단계') },
     { value: '1:1', label: l('individual development focus', '개인별 맞춤 성장') },
-    { value: 'SIUS', label: l('live electronic scoring', '실시간 전자 채점') },
-  ],
+    { value: 'SIUS', label: l('live electronic scoring', '실시간 전자 채점'), logo: true },
+  ] as { value: string; label: L; logo?: boolean }[],
   standard: {
     eyebrow: l('The Sky Arc standard', 'Sky Arc의 기준'),
     steps: [l('Prepare', '준비'), l('Execute', '실행'), l('Call', '예측')],
@@ -151,7 +163,6 @@ export const HOME = {
         ),
       },
     ],
-    todo: l('Placeholder: the academy’s written range rules (eye protection, coach ratio, commands) go here.', '임시: 아카데미의 사대 안전 규칙(보안경, 코치 비율, 구령)이 들어갈 자리입니다.'),
   },
   path: {
     eyebrow: l('The path', '성장 경로'),
@@ -234,7 +245,6 @@ export const HOME = {
       l('Wear comfortable clothing and closed-toe shoes.', '편한 옷과 앞이 막힌 신발을 착용해 주세요.'),
       l('Equipment guidance is provided.', '장비 안내는 아카데미에서 해 드립니다.'),
     ],
-    todo: l('Placeholder: trial price and length, to confirm with the academy.', '임시: 체험 비용과 시간은 아카데미 확인 후 기재합니다.'),
   },
   news: {
     eyebrow: l('Stay current', '최신 소식'),
@@ -250,7 +260,6 @@ export const HOME = {
     eyebrow: l('Families', '학부모 후기'),
     title: l('What families say.', '학부모들의 이야기.'),
     text: l('Real words from Sky Arc families, shared with their permission.', 'Sky Arc 가족들의 실제 후기를 동의를 받아 싣습니다.'),
-    todo: l('Placeholder: these cards are waiting for real parent quotes.', '임시: 실제 학부모 후기를 받으면 이 자리에 들어갑니다.'),
   },
   faq: {
     eyebrow: l('Questions', '자주 묻는 질문'),
@@ -454,9 +463,22 @@ export const PROGRAMS = {
     eyebrow: l('How placement works', '반 배정 방식'),
     title: l('Progress is more than a score.', '성장은 점수 그 이상입니다.'),
     steps: [
-      { title: l('Train', '훈련'), text: l('Build safe, repeatable fundamentals in the athlete’s current program.', '현재 프로그램에서 안전하고 반복 가능한 기본기를 다집니다.') },
-      { title: l('Demonstrate', '증명'), text: l('Show technical consistency, responsible conduct, effort, and coachability.', '기술의 꾸준함과 책임감 있는 태도, 노력, 배우려는 자세를 보여 줍니다.') },
-      { title: l('Advance', '진급'), text: l('Move forward when score, readiness, and coach evaluation align.', '점수와 준비 정도, 코치 평가가 모두 맞을 때 다음 단계로 갑니다.') },
+      {
+        title: l('Train', '훈련'),
+        text: l('Build safe, repeatable fundamentals in the athlete’s current program.', '현재 프로그램에서 안전하고 반복 가능한 기본기를 다집니다.'),
+        /** The step's parts, in a word each (from its sentence). */
+        marks: [l('Safety', '안전'), l('Fundamentals', '기본기'), l('Repetition', '반복')],
+      },
+      {
+        title: l('Demonstrate', '증명'),
+        text: l('Show technical consistency, responsible conduct, effort, and coachability.', '기술의 꾸준함과 책임감 있는 태도, 노력, 배우려는 자세를 보여 줍니다.'),
+        marks: [l('Consistency', '꾸준함'), l('Conduct', '태도'), l('Effort', '노력'), l('Coachability', '배우는 자세')],
+      },
+      {
+        title: l('Advance', '진급'),
+        text: l('Move forward when score, readiness, and coach evaluation align.', '점수와 준비 정도, 코치 평가가 모두 맞을 때 다음 단계로 갑니다.'),
+        marks: [l('Score', '점수'), l('Readiness', '준비도'), l('Coach evaluation', '코치 평가')],
+      },
     ],
   },
   pathways: {
@@ -470,6 +492,8 @@ export const PROGRAMS = {
       { tag: l('Sporter', '스포터'), title: l('Sharpshooter & Expert', '샤프슈터 & 엑스퍼트'), text: l('Continue developing advanced match performance within the regulated Sporter equipment class.', '규정된 스포터 장비 등급 안에서 상위 경기력을 계속 키웁니다.') },
       { tag: l('Precision', '프리시전'), title: l('NCAA Precision', 'NCAA 프리시전'), text: l('Explore the specialized equipment and technical pathway used in collegiate and international-style competition.', '대학 및 국제 대회 방식에서 쓰는 전문 장비와 기술 경로를 익힙니다.') },
     ],
+    /** Where the Precision pathway leads (from its sentence). */
+    leadsTo: [l('Collegiate competition', '대학 대회'), l('International-style competition', '국제 대회 방식')],
   },
   rankMap: {
     eyebrow: l('Rank & program map', '등급과 프로그램'),
@@ -486,7 +510,6 @@ export const PROGRAMS = {
     rate: l('Current rates available by inquiry', '수강료는 문의해 주세요'),
     cta: l('Request the tuition guide', '수강료 안내 요청'),
     note: l('We’re more than happy to discuss tuition. Send us an inquiry, and we’ll get back to you as soon as possible.', '수강료에 대해 편하게 문의해 주세요. 최대한 빨리 답변드리겠습니다.'),
-    todo: l('Placeholder: real prices, once the academy shares them.', '임시: 아카데미가 공유하면 실제 수강료가 들어갑니다.'),
     age: {
       title: l('Age informs placement. Skill drives progress.', '나이는 참고, 성장은 실력으로.'),
       text: l(
@@ -626,7 +649,6 @@ export const NEWS = {
 export interface FaqItem {
   q: L
   a: L
-  todo?: L
   hours?: boolean
 }
 
@@ -634,7 +656,6 @@ export const FAQ: FaqItem[] = [
   {
     q: l('What age can my child start?', '몇 살부터 시작할 수 있나요?'),
     a: l('Placement is led by skill, safety and readiness, not school grade. Younger athletes start with bench support at Launchpad.', '반 배정은 학년이 아니라 실력과 안전, 준비 정도로 정해집니다. 어린 선수는 런치패드에서 벤치 지지대를 이용해 시작합니다.'),
-    todo: l('Placeholder: the youngest starting age, to confirm with the academy.', '임시: 시작 가능한 최소 나이는 아카데미 확인 후 기재합니다.'),
   },
   {
     q: l('Does my child need any experience?', '경험이 없어도 되나요?'),
@@ -650,7 +671,6 @@ export const FAQ: FaqItem[] = [
       'Trial One introduces safety, range commands and the rifle, with no shooting. Trial Two is a longer, hands-on session with coached shots from a supported position. You request Trial One online and we confirm a time by email; afterwards we help you book Trial Two.',
       '1차 체험에서는 사격 없이 안전 수칙과 사대 구령, 총에 대해 배웁니다. 2차 체험은 더 긴 실습 수업으로, 지지대 자세에서 코치와 함께 사격합니다. 1차 체험을 온라인으로 신청하시면 이메일로 시간을 확정해 드리고, 마친 뒤 2차 체험 예약을 도와 드립니다.',
     ),
-    todo: l('Placeholder: trial price and length, to confirm.', '임시: 체험 비용과 시간은 확인 후 기재합니다.'),
   },
   {
     q: l('How much is tuition?', '수강료는 얼마인가요?'),
@@ -673,11 +693,6 @@ export const FAQ: FaqItem[] = [
     q: l('How will I know how my child is doing?', '아이의 진행 상황은 어떻게 알 수 있나요?'),
     a: l('Parents log in to the Sky Arc portal to see class schedules, scores and progress reports, with notes from the coaches.', '학부모는 Sky Arc 포털에 로그인해 수업 일정과 점수, 코치 코멘트가 담긴 성장 리포트를 확인할 수 있습니다.'),
   },
-  {
-    q: l('Is coaching available in Korean?', '한국어로도 코칭하나요?'),
-    a: l('Coaching, safety commands and academy communication are conducted in English. The Korean pages of this site are there to make reading easier.', '코칭과 안전 구령, 아카데미 안내는 영어로 진행됩니다. 이 사이트의 한국어 페이지는 읽기 편하도록 제공합니다.'),
-    todo: l('To confirm with the academy.', '아카데미 확인 필요.'),
-  },
 ]
 
 export const TRIAL = {
@@ -688,7 +703,7 @@ export const TRIAL = {
     '1차 체험에서는 직접 사격하는 2차 체험 전에 필요한 안전 문화와 기본 지식을 배웁니다. 가능한 요일을 알려 주시면 시간을 확정해 드립니다.',
   ),
   kinds: {
-    // How long each trial runs is still to confirm with the academy (todo below): no length is shown until then.
+    // How long each trial runs is still to confirm with the academy: no length is shown until then.
     one: { name: l('Trial One', '1차 체험'), summary: l('Safety, commands and rifle orientation', '안전 수칙, 구령, 총기 오리엔테이션'), minutes: null as number | null },
     two: { name: l('Trial Two', '2차 체험'), summary: l('Longer setup and hands-on coached shooting', '장비 준비와 코치와 함께하는 실습 사격'), minutes: null as number | null },
   },

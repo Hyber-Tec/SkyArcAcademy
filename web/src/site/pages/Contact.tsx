@@ -6,19 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, CONTACT, type Lang, TRIAL, UI, l } from '@/site/kit/content'
+import { ACADEMY, CONTACT, type Lang, TRIAL, UI } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { useSite } from '@/site/kit/site'
 import { CallError, callFunction } from '@/site/rest'
-import { BookButton, Container, TodoNote, btnInk, btnOutline } from '../components/bits'
+import { BookButton, Container, btnInk, btnOutline } from '../components/bits'
 import { DIRECTIONS_URL, HoursTable, MapEmbed, PageHero, instagramHandle } from '../components/blocks'
 import { Field, Segmented, inputClass, selectTriggerClass } from '../components/fields'
 import { T } from '../i18n'
 
 type Key = 'name' | 'email' | 'phone' | 'student' | 'topic' | 'message'
 
-const PHONE_TODO = l('Placeholder: the academy’s phone number', '임시: 아카데미 전화번호')
-const EMAIL_TODO = l('Placeholder: the academy’s email', '임시: 아카데미 이메일')
 
 export function Contact() {
   const { t, lang, query } = useSite()
@@ -30,7 +28,7 @@ export function Contact() {
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed' | 'limited'>('idle')
   // The field people never see: only bots fill it in.
   const [website, setWebsite] = useState('')
-  const { ready, contact, content } = useSiteData()
+  const { contact, content } = useSiteData()
   const set = (k: Key) => (value: string) => {
     setV((s) => ({ ...s, [k]: value }))
     setErrors((e) => ({ ...e, [k]: undefined }))
@@ -68,16 +66,16 @@ export function Contact() {
     <>
       <PageHero kicker={t(CONTACT.eyebrow)} title={t(CONTACT.title)} text={t(CONTACT.text)} />
       <section className="py-14 sm:py-20" aria-label={t(UI.contact)}>
-        <Container className="grid items-start gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-10">
-          <Reveal>
+        <Container className="grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-10">
+          <Reveal className="h-full">
             {state === 'sent' ? (
-              <div id="contact-result" className="rounded-[28px] border border-line bg-white p-8 text-center shadow-soft sm:p-12" role="status" aria-live="polite">
+              <div id="contact-result" className="flex h-full flex-col items-center justify-center rounded-[28px] border border-line bg-white p-8 text-center shadow-soft sm:p-12" role="status" aria-live="polite">
                 <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-ink text-white">
                   <LuCheck className="size-7" strokeWidth={2.5} aria-hidden="true" />
                 </span>
                 <h2 className="mt-6 text-[30px] font-semibold tracking-tight text-ink">{t(CONTACT.sent.title)}</h2>
                 <p className="mt-3 text-[16px] text-stone">
-                  {t(CONTACT.sent.text)} <span className="font-semibold break-all text-ink">{v.email}</span>
+                  {t(CONTACT.sent.text)} <span className="font-semibold [overflow-wrap:anywhere] text-ink">{v.email}</span>
                 </p>
                 <p className="mt-1 text-[14px] text-stone">{t(CONTACT.response)}</p>
                 <button
@@ -92,7 +90,7 @@ export function Contact() {
                 </button>
               </div>
             ) : (
-              <form ref={form} onSubmit={submit} noValidate className="relative rounded-[28px] border border-line bg-white p-6 shadow-soft sm:p-9">
+              <form ref={form} onSubmit={submit} noValidate className="relative h-full rounded-[28px] border border-line bg-white p-6 shadow-soft sm:p-9">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field id="c-name" label={t(CONTACT.fields.name)} error={err('name')} className="sm:col-span-2">
                     <Input id="c-name" autoComplete="name" value={v.name} onChange={(e) => set('name')(e.target.value)} aria-invalid={inv('name')} className={inputClass} />
@@ -156,7 +154,7 @@ export function Contact() {
                   </p>
                 ) : null}
                 <div className="mt-8 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[13px] leading-relaxed text-stone">{t(CONTACT.delivered)}</p>
+                  <p className="text-[13px] leading-relaxed text-pretty text-stone">{t(CONTACT.delivered)}</p>
                   <button type="submit" disabled={state === 'sending'} className={cn(btnInk, 'shrink-0 disabled:opacity-50')}>
                     {state === 'sending' ? <LuLoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <LuSend className="size-4" aria-hidden="true" />}
                     {state === 'sending' ? t(CONTACT.sending) : t(CONTACT.send)}
@@ -166,25 +164,20 @@ export function Contact() {
             )}
           </Reveal>
 
-          <Reveal delay={0.08} className="lg:sticky lg:top-28">
-            <aside className="rounded-[28px] bg-warm p-6 sm:p-8" aria-labelledby="contact-side">
+          <Reveal delay={0.08} className="h-full">
+            <aside className="h-full rounded-[28px] bg-warm p-6 sm:p-8" aria-labelledby="contact-side">
               <h2 id="contact-side" className="text-[20px] font-semibold tracking-tight text-ink">
                 {t(T.contactSide)}
               </h2>
               <address className="mt-5 grid gap-3.5 text-[15px] text-ink not-italic">
                 {contact.email ? (
-                  <a href={`mailto:${contact.email}`} className="flex items-center gap-3 break-all hover:underline">
-                    <LuMail className="size-5 shrink-0" aria-hidden="true" /> {contact.email}
+                  <a href={`mailto:${contact.email}`} className="flex items-center gap-3 hover:underline">
+                    <LuMail className="size-5 shrink-0" aria-hidden="true" /> <span className="min-w-0 [overflow-wrap:anywhere]">{contact.email}</span>
                   </a>
-                ) : ready ? (
-                  <span className="flex items-center gap-3">
-                    <LuMail className="size-5 shrink-0" aria-hidden="true" />
-                    <TodoNote className="py-1.5">{t(EMAIL_TODO)}</TodoNote>
-                  </span>
                 ) : null}
                 <a href={DIRECTIONS_URL} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:underline">
                   <LuMapPin className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-                  <span>
+                  <span className="whitespace-nowrap">
                     {ACADEMY.street}
                     <br />
                     {ACADEMY.city}
@@ -202,11 +195,6 @@ export function Contact() {
                   <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-3 hover:underline">
                     <LuPhone className="size-5 shrink-0" aria-hidden="true" /> {contact.phone}
                   </a>
-                ) : ready ? (
-                  <span className="flex items-center gap-3">
-                    <LuPhone className="size-5 shrink-0" aria-hidden="true" />
-                    <TodoNote className="py-1.5">{t(PHONE_TODO)}</TodoNote>
-                  </span>
                 ) : null}
               </address>
               {content.hours.length ? (
@@ -229,7 +217,7 @@ export function Contact() {
             {t(T.findUs)}
           </h2>
           <Reveal>
-            <MapEmbed className="h-[420px] sm:h-[480px]" />
+            <MapEmbed className="min-h-[420px] sm:min-h-[480px]" />
           </Reveal>
         </Container>
       </section>

@@ -69,22 +69,5 @@ export function BookButton({ className, label, icon = true }: { className?: stri
   )
 }
 
-/** The text after "Placeholder:" (the tag already says it). */
-export const stripTodo = (s: string) => {
-  const rest = s.replace(/^(Placeholder|임시)\s*:\s*/, '')
-  return rest.charAt(0).toUpperCase() + rest.slice(1)
-}
-
-/** "Placeholder" note, for content the academy still has to send. */
-export function TodoNote({ children, className }: { children: ReactNode; className?: string }) {
-  const { lang } = useSite()
-  return (
-    <p className={cn('ph-soft flex items-start gap-2.5 rounded-xl border border-dashed border-ink/20 px-3.5 py-2.5 text-[12.5px] leading-relaxed', className)}>
-      <span className="mt-px shrink-0 rounded-[5px] bg-ink px-1.5 py-0.5 font-mono text-[9.5px] font-medium tracking-[0.16em] text-white uppercase">{lang === 'ko' ? '임시' : 'Placeholder'}</span>
-      <span className="text-ink/75">{typeof children === 'string' ? stripTodo(children) : children}</span>
-    </p>
-  )
-}
-
 /** "30 min" / "30분". */
 export const mins = (n: number, lang: Lang) => (lang === 'ko' ? `${n}분` : `${n} min`)
