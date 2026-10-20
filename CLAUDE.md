@@ -68,7 +68,11 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
   2026-10-17, and parents and students have theirs since then too (Home, Classes, Scores, Reports, More). **Coaches,
   parents and students can do on the phone what they do on the website** (owner, 2026-10-18: coaches are "the main one
   who's using the phone"); the office keeps the rest on the website.
-- **Don't design the landing page.** Homepage is a minimal placeholder (logo, Login, Book a Trial).
+- **The public website** (`web/src/site`, at `/`; `docs/DECISIONS.md` §18): the academy's own pages, the owner's pick of
+  the design options. The CRM fills it: the Website page (photos, coaches, testimonials, hours, Instagram, and the trial
+  requests and questions sent from it) and announcements shown "On the website". Its pages talk to parents only (no
+  notes on how the site works), never invent a fact or a testimonial (until real quotes exist it shows samples marked
+  "Sample"), and never show a student's name, scores or targets. Its Korean is a draft the owner reviews.
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
 - **Few rules.** Add a rule only when the academy needs one: makeups and trials are labels on a class, and levels
@@ -81,7 +85,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
 - **Language:** English only while the features are built. Korean and other languages come in one pass once
-  everything works (`docs/DECISIONS.md` §6, Q14).
+  everything works (`docs/DECISIONS.md` §6, Q14). The public website already has Korean pages (`/ko/…`), a draft the
+  owner reviews by hand: don't spend time polishing them (`docs/TODO.md`).
 
 ## Owner and production
 
@@ -96,7 +101,7 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 | Path | What |
 |---|---|
-| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/home.css` is the placeholder homepage at `/`; `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports), `components/ui/` shadcn components, `pages/public/` sign-in, the trial page and the privacy policy. `public/` holds the brand files and icons. |
+| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/site/` is the public website (`/`, `/programs`, `/ko/…`, its addresses in `src/site/paths.ts`; the build writes each page's own HTML, the sitemap and robots.txt); `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports, `website/` the Website page), `components/ui/` shadcn components, `pages/public/` sign-in and the privacy policy. `public/` holds the brand files and icons. |
 | `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Home, Schedule, Scan, Students, More for owners and admins; Home, Schedule, Availability, Scan, More for coaches) and the family's (Home, Classes, Scores, Reports, More) for parents and students. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
 | `shared/` | Pure TypeScript used by the website, the functions and the phone app: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `targets/` (reading a photo of the academy's paper card: its bulls, the holes and their scores, and the review before saving; tested on made-up photos of the card), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
 | `functions/` | Cloud Functions v2 (Node 22, bundled by esbuild): invite and account emails, class notifications, announcements, kiosk, report sharing, nightly jobs (the Drive's Trash among them). |
@@ -164,7 +169,8 @@ don't redraw, recolor, stretch, crop or rebuild them from other images.
 - **In the website**, use the components in `web/src/components/app/SkyArcMark.tsx`, not the files directly:
   `SkyArcLogo` for the full logo (`tone="auto"` follows dark mode; `tone="black"` on white paper whatever the theme,
   as reports are; `tone="white"` on dark), `SkyArcLockup` for the icon and wordmark (`size="md"` in the sidebar,
-  `"sm"` in a top bar), and `SkyArcMark` for the square icon (`tone="black"` or `"white"`).
+  `"sm"` in a top bar), and `SkyArcMark` for the square icon (`tone="black"` or `"white"`), and `SkyArcReticle` for the reticle alone (the
+  official white mark) as decoration over dark colors or photos.
 - **Placement:** on a card that opens with the logo (sign-in, sign-up, messages), the logo is centered above the
   card's content; in headers and on report pages it sits on the left.
 - **Sizes:** the full logo needs room to read ("SPORTS ACADEMY" is small): 36 px tall at the least, 64 px on sign-in

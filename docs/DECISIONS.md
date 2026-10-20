@@ -8,7 +8,7 @@ end of the matching section, with the date.
 - **One academy.** No branch creation, no super-admin layer.
 - **Web first.** The phone app (admin, coach, parent, student) is Phase 2; data and APIs stay ready for it.
 - **No landing page yet.** The homepage is a placeholder: logo, one line, Log in, Book a trial. Goo designs the
-  landing page last.
+  landing page last. *Changed: the public website (§18).*
 - **Progress reports are uploaded by hand** (bulk SIUS PDFs with a review table, paper-target photos). No SIUS
   integration. Only official evaluations are uploaded (about 1–3 per student per month), starting fresh. *Changed:
   they go into a Drive, and parents see the app's own report (§7).*
@@ -430,3 +430,56 @@ and parents. Except admin."
   scores; a PDF that isn't a SIUS result is kept as a file. It always worked by dropping anywhere on the page, but
   nothing showed it, so the owner didn't find it.
 - **The meeting notes, checked** (the notes stay out of git): what's still missing is in `docs/TODO.md`.
+
+
+## 18. The public website (2026-10-19)
+
+The owner: "It's time to build the public website … the landing page / homepage and the public pages that go with it."
+After five clickable design options (local only, in `docs/internal/site-demos/`), the owner picked option 3,
+"Academy" ("it's very clean"), asked for refinements, then: "deploy the option 3 as the main landing page, main
+homepage now … I'll actually test and verify from the live website".
+
+- **The site** (`web/src/site`): Home, Programs (with tuition), About (with the coaches), Gallery, News and each post,
+  Book a trial, Contact and the Parent portal page, in English at `/` and a Korean draft at `/ko/`. Log in is the
+  app's sign-in page, unchanged; on a browser that's signed in, the header says "Open the app". Each page's HTML is
+  built with its own title and description for search engines and link previews.
+- **What the owner asked for in the refinements**: the logo intro a little longer (about 2.2 s, "but not too long"),
+  played on the homepage once per visit; the academy's match-day photo at the top of the homepage; the iPad showing a
+  parent's progress report upright like the PDF it is, held in place while the page scrolls the report inside it, as
+  on HyberCRM's website, so it can't be skipped; "One path, four levels" joining option 2's tightening shot group to
+  option 4's rank chart (the scores and groups are illustrations; the rank ranges are the academy's, on its 3×10
+  format); a Google Map at 730 Peachtree Industrial Blvd ("technically Eyelevel Learning Center Suwanee … the same
+  building … you can just point eye level and then you can just say that skyarc"); News showing 12 posts, then more as
+  the reader scrolls, with no button; and words for parents only ("think of that we're showing this to the parents":
+  nothing about how the site or the app works).
+- **The plan's five calls, accepted with the deploy**: (1) two trials, as on the academy's earlier site: Trial One
+  (safety, no shooting) is asked for online, Trial Two follows; (2) instant booking that the office can move or cancel,
+  built when booking opens; (3) **booking stays closed until the academy approves the privacy policy** (§6, Q15):
+  until then "Book a trial" sends a request (the days that suit the family, the athlete and the parent) and the office
+  replies; (4) the academy's photos never go into git: they live in Storage and are managed on the CRM's Website page
+  (HyberTec loaded the earlier site's photos, coaches, hours and news once, after the deploy); (5) tuition is a section
+  of Programs while rates are "by inquiry".
+- **Testimonials are real or marked.** The owner asked to make up many reviews when none could be found online. The
+  site never presents made-up quotes as real (the brief's rule, and the FTC's 2024 rule on fake reviews): until the
+  academy adds real ones on the Website page (with the family's permission), it shows sample quotes, each marked
+  "Sample". They must be real, or gone, before skyarcacademy.com points here (`docs/DEPLOY.md`).
+- **The Website page** (owners and admins, `/admin/website`): the trial requests and questions sent from the site
+  (newest first, New and Done), the photo library (several at a time, from a phone too, resized in the browser to a few
+  widths; caption, album, focus point, hide, order, delete), which photo goes where on the site, the coaches' cards,
+  families' quotes, the hours the site shows (not the schedule's own hours, which are wider) and the Instagram link.
+- **News from the CRM**: an announcement's "On the website" switch (with a category and a cover picture) puts it on the
+  site's News; a Cloud Function keeps a public copy holding only the title, text, category, cover, pin and dates (no
+  author, audience, comments or attachments). Switching it off, archiving or deleting the post takes it off the site.
+  Its address is fixed the first time it goes on the site. Children's names and photos only with their parents'
+  permission (the editor says so).
+- **Messages from the website** (`websiteMessage`): checked again on the server, dropped when a bot fills a field people
+  never see, and limited per sender (5 an hour from one network address, 3 per email, 200 a day in all). Each is kept
+  for the Website page, owners and admins get a notification, and the office an email they can reply to: the
+  academy's email in Settings → Academy, or the owners' and admins' own until it's set.
+- **Public data, public rules**: anyone reads the site's photos (unless hidden), its content (`public/website`) and its
+  news copies; only admins write them, and nobody but the function writes a message. The public pages read these over
+  Firestore's REST API and send messages over HTTPS, without the Firebase SDK.
+- **Languages**: the site's Korean is a draft the owner reviews by hand ("when we trying to create something with
+  Korean from AI it's not really accurate"); more languages come later, even after launch (`docs/TODO.md`). What the
+  academy writes in the CRM (news, captions, coaches) shows as written.
+
