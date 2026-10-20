@@ -31,7 +31,6 @@ export const ACADEMY = {
   city: 'Suwanee, GA 30024',
   /** The app's sign-in page (the parent portal). */
   loginUrl: '/login',
-  privacyUrl: '/privacy',
 }
 
 export const LANG_NAMES: Record<Lang, string> = { en: 'English', ko: '한국어' }
@@ -858,6 +857,7 @@ export const FOOTER = {
   ),
   copyright: l(`© ${new Date().getFullYear()} Sky Arc Sports Academy. All rights reserved.`, `© ${new Date().getFullYear()} Sky Arc Sports Academy. All rights reserved.`),
   privacy: l('Privacy policy', '개인정보 처리방침'),
+  help: l('Help', '도움말'),
   sections: { explore: l('Explore', '둘러보기'), visit: l('Visit', '오시는 길'), families: l('Families', '가족') },
 }
 

@@ -392,10 +392,13 @@ export function PageHero({
   focus,
   children,
   aside,
+  textLang,
 }: {
   kicker: string
   title: string
   text: string
+  /** The lead's language, when it isn't the page's. */
+  textLang?: string
   photo?: WebsitePlace
   photoLabel?: L
   focus?: string
@@ -410,7 +413,7 @@ export function PageHero({
           <h1 id="page-title" className="mt-5 text-[42px] leading-[1] font-semibold tracking-[-0.04em] text-balance text-ink sm:text-[56px] lg:text-[64px]">
             {title}
           </h1>
-          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-pretty text-stone sm:text-[19px]">{text}</p>
+          <p lang={textLang} className="mt-5 max-w-xl text-[17px] leading-relaxed text-pretty text-stone sm:text-[19px]">{text}</p>
           {children}
         </Reveal>
         {photo ? (

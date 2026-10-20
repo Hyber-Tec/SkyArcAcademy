@@ -365,12 +365,12 @@ function Consent({ wizard }: { wizard: Wizard }) {
 
 /** "I agree to the privacy policy." with "privacy policy" as the link to it. */
 function ConsentText() {
-  const { t } = useSite()
+  const { t, href } = useSite()
   const text = t(TRIAL.fields.consent)
   const link = t(TRIAL.fields.privacy)
   const at = text.toLowerCase().indexOf(link.toLowerCase())
   const a = (label: string) => (
-    <a href={ACADEMY.privacyUrl} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4" onClick={(e) => e.stopPropagation()}>
+    <a href={href('privacy')} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4" onClick={(e) => e.stopPropagation()}>
       {label}
     </a>
   )
