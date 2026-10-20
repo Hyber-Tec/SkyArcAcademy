@@ -611,7 +611,7 @@ service cloud.firestore {
         function validPhoto(d) {
           return d.keys().hasOnly(['album', 'caption', 'alt', 'focus', 'order', 'hidden', 'folder', 'format', 'widths',
                                    'width', 'height', 'color', 'blur', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
-            && d.album in ['training', 'coaching', 'competition', 'community']
+            && d.album in ['training', 'coaching', 'competition', 'community', 'pages']
             && d.caption is string && d.caption.size() <= 200
             && d.alt is string && d.alt.size() <= 400
             && d.focus is string && d.focus.size() <= 24

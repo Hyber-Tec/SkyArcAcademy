@@ -211,7 +211,8 @@ export function ReportShowcase({ header, footer, className }: { header?: ReactNo
       {header}
       <div ref={track} className="relative" style={still ? undefined : { height: `calc(100svh + ${Math.round(Math.max(travel, 1000) * 1.08)}px)` }}>
         <div
-          className={cn('flex items-center justify-center', still ? 'py-12' : 'sticky top-[68px] h-[calc(100svh-68px)] overflow-hidden sm:top-[76px] sm:h-[calc(100svh-76px)]')}
+          // Clipped at the sides only: the iPad's shadow fades out below it instead of ending in a line.
+          className={cn('flex items-center justify-center', still ? 'py-12' : 'sticky top-[68px] h-[calc(100svh-68px)] overflow-x-clip sm:top-[76px] sm:h-[calc(100svh-76px)]')}
           style={{ perspective: 1200 }}
         >
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">

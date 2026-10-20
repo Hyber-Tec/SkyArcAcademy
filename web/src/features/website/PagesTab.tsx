@@ -129,6 +129,12 @@ function PlacesCard({ photos, content }: { photos: WithId<WebsitePhoto>[]; conte
   )
 }
 
+/** What a spot shows without a photo, where it isn't a marked placeholder. */
+const WITHOUT_PHOTO: Partial<Record<PlaceDef['id'], string>> = {
+  menu: 'the menu shows without one',
+  cta: 'the banner shows the Sky Arc mark on black',
+}
+
 function PlaceRow({
   place,
   photoId,
@@ -150,10 +156,10 @@ function PlaceRow({
   let status: React.ReactNode
   if (incoming?.stage === 'failed') status = <span className="text-destructive">The new photo didn’t upload: {incoming.error}</span>
   else if (incoming) status = 'Uploading the new photo: it’s shown here once it’s up.'
-  else if (photo?.hidden) status = <span className="text-amber-700 dark:text-amber-400">This photo is hidden, so the website shows a placeholder here.</span>
+  else if (photo?.hidden) status = <span className="text-amber-700 dark:text-amber-400">This photo is hidden, so {WITHOUT_PHOTO[place.id] ?? 'the website shows a placeholder here'}.</span>
   else if (photo) status = photo.caption ? photoName(photo) : 'A photo from the library'
   else if (photoId) status = 'Its photo was deleted. Choose another.'
-  else status = 'No photo yet: the website shows a marked placeholder.'
+  else status = `No photo yet: ${WITHOUT_PHOTO[place.id] ?? 'the website shows a marked placeholder'}.`
 
   return (
     <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center" data-testid={`place-${place.id}`}>

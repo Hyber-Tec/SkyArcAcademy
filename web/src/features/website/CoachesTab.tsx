@@ -242,7 +242,8 @@ function CoachDialog({
               setChoosing(false)
             }}
             onUpload={(file) => {
-              const [id] = startPhotoUploads(branchId, actor, [file], { album: 'coaching', photos })
+              // A portrait belongs on its card, not in the gallery.
+              const [id] = startPhotoUploads(branchId, actor, [file], { album: 'pages', photos })
               set({ photoId: id })
               setChoosing(false)
             }}

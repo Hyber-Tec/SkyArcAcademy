@@ -5,14 +5,14 @@ import type { WebsitePlace, WebsiteTeamMember } from '@shared/website/types'
 import { SkyArcReticle } from '@/components/app/SkyArcMark'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { type SitePost, usePhotoById, useSiteData } from '@/site/data'
-import { ACADEMY, FAQ, type FaqItem, HOME, type L, type Lang, NEWS, TEAM_PHOTO_TODO, UI, l } from '@/site/kit/content'
+import { type SitePost, usePhotoById, usePlacePhoto, useSiteData } from '@/site/data'
+import { ACADEMY, FAQ, type FaqItem, HOME, type L, type Lang, NEWS, TEAM_PHOTO_TODO, UI, keepWhole } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { Photo, PlacePhoto, Placeholder } from '@/site/kit/Photo'
 import { A, useSite } from '@/site/kit/site'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/site/kit/ui'
 import { T } from '../i18n'
-import { BookButton, Container, Kicker, TodoNote } from './bits'
+import { BookButton, Container, Kicker } from './bits'
 
 /** The academy's time zone, for dates and "today" (Settings → Academy has the same). */
 export const ACADEMY_TZ = 'America/New_York'
@@ -23,9 +23,6 @@ export function formatDate(ms: number, lang: Lang): string {
 
 /** The academy's words from the CRM are in English: say so to screen readers and translators on Korean pages. */
 export const crmLang = 'en'
-
-const PHONE_TODO = l('Placeholder: the academy’s phone number', '임시: 아카데미 전화번호')
-const EMAIL_TODO = l('Placeholder: the academy’s email', '임시: 아카데미 이메일')
 
 /** "@arc_10.9" from "https://www.instagram.com/arc_10.9/". */
 export function instagramHandle(url: string): string {
@@ -105,6 +102,23 @@ export function CoachPortrait({ person, className, compact = false }: { person: 
   return <Placeholder kind="person" compact={compact} label={TEAM_PHOTO_TODO} className={cn('border-ink/15 bg-warm text-stone', compact && 'p-2', className)} />
 }
 
+/** What a coach focuses on ("Safety · Athlete development"), a chip each, so no phrase breaks across lines. */
+export function FocusChips({ focus, className }: { focus: string; className?: string }) {
+  const parts = focus
+    .split(/\s*[·•|]\s*/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+  return (
+    <ul className={cn('flex flex-wrap gap-1.5', className)} lang={crmLang}>
+      {parts.map((x) => (
+        <li key={x} className="rounded-full bg-warm-2 px-2.5 py-1 text-[12.5px] leading-snug font-medium whitespace-nowrap text-ink/80">
+          {x}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; index?: number }) {
   const { t } = useSite()
   const [open, setOpen] = useState(false)
@@ -115,12 +129,12 @@ export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; in
         <CoachPortrait person={person} compact className="aspect-[4/5] w-28 shrink-0 self-start rounded-[20px] sm:w-auto sm:self-stretch" />
         <div className="flex min-w-0 flex-1 flex-col py-1 pr-1 sm:px-3 sm:pt-4 sm:pb-3" lang={crmLang}>
           <h3 className="text-[19px] font-semibold tracking-tight text-ink sm:text-[21px]">{person.name}</h3>
-          <p className="mt-0.5 text-[14px] text-stone">{person.role}</p>
+          <p className="mt-0.5 text-[14px] text-balance text-stone sm:min-h-[2lh]">{person.role}</p>
           <ul className="mt-3 space-y-2 text-[13.5px] leading-snug text-ink/80 sm:mt-4">
             {person.credentials.slice(0, 2).map((c) => (
               <li key={c} className="flex gap-2">
                 <LuCheck className="mt-0.5 size-3.5 shrink-0 text-ink" aria-hidden="true" />
-                {c}
+                {keepWhole(c)}
               </li>
             ))}
           </ul>
@@ -141,17 +155,13 @@ export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; in
             </div>
           </div>
           <div className="p-6 pt-5">
-            {person.focus ? (
-              <p lang={crmLang} className="text-[13px] font-medium text-stone">
-                {person.focus}
-              </p>
-            ) : null}
+            {person.focus ? <FocusChips focus={person.focus} /> : null}
             <h4 className="mt-5 text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">{t(T.allCredentials)}</h4>
             <ul className="mt-3 space-y-2.5 text-[14.5px] leading-snug text-ink" lang={crmLang}>
               {person.credentials.map((c) => (
                 <li key={c} className="flex gap-2.5">
                   <LuCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                  {c}
+                  {keepWhole(c)}
                 </li>
               ))}
             </ul>
@@ -166,7 +176,7 @@ export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; in
 
 /** "Monday 4:30–8 PM · Tuesday 5–8 PM · …", from the hours the Website page sets. */
 function hoursSentence(lines: { days: string; time: string; note: string }[]): string {
-  return lines.map((h) => `${h.days} ${h.time}${h.note ? ` (${h.note})` : ''}`).join(' · ')
+  return keepWhole(lines.map((h) => `${h.days} ${h.time}${h.note ? ` (${h.note})` : ''}`).join(' · '))
 }
 
 export function FaqList({ items = FAQ, columns = 2, className }: { items?: FaqItem[]; columns?: 1 | 2; className?: string }) {
@@ -183,7 +193,6 @@ export function FaqList({ items = FAQ, columns = 2, className }: { items?: FaqIt
               <AccordionTrigger className="min-h-14 py-5 text-[16.5px] font-semibold text-ink hover:no-underline [&>svg]:size-5 [&>svg]:text-ink">{t(f.q)}</AccordionTrigger>
               <AccordionContent className="pr-8 text-[15px] leading-relaxed text-stone">
                 {f.hours && content.hours.length ? <p lang={crmLang}>{hoursSentence(content.hours)}</p> : <p>{t(f.a)}</p>}
-                {f.todo ? <TodoNote className="mt-3">{t(f.todo)}</TodoNote> : null}
               </AccordionContent>
             </AccordionItem>
           ))}
@@ -206,7 +215,7 @@ export function HoursTable({ className, compact = false }: { className?: string;
       {content.hours.map((h) => (
         <div key={h.id} className={cn('flex items-baseline justify-between gap-4', compact ? 'py-2' : 'py-3')}>
           <dt className="flex items-center gap-2 text-[14.5px] text-ink">
-            {h.days}
+            {keepWhole(h.days)}
             {weekdaysOf(h.days).includes(today) ? (
               <span lang={lang} className="rounded-full bg-ink px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-white uppercase">
                 {lang === 'ko' ? '오늘' : 'Today'}
@@ -214,8 +223,8 @@ export function HoursTable({ className, compact = false }: { className?: string;
             ) : null}
           </dt>
           <dd className="text-right">
-            <span className="text-[14.5px] font-medium text-ink tabular-nums">{h.time}</span>
-            {h.note ? <span className="block text-[12.5px] text-stone">{h.note}</span> : null}
+            <span className="text-[14.5px] font-medium text-ink tabular-nums">{keepWhole(h.time)}</span>
+            {h.note ? <span className="block text-[12.5px] text-balance text-stone">{h.note}</span> : null}
           </dd>
         </div>
       ))}
@@ -223,30 +232,24 @@ export function HoursTable({ className, compact = false }: { className?: string;
   )
 }
 
-/** The academy's address, email, Instagram and phone (Settings → Academy and the Website page); missing ones marked. */
+/** The academy's address, email, Instagram and phone (Settings → Academy and the Website page); missing ones left out. */
 export function ContactLines({ className, iconClass = 'size-5' }: { className?: string; iconClass?: string }) {
-  const { t } = useSite()
-  const { ready, contact, content } = useSiteData()
+  const { contact, content } = useSiteData()
   return (
     <address className={cn('grid gap-3 text-[15px] text-ink not-italic', className)}>
       <span className="flex items-start gap-3">
         <LuMapPin className={cn('mt-0.5 shrink-0', iconClass)} aria-hidden="true" />
-        <span>
+        <span className="whitespace-nowrap">
           {ACADEMY.street}
           <br />
           {ACADEMY.city}
         </span>
       </span>
       {contact.email ? (
-        <a href={`mailto:${contact.email}`} className="flex items-center gap-3 break-all hover:underline">
+        <a href={`mailto:${contact.email}`} className="flex items-center gap-3 hover:underline">
           <LuMail className={cn('shrink-0', iconClass)} aria-hidden="true" />
-          {contact.email}
+          <span className="min-w-0 [overflow-wrap:anywhere]">{contact.email}</span>
         </a>
-      ) : ready ? (
-        <span className="flex items-center gap-3 text-stone">
-          <LuMail className={cn('shrink-0', iconClass)} aria-hidden="true" />
-          <TodoNote className="py-1.5">{t(EMAIL_TODO)}</TodoNote>
-        </span>
       ) : null}
       {content.instagram ? (
         <a href={content.instagram} target="_blank" rel="noreferrer" className="flex items-center gap-3 hover:underline">
@@ -259,11 +262,6 @@ export function ContactLines({ className, iconClass = 'size-5' }: { className?: 
           <LuPhone className={cn('shrink-0', iconClass)} aria-hidden="true" />
           {contact.phone}
         </a>
-      ) : ready ? (
-        <span className="flex items-center gap-3 text-stone">
-          <LuPhone className={cn('shrink-0', iconClass)} aria-hidden="true" />
-          <TodoNote className="py-1.5">{t(PHONE_TODO)}</TodoNote>
-        </span>
       ) : null}
     </address>
   )
@@ -319,7 +317,7 @@ export function MapEmbed({ className }: { className?: string }) {
             {ACADEMY.name}
           </p>
           <p className="mt-0.5 pl-4 text-[13.5px] text-stone">
-            {ACADEMY.street}, {ACADEMY.city}
+            <span className="whitespace-nowrap">{ACADEMY.street},</span> <span className="whitespace-nowrap">{ACADEMY.city}</span>
           </p>
         </div>
         <a
@@ -331,7 +329,7 @@ export function MapEmbed({ className }: { className?: string }) {
           <LuNavigation className="size-4" aria-hidden="true" /> {t(UI.directions)}
         </a>
       </div>
-      <div className="relative min-h-[300px] flex-1 border-t border-line bg-warm-2">
+      <div className="relative mx-3 mb-3 min-h-[300px] flex-1 overflow-hidden rounded-[16px] border border-line bg-warm-2">
         <iframe title={t(T.mapTitle)} src={MAP_EMBED} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen className="absolute inset-0 size-full border-0" />
       </div>
     </div>
@@ -340,12 +338,23 @@ export function MapEmbed({ className }: { className?: string }) {
 
 /* ------------------------------------------------------------------ the closing call */
 
+/**
+ * The closing call at the end of every page, on black: the photo the academy chose for the closing banner melts into
+ * the black (from the left on wide screens, above the words on phones), or the white reticle without one.
+ */
 export function FinalCta() {
   const { t } = useSite()
+  const photo = usePlacePhoto('cta')
   return (
-    <section className="relative overflow-hidden bg-ink text-white" aria-labelledby="final-title">
-      <SkyArcReticle className="pointer-events-none absolute -top-24 -right-24 size-[440px] opacity-[0.07] sm:-right-10 sm:size-[560px]" />
-      <Container className="relative py-20 sm:py-28">
+    <section className="relative isolate overflow-hidden bg-ink text-white" aria-labelledby="final-title">
+      {photo ? (
+        <div className="final-photo pointer-events-none absolute inset-x-0 top-0 -z-10 h-[300px] sm:h-[400px] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-auto lg:w-[68%] xl:w-[58%]" aria-hidden="true">
+          <Photo photo={photo} alt="" sizes="(min-width: 1280px) 58vw, (min-width: 1024px) 68vw, 100vw" className="size-full" />
+        </div>
+      ) : (
+        <SkyArcReticle className="pointer-events-none absolute -top-24 -right-24 size-[440px] opacity-[0.07] sm:-right-10 sm:size-[560px]" />
+      )}
+      <Container className={cn('relative pb-20 sm:pb-28', photo ? 'pt-[230px] sm:pt-[320px] lg:pt-28' : 'pt-20 sm:pt-28')}>
         <div className="max-w-2xl">
           <Kicker tone="light">{t(HOME.final.eyebrow)}</Kicker>
           <h2 id="final-title" className="mt-5 text-[40px] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-[60px]">

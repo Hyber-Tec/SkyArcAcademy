@@ -4,6 +4,7 @@ import { COL, DOC, ROOT } from '@shared/paths'
 import type { BranchContact, BranchPublicProfile } from '@shared/types'
 import {
   EMPTY_WEBSITE_CONTENT,
+  inGallery,
   type WebsiteContent,
   type WebsiteImage,
   type WebsiteNewsCategory,
@@ -18,7 +19,7 @@ import { type Doc, getDocument, runQuery } from './rest'
  * visit, so moving between pages never waits; a later visit shows the kept copy at once and refreshes it.
  */
 const BRANCH = `${ROOT.branches}/${ACADEMY_ID}`
-const CACHE_KEY = 'skyarc-site-data-v1'
+const CACHE_KEY = 'skyarc-site-data-v2'
 
 export type SitePhoto = Omit<WebsitePhoto, 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'> & { id: string }
 
@@ -45,14 +46,16 @@ interface SiteData {
   name: string | null
   contact: BranchContact
   content: WebsiteContent
-  /** The gallery's photos, in its order (hidden ones never arrive). */
+  /** The gallery's photos, in its order (hidden ones never arrive; those for the pages only stay out). */
   photos: SitePhoto[]
+  /** Every photo on the website, for the pages' spots and the coaches' portraits. */
+  library: SitePhoto[]
   /** Every post's card, pinned first, then newest first. */
   posts: SitePost[]
 }
 
 const EMPTY_CONTACT: BranchContact = { email: '', phone: '', address: '', website: '' }
-const EMPTY: SiteData = { ready: false, failed: false, name: null, contact: EMPTY_CONTACT, content: EMPTY_WEBSITE_CONTENT, photos: [], posts: [] }
+const EMPTY: SiteData = { ready: false, failed: false, name: null, contact: EMPTY_CONTACT, content: EMPTY_WEBSITE_CONTENT, photos: [], library: [], posts: [] }
 
 const POST_CARD_FIELDS = ['slug', 'title', 'excerpt', 'category', 'cover', 'pinned', 'publishedAt']
 
@@ -79,31 +82,33 @@ async function load(signal: AbortSignal): Promise<SiteData> {
     runQuery<WebsitePhoto>(BRANCH, { collection: COL.websitePhotos, where: [{ field: 'hidden', op: 'EQUAL', value: false }] }, signal),
     runQuery<Record<string, unknown>>(BRANCH, { collection: COL.websitePosts, orderBy: [{ field: 'publishedAt', direction: 'DESCENDING' }], select: POST_CARD_FIELDS, limit: 300 }, signal),
   ])
+  const library = photos
+    .map(({ id, data }): SitePhoto => ({
+      id,
+      album: data.album,
+      caption: data.caption ?? '',
+      alt: data.alt ?? '',
+      focus: data.focus || '50% 50%',
+      order: Number(data.order ?? 0),
+      hidden: false,
+      folder: data.folder,
+      format: data.format,
+      widths: data.widths ?? [],
+      width: Number(data.width),
+      height: Number(data.height),
+      color: data.color ?? '',
+      blur: data.blur ?? '',
+    }))
+    .filter((p) => p.widths.length > 0)
+    .sort((a, b) => a.order - b.order)
   return {
     ready: true,
     failed: false,
     name: profile?.name?.trim() || null,
     contact: { ...EMPTY_CONTACT, ...(profile?.contact ?? {}) },
     content: { ...EMPTY_WEBSITE_CONTENT, ...(content ?? {}), places: content?.places ?? {} },
-    photos: photos
-      .map(({ id, data }) => ({
-        id,
-        album: data.album,
-        caption: data.caption ?? '',
-        alt: data.alt ?? '',
-        focus: data.focus || '50% 50%',
-        order: Number(data.order ?? 0),
-        hidden: false,
-        folder: data.folder,
-        format: data.format,
-        widths: data.widths ?? [],
-        width: Number(data.width),
-        height: Number(data.height),
-        color: data.color ?? '',
-        blur: data.blur ?? '',
-      }))
-      .filter((p) => p.widths.length > 0)
-      .sort((a, b) => a.order - b.order),
+    photos: library.filter(inGallery),
+    library,
     posts: sortPosts(posts.map(asPost).filter((p) => p.slug)),
   }
 }
@@ -152,14 +157,14 @@ export function useSiteData(): SiteData {
 
 /** The photo chosen for a spot on the site, if any. */
 export function usePlacePhoto(place: WebsitePlace): SitePhoto | null {
-  const { content, photos } = useSiteData()
+  const { content, library } = useSiteData()
   const id = content.places?.[place]
-  return useMemo(() => (id ? (photos.find((p) => p.id === id) ?? null) : null), [id, photos])
+  return useMemo(() => (id ? (library.find((p) => p.id === id) ?? null) : null), [id, library])
 }
 
 export function usePhotoById(id: string | null | undefined): SitePhoto | null {
-  const { photos } = useSiteData()
-  return useMemo(() => (id ? (photos.find((p) => p.id === id) ?? null) : null), [id, photos])
+  const { library } = useSiteData()
+  return useMemo(() => (id ? (library.find((p) => p.id === id) ?? null) : null), [id, library])
 }
 
 /** A post with its text, by its address; null while loading, 'missing' if there's none. */

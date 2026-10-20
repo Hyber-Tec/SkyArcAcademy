@@ -1,5 +1,5 @@
 import { NavigationMenu } from 'radix-ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LuArrowRight, LuChevronDown, LuChevronRight, LuLogIn, LuMail, LuMapPin, LuMenu, LuUserRound, LuX } from 'react-icons/lu'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { ACADEMY, LEVELS, type Lang, PROGRAMS, UI } from '@/site/kit/content'
 import { usePlacePhoto, useSiteData } from '@/site/data'
 import { Photo } from '@/site/kit/Photo'
-import { A, useSite } from '@/site/kit/site'
+import { A, useIsPage, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
 import { BookButton, Container } from './bits'
@@ -43,14 +43,49 @@ export function LangSwitch({ tone = 'ink', className }: { tone?: 'ink' | 'light'
 const navLink =
   'inline-flex h-10 items-center rounded-full px-3.5 text-[15px] font-medium text-ink/80 transition hover:bg-warm hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none aria-[current=page]:text-ink aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-3.5 aria-[current=page]:after:-bottom-[15px] aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-ink relative'
 
-function ProgramsMenu() {
-  const { t, href } = useSite()
+/**
+ * "Programs": a click goes to the Programs page; the menu of its parts opens on hover (and with the down arrow key).
+ * After a click it stays closed until the pointer leaves, so it doesn't open again over the page just reached.
+ */
+function ProgramsMenu({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+  const { t, href, go } = useSite()
+  const current = useIsPage('programs')
   const photo = usePlacePhoto('menu')
+  const quiet = useRef(false)
+  const hush = (e: React.PointerEvent) => {
+    if (quiet.current) e.preventDefault()
+  }
   return (
-    <NavigationMenu.Item>
-      <NavigationMenu.Trigger className={cn(navLink, 'group gap-1 data-[state=open]:bg-warm data-[state=open]:text-ink')}>
-        {t(UI.programs)}
-        <LuChevronDown className="size-4 transition duration-200 group-data-[state=open]:rotate-180" aria-hidden="true" />
+    <NavigationMenu.Item value="programs">
+      <NavigationMenu.Trigger asChild>
+        <a
+          href={href('programs')}
+          aria-current={current ? 'page' : undefined}
+          onPointerEnter={hush}
+          onPointerMove={hush}
+          onPointerLeave={(e) => {
+            // The page's cross-fade after the click counts as a leave too: only a pointer really outside counts.
+            const r = e.currentTarget.getBoundingClientRect()
+            if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) quiet.current = false
+          }}
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+            e.preventDefault()
+            quiet.current = true
+            setOpen(false)
+            go('programs')
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' && !open) {
+              e.preventDefault()
+              setOpen(true)
+            }
+          }}
+          className={cn(navLink, 'group gap-1 data-[state=open]:bg-warm data-[state=open]:text-ink')}
+        >
+          {t(UI.programs)}
+          <LuChevronDown className="size-4 transition duration-200 group-data-[state=open]:rotate-180" aria-hidden="true" />
+        </a>
       </NavigationMenu.Trigger>
       <NavigationMenu.Content className="absolute top-full left-0 mt-3.5 w-[780px] rounded-[26px] border border-line bg-white p-3 shadow-float data-[motion^=from-]:animate-in data-[motion^=from-]:fade-in data-[motion^=to-]:animate-out data-[motion^=to-]:fade-out data-[state=open]:slide-in-from-top-1">
         <div className="grid grid-cols-[1.35fr_1fr] gap-3">
@@ -183,12 +218,16 @@ function MobileMenu() {
           <div className="mt-6 space-y-2 px-3 text-[14px] text-stone">
             <p className="flex items-start gap-2">
               <LuMapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              {ACADEMY.street}, {ACADEMY.city}
+              <span className="whitespace-nowrap">
+                {ACADEMY.street}
+                <br />
+                {ACADEMY.city}
+              </span>
             </p>
             {contact.email ? (
-              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 break-all hover:text-ink">
+              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-ink">
                 <LuMail className="size-4 shrink-0" aria-hidden="true" />
-                {contact.email}
+                <span className="min-w-0 [overflow-wrap:anywhere]">{contact.email}</span>
               </a>
             ) : null}
           </div>
@@ -217,6 +256,7 @@ export function Header() {
   const { t, href } = useSite()
   const login = useLoginLabel()
   const [scrolled, setScrolled] = useState(false)
+  const [menu, setMenu] = useState('')
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 44)
     on()
@@ -253,9 +293,9 @@ export function Header() {
           <a href={href('')} className="shrink-0 rounded-md focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none" aria-label={`${ACADEMY.name} · ${t(UI.home)}`}>
             <SkyArcLogo tone="black" className="h-10 sm:h-12" />
           </a>
-          <NavigationMenu.Root className="relative hidden lg:block" aria-label={t(T.mainNav)} delayDuration={80}>
+          <NavigationMenu.Root value={menu} onValueChange={setMenu} className="relative hidden lg:block" aria-label={t(T.mainNav)} delayDuration={80}>
             <NavigationMenu.List className="flex items-center gap-0.5">
-              <ProgramsMenu />
+              <ProgramsMenu open={menu === 'programs'} setOpen={(on) => setMenu(on ? 'programs' : '')} />
               {LINKS.map((l) => (
                 <NavigationMenu.Item key={l.to}>
                   <NavigationMenu.Link asChild>

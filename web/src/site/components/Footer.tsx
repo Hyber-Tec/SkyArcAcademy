@@ -1,7 +1,7 @@
-import { LuInstagram, LuMail, LuMapPin } from 'react-icons/lu'
+import { LuInstagram, LuMail, LuMapPin, LuPhone } from 'react-icons/lu'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, FOOTER, UI } from '@/site/kit/content'
+import { ACADEMY, FOOTER, UI, keepWhole } from '@/site/kit/content'
 import { A, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
@@ -28,7 +28,7 @@ export function Footer() {
               </a>
             ) : null}
           </div>
-          <div className="grid gap-10 sm:grid-cols-3">
+          <div className="grid gap-10 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:gap-x-12">
             <nav aria-label={t(FOOTER.sections.explore)}>
               <h2 className="text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">{t(FOOTER.sections.explore)}</h2>
               <ul className="mt-3 grid gap-0.5">
@@ -83,25 +83,31 @@ export function Footer() {
               <address className="mt-3 grid gap-2.5 text-[14.5px] text-ink/75 not-italic">
                 <a href={DIRECTIONS_URL} target="_blank" rel="noreferrer" className="flex items-start gap-2 hover:text-ink">
                   <LuMapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                  <span>
+                  <span className="whitespace-nowrap">
                     {ACADEMY.street}
                     <br />
                     {ACADEMY.city}
                   </span>
                 </a>
                 {contact.email ? (
-                  <a href={`mailto:${contact.email}`} className="flex items-center gap-2 break-all hover:text-ink">
+                  <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-ink">
                     <LuMail className="size-4 shrink-0" aria-hidden="true" />
-                    {contact.email}
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{contact.email}</span>
+                  </a>
+                ) : null}
+                {contact.phone ? (
+                  <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 whitespace-nowrap hover:text-ink">
+                    <LuPhone className="size-4 shrink-0" aria-hidden="true" />
+                    {contact.phone}
                   </a>
                 ) : null}
               </address>
               {content.hours.length ? (
-                <dl className="mt-4 grid gap-1 text-[13px]" lang={crmLang}>
+                <dl className="mt-4 grid gap-1 text-[13px] sm:max-w-80" lang={crmLang}>
                   {content.hours.map((h) => (
                     <div key={h.id} className="flex justify-between gap-3">
-                      <dt className="text-stone">{h.days}</dt>
-                      <dd className="text-right text-ink/80 tabular-nums">{h.time}</dd>
+                      <dt className="text-stone">{keepWhole(h.days)}</dt>
+                      <dd className="text-right text-ink/80 tabular-nums">{keepWhole(h.time)}</dd>
                     </div>
                   ))}
                 </dl>

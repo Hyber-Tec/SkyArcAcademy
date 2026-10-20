@@ -72,7 +72,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
   the design options. The CRM fills it: the Website page (photos, coaches, testimonials, hours, Instagram, and the trial
   requests and questions sent from it) and announcements shown "On the website". Its pages talk to parents only (no
   notes on how the site works), never invent a fact or a testimonial (until real quotes exist it shows samples marked
-  "Sample"), and never show a student's name, scores or targets. Its Korean is a draft the owner reviews.
+  "Sample"; a fact the academy hasn't confirmed is left out, not marked), and never show a student's name, scores or
+  targets. Its Korean is a draft the owner reviews.
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
 - **Few rules.** Add a rule only when the academy needs one: makeups and trials are labels on a class, and levels
@@ -183,6 +184,9 @@ don't redraw, recolor, stretch, crop or rebuild them from other images.
 - **The phone app** (Expo, later): the app icon from `skyarc-icon-black.svg`; the full logo on the splash and sign-in
   screens (white on black, or black on white); the lockup at the top of its navigation.
 - **Colors** from the logo: black `#0A0A0A`, white, and red `#FB0202` for the dot (the `brand` tokens).
+- **Other organisations' logos** (the public website): only their official files, unchanged, where the site names
+  something the academy uses or belongs to: SIUS, its electronic scoring (`web/src/site/assets/sius.webp`, from the
+  logo the owner sent). Never a body's logo it doesn't allow a club to use (the NCAA's).
 - The designer's file names, for when new versions arrive: `Group 92.svg` is the full logo, `Group 112.svg` the
   wordmark, `Group 96.svg` the white reticle, `Group 97.svg` the black icon, `Group 98.svg` the white icon. The
   originals are kept, git-ignored, in `logo/official/` on the owner's machine.

@@ -9,8 +9,8 @@ import type { AuditStamp, TimestampLike } from '../types'
 /** The website's languages: English, and Korean as a draft the owner reviews (docs/TODO.md). */
 export type SiteLang = 'en' | 'ko'
 
-/** The gallery's albums. */
-export const WEBSITE_ALBUMS = ['training', 'coaching', 'competition', 'community'] as const
+/** The gallery's albums, and `pages`: a photo shown only where it's chosen (a banner, a portrait), not in the gallery. */
+export const WEBSITE_ALBUMS = ['training', 'coaching', 'competition', 'community', 'pages'] as const
 export type WebsiteAlbum = (typeof WEBSITE_ALBUMS)[number]
 
 export const WEBSITE_ALBUM_LABELS: Record<WebsiteAlbum, string> = {
@@ -18,7 +18,11 @@ export const WEBSITE_ALBUM_LABELS: Record<WebsiteAlbum, string> = {
   coaching: 'Coaching',
   competition: 'Competition',
   community: 'Community',
+  pages: 'Pages only',
 }
+
+/** Whether the gallery shows the photo (photos for the pages only stay out of it). */
+export const inGallery = (photo: Pick<WebsitePhoto, 'album'>) => photo.album !== 'pages'
 
 /**
  * A picture resized for the website: a few widths at `{folder}/{width}.{format}` in Storage, which anyone can read
@@ -61,6 +65,7 @@ export const WEBSITE_PLACES = [
   { id: 'about.hero', page: 'About', label: 'Top of About' },
   { id: 'about.story', page: 'About', label: 'About: our mission' },
   { id: 'menu', page: 'Menu', label: 'The Programs menu' },
+  { id: 'cta', page: 'Every page', label: 'The closing banner, at the end of every page' },
 ] as const
 export type WebsitePlace = (typeof WEBSITE_PLACES)[number]['id']
 

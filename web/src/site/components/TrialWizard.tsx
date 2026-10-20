@@ -88,11 +88,11 @@ export function TrialWizard({ wizard, variant, onClose, title }: { wizard: Wizar
   return (
     <div className={cn('flex min-h-0 min-w-0 flex-col', drawer ? 'h-full' : 'rounded-[28px] border border-line bg-white shadow-soft')}>
       {/* Header: what's being requested, and where in the steps */}
-      <div className={cn('shrink-0 border-b border-line px-5 pt-5 pb-4 sm:px-7', drawer && 'pt-6')}>
+      <div className={cn('shrink-0 border-b border-line px-5 pt-5 pb-4 sm:px-7', drawer ? 'pt-6' : 'sm:pt-8')}>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[12px] font-medium tracking-[0.14em] text-stone uppercase">{t(kindInfo.name)}</p>
-            <h2 className="mt-1 text-[22px] leading-tight font-semibold tracking-tight text-ink">{state.step === 'done' ? t(T.sentTitle) : heading}</h2>
+            <h2 className="mt-2 text-[22px] leading-tight font-semibold tracking-tight text-ink">{state.step === 'done' ? t(T.sentTitle) : heading}</h2>
             <p className="mt-1 text-[13.5px] text-stone">{t(kindInfo.summary)}</p>
           </div>
           {onClose ? (
@@ -169,7 +169,7 @@ export function TrialWizard({ wizard, variant, onClose, title }: { wizard: Wizar
                       </span>
                     </>
                   ) : (
-                    <span className={cn(state.errors.days ? 'font-medium text-red-text' : 'text-stone')}>{t(state.errors.days ? T.daysError : T.daysNone)}</span>
+                    <span className={cn('text-pretty', state.errors.days ? 'font-medium text-red-text' : 'text-stone')}>{t(state.errors.days ? T.daysError : T.daysNone)}</span>
                   )}
                 </div>
               )}
@@ -425,7 +425,7 @@ function ReviewStep({ wizard, go }: { wizard: Wizard; go: (s: Step) => void }) {
           </ul>
         </Row>
         <Row label={t(T.where)}>
-          {ACADEMY.street}
+          <span className="whitespace-nowrap">{ACADEMY.street}</span>
           <br />
           {ACADEMY.city}
         </Row>
@@ -508,8 +508,11 @@ function DoneStep({ wizard }: { wizard: Wizard }) {
               <li key={d}>{d}</li>
             ))}
           </ul>
-          <p className="flex items-center gap-2 text-[14px] text-stone">
-            <LuMapPin className="size-4" aria-hidden="true" /> {ACADEMY.street}, {ACADEMY.city}
+          <p className="flex items-start gap-2 text-[14px] text-stone">
+            <LuMapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              <span className="whitespace-nowrap">{ACADEMY.street},</span> <span className="whitespace-nowrap">{ACADEMY.city}</span>
+            </span>
           </p>
         </div>
       </div>

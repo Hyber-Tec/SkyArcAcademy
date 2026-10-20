@@ -11,10 +11,11 @@ import { A, useSite } from '@/site/kit/site'
 import { TestimonialsColumns } from '@/site/kit/ui'
 import { useIntroReady } from '../intro-context'
 import { useBooking } from '../booking-context'
-import { BookButton, Container, SectionHead, TodoNote, btnInk, btnOutline, linkArrow, mins } from '../components/bits'
+import { BookButton, Container, SectionHead, btnInk, btnOutline, linkArrow, mins } from '../components/bits'
 import { CoachCard, FaqList, FinalCta, NewsCard, VisitUs, crmLang } from '../components/blocks'
 import { LevelPath } from '../components/LevelPath'
 import { ReportShowcase } from '../components/ReportShowcase'
+import siusLogo from '../assets/sius.webp'
 import { T } from '../i18n'
 
 const FACT_ICONS = [LuTarget, LuLayers, LuUserRound, LuActivity]
@@ -44,7 +45,7 @@ function NextTrialCard({ className }: { className?: string }) {
           <span className="rounded-full bg-warm-2 px-2 py-0.5 text-[11.5px] font-medium text-ink tabular-nums">{mins(TRIAL.kinds.one.minutes, lang)}</span>
         ) : null}
       </span>
-      <span className="mt-2.5 block text-[20px] leading-tight font-semibold tracking-tight text-ink sm:text-[22px]">{t(T.heroCardTitle)}</span>
+      <span className="mt-2.5 block text-[20px] leading-tight font-semibold tracking-tight text-balance text-ink sm:text-[22px]">{t(T.heroCardTitle)}</span>
       <span className="mt-1 block text-[13px] leading-snug text-stone">{t(TRIAL.kinds.one.summary)}</span>
       <span className="mt-3.5 flex items-center justify-between border-t border-line pt-3 text-[14px] font-semibold text-ink">
         {t(T.heroCardCta)}
@@ -113,7 +114,7 @@ function Hero() {
             </p>
           </div>
           <motion.div
-            className="relative z-10 -mt-12 px-3 sm:absolute sm:right-6 sm:-bottom-10 sm:mt-0 sm:w-[300px] sm:px-0 lg:-right-6 lg:-bottom-12"
+            className="relative z-10 -mt-12 px-3 sm:absolute sm:right-6 sm:-bottom-10 sm:mt-0 sm:w-[300px] sm:px-0 lg:-bottom-12 xl:-right-6"
             initial={reduce ? false : { opacity: 0, y: 24 }}
             animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
             transition={{ duration: 0.8, delay: 0.55, ease: EASE_OUT }}
@@ -126,9 +127,18 @@ function Hero() {
             const Icon = FACT_ICONS[i]
             return (
               <div key={f.value} className="flex flex-col gap-1 bg-white px-4 py-4">
-                <Icon className="size-[18px] text-ink" aria-hidden="true" />
                 <dt className="sr-only">{t(f.label)}</dt>
-                <dd className="mt-1.5 text-[20px] leading-none font-semibold tracking-tight text-ink">{f.value}</dd>
+                {f.logo ? (
+                  // The official logo, as SIUS makes it, as tall as an icon and a figure together.
+                  <dd className="h-12">
+                    <img src={siusLogo} alt={f.value} width={400} height={275} className="h-full w-auto" />
+                  </dd>
+                ) : (
+                  <>
+                    <Icon className="size-[18px] text-ink" aria-hidden="true" />
+                    <dd className="mt-1.5 text-[20px] leading-none font-semibold tracking-tight text-ink">{f.value}</dd>
+                  </>
+                )}
                 <dd className="text-[12.5px] leading-snug text-stone">{t(f.label)}</dd>
               </div>
             )
@@ -216,7 +226,7 @@ function Portal() {
         </Container>
       }
       footer={
-        <Container className="pt-6 pb-20 sm:pb-28">
+        <Container className="pt-16 pb-20 sm:pt-20 sm:pb-28">
           <Reveal className="flex flex-col items-center gap-5 text-center">
             <p className="max-w-xl text-[15.5px] leading-relaxed text-stone">{t(T.portalAlso)}</p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -307,7 +317,6 @@ function Trials() {
                   )
                 })}
               </ul>
-              <TodoNote className="mt-6">{t(HOME.trial.todo)}</TodoNote>
             </div>
           </Reveal>
           <Reveal delay={0.08} className="h-full">
@@ -430,7 +439,6 @@ function GalleryMosaic() {
               className={cn(
                 'group relative overflow-hidden rounded-[22px] bg-warm-2 focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:outline-none',
                 i === 0 && 'col-span-2 row-span-2',
-                i === 4 && 'col-span-2 lg:col-span-1',
                 // A short gallery still fills its rows.
                 items.length === 2 && i === 1 && 'col-span-2 row-span-2 lg:col-span-2',
                 items.length === 4 && i === 3 && 'col-span-2 lg:col-span-1',

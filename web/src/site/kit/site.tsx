@@ -1,7 +1,7 @@
 import { type AnchorHTMLAttributes, type ReactNode, createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { PAGE_META, type Page, isSitePath } from '../paths'
-import { ACADEMY, type L, type Lang, TITLES } from './content'
+import { ACADEMY, type L, type Lang, TITLES, keepWhole } from './content'
 
 /**
  * The website's pages and languages. English is at `/programs`, Korean at `/ko/programs`; a news post at
@@ -155,7 +155,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SiteValue>(
     () => ({
       ...route,
-      t: (x) => x[route.lang],
+      t: (x) => keepWhole(x[route.lang]),
       href: (path, lang = route.lang) => hrefFor(path, lang),
       go: (path) => {
         window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(path, route.lang) }))

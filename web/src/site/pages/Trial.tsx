@@ -2,7 +2,7 @@ import { LuArrowRight, LuCheck, LuClock, LuShieldCheck, LuTicket } from 'react-i
 import { FAQ, HOME, TRIAL } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { A, useSite } from '@/site/kit/site'
-import { Container, Kicker, SectionHead, TodoNote, mins } from '../components/bits'
+import { Container, Kicker, SectionHead, mins } from '../components/bits'
 import { FaqList, PageHero, VisitUs } from '../components/blocks'
 import { TrialWizard } from '../components/TrialWizard'
 import { T } from '../i18n'
@@ -112,7 +112,6 @@ export function Trial() {
                     </li>
                   ))}
                 </ul>
-                <TodoNote className="mt-5">{t(HOME.trial.todo)}</TodoNote>
               </div>
             </Reveal>
           </div>
@@ -121,7 +120,7 @@ export function Trial() {
 
       <TrialTwo />
 
-      <section className="py-20 sm:py-24" aria-labelledby="trial-faq">
+      <section className="pt-20 sm:pt-24" aria-labelledby="trial-faq">
         <Container className="grid gap-10 lg:grid-cols-[0.8fr_1.3fr] lg:gap-16">
           <SectionHead kicker={t(T.faqKicker)} title={<span id="trial-faq">{t(T.trialQuestions)}</span>} />
           <FaqList items={trialFaq} columns={1} />

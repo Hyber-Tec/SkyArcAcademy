@@ -184,6 +184,9 @@ export async function deleteMessage(branchId: string, actor: Actor, m: WithId<We
 
 // photos
 
+/** "the website’s Training album", or the pages only. */
+const albumName = (album: WebsiteAlbum) => (album === 'pages' ? 'the website’s pages only (not the gallery)' : `the website’s ${WEBSITE_ALBUM_LABELS[album]} album`)
+
 /** Saves a new photo's record once its files are up; `place`: also show it there (chosen while it uploaded). */
 export async function addPhoto(branchId: string, actor: Actor, id: string, record: PhotoRecord, fileName: string, place: WebsitePlace | null) {
   const batch = writeBatch(db)
@@ -195,7 +198,7 @@ export async function addPhoto(branchId: string, actor: Actor, id: string, recor
   })
   if (place) setContent(batch, branchId, actor, { places: { [place]: id } })
   const where = place ? ` and chose it for “${placeLabel(place)}”` : ''
-  audit(batch, branchId, actor, 'photo.add', 'websitePhoto', id, `Added the photo “${fileName}” to the website’s ${WEBSITE_ALBUM_LABELS[record.album]} album${where}`)
+  audit(batch, branchId, actor, 'photo.add', 'websitePhoto', id, `Added the photo “${fileName}” to ${albumName(record.album)}${where}`)
   await batch.commit()
 }
 
@@ -209,7 +212,7 @@ export async function updatePhoto(branchId: string, actor: Actor, photo: WithId<
 }
 
 export function setPhotoAlbum(branchId: string, actor: Actor, photo: WithId<WebsitePhoto>, album: WebsiteAlbum) {
-  return updatePhoto(branchId, actor, photo, { album }, `Moved ${photoName(photo)} to the website’s ${WEBSITE_ALBUM_LABELS[album]} album`, [
+  return updatePhoto(branchId, actor, photo, { album }, `Moved ${photoName(photo)} to ${albumName(album)}`, [
     { field: 'album', label: 'Album', from: WEBSITE_ALBUM_LABELS[photo.album] ?? photo.album, to: WEBSITE_ALBUM_LABELS[album] },
   ])
 }

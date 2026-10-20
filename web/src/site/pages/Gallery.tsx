@@ -28,7 +28,8 @@ export function Gallery() {
   const [shown, setShown] = useState(PAGE)
   const items = useMemo(() => (album === 'all' ? photos : photos.filter((g) => g.album === album)), [album, photos])
   const count = (id: Album) => (id === 'all' ? photos.length : photos.filter((g) => g.album === id).length)
-  const cover = (id: Album): SitePhoto | undefined => (id === 'all' ? photos[0] : photos.find((g) => g.album === id))
+  const firsts = GALLERY.categories.flatMap((c) => (c.id === 'all' ? [] : (photos.find((g) => g.album === c.id)?.id ?? [])))
+  const cover = (id: Album): SitePhoto | undefined => (id === 'all' ? (photos.find((g) => !firsts.includes(g.id)) ?? photos[0]) : photos.find((g) => g.album === id))
   const albums = GALLERY.categories.filter((c) => c.id === 'all' || count(c.id) > 0)
   const albumLabel = GALLERY.categories.find((c) => c.id === album)?.label ?? GALLERY.categories[0].label
   const visible = items.slice(0, shown)
@@ -61,7 +62,7 @@ export function Gallery() {
               <h2 id="albums-title" className="text-[13px] font-semibold tracking-[0.14em] text-stone uppercase">
                 {t(T.albums)}
               </h2>
-              <div className="no-scrollbar -mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5" role="group" aria-label={t(T.albums)}>
+              <div className="no-scrollbar scroll-fade -mx-5 mt-2.5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pt-1.5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5" role="group" aria-label={t(T.albums)}>
                 {albums.map((c) => {
                   const g = cover(c.id)
                   const on = c.id === album
