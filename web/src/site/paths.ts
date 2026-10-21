@@ -2,7 +2,7 @@
  * The website's addresses (kept free of React, so the Vite config can read it too). English pages are at `/programs`,
  * Korean at `/ko/programs`, a news post at `/news/{slug}`. Every other address is the app's.
  */
-export const PAGES = ['', 'programs', 'about', 'gallery', 'news', 'trial', 'contact', 'portal'] as const
+export const PAGES = ['', 'programs', 'about', 'gallery', 'news', 'trial', 'contact', 'portal', 'privacy', 'help'] as const
 export type Page = (typeof PAGES)[number]
 
 /** Whether an address is one of the website's pages (and not the app's). */
@@ -60,5 +60,13 @@ export const PAGE_META: Record<Page | 'news-post', { en: { title: string; descri
   portal: {
     en: { title: 'Parent portal · Sky Arc Sports Academy', description: 'One login for class schedules, scores, progress reports and academy news.' },
     ko: { title: '학부모 포털 · Sky Arc Sports Academy', description: '로그인 한 번으로 수업 일정, 점수, 성장 리포트, 아카데미 소식을 확인하세요.' },
+  },
+  privacy: {
+    en: { title: 'Privacy Policy · Sky Arc Sports Academy', description: 'What Sky Arc Sports Academy keeps about families, students and staff on its website and phone app, why, who can see it, and your choices.' },
+    ko: { title: '개인정보 처리방침 · Sky Arc Sports Academy', description: 'Sky Arc Sports Academy가 웹사이트와 휴대폰 앱에서 보관하는 정보와 그 이유, 열람 범위, 선택권 (영어 원문).' },
+  },
+  help: {
+    en: { title: 'Help · Sky Arc Sports Academy', description: 'Help with the Sky Arc Sports Academy website and the Sky Arc phone app: whom to ask, signing in, and deleting your account.' },
+    ko: { title: '도움말 · Sky Arc Sports Academy', description: 'Sky Arc Sports Academy 웹사이트와 Sky Arc 휴대폰 앱 도움말: 문의처, 로그인, 계정 삭제.' },
   },
 }

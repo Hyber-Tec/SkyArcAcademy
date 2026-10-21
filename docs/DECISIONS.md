@@ -123,7 +123,10 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
 - **Q15. Privacy policy: HyberTec drafts it from a template, and the academy reviews it.** The draft is at `/privacy`,
   linked from the homepage and the sign-in pages, with the academy's name and contact details from Settings → Academy.
   It says "draft" until the academy approves it (A10), and families aren't invited and trial booking stays closed
-  until then. It isn't legal advice: the academy may want a lawyer to read it.
+  until then. It isn't legal advice: the academy may want a lawyer to read it. **Approved** (the owner, 2026-10-20: "we
+  actually reviewed. so it's good now. remove the draft"): in effect from 2026-10-20, now a page of the website
+  (`web/src/site/pages/Legal.tsx`, with Help), with one line added that day on what the website's trial and question
+  forms keep.
 - **Questions for the academy:** the open questions and the data still missing are one numbered list in
   `docs/QUESTIONS.md`, in the order of the email Goo sends the academy, so answers can be matched by number. Whatever
   rules the academy gives become settings it can change later.
@@ -256,7 +259,7 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
 - **Publishing (Goo):** the app goes out under **HyberTec LLC's own Apple developer account**, as a **public** listing
   anyone can download, not under an account of the academy's. Apple allows it; to be ready for its review, a letter
   from the academy licensing its name and logo to HyberTec (guideline 5.2.1), and review notes that say who builds and
-  runs the app (4.2.6, 4.3). Steps: [docs/publishing.md](publishing.md#public-or-unlisted).
+  runs the app (4.2.6, 4.3). Steps: [docs/publishing/apple/rules.md](publishing/apple/rules.md#public-or-unlisted).
 - **Checking a card:** pinch to zoom into the card and into a bull; a shot is held and dragged onto its hole (its
   circle is the pellet's size at every zoom, and its score follows as it moves); a tap places a missing one.
 - **Close calls get a look:** a hole that touches a ring's line by less than 0.4 mm is marked to check, with the reason
@@ -503,3 +506,27 @@ homepage now … I'll actually test and verify from the live website".
   - More pictures and fewer words where the text was a list: the two advanced pathways (the Sporter ranks on their
     score scale; where Precision leads) and the three placement steps (each step's parts with icons).
 
+
+## 19. Publishing the phone app (2026-10-20)
+
+- **The App Store first, as soon as possible, then updates** (the owner). Android follows once it has been tried on
+  Android phones. **TestFlight is optional**: Apple reviews a build without it, so the owner uses it only to try a build
+  first. The owner uploads and submits; Claude Code prepares everything else, and runs the upload only when asked.
+- **The guides**: `docs/publishing.md` is the map ("should be just a summary to navigate which one to follow"), with
+  step-by-step guides and their links in `docs/publishing/`: `apple/` (`app-store.md`, `testflight.md`, and
+  `rules.md`, the reasons behind the answers), `google-play/` (`account.md`, `testing.md`, `production.md`) and
+  `updates.md`. The texts to paste stay in `docs/store/`.
+- **Screenshots from the owner's iPhone** ("can't i just take screenshot from my iphone and just use that?"): eight of
+  them, the families' first (a progress report, its target, Scores, Home), then the office's (Home, Schedule, Scan,
+  Students). At 1179 × 2556 they are the 6.3-inch size Apple now requires; a 6.9-inch copy waits in case App Store
+  Connect asks for that size too. Android's come from an Android phone when Android is ready.
+- **The reviewers' logins**: four sample people in production (the office, a coach, a parent, and a student for trying
+  Delete my account), made by `scripts/review-logins.ts`, their passwords only on the owner's Mac.
+- **Expo's modules are built from source** (`mobile/app.config.ts`): the prebuilt image module carried SDWebImage
+  without the privacy manifest Apple requires of it (ITMS-91061). The first build after the change takes longer.
+- **Store answers**: staff comments make the honest answers to Apple's "User-Generated Content" and "Messaging and
+  Chat" Yes (neither changes the 9+ rating); the privacy answers add what coaches enter (their phone, address, birth
+  date and availability), comments and what people opened. On Google Play the target audience includes the academy's
+  youngest students, which puts the app under Google's Families policy (no ads or advertising ID, as already).
+- **Google Play account**: an organization account for HyberTec LLC is the recommendation (no two-week closed test);
+  the owner checks which kind HyberTec has (`docs/TODO.md`).

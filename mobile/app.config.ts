@@ -254,7 +254,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
         },
       ],
       // React Native Firebase brings Firebase's iOS SDK in through Swift Package Manager, which needs dynamic frameworks.
-      ["expo-build-properties", { ios: { useFrameworks: "dynamic" } }],
+      // Expo's modules are built from source rather than taken prebuilt: the prebuilt image module carries SDWebImage
+      // without the privacy manifest Apple requires of it (ITMS-91061; docs/publishing/apple/rules.md).
+      ["expo-build-properties", { ios: { useFrameworks: "dynamic", usePrecompiledModules: false } }],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       ...(iosUrlScheme ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as [string, unknown]] : []),

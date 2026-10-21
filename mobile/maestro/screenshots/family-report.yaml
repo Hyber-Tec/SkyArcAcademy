@@ -1,0 +1,22 @@
+# Opens the newest progress report the academy shared, for the stores' screenshots (npm run publish:screenshots,
+# scripts/phone.mjs): Reports, then the first report, at its top. Starts from the family's signed-in app.
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    file: ../steps/family-tab.yaml
+    env:
+      TAB: reports
+      LABEL: Reports
+- extendedWaitUntil:
+    visible:
+      id: "family-reports-list"
+    timeout: 30000
+- tapOn:
+    id: "family-report-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "report-tiles"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000

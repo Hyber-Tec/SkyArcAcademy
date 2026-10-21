@@ -636,10 +636,23 @@ async function fillPracticeCopy() {
   } else {
     ok("The academy and its sample data are there");
   }
+  // Right after the sample data goes in, the emulators are still running its hundreds of triggers, and the Auth
+  // emulator (in the same process) may not answer for a while: try again for up to two minutes before giving up.
   try {
-    for (const login of PRACTICE_LOGINS) await practiceLogin(login, password);
+    for (const login of PRACTICE_LOGINS) {
+      for (let tries = 1; ; tries++) {
+        try {
+          await practiceLogin(login, password);
+          break;
+        } catch (e) {
+          if (!(e instanceof TypeError) || tries >= 30) throw e;
+          await sleep(4000);
+        }
+      }
+    }
   } catch (e) {
-    stop([`The practice logins couldn't be made in the Auth emulator: ${e.message}`, `Ask Claude Code: "the practice logins don't work".`]);
+    const cause = e?.cause?.code || e?.cause?.message;
+    stop([`The practice logins couldn't be made in the Auth emulator: ${e.message}${cause ? ` (${cause})` : ""}`, `Ask Claude Code: "the practice logins don't work".`]);
   }
   ok(`The practice logins: ${PRACTICE_LOGINS.map((l) => `${l.email} (${l.role})`).join(", ")}`);
 }
@@ -825,12 +838,13 @@ function ensureIosRuntime(env) {
 
 /**
  * Picks the newest standard iPhone (not Pro, Plus or Max) the newest iOS runs: the size most people carry. For the
- * store screenshots, the newest Pro Max: its screen is the 6.9-inch size App Store Connect asks screenshots for.
+ * store screenshots, the newest Pro: its 6.3-inch screen (1206 × 2622) is the size App Store Connect requires since
+ * October 2026 ("iPhone with Dynamic Island (medium display)"; it no longer takes a Pro Max's in that slot).
  */
-function pickIphone(runtime, big = false) {
+function pickIphone(runtime, store = false) {
   const iphones = (runtime.supportedDeviceTypes ?? []).filter((t) => t.productFamily === "iPhone");
   const number = (t) => Number(/\d+/.exec(t.name)?.[0] ?? 0);
-  const wanted = iphones.filter((t) => (big ? /^iPhone \d+ Pro Max$/ : /^iPhone \d+$/).test(t.name)).sort((a, b) => number(b) - number(a));
+  const wanted = iphones.filter((t) => (store ? /^iPhone \d+ Pro$/ : /^iPhone \d+$/).test(t.name)).sort((a, b) => number(b) - number(a));
   return wanted[0] ?? iphones.at(-1);
 }
 
@@ -1513,14 +1527,23 @@ async function prepare() {
 // The stores' images: the app on a big iPhone simulator and on an Android emulator of their own, on the practice copy.
 
 const SCREENS_DIR = path.join(mobile, ".publish", "screenshots");
-/** The five screens both stores get, uploaded in this order: the office's five tabs, as the practice owner. */
+/**
+ * The eight screens both stores get, uploaded in this order (the set the owner chose on 2026-10-20, from their iPhone): the
+ * family's first (most people who find the app are parents), as the sample parent, then the office's, as the practice
+ * owner. `flow` opens the screen: a tab of either app, or the newest progress report.
+ */
 const SCREENS = [
-  { file: "01-home", tab: "today", label: "Home", what: "Home: the day's classes" },
-  { file: "02-schedule", tab: "schedule", label: "Schedule", what: "Schedule: the day's classes by coach" },
-  { file: "03-scan", tab: "scan", label: "Scan", what: "Scan: photographing a paper target" },
-  { file: "04-students", tab: "students", label: "Students", what: "Students: the academy's students" },
-  { file: "05-more", tab: "more", label: "More", what: "More: coaches, appearance, the website" },
+  { file: "01-report", as: "family", flow: "maestro/screenshots/family-report.yaml", env: {}, what: "A progress report, as a parent sees it" },
+  { file: "02-report-shots", as: "family", flow: "maestro/screenshots/family-report-shots.yaml", env: {}, what: "The report's target: where the shots went" },
+  { file: "03-scores", as: "family", flow: "maestro/screenshots/family-tab.yaml", env: { TAB: "scores", LABEL: "Scores" }, what: "Scores: every result, by position" },
+  { file: "04-family-home", as: "family", flow: "maestro/screenshots/family-tab.yaml", env: { TAB: "home", LABEL: "Home" }, what: "The family's Home: the next class and the week" },
+  { file: "05-today", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "today", LABEL: "Home" }, what: "The office's Home: the day's classes" },
+  { file: "06-schedule", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "schedule", LABEL: "Schedule" }, what: "Schedule: the day's classes by coach" },
+  { file: "07-scan", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "scan", LABEL: "Scan" }, what: "Scan: photographing a paper target" },
+  { file: "08-students", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "students", LABEL: "Students" }, what: "Students: the academy's students" },
 ];
+/** The sample parent the family's screens are taken as (a practice login: two children, shared reports). */
+const SCREENS_PARENT = "jiyeon.hwang@skyarc-sample.test";
 
 /** The size of a PNG, from sips. */
 function imageSize(file) {
@@ -1529,29 +1552,34 @@ function imageSize(file) {
 }
 
 /**
- * Signs in on one device as the practice owner (sign-in.yaml), then opens each tab (screenshots/tab.yaml) and takes its
- * picture, with the status bar as the stores like it.
+ * Signs in on one device as the practice owner (sign-in.yaml) and takes the office's screens, then signs in as the
+ * sample parent (screenshots/family-sign-in.yaml) and takes the family's, each opened by its flow, with the status bar
+ * as the stores like it.
  */
 async function shoot(maestro, signIn, device, dir) {
   fs.mkdirSync(dir, { recursive: true });
   device.statusBar(true);
+  const failed = (what) =>
+    stop([`${what} on ${device.label}. Maestro's own screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Run this again; if it fails the same way, ask Claude Code: "npm run publish:screenshots fails".`]);
   try {
     step(`Signing in on ${device.label} as the practice owner`);
     device.reset();
-    if (!maestro(device.testId, "maestro/sign-in.yaml", signIn)) {
-      stop([`The app didn't sign in on ${device.label}. Maestro's own screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Run this again; if it fails the same way, ask Claude Code: "npm run publish:screenshots fails".`]);
-    }
-    for (const screen of SCREENS) {
-      step(`${screen.file} on ${device.label}: ${screen.what}`);
-      if (!maestro(device.testId, "maestro/screenshots/tab.yaml", { TAB: screen.tab, LABEL: screen.label })) {
-        stop([`The ${screen.label} tab didn't open on ${device.label}. Maestro's own screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Ask Claude Code: "npm run publish:screenshots fails".`]);
+    if (!maestro(device.testId, "maestro/sign-in.yaml", signIn)) failed("The app didn't sign in");
+    for (const as of ["office", "family"]) {
+      if (as === "family") {
+        step(`Signing in on ${device.label} as the sample parent`);
+        if (!maestro(device.testId, "maestro/screenshots/family-sign-in.yaml", { EMAIL: SCREENS_PARENT, PASSWORD: signIn.PASSWORD })) failed("The app didn't sign in as the sample parent");
       }
-      await sleep(3000); // the screen's data, and the last animation
-      const file = path.join(dir, `${screen.file}.png`);
-      device.snap(file);
-      const { width, height } = imageSize(file);
-      if (!width) stop(`No picture came out for ${screen.file} on ${device.label}. Run this again.`);
-      ok(`${path.relative(root, file)} (${width} × ${height})`);
+      for (const screen of SCREENS.filter((s) => s.as === as)) {
+        step(`${screen.file} on ${device.label}: ${screen.what}`);
+        if (!maestro(device.testId, screen.flow, screen.env)) failed(`${screen.what} didn't open`);
+        await sleep(3000); // the screen's data, and the last animation
+        const file = path.join(dir, `${screen.file}.png`);
+        device.snap(file);
+        const { width, height } = imageSize(file);
+        if (!width) stop(`No picture came out for ${screen.file} on ${device.label}. Run this again.`);
+        ok(`${path.relative(root, file)} (${width} × ${height})`);
+      }
     }
   } finally {
     device.statusBar(false);
@@ -1614,7 +1642,8 @@ function androidStatusBar(a, serial, on) {
 
 /**
  * Google Play refuses a phone screenshot taller than twice its width (a Pixel's screen is 2.24:1): each is given white
- * margins to 9:16, the classic phone shape, which keeps every pixel of the app.
+ * margins to 9:16, the classic phone shape, which keeps every pixel of the app. Play also refuses a screenshot with
+ * transparency, which Android's PNGs carry (even when nothing is see-through), so each becomes a JPEG at its best quality.
  */
 function padForPlay(dir) {
   for (const f of fs.readdirSync(dir).filter((n) => /^\d\d-.*\.png$/.test(n))) {
@@ -1622,12 +1651,32 @@ function padForPlay(dir) {
     const { height, width } = imageSize(file);
     const wanted = Math.ceil((height * 9) / 16);
     if (wanted > width) read("sips", ["--padToHeightWidth", String(height), String(wanted), "--padColor", "FFFFFF", file]);
+    read("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "best", file, "--out", file.replace(/\.png$/, ".jpg")]);
+    fs.rmSync(file);
   }
 }
 
 /**
- * The Play Console's icon (512 × 512) and feature graphic (1024 × 500): the app's icon, and the official white logo on
- * the logo's black (the logo carries the academy's name, so no name is written beside it: CLAUDE.md "Brand and logos").
+ * The 6.9-inch iPhone set, for App Store Connect's slot for the large display when it asks for one besides the
+ * required 6.3-inch set: the same pictures scaled to the large display's size of the same shape (1179 × 2556 → 1290 ×
+ * 2796, 1206 × 2622 → 1320 × 2868), into `<dir>-6.9-inch`.
+ */
+function largeIphoneCopies(dir) {
+  const large = `${dir}-6.9-inch`;
+  fs.rmSync(large, { recursive: true, force: true });
+  fs.mkdirSync(large, { recursive: true });
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".png"))) {
+    const { width } = imageSize(path.join(dir, f));
+    const [h, w] = width === 1179 ? [2796, 1290] : [2868, 1320];
+    read("sips", ["-s", "format", "png", "-z", String(h), String(w), path.join(dir, f), "--out", path.join(large, f)]);
+  }
+  return large;
+}
+
+/**
+ * The Play Console's icon (512 × 512) and feature graphic (1024 × 500, a JPEG: Play refuses transparency in it): the
+ * app's icon, and the official white logo on the logo's black (the logo carries the academy's name, so no name is written
+ * beside it: CLAUDE.md "Brand and logos").
  */
 async function storeImages(dir) {
   read("sips", ["-z", "512", "512", path.join(mobile, "assets", "images", "icon.png"), "--out", path.join(dir, "icon-512.png")]);
@@ -1640,7 +1689,7 @@ async function storeImages(dir) {
     try {
       const page = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
       await page.setContent(html);
-      await page.screenshot({ path: path.join(dir, "feature-graphic-1024x500.png"), type: "png" });
+      await page.screenshot({ path: path.join(dir, "feature-graphic-1024x500.jpg"), type: "jpeg", quality: 100 });
     } finally {
       await browser.close();
     }
@@ -1651,8 +1700,10 @@ async function storeImages(dir) {
 
 /**
  * `npm run publish:screenshots`: every image the App Store and Google Play ask for, from the practice copy (the sample
- * academy's made-up people, as the practice owner), into mobile/.publish/screenshots/ (ios/ at the iPhone 6.9-inch size App
- * Store Connect requires; android/ with the Play Console's icon and feature graphic). On a simulator and an emulator of
+ * academy's made-up people, as the practice owner and the sample parent), into mobile/.publish/screenshots/ (ios/ at
+ * the 6.3-inch iPhone size App Store Connect requires, and ios-6.9-inch/ the same at the large size in case it asks;
+ * android/ with the Play Console's icon and feature graphic).
+ * Screenshots taken on a real iPhone of that size (or an iPhone 15 or 16: 1179 × 2556) do as well. On a simulator and an emulator of
  * their own ("Sky Arc Screenshots"), with Release builds of the app, as the stores get it: no development menu over
  * the screens, and no development server. The practice copy is started (or shared with a window that has it) and
  * stopped after.
@@ -1671,7 +1722,7 @@ async function screenshots() {
   console.log(`\n✓ The stores' images are in ${path.relative(root, SCREENS_DIR)}/:`);
   for (const m of made) console.log(`  • ${m}`);
   for (const screen of SCREENS) console.log(`  ${screen.file}.png: ${screen.what}`);
-  console.log("  Look at each before uploading: the sample data's made-up names only, no real student. docs/publishing.md says where each goes.\n");
+  console.log("  Look at each before uploading: the sample data's made-up names only, no real student. docs/publishing/apple/app-store.md and docs/publishing/google-play/production.md say where each goes.\n");
   await stopAll();
   process.exit(0);
 }
@@ -1696,7 +1747,9 @@ async function iosScreenshots(maestro, signIn, made) {
     snap: (file) => read("xcrun", ["simctl", "io", sim.id, "screenshot", "--type=png", file], { env }),
     statusBar: (on) => iosStatusBar(sim.id, env, on),
   }, dir);
-  made.push(`${path.relative(root, dir)}/: App Store Connect → the version's iPhone 6.9" Display screenshots (drag all five in, in order)`);
+  const large = largeIphoneCopies(dir);
+  made.push(`${path.relative(root, dir)}/: App Store Connect → the version's iPhone screenshots, the 6.3-inch display, "iPhone with Dynamic Island (medium display)" (drag all eight in, in order)`);
+  made.push(`${path.relative(root, large)}/: the same, for the 6.9-inch display, only if App Store Connect asks for that size too`);
 }
 
 async function androidScreenshots(maestro, signIn, made) {
@@ -1723,7 +1776,7 @@ async function androidScreenshots(maestro, signIn, made) {
   }, dir);
   padForPlay(dir);
   await storeImages(dir);
-  made.push(`${path.relative(root, dir)}/: Play Console → Store listing → phone screenshots (the five, in order), the app icon (icon-512.png) and the feature graphic (feature-graphic-1024x500.png)`);
+  made.push(`${path.relative(root, dir)}/: Play Console → Store listing → phone screenshots (the eight, in order), the app icon (icon-512.png) and the feature graphic (feature-graphic-1024x500.jpg)`);
 }
 
 function help() {

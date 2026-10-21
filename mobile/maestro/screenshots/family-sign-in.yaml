@@ -1,0 +1,33 @@
+# Signs out of the office's app and in as the sample parent, for the family's screenshots (npm run publish:screenshots,
+# scripts/phone.mjs). Starts from the signed-in office app; EMAIL and PASSWORD are the parent's.
+#   maestro test -e EMAIL=jiyeon.hwang@skyarc-sample.test -e PASSWORD=… maestro/screenshots/family-sign-in.yaml
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    file: ../steps/tab.yaml
+    env:
+      TAB: more
+      LABEL: More
+- scrollUntilVisible:
+    element:
+      id: "more-sign-out"
+    direction: DOWN
+# Once more, so the row isn't left under the floating tab bar.
+- scroll
+- tapOn:
+    id: "more-sign-out"
+- runFlow:
+    file: ../sign-in.yaml
+    env:
+      EMAIL: ${EMAIL}
+      PASSWORD: ${PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: "family-home"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "family-next"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000

@@ -50,3 +50,11 @@ export async function upsertPasswordUser(input: { email: string; password: strin
   const r = await call<{ localId: string }>('/accounts', { email: input.email, password: input.password, displayName: input.displayName, emailVerified: true })
   return { uid: r.localId, created: true }
 }
+
+/** Deletes the sign-in for an email, if there is one; whether there was. */
+export async function deleteUserByEmail(email: string): Promise<boolean> {
+  const existing = await findUserByEmail(email)
+  if (!existing) return false
+  await call('/accounts:delete', { localId: existing.localId })
+  return true
+}

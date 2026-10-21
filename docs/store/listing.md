@@ -1,119 +1,147 @@
 # Store listing texts
 
-Paste these into App Store Connect and the Google Play Console ([docs/publishing.md](../publishing.md), parts 3 and 4)
-when the app is published. Both stores count characters; the limits are given, and every text below fits. They're
-written for the academy's staff (the office and the coaches) and work for a public or an unlisted listing alike
-([docs/publishing.md](../publishing.md), "Public or unlisted").
+What to paste into App Store Connect ([apple/app-store.md](../publishing/apple/app-store.md), steps 11–20) and the Play
+Console ([google-play/production.md](../publishing/google-play/production.md)). Both stores count characters; each
+limit is given, and every text fits. Written on 2026-10-20 for the app as it is (families, coaches and the office).
+Before pasting a later version, read each paragraph against the app that day: the stores reject a description that
+promises something the app doesn't do.
 
-Before pasting, read each paragraph against the app as it is on that day (it was still being built when this was
-written): the stores reject a description that promises something the app doesn't do.
+## App Store
 
-## Apple App Store
+**Name** (30): `Sky Arc`. If App Store Connect says it's taken: `Sky Arc Sports Academy`.
 
-**Name** (30): `Sky Arc`. If App Store Connect says the name is taken: `Sky Arc Sports Academy`.
+**Subtitle** (30): `Classes, scores and progress`
 
-**Subtitle** (30): `The academy's staff app`
+**Promotional text** (170; can be changed at any time, with no new version and no review):
 
-**Promotional text** (170; can be changed at any time, without a new version):
-`For the staff of Sky Arc Sports Academy: today's classes, the schedule by coach, the students, and paper targets scored from a photo.`
+```
+Sky Arc Sports Academy's app: your classes, every score from the range, and progress reports with a note from the coach. For the academy's families and staff.
+```
 
 **Description** (4000):
 
 ```
-Sky Arc is the app of Sky Arc Sports Academy's staff, the office and the coaches: the day at the academy, its students and coaches, and its paper targets, in your pocket.
+Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy: classes, scores and progress for its families, and the day's work for its coaches and office.
 
 You need an account from the academy. When the academy adds your email address, sign in with that address, with Google or with a password.
 
-TODAY
-The day's classes in order, with each coach and student, and how many students and coaches are in today. Coaches see their own classes.
+FOR FAMILIES
+• Home: each student's next class and the rest of the week, the academy's news, the latest scores and progress report, and attendance.
+• Classes: what's coming and what's past, as a list or month by month.
+• Scores: every result, from the range's electronic scoring and from paper targets, with each position's figures, the scores over time and where the shots went.
+• Reports: the progress reports the academy shares, with the coach's words, the period's shots played back on the target, and the goals.
+A parent with more than one child sees them together or one at a time.
 
-SCHEDULE
-The academy's classes day by day, by coach, with the day's open hours. Open a class to see its students and call or text the coach.
+FOR COACHES
+• Home: today's classes, your hours this week and what's left to do.
+• Schedule: your classes, day by day.
+• Availability: the days and times you can teach.
+• Scan: photograph a paper target, or choose a photo of one. The app reads and scores the shots, you check them, and it files the card with its scores in the student's folder.
+• The students, with their classes, scores and files; the academy's news; your pay, by pay period.
 
-SCAN
-Photograph a paper target, or choose a photo of one. The app scores it, you check the shots, and it files the card, with the scores, in the student's folder.
-
-STUDENTS
-Every student, searchable: their next and last classes, their latest scores and their files, and for the office their family's phone and email. Open a score to correct or delete it.
-
-MORE
-The coaches with their contacts, the appearance, and the website for everything else.
+FOR THE OFFICE
+• Today's classes, and the schedule by coach.
+• Every student, with their classes, scores, files and family contacts.
+• Scan, the academy's Drive, progress reports, the coaches and the academy's news.
 
 Everything follows the academy's time zone, wherever you are.
-
-Privacy: PRIVACY POLICY ADDRESS
 ```
 
-**Keywords** (100, commas, no spaces after them; the name's own words are left out, as Apple counts them anyway):
-`air rifle,shooting,target,score,scan,coach,class,schedule,students,staff`
+**Keywords** (100, commas without spaces; the name's words are left out, as Apple counts them anyway; if the name ends
+up `Sky Arc Sports Academy`, swap `academy` for `range`):
 
-**Support URL:** `https://skyarcacademy.web.app/help` (the website's Help page: whom to ask, signing in, deleting an
-account, and HyberTec's email for problems with the app). It shows the academy's email and phone from the website's
-Settings → Academy, so fill those in first. Apple checks: "A link to user support with up-to-date contact information …
-is required for all apps" (guideline 1.5).
-**Marketing URL:** `https://skyarcacademy.com`
-**Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app: [docs/publishing.md](../publishing.md), "Public or unlisted").
+```
+air rifle,shooting,target,score,scan,coach,class,schedule,progress,report,parent,training,academy
+```
+
+**Support URL:** `https://skyarcacademy.web.app/help` (whom to ask, signing in, deleting an account, with the academy's
+email and phone from the website's Settings → Academy; guideline 1.5).
+**Marketing URL:** `https://skyarcacademy.web.app` (the academy's website; `https://skyarcacademy.com` once the domain
+moves there, `docs/DEPLOY.md`).
+**Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app).
 **Category:** Sports; secondary Education.
-**What's New** (first version): `First release.`
+**What's New:** App Store Connect doesn't ask for it on the first version.
 
-## Apple: age rating
+The words "for kids" or "for children" stay out of every text: Apple keeps them for its Kids category (guideline
+2.3.8).
 
-App Store Connect → Sky Arc → **App Information** → **Age Ratings** → **Set Up Age Ratings**. The questions as they were
-on 2026-10-17 (Apple added some in 2025 and the social media ones in 2026); answer them honestly (guideline 2.3.6),
-and read any new question against what the app does that day.
+## App Store: age rating
+
+App Store Connect → Sky Arc → **App Information** → **Age Rating** → **Set Up Age Rating** (or **Edit**). The
+questions as they were on 2026-10-20 (Apple added the social media ones in July 2026). Answer them honestly (guideline
+2.3.6); read any new question against what the app does that day. Apple's definitions:
+https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/
 
 - **In-app controls:** Parental Controls **No**; Age Assurance **No**.
-- **Capabilities:** Unrestricted Web Access **No** (the in-app browser opens only the academy's own website, with no
-  address bar); User-Generated Content **No** (photos and scores stay in the academy's private records; nothing is
-  published to other people); Social Media **No**; Messaging and Chat **No**; Advertising **No**.
+- **Capabilities:**
+  - Unrestricted Web Access **No** (the app opens only the academy's own website, without an address bar).
+  - User-Generated Content **Yes**, and Messaging and Chat **Yes**: the academy's staff comment on its announcements.
+    Only the staff see the comments; families can't post anything. Neither answer changes the rating in the United
+    States.
+  - Social Media **No** (no feed, likes, shares or following); Social Media Disabled for Users Under 13 **No** (there
+    is no social media to disable).
+  - Advertising **No**.
 - **Mature themes** (profanity or crude humor; horror or fear; alcohol, tobacco or drugs): **None**.
 - **Medical or wellness** (medical or treatment information; health or wellness topics): **None**.
 - **Sexuality or nudity:** **None** throughout.
 - **Violence:** cartoon or fantasy, realistic, prolonged graphic: **None**. **Guns or Other Weapons: Infrequent**: the
-  app is about air rifle target shooting, and results carry event names such as "Air Rifle 60", but it shows no
-  pictures of guns.
+  app is about air rifle target shooting; results carry event names such as "Air Rifle 60", and the academy's news may
+  show the range.
 - **Chance-based activities:** Gambling **No**; Simulated Gambling **None**; Contests **None** (training and match
   results; the app runs no competitions between its users); Loot Boxes **No**.
-- **Age categories and override:** don't choose **Made for Kids**; no override; leave the Age Suitability URL empty.
+- **Age categories and override:** don't choose **Made for Kids**; **Not Applicable**; leave the Age Suitability URL
+  empty.
 
-Apple then works out **9+**, from "infrequent guns or other weapons". Change the answers if the app gains chat, posts or
-comments, a web browser, or anything else these questions ask about.
+Apple then works out **9+**, from "infrequent guns or other weapons" (frequent would be 13+).
 
 ## Google Play
 
 **App name** (30): `Sky Arc`
 
-**Short description** (80): `Sky Arc Sports Academy's staff app: classes, students and scanned targets.`
+**Short description** (80): `Sky Arc Sports Academy's app: classes, scores and progress reports.`
 
 **Full description** (4000): the App Store description above, unchanged.
 
-**App category:** Sports. **Tags:** choose those closest to Sports, Education and Productivity.
-**Contact details:** the academy's email and website (a phone number only if it wants one shown publicly).
-**Privacy policy:** the policy's address.
+**App category:** Sports. **Tags:** those closest to Sports and Education.
+**Contact details:** the academy's email (the website's Settings → Academy) and website `https://skyarcacademy.web.app`;
+a phone only if the academy wants one public.
+**Privacy policy:** `https://skyarcacademy.web.app/privacy`.
+
+## Google Play: content rating
+
+Play Console → **App content** → **Content rating** → category **All other app types**. Google doesn't publish its
+questions; answer by these facts:
+
+- **Violence, blood, sexual content, bad language, drugs, alcohol or tobacco, crude humor, gambling, horror:** No.
+- **Weapons**, if asked: the app is about sport air rifle target shooting (event names, paper targets, the academy's
+  news), with no violence.
+- **Users interact or exchange content:** Yes: the academy's staff comment on its announcements; families can't post.
+- **Shares the user's location with others:** No. **Purchases of digital goods:** No. **Unrestricted internet access:**
+  No.
 
 ## Screenshots
 
-`npm run publish:screenshots` (20–30 minutes) makes every image both stores need, from the practice copy (the sample
-data's made-up people), signed in as the practice owner, on a simulator and an emulator of its own, into
-`mobile/.publish/screenshots/`:
+In `mobile/.publish/screenshots/` on this Mac (never in git: `open mobile/.publish/screenshots`), showing only the
+sample academy's made-up people:
 
-- `ios/`: five PNGs, 1320 × 2868 (the iPhone 6.9-inch size, "iPhone with Dynamic Island (large display)"). The app is
-  iPhone-only, so no iPad set. Checked on 2026-10-17: App Store Connect's help now names the medium size (6.3-inch,
-  1206 × 2622) as the one required, and accepts the large one too; if the version page still asks for the medium size,
-  ask Claude Code to add it to the command. iPhone Duo screenshots become required from April 2027 for builds made with
-  Xcode 27.1 or later.
-- `android/`: the same five from a Pixel 9, given white margins to the 9:16 shape the Play Console accepts, plus
-  `icon-512.png` (the app icon) and `feature-graphic-1024x500.png` (the official white logo on the logo's black). The
-  Play Console requires both.
+- `ios/`: the eight the owner took on their iPhone on 2026-10-20, 1179 × 2556, the 6.3-inch size App Store Connect
+  requires ("iPhone with Dynamic Island (medium display)").
+- `ios-6.9-inch/`: the same eight at 1290 × 2796, only if App Store Connect also asks for the 6.9-inch display.
+- `android/`: not yet. When Android is ready, take the same eight screens on an Android phone and give them to Claude
+  Code: it frames them to Google's shape (no taller than twice their width, no transparency) and adds `icon-512.png` and
+  `feature-graphic-1024x500.jpg` (the official white logo on black), which the Play Console requires.
 
-The five screens, named in the order to upload them:
+Upload them in this order (the families' first: most people who look the app up are parents):
 
-1. `01-home`: Home, the day's classes.
-2. `02-schedule`: Schedule, the day's classes by coach.
-3. `03-scan`: Scan, photographing a paper target.
-4. `04-students`: Students, the academy's students.
-5. `05-more`: More, the coaches and the rest.
+1. `01-report`: a progress report, as a parent sees it.
+2. `02-report-shots`: the report's target, where the shots went.
+3. `03-scores`: Scores, every result by position.
+4. `04-family-home`: the family's Home, the next class and the week.
+5. `05-today`: the office's Home, the day's classes.
+6. `06-schedule`: Schedule, the day's classes by coach.
+7. `07-scan`: Scan, photographing a paper target.
+8. `08-students`: Students, the academy's students.
 
-The pictures show whatever the practice copy holds that day, so take them on a day the academy is open (the sample
-data follows the academy's real week). Look at each before uploading: the sample data's made-up names only, no real
-student.
+`npm run publish:screenshots` makes the same set on a simulator and an emulator from the practice copy, if they ever
+need to be taken again (about 20 GB of simulators the first time). Screenshots taken on a real iPhone 15, 16 or 17, or
+their Pro models (not the Plus, Pro Max or Air), are already the right size.

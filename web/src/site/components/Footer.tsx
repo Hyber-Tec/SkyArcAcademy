@@ -120,9 +120,12 @@ export function Footer() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>{t(FOOTER.copyright)}</p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-              <a href={ACADEMY.privacyUrl} className="inline-flex min-h-9 items-center hover:text-ink">
+              <A to="privacy" className="inline-flex min-h-9 items-center hover:text-ink">
                 {t(FOOTER.privacy)}
-              </a>
+              </A>
+              <A to="help" className="inline-flex min-h-9 items-center hover:text-ink">
+                {t(FOOTER.help)}
+              </A>
             </div>
           </div>
         </div>
