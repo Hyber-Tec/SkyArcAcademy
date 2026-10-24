@@ -12,8 +12,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    reviewers' logins in production until then.
 2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
    two-week closed test comes first (`docs/publishing/google-play/account.md`).
-3. **The academy:** the follow-up questions A16–A18 (a text to the manager will do), and the spreadsheet of the
-   students' grades and parents the manager is sending (A1); later A10 and A12–A15 (`docs/QUESTIONS.md`).
+3. **The academy:** the follow-up question A16 (a text to the manager will do), and the spreadsheet of the students'
+   grades and parents the manager is sending (A1); later A10 and A12–A15 (`docs/QUESTIONS.md`).
 
 ## Product questions waiting for the owner
 

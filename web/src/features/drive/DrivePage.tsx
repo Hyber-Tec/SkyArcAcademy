@@ -23,6 +23,7 @@ import {
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
+import { studentNamedIn } from '@shared/drive/suggest'
 import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, sortDriveItems } from '@shared/drive/model'
 import { type DriveFile, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
@@ -42,7 +43,7 @@ import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { branchCol } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { AddResultsDialog, type ResultRow, suggestStudent } from './AddResultsDialog'
+import { AddResultsDialog, type ResultRow } from './AddResultsDialog'
 import { createFolder, ensureFolderPaths, moveItems, removeFailedUpload, renameFile, renameFolder, trashItems } from './api'
 import { DetailsPanel } from './DetailsPanel'
 import { NameDialog, RefusedDialog } from './dialogs'
@@ -210,9 +211,23 @@ export function DrivePage() {
         baseId,
         fixedStudentId: fixed,
         rows: sius.map((a, i) => {
-          const guess = fixed ? null : suggestStudent(a.entry.file.name, index.students)
-          const position = positionFromName(a.entry.file.name)
-          return { key: `${i}-${a.entry.file.name}`, file: a.entry.file, plan: a.plan, sius: a.sius, studentId: fixed ?? guess, position, studentGuessed: !!guess, positionGuessed: !!position }
+          // A name printed on the report (set on the SIUS lane) comes first, then the file name's.
+          const printed = a.sius.result.pageText.join(' ')
+          const fileName = a.entry.file.name.replace(/\.pdf$/i, '')
+          const fromReport = fixed ? null : studentNamedIn(printed, index.students)
+          const fromFile = fixed || fromReport ? null : studentNamedIn(fileName, index.students)
+          const positionOnReport = positionFromName(printed)
+          const position = positionOnReport ?? positionFromName(fileName)
+          return {
+            key: `${i}-${a.entry.file.name}`,
+            file: a.entry.file,
+            plan: a.plan,
+            sius: a.sius,
+            studentId: fixed ?? fromReport ?? fromFile,
+            position,
+            studentFrom: fromReport ? 'report' : fromFile ? 'file' : null,
+            positionFrom: positionOnReport ? 'report' : position ? 'file' : null,
+          }
         }),
       })
     }

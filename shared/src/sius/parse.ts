@@ -5,8 +5,9 @@ import { type DateKey, dateKeyOf, makeDateKey, minutesOf, toInstant, tzOffsetMin
 /**
  * Reading a SIUS "Results" PDF (printed from the SIUS software through "Microsoft: Print To PDF"). The page has a real
  * text layer: the program and time, the totals, then one block per series with its shots in firing order, each shot
- * followed by a small arrow image showing its direction. Nothing on the page names the position, nor the shooter unless
- * the lane was given a name (the academy can set it, A6; no sample shows where it prints yet).
+ * followed by a small arrow image showing its direction. Nothing on the page names the position, and the academy's
+ * reports so far name no shooter either; it can set names on the lanes (A6), so any other words on the page are kept
+ * (`pageText`) for the Drive to find a student's name in, wherever SIUS prints it.
  *
  * The PDF is opened where it is (pdf.js, in the browser or a script) and handed here as positioned text and image
  * paints, so this file stays pure and testable. Text order in a PDF is not reading order: rows are rebuilt from the
@@ -77,7 +78,15 @@ export interface SiusResult {
   mpi: ShotPoint | null
   groupMm: number | null
   series: SiusSeries[]
+  /**
+   * Any other words on the page, top to bottom: none on the academy's reports so far; the shooter's name once it's set
+   * on the lane (A6), wherever SIUS prints it.
+   */
+  pageText: string[]
 }
+
+/** The page's own labels (and SIUS's logo, should it print as text), never a name. */
+const LABELS = new Set(['Results', 'Total:', 'Inner tens:', 'Series totals:', 'MPI:', 'Group size:', 'Series total:', 'SIUS'])
 
 const RE = {
   date: /^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2})(?: ?(AM|PM))?$/i,
@@ -165,6 +174,12 @@ export function parseSiusPage(page: SiusPage): SiusResult | null {
   })
 
   const totalsText = valueOf('Series totals:', summary)
+  const eventItem = items.find((i) => i !== dateItem && sameRow(i, dateItem) && i.x < dateItem.x && i.s === event)
+  const pageText = items
+    .filter((i) => i !== dateItem && i !== eventItem && /\p{L}.*\p{L}/u.test(i.s))
+    .filter((i) => !LABELS.has(i.s) && !RE.series.test(i.s) && !RE.mpi.test(i.s) && !RE.group.test(i.s))
+    .sort((a, b) => (Math.abs(a.y - b.y) > ROW_TOL ? b.y - a.y : a.x - b.x))
+    .map((i) => i.s)
   return {
     event,
     printed: dateItem.s,
@@ -176,6 +191,7 @@ export function parseSiusPage(page: SiusPage): SiusResult | null {
     mpi: parseMpi(valueOf('MPI:', summary)),
     groupMm: parseGroup(valueOf('Group size:', summary)),
     series,
+    pageText,
   }
 }
 
