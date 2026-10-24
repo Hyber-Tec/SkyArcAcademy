@@ -56,6 +56,14 @@ describe('synthetic SIUS PDFs read back', () => {
     expect(reading?.notes).toEqual(expect.arrayContaining(['One 0.0 entry without a direction wasn’t counted as a shot.', '11 match shots, all counted.']))
   })
 
+  it('keeps the other words on the page, such as a name set on the lane, and nothing from the academy’s own layout', async () => {
+    const plain = await read({ printed, pcOffsetMin: -240, series: [{ shots: shots([9.1, 9.4]) }] })
+    expect(plain.result?.pageText).toEqual([])
+    const named = await read({ printed, pcOffsetMin: -240, name: 'Avery Stone', series: [{ shots: shots([9.1, 9.4]) }] })
+    expect(named.result?.pageText).toEqual(['Avery Stone'])
+    expect(named.result?.event).toBe('Air Rifle 60')
+  })
+
   it('counts the sighters of a result shot without switching to match mode (Total 0)', async () => {
     const { reading } = await read({ printed, pcOffsetMin: -240, series: [{ sighter: true, shots: shots([9.1, 10.4, 8.8]) }, { sighter: true, shots: shots([10.2, 9.9]) }] })
     expect(reading).toMatchObject({ shots: 5, total: 48.4, innerTens: 2, sighters: 0, fromSighters: true, noShots: false, problems: [] })

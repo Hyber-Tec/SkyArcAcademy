@@ -21,6 +21,8 @@ export interface SiusSpec {
   /** That computer's UTC offset in minutes (−240 for Eastern daylight time, −420 for Pacific). */
   pcOffsetMin: number
   series: { sighter?: boolean; shots: SiusSpecShot[] }[]
+  /** A shooter's name set on the lane, printed under the program (no academy report shows one yet: A6). */
+  name?: string
 }
 
 const PAGE_W = 595.32
@@ -167,6 +169,7 @@ export async function siusPdf(spec: SiusSpec): Promise<Uint8Array> {
   let page = doc.addPage([PAGE_W, PAGE_H])
   page.drawText('Results', { x: (PAGE_W - bold.widthOfTextAtSize('Results', 18)) / 2, y: 788.04, size: 18, font: bold })
   page.drawText(spec.event ?? 'Air Rifle 60', { x: 55.44, y: 771, size: SIZE, font: regular })
+  if (spec.name) page.drawText(spec.name, { x: 55.44, y: 764.5, size: SIZE, font: regular })
   rightAligned(page, printedLabel(spec.printed), 548, 771, regular)
   page.drawLine({ start: { x: 55.44, y: 760 }, end: { x: 548, y: 760 }, thickness: 1.5 })
   page.drawText('Total:', { x: 62.64, y: 729.36, size: SIZE, font: regular })
