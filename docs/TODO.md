@@ -6,29 +6,32 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 
 ## The owner's to-do (left for later on purpose)
 
-Publishing the phone app (the owner, 2026-10-20: the App Store as soon as possible, then updates; Android once it has
-been tried). Everything else is ready (the texts, the screenshots, the reviewers' logins, a signed App Store build);
-`docs/publishing.md` lists what only the owner can do, with each step-by-step guide:
-
-1. **The academy's written permission** to publish its name and logo under HyberTec LLC: an email from the academy's
-   owner is enough (Apple asks for it with the first submission).
-2. **The App Store:** Apple's updated agreement and the EU question (the Account Holder), the App Store Connect key and
-   the app's record, the upload, the pages, and Submit (`docs/publishing/apple/app-store.md`).
-3. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
+1. **The App Store:** Sky Arc 1.0.0 (build 2, uploaded 2026-10-21) is in Apple's review (2026-10-24). When Apple
+   answers: release it (`docs/publishing/apple/app-store.md`, steps 25–26), or give Claude Code Apple's message. If
+   Apple asks for the academy's permission (guideline 5.2.1), attach the academy's email. Keep the sample data and the
+   reviewers' logins in production until then.
+2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
    two-week closed test comes first (`docs/publishing/google-play/account.md`).
-4. **The questions for the academy:** `docs/QUESTIONS.md` (A1–A14), in the order of the email to send.
+3. **The academy:** the follow-up question A16 (a text to the manager will do), and the spreadsheet of the students'
+   grades and parents the manager is sending (A1); later A10 and A12–A15 (`docs/QUESTIONS.md`).
 
 ## Product questions waiting for the owner
 
+- **A class taught by several coaches together** (A16, `docs/DECISIONS.md` §20): if the manager confirms that a time
+  slot is one class of about six students with two or more coaches, the schedule needs a new shape (today a class is
+  one coach's, from HyberCRM's tutoring). Look at design options together before building it.
 - Should coaches see every class (other coaches' too, and a student's classes with other coaches), or only their own
   (today's rule)?
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
   recorded: languages, push, the stores; the public website is live since 2026-10-20, `docs/DECISIONS.md` §18):
-  - **Families cancel a class themselves**, with the academy's notice rule (A5), and the office is told (an inbox for
-    owners and admins on the website, an email, or both). Today a class's sheet says to contact the academy.
-  - **Families book a makeup in an open slot** (§7: families book classes for their children). Not built.
+  - **Families cancel a class themselves**, with the academy's notice rule (24 hours, preferably: §20), and the office
+    is told (an inbox for owners and admins on the website, an email, or both). Today a class's sheet says to contact
+    the academy.
+  - **Families book a makeup or extra practice in an open seat** (§7: families book classes for their children; the
+    manager, 2026-10-24: students who come for extra practice should "be able to book whenever extra space opens
+    up"). Not built.
   - **A student's class that repeats every week.** Today the office copies whole weeks (Duplicate week).
   - **Coaches' notes on a class** (a session log, "if they want"). Today only the office writes a class's note.
   - **The kiosk as a registered device** with a setup PIN (§6 Q9); until then it opens for a signed-in admin.
@@ -62,6 +65,16 @@ been tried). Everything else is ready (the texts, the screenshots, the reviewers
   too: any language, added late, even after the site is live (the owner, 2026-10-19). The owner reviews the Korean by
   hand, since machine-written Korean doesn't read naturally, so until then the site's Korean stays a draft: don't spend
   time polishing it.
-- **Before the real data comes in:** remove the sample data with `npm run seed:sample -- --remove` (it also removes the
-  logins made for testing with `--login`), then import the academy's history (A4).
+- **Moving the real data in** (`docs/DECISIONS.md` §20), once Apple has finished its review, the manager has answered
+  A16 and the spreadsheet of students has come:
+  1. Take away the reviewers' logins and the sample data: `npx tsx scripts/review-logins.ts --remove`, then
+     `npm run seed:sample -- --remove` (it also removes the logins made for testing with `--login`).
+  2. Settings: the **Hourly** pay model from the start (Settings → Academy rules); Sunday's hours to cover classes until
+     7:30 PM (the default is 1–6 PM); the month's make-up Friday opened on its date.
+  3. The import (Claude Code builds it once A16 is answered; the sheets are already read, in
+     `docs/internal/schedule-import/`): the staff with their rates and usual days; the students with their levels,
+     rifle codes, grades and parents; the classes from August 31 (past weeks as they happened, with absences and
+     make-ups) through November's standing week. Nobody gets access or email.
+  4. Access, from the website, when the office is ready: each sends that person's sign-in email.
+  5. The next App Store update needs review logins that see no real student (`docs/publishing/updates.md`).
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

@@ -204,7 +204,9 @@ it), give an email you read a sample person's access: `npm run seed:sample -- --
 delivers `you+anything@gmail.com` to `you@gmail.com`. The academy's sign-in email goes to it; sign in there with a
 password made for it (Create an account, with that email). `--remove` takes these logins away with the sample data.
 
-**Before the real data is imported, remove it all:** `npm run seed:sample -- --remove`. It also deletes what the app
+**Before the real data is imported, remove it all**, once no App Store or Google Play review is under way (their
+reviewers sign in as sample people): first `npx tsx scripts/review-logins.ts --remove`, then
+`npm run seed:sample -- --remove`. It also deletes what the app
 made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and
 never touches anyone else; the Drive files' bytes go with their records. Running `npm run seed:sample` again
 refreshes the classes around the new date.
