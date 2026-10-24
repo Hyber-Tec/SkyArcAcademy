@@ -550,16 +550,19 @@ The manager's answers to A1–A9 (`docs/QUESTIONS.md`), and Goo's calls on them.
 - **Extra practice:** students in light blue on the sheets come for extra practice. The manager would like them to book
   it themselves when seats open (`docs/TODO.md`).
 - **SIUS reports:**
-  - The shooter's name can be set on the lanes (A6). The app will read it once a report shows where it prints (A18).
+  - The shooter's name can be set on the lanes (A6). None of the ten reports so far prints one, so the reader keeps
+    every other word on a report and the Drive looks for a student's name there first, wherever SIUS prints it, then
+    in the file name as before (built 2026-10-24). Nothing to ask the academy for.
   - The SIUS computers' clocks will be set to Eastern (A7); meanwhile the app keeps correcting them (§8).
   - **A session shot without switching to match mode counts** (A8). SIUS then prints sighters only (Total 0), and the
-    app now scores the sighters as the session's shots (built 2026-10-24). Every shot counts, however many: 20, 40 or
-    60, and several positions in one session.
+    app now scores the sighters as the session's shots (built 2026-10-24); two of the ten sample reports are such
+    sessions, 20 shots each. Every shot counts, however many: 20, 40 or 60, and several positions in one session.
   - A `0.0` without a direction arrow is a fault of one target's sensor, not a shot (A9), as the app already treats it.
 - **The schedule sheets** (A4): monthly sheets give each month's standing week, and weekly sheets give what happened
   each week from August 31: make-ups, practice, trials, absences, and the monthly make-up Friday. Under each day, each
-  time slot has six seats in two columns. Each seat holds a level with a rifle code (`C9`), then the student's name.
-  No sheet names the coaches. Goo, from a visit: a class is one time range with about six students, taught by two or
+  time slot has six seats in two columns. Each seat holds a level with the student's rifle (`C9`; also `(P)` or `JG`,
+  kept as written), then the student's name. No sheet names the coaches, but their days are known (A2): Monday three
+  coaches, Tuesday to Thursday two, Sunday two plus one in rotation, and the manager every day. Goo, from a visit: a class is one time range with about six students, taught by two or
   more coaches together, not one coach per three students. The sheets agree: each slot mixes the same levels in both
   columns, and a slot usually gathers one level (Precision, Marksman, Scout). To confirm (A16): it decides how the app
   shows classes, whose model (one coach per student per class) comes from HyberCRM's tutoring.

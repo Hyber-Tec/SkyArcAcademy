@@ -27,9 +27,7 @@ with names, contacts and pay rates in `docs/internal/academy-answers-2026-10.md`
 
 | | Question | Needed for | Until answered |
 |---|---|---|---|
-| **A16** | **Classes and coaches:** is each time slot on the sheets one class of up to six students that the coaches on duty teach together (two most days)? Or does each coach take some of the students, a column of the sheet each? And which coaches teach on each day? | How the app shows classes, and importing them | The classes aren't imported |
-| **A17** | **The codes beside a level:** `C9` is a rifle assignment. What do `(P)` and `JG` mean? | The students' records | Kept as written |
-| **A18** | **A SIUS report with a name:** once names are set on the lanes (A6), one PDF that shows it, so the app learns where it prints and files reports by it. | Filing SIUS reports | The app asks whose report it is |
+| **A16** | **Classes and coaches:** the coaches' days are known (A2), so each day has two or three coaches on duty. Do they teach each class together, or does each coach take some of the students (a column of the sheet each)? | How the app shows classes, and importing them | The classes aren't imported |
 
 ### Later: before launch (a second email)
 
