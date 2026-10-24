@@ -530,3 +530,39 @@ homepage now … I'll actually test and verify from the live website".
   youngest students, which puts the app under Google's Families policy (no ads or advertising ID, as already).
 - **Google Play account**: an organization account for HyberTec LLC is the recommendation (no two-week closed test);
   the owner checks which kind HyberTec has (`docs/TODO.md`).
+
+## 20. The academy's answers to the first email (2026-10-24)
+
+The manager's answers to A1–A9 (`docs/QUESTIONS.md`), and Goo's calls on them. Names, contacts and pay rates are in
+`docs/internal/academy-answers-2026-10.md`.
+
+- **The staff:** the manager (an admin, at the academy every day) and four coaches, two of them also coordinators (the
+  program, the facility), each with their usual days. Sundays: the manager and one coach every week, the other coaches
+  in turn. Everyone may fill in on other days. The manager signs in with a personal address (Goo), not the academy's
+  own.
+- **Pay: Hourly.** Everyone is paid by the hour for all their time at the academy, from clock-in to clock-out, at
+  their own rate. They clock in 30 minutes before the first class to set up (Mondays: 4:00 PM for 4:30). That is the
+  app's **Hourly** pay model (Settings → Academy rules), which replaces Classes taught (§6, Q10) when the real data
+  moves in. Coaches are paid for an hour even when every student cancels: the clock pays it.
+- **Cancellations:** 24 hours' notice, preferably. A missed class is made up during the week when there's room, and on
+  a make-up day near the end of the month (a Friday on the sheets). Nothing in the app enforces it: families don't
+  cancel in the app, and make-ups stay labels on a class ("MU for 10/13", the sheets' own words; §7).
+- **Extra practice:** students in light blue on the sheets come for extra practice. The manager would like them to book
+  it themselves when seats open (`docs/TODO.md`).
+- **SIUS reports:**
+  - The shooter's name can be set on the lanes (A6). The app will read it once a report shows where it prints (A18).
+  - The SIUS computers' clocks will be set to Eastern (A7); meanwhile the app keeps correcting them (§8).
+  - **A session shot without switching to match mode counts** (A8). SIUS then prints sighters only (Total 0), and the
+    app now scores the sighters as the session's shots (built 2026-10-24). Every shot counts, however many: 20, 40 or
+    60, and several positions in one session.
+  - A `0.0` without a direction arrow is a fault of one target's sensor, not a shot (A9), as the app already treats it.
+- **The schedule sheets** (A4): monthly sheets give each month's standing week, and weekly sheets give what happened
+  each week from August 31: make-ups, practice, trials, absences, and the monthly make-up Friday. Under each day, each
+  time slot has six seats in two columns. Each seat holds a level with a rifle code (`C9`), then the student's name.
+  No sheet names the coaches. Goo, from a visit: a class is one time range with about six students, taught by two or
+  more coaches together, not one coach per three students. The sheets agree: each slot mixes the same levels in both
+  columns, and a slot usually gathers one level (Precision, Marksman, Scout). To confirm (A16): it decides how the app
+  shows classes, whose model (one coach per student per class) comes from HyberCRM's tutoring.
+- **Moving the real data in** (Goo, 2026-10-24): only after Apple's review, since the App Store's review logins are
+  sample people. The import adds everyone's records but no access, so nobody is emailed. The office gives access from
+  the website when it's ready, and that sends the sign-in emails. The steps are in `docs/TODO.md`.

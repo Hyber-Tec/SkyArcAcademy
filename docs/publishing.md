@@ -9,6 +9,9 @@ updates. Android follows once it has been tried on Android phones.
 
 ## Where things stand (2026-10-20)
 
+**2026-10-24: in Apple's review.** Sky Arc 1.0.0 (build 2) was uploaded on 2026-10-21 and submitted. Production keeps
+the sample data and the reviewers' logins until Apple answers.
+
 Ready for the App Store:
 
 - **The app**, version 1.0.0: the office's, the coaches' and the families' tabs, with Delete my account, Help and the
