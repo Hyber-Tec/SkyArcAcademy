@@ -264,15 +264,15 @@ export function DrivePage() {
       const snap = await getDocs(query(branchCol(branchId, COL.evaluations), where('studentId', '==', id)))
       known.set(id, new Set(snap.docs.map((d) => d.data() as Evaluation).filter((e) => e.sius).map((e) => `${e.sius!.printed}|${e.total}`)))
     }
-    const fresh = list.filter((r) => r.sius.reading.sightersOnly || !known.get(r.studentId!)?.has(`${r.sius.reading.printed}|${r.sius.reading.total}`))
+    const fresh = list.filter((r) => r.sius.reading.noShots || !known.get(r.studentId!)?.has(`${r.sius.reading.printed}|${r.sius.reading.total}`))
     const skipped = list.length - fresh.length
     const uploads: ResultUpload[] = fresh.map((r) => {
       const reading = r.sius.reading
       const studentId = r.studentId as string
       const folderId = resultFolder(results.baseId, studentId)
-      const up = plannedFile(branchId, r.file, { ...r.plan, name: resultName(reading.dateKey, r.position, reading.sightersOnly ? null : reading.total) }, folderId, studentId, { originalName: r.file.name })
+      const up = plannedFile(branchId, r.file, { ...r.plan, name: resultName(reading.dateKey, r.position, reading.noShots ? null : reading.total) }, folderId, studentId, { originalName: r.file.name })
       const evaluation =
-        reading.sightersOnly || !r.position
+        reading.noShots || !r.position
           ? null
           : {
               studentId,

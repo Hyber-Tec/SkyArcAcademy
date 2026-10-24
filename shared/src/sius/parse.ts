@@ -5,7 +5,8 @@ import { type DateKey, dateKeyOf, makeDateKey, minutesOf, toInstant, tzOffsetMin
 /**
  * Reading a SIUS "Results" PDF (printed from the SIUS software through "Microsoft: Print To PDF"). The page has a real
  * text layer: the program and time, the totals, then one block per series with its shots in firing order, each shot
- * followed by a small arrow image showing its direction. Nothing on the page names the shooter or the position.
+ * followed by a small arrow image showing its direction. Nothing on the page names the position, nor the shooter unless
+ * the lane was given a name (the academy can set it, A6; no sample shows where it prints yet).
  *
  * The PDF is opened where it is (pdf.js, in the browser or a script) and handed here as positioned text and image
  * paints, so this file stays pure and testable. Text order in a PDF is not reading order: rows are rebuilt from the
@@ -43,13 +44,16 @@ export interface SiusShot {
   v: number
   /** Direction in degrees (0 right, 90 up), from its arrow. */
   a: number | null
-  /** Whether SIUS printed an arrow after it. A 0.0 without one isn't a shot (meaning unknown, academy question A9). */
+  /**
+   * Whether SIUS printed an arrow after it. A 0.0 without one isn't a shot: one of the range's target sensors records
+   * 0.0 for shots that aren't (the academy, A9).
+   */
   arrow: boolean
 }
 
 export interface SiusSeries {
   n: number
-  /** `Series 1P:` — sighters, never counted. */
+  /** `Series 1P:` — sighters: not counted, unless the result has no match shots (then they're the shots, A8). */
   sighter: boolean
   total: number | null
   mpi: ShotPoint | null
@@ -185,18 +189,27 @@ export interface SiusReading {
   instantMs: number
   /** Minutes added to the printed time to reach the academy's time (180 when the SIUS computer is on Pacific time). */
   clockFixMin: number
-  /** Match shots (sighters and arrowless 0.0 entries excluded). */
+  /**
+   * Shots counted: the match shots (sighters and arrowless 0.0 entries excluded), or the sighters when there are no
+   * match shots (`fromSighters`).
+   */
   shots: number
   total: number
   wholeTotal: number
   innerTens: number
   mpi: ShotPoint | null
   groupMm: number | null
-  /** The match series, with their counted shots. */
+  /** The series counted, with their shots. */
   series: EvalSeries[]
+  /** Sighters left out (none when they are the shots). */
   sighters: number
-  /** No match shots: sighters only (Total 0), so there are no scores to save. */
-  sightersOnly: boolean
+  /**
+   * The shots are the sighters: the session was shot without switching to match mode, so SIUS printed sighters only
+   * (Total 0). The academy counts it as an evaluation all the same (A8).
+   */
+  fromSighters: boolean
+  /** Nothing to score (no shots at all): the file is kept without scores. */
+  noShots: boolean
   /** Checks that failed: the result should be looked at before it's saved. */
   problems: string[]
   /** Worth knowing, not wrong. */
@@ -230,8 +243,13 @@ export function readSiusResult(result: SiusResult, timezone: string): SiusReadin
 
   const problems: string[] = []
   const notes: string[] = []
-  const match = result.series.filter((s) => !s.sighter)
-  const sighterShots = result.series.filter((s) => s.sighter).flatMap((s) => s.shots.filter((t) => t.arrow))
+  const counts = (s: SiusSeries) => s.shots.some((t) => t.arrow)
+  // A session shot without switching to match mode holds sighters only (Total 0): the academy counts them (A8).
+  const fromSighters = !result.series.some((s) => !s.sighter && counts(s)) && result.series.some((s) => s.sighter && counts(s))
+  const scored = result.series.filter((s) => s.sighter === fromSighters)
+  const sighterShots = fromSighters ? [] : result.series.filter((s) => s.sighter).flatMap((s) => s.shots.filter((t) => t.arrow))
+  // The page's own totals, MPI and group are the match's: with sighters only they read 0, so they aren't compared.
+  const printedStats = !fromSighters
 
   for (const s of result.series) {
     const counted = s.shots.filter((t) => t.arrow)
@@ -244,21 +262,21 @@ export function readSiusResult(result: SiusResult, timezone: string): SiusReadin
     if (missingAngle.length) problems.push(`${label}: ${missingAngle.length === 1 ? 'one arrow' : `${missingAngle.length} arrows`} couldn't be read.`)
   }
 
-  const series: EvalSeries[] = match.map((s) => {
+  const series: EvalSeries[] = scored.map((s, i) => {
     const shots: EvalShot[] = s.shots.filter((t) => t.arrow).map((t) => ({ v: t.v, a: t.a }))
     const group = shotGroup(shots)
-    return { n: s.n, total: s.total ?? shotTotals(shots).total, shots, mpi: s.mpi ?? group.mpi, groupMm: s.groupMm ?? group.groupMm }
+    return { n: fromSighters ? i + 1 : s.n, total: s.total ?? shotTotals(shots).total, shots, mpi: s.mpi ?? group.mpi, groupMm: s.groupMm ?? group.groupMm }
   })
   const shots = series.flatMap((s) => s.shots)
   const totals = shotTotals(shots)
   const seriesSum = round1(series.reduce((n, s) => n + s.total, 0))
-  if (result.total !== null && shots.length && !close(seriesSum, result.total)) {
+  if (printedStats && result.total !== null && shots.length && !close(seriesSum, result.total)) {
     problems.push(`The series add up to ${seriesSum.toFixed(1)}, not the printed total ${result.total.toFixed(1)}.`)
   }
-  if (result.innerTens !== null && shots.length && totals.innerTens !== result.innerTens) {
+  if (printedStats && result.innerTens !== null && shots.length && totals.innerTens !== result.innerTens) {
     problems.push(`Counted ${totals.innerTens} inner tens; the result says ${result.innerTens}.`)
   }
-  if (result.seriesTotals && shots.length) {
+  if (printedStats && result.seriesTotals && shots.length) {
     const printed = result.seriesTotals.filter((v, i, all) => !(v === 0 && i === all.length - 1))
     if (printed.length !== series.length || printed.some((v, i) => !close(v, series[i].total))) {
       problems.push('The series totals line doesn’t match the series.')
@@ -266,19 +284,20 @@ export function readSiusResult(result: SiusResult, timezone: string): SiusReadin
   }
   const points = shots.map((t) => shotPoint(t.v, t.a)).filter((p): p is ShotPoint => p !== null)
   const rebuilt = meanPoint(points)
-  if (result.mpi && rebuilt && points.length >= 2 && Math.hypot(rebuilt.x - result.mpi.x, rebuilt.y - result.mpi.y) > 0.5) {
+  if (printedStats && result.mpi && rebuilt && points.length >= 2 && Math.hypot(rebuilt.x - result.mpi.x, rebuilt.y - result.mpi.y) > 0.5) {
     problems.push('The shot directions don’t match the printed MPI, so the target picture may be off.')
   }
 
   const arrowless = result.series.flatMap((s) => s.shots.filter((t) => !t.arrow && t.v === 0))
   if (arrowless.length) notes.push(arrowless.length === 1 ? 'One 0.0 entry without a direction wasn’t counted as a shot.' : `${arrowless.length} entries of 0.0 without a direction weren’t counted as shots.`)
-  if (shots.length && shots.length !== 20 && shots.length % 10 !== 0) notes.push(`${shots.length} match shots, all counted.`)
+  if (fromSighters) notes.push(`Shot without switching to match mode: its ${shots.length === 1 ? 'one sighter is counted' : `${shots.length} sighters are counted`} as the session's shots.`)
+  else if (shots.length && shots.length !== 20 && shots.length % 10 !== 0) notes.push(`${shots.length} match shots, all counted.`)
   if (clockFixMin) {
     const hours = Math.abs(clockFixMin) / 60
     notes.push(`The SIUS computer's clock is on ${offsetLabel(result.pcOffsetMin ?? 0)}: the time was moved ${Number.isInteger(hours) ? hours : hours.toFixed(1)} ${hours === 1 ? 'hour' : 'hours'} ${clockFixMin > 0 ? 'later' : 'earlier'}.`)
   }
-  const sightersOnly = shots.length === 0
-  if (sightersOnly) notes.push('Sighters only: no match shots, so there are no scores to save.')
+  const noShots = shots.length === 0
+  if (noShots) notes.push('No shots: the file is kept without scores.')
 
   return {
     event: result.event,
@@ -288,14 +307,15 @@ export function readSiusResult(result: SiusResult, timezone: string): SiusReadin
     instantMs,
     clockFixMin,
     shots: shots.length,
-    total: result.total !== null && shots.length ? result.total : totals.total,
+    total: printedStats && result.total !== null && shots.length ? result.total : totals.total,
     wholeTotal: totals.wholeTotal,
-    innerTens: result.innerTens ?? totals.innerTens,
-    mpi: result.mpi && shots.length ? result.mpi : meanPoint(points),
-    groupMm: result.groupMm !== null && shots.length ? result.groupMm : groupSizeMm(points),
+    innerTens: printedStats ? (result.innerTens ?? totals.innerTens) : totals.innerTens,
+    mpi: printedStats && result.mpi && shots.length ? result.mpi : meanPoint(points),
+    groupMm: printedStats && result.groupMm !== null && shots.length ? result.groupMm : groupSizeMm(points),
     series,
     sighters: sighterShots.length,
-    sightersOnly,
+    fromSighters,
+    noShots,
     problems,
     notes,
   }

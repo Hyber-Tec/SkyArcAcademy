@@ -29,7 +29,7 @@ describe('synthetic SIUS PDFs read back', () => {
     const { result, reading } = await read({ printed, pcOffsetMin: -240, series: [{ shots: shots(s1) }, { shots: shots(s2) }] })
     expect(result?.event).toBe('Air Rifle 60')
     expect(result?.printed).toBe('10/7/2026 6:35:59 PM')
-    expect(reading).toMatchObject({ dateKey: '2026-10-07', timeMin: 18 * 60 + 35, clockFixMin: 0, shots: 20, total: 186.8, wholeTotal: 179, innerTens: 3, sighters: 0, sightersOnly: false })
+    expect(reading).toMatchObject({ dateKey: '2026-10-07', timeMin: 18 * 60 + 35, clockFixMin: 0, shots: 20, total: 186.8, wholeTotal: 179, innerTens: 3, sighters: 0, fromSighters: false, noShots: false })
     expect(reading?.problems).toEqual([])
     expect(reading?.series.map((s) => s.total)).toEqual([92.8, 94])
     const got = reading!.series.flatMap((s) => s.shots)
@@ -56,8 +56,11 @@ describe('synthetic SIUS PDFs read back', () => {
     expect(reading?.notes).toEqual(expect.arrayContaining(['One 0.0 entry without a direction wasn’t counted as a shot.', '11 match shots, all counted.']))
   })
 
-  it('treats a sighters-only result as having no scores', async () => {
-    const { reading } = await read({ printed, pcOffsetMin: -240, series: [{ sighter: true, shots: shots([9.1, 9.4, 8.8]) }] })
-    expect(reading).toMatchObject({ shots: 0, sightersOnly: true, sighters: 3 })
+  it('counts the sighters of a result shot without switching to match mode (Total 0)', async () => {
+    const { reading } = await read({ printed, pcOffsetMin: -240, series: [{ sighter: true, shots: shots([9.1, 10.4, 8.8]) }, { sighter: true, shots: shots([10.2, 9.9]) }] })
+    expect(reading).toMatchObject({ shots: 5, total: 48.4, innerTens: 2, sighters: 0, fromSighters: true, noShots: false, problems: [] })
+    expect(reading?.series.map((s) => s.n)).toEqual([1, 2])
+    expect(reading?.mpi).not.toBeNull()
+    expect(reading?.notes).toContain('Shot without switching to match mode: its 5 sighters are counted as the session\'s shots.')
   })
 })
