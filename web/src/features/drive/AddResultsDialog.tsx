@@ -22,31 +22,14 @@ export interface ResultRow {
   sius: SiusFile
   studentId: string | null
   position: Position | null
-  /** The student was guessed from the file name: shown as such until someone picks one. */
-  studentGuessed?: boolean
-  /** The position came from the file name. */
-  positionGuessed?: boolean
+  /** Where the student was read from (the name printed on the report, or the file name): shown until someone picks one. */
+  studentFrom?: ReadFrom | null
+  /** Where the position was read from. */
+  positionFrom?: ReadFrom | null
 }
 
-const words = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-
-/**
- * The student a file name points at: a student whose first name is a word of it (and, when several share that
- * first name, whose last name is too). Nothing is trusted without the admin seeing it.
- */
-export function suggestStudent(fileName: string, students: readonly DriveStudent[]): string | null {
-  const name = new Set(words(fileName.replace(/\.pdf$/i, '')))
-  const byFirst = students.filter((s) => !s.finished && name.has(words(s.name)[0] ?? ''))
-  if (byFirst.length === 1) return byFirst[0].id
-  const byBoth = byFirst.filter((s) => words(s.name).slice(1).some((w) => name.has(w)))
-  return byBoth.length === 1 ? byBoth[0].id : null
-}
+/** A choice read from the report's words or from the file name. */
+export type ReadFrom = 'report' | 'file'
 
 /** Rows and "Set all" share the columns: the target, the result, the student, the position. */
 const COLUMNS = 'sm:grid-cols-[56px_minmax(0,1fr)_14rem_10rem]'
@@ -78,11 +61,12 @@ function PositionSelect({ value, onChange, placeholder, label }: { value: Positi
   )
 }
 
-/** Marks a choice read from the file name, so whoever adds the result checks it. */
-function FromFileName({ what }: { what: 'student' | 'position' }) {
+/** Marks a choice read from the report or the file name, so whoever adds the result checks it. */
+function ReadFromNote({ what, from }: { what: 'student' | 'position'; from: ReadFrom }) {
+  const where = from === 'report' ? 'the report' : 'the file name'
   return (
-    <p className="flex items-center gap-1 text-[11px] leading-4 text-amber-700 dark:text-amber-400" title={`The ${what} was read from the file name: check it’s right.`} data-testid={`guessed-${what}`}>
-      <LuFileSearch className="size-3 shrink-0" /> From the file name
+    <p className="flex items-center gap-1 text-[11px] leading-4 text-amber-700 dark:text-amber-400" title={`The ${what} was read from ${where}: check it’s right.`} data-testid={`guessed-${what}`}>
+      <LuFileSearch className="size-3 shrink-0" /> From {where}
     </p>
   )
 }
@@ -151,14 +135,14 @@ export function AddResultsDialog({
                 <div className={PICKERS}>
                   <OptionPicker
                     value={fixedStudentId ?? allStudent}
-                    onChange={(v) => setAll({ studentId: v, studentGuessed: false })}
+                    onChange={(v) => setAll({ studentId: v, studentFrom: null })}
                     options={options}
                     placeholder="Student for all…"
                     searchPlaceholder="Search students…"
                     disabled={!!fixedStudentId}
                     className="w-full bg-background"
                   />
-                  <PositionSelect value={allPosition} onChange={(p) => setAll({ position: p, positionGuessed: false })} placeholder={fits('Position…', 'Position for all')} label="Position for all" />
+                  <PositionSelect value={allPosition} onChange={(p) => setAll({ position: p, positionFrom: null })} placeholder={fits('Position…', 'Position for all')} label="Position for all" />
                 </div>
               </div>
             ) : null}
@@ -167,7 +151,7 @@ export function AddResultsDialog({
                 const reading = r.sius.reading
                 const shots = reading.series.flatMap((s) => s.shots)
                 const color = r.position ? POSITION_COLORS[r.position] : '#6b7280'
-                const guessedStudent = !!r.studentGuessed && !!r.studentId && !fixedStudentId
+                const studentFrom = r.studentId && !fixedStudentId ? (r.studentFrom ?? null) : null
                 return (
                   <div key={r.key} className={cn('grid gap-x-3 gap-y-2 p-3 sm:items-start', COLUMNS)} data-testid="result-row">
                     <div className="hidden sm:block">
@@ -226,23 +210,23 @@ export function AddResultsDialog({
                       <div className="min-w-0 space-y-1">
                         <OptionPicker
                           value={r.studentId}
-                          onChange={(v) => set(r.key, { studentId: v, studentGuessed: false })}
+                          onChange={(v) => set(r.key, { studentId: v, studentFrom: null })}
                           options={options}
                           placeholder="Whose result?"
                           searchPlaceholder="Search students…"
                           disabled={!!fixedStudentId}
-                          className={cn('w-full', guessedStudent && 'border-amber-400 dark:border-amber-500/60')}
+                          className={cn('w-full', studentFrom && 'border-amber-400 dark:border-amber-500/60')}
                         />
-                        {guessedStudent ? <FromFileName what="student" /> : null}
+                        {studentFrom ? <ReadFromNote what="student" from={studentFrom} /> : null}
                       </div>
                       <div className="min-w-0 space-y-1">
                         <PositionSelect
                           value={r.position}
-                          onChange={(p) => set(r.key, { position: p, positionGuessed: false })}
+                          onChange={(p) => set(r.key, { position: p, positionFrom: null })}
                           placeholder={reading.noShots ? fits('Optional', 'Position (optional)') : 'Position'}
                           label="Position"
                         />
-                        {r.positionGuessed && r.position ? <FromFileName what="position" /> : null}
+                        {r.positionFrom && r.position ? <ReadFromNote what="position" from={r.positionFrom} /> : null}
                       </div>
                     </div>
                   </div>
