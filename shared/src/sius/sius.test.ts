@@ -28,6 +28,20 @@ describe('reading SIUS results', () => {
     const reading = readSiusResult(result, 'America/New_York')
     expect(reading.problems).toEqual(['The series add up to 18.5, not the printed total 20.0.'])
   })
+
+  it('keeps a result with no shots at all as a file, without scores', () => {
+    const items = [
+      { str: 'Results', x: 270, y: 788, w: 65, font: 'b' },
+      { str: 'Air Rifle 60', x: 55, y: 771, w: 47, font: 'r' },
+      { str: '10/7/2026 6:35:59 PM', x: 452, y: 771, w: 96, font: 'r' },
+      { str: 'Total:', x: 62, y: 729, w: 24, font: 'r' },
+      { str: '0', x: 136, y: 729, w: 6, font: 'b' },
+    ]
+    const result = parseSiusPage({ items, images: [], arrowAngles: {}, creationDate: "D:20261007183559-04'00'" })!
+    const reading = readSiusResult(result, 'America/New_York')
+    expect(reading).toMatchObject({ shots: 0, noShots: true, fromSighters: false, problems: [] })
+    expect(reading.notes).toContain('No shots: the file is kept without scores.')
+  })
 })
 
 describe('SIUS helpers', () => {

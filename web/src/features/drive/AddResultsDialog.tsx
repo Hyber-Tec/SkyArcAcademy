@@ -113,8 +113,8 @@ export function AddResultsDialog({
   // "Set all" shows the student or the position when every row has the same one.
   const allStudent = rows.every((r) => r.studentId === rows[0]?.studentId) ? (rows[0]?.studentId ?? null) : null
   const allPosition = rows.every((r) => r.position === rows[0]?.position) ? (rows[0]?.position ?? null) : null
-  const missing = rows.filter((r) => !r.studentId || (!r.sius.reading.sightersOnly && !r.position)).length
-  const scored = rows.filter((r) => !r.sius.reading.sightersOnly).length
+  const missing = rows.filter((r) => !r.studentId || (!r.sius.reading.noShots && !r.position)).length
+  const scored = rows.filter((r) => !r.sius.reading.noShots).length
   const fixedName = fixedStudentId ? options.find((o) => o.value === fixedStudentId)?.label : null
   const confirm = async () => {
     setBusy(true)
@@ -176,9 +176,9 @@ export function AddResultsDialog({
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-medium tabular-nums">{formatDateKey(reading.dateKey, 'weekdayMedium')} · {formatMinutes(reading.timeMin)}</span>
-                        {reading.sightersOnly ? (
+                        {reading.noShots ? (
                           <span className="flex items-center gap-2">
-                            <Badge variant="secondary">Sighters only</Badge>
+                            <Badge variant="secondary">No shots</Badge>
                             <span className="text-xs text-muted-foreground">kept as a file, without scores</span>
                           </span>
                         ) : (
@@ -197,7 +197,7 @@ export function AddResultsDialog({
                             <TooltipContent className="max-w-xs">{reading.problems.join(' ')}</TooltipContent>
                           </Tooltip>
                         ) : null}
-                        {reading.notes.length && !reading.sightersOnly ? (
+                        {reading.notes.length && !reading.noShots ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="inline-flex text-muted-foreground" aria-label="Notes">
@@ -239,7 +239,7 @@ export function AddResultsDialog({
                         <PositionSelect
                           value={r.position}
                           onChange={(p) => set(r.key, { position: p, positionGuessed: false })}
-                          placeholder={reading.sightersOnly ? fits('Optional', 'Position (optional)') : 'Position'}
+                          placeholder={reading.noShots ? fits('Optional', 'Position (optional)') : 'Position'}
                           label="Position"
                         />
                         {r.positionGuessed && r.position ? <FromFileName what="position" /> : null}
