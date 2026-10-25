@@ -82,6 +82,7 @@ export function IdentityColumn({
           <div className="mt-3 flex flex-wrap gap-1.5">
             <StudentStatusBadge status={student.status} />
             {student.level ? <Badge variant="outline">{student.level}</Badge> : null}
+            {student.rifle ? <Badge variant="outline">Rifle {student.rifle}</Badge> : null}
             {student.program ? <Badge variant="secondary">{student.program}</Badge> : null}
           </div>
           {actions.length ? (
@@ -151,13 +152,14 @@ export function IdentityColumn({
             <ul className="space-y-3">
               {priv.parents.map((p, i) => (
                 <li key={i} className="flex items-center gap-3">
-                  <Avatar name={p.name || '?'} />
+                  <Avatar name={p.name || p.email || '?'} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{p.name || 'No name'}</div>
-                    <div className="truncate text-xs text-muted-foreground">{[p.relation, p.phone ? formatPhone(p.phone) : null].filter(Boolean).join(' · ') || p.email}</div>
+                    {/* A parent known only by email (as the academy's spreadsheet gives them) shows by it. */}
+                    <div className="truncate text-sm font-medium">{p.name || p.email || 'Parent'}</div>
+                    <div className="truncate text-xs text-muted-foreground">{[p.relation, p.phone ? formatPhone(p.phone) : null].filter(Boolean).join(' · ') || (p.name ? p.email : '')}</div>
                   </div>
                   {p.email ? (
-                    <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}>
+                    <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name || p.email}`}>
                       <LuMail className="size-4" />
                     </a>
                   ) : null}

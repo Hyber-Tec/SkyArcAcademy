@@ -205,6 +205,8 @@ export interface Student extends AuditStamp {
   level: string | null
   /** One of `settings.students.programs`, or null. */
   program: string | null
+  /** The rifle the academy gives the student, by its own code ("C9", "P", "JG"); null or missing when none is set. */
+  rifle?: string | null
   status: StudentStatus
   statusSource: 'auto' | 'manual'
   signUpDate: DateKey | null

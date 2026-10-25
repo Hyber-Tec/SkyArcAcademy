@@ -17,7 +17,7 @@ import { EMPTY_PRIVATE, resumeAutoStatus, saveStudentInfo } from './api'
 import { Avatar } from './profile/IdentityColumn'
 import { ageOn } from './profile/model'
 
-type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'level' | 'program' | 'school' | 'status' | 'signUpDate'>
+type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'level' | 'program' | 'rifle' | 'school' | 'status' | 'signUpDate'>
 
 const pickPublic = (s: Student): PublicForm => ({
   firstName: s.firstName ?? '',
@@ -25,6 +25,7 @@ const pickPublic = (s: Student): PublicForm => ({
   grade: s.grade ?? '',
   level: s.level ?? null,
   program: s.program ?? null,
+  rifle: s.rifle ?? null,
   school: s.school ?? '',
   status: s.status,
   signUpDate: s.signUpDate ?? null,
@@ -59,7 +60,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
     if (!form.firstName.trim()) return toast.error('Enter the first name.')
     setBusy(true)
     try {
-      const patch: Partial<Student> = { ...form, firstName: form.firstName.trim(), lastName: form.lastName.trim() }
+      const patch: Partial<Student> = { ...form, firstName: form.firstName.trim(), lastName: form.lastName.trim(), rifle: form.rifle?.trim() || null }
       await saveStudentInfo(branchId, actor, student, patch, readOnly ? null : { ...pform, parents: pform.parents.filter((p) => p.name || p.email || p.phone) })
       toast.success('Saved')
       setEditing(false)
@@ -114,6 +115,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
             <Item label="Grade">{student.grade ? gradeLabel(student.grade) : '—'}</Item>
             <Item label="Level">{student.level || '—'}</Item>
             <Item label="Program">{student.program || '—'}</Item>
+            <Item label="Rifle">{student.rifle || '—'}</Item>
             <Item label="Status">
               <StudentStatusBadge status={student.status} />
               {statusNote ? <div className="mt-1.5">{statusNote}</div> : null}
@@ -182,23 +184,23 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     {priv.parents.map((p, i) => (
                       <div key={i} className="flex items-center gap-3 rounded-xl border p-3">
-                        <Avatar name={p.name || '?'} className="size-10" />
+                        <Avatar name={p.name || p.email || '?'} className="size-10" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium">
-                            {p.name || 'No name'}
+                            {p.name || p.email || 'Parent'}
                             {p.relation ? <span className="font-normal text-muted-foreground"> · {p.relation}</span> : null}
                           </div>
-                          {p.email ? <div className="truncate text-xs text-muted-foreground">{p.email}</div> : null}
+                          {p.email && p.name ? <div className="truncate text-xs text-muted-foreground">{p.email}</div> : null}
                           {p.phone ? <div className="text-xs text-muted-foreground">{formatPhone(p.phone)}</div> : null}
                         </div>
                         <div className="flex gap-1">
                           {p.email ? (
-                            <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}>
+                            <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name || p.email}`}>
                               <LuMail className="size-4" />
                             </a>
                           ) : null}
                           {p.phone ? (
-                            <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`tel:${p.phone.replace(/[^\d+]/g, '')}`} aria-label={`Call ${p.name}`}>
+                            <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`tel:${p.phone.replace(/[^\d+]/g, '')}`} aria-label={`Call ${p.name || p.email || 'the parent'}`}>
                               <LuPhone className="size-4" />
                             </a>
                           ) : null}
@@ -293,6 +295,10 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="si-rifle">Rifle</FieldLabel>
+              <Input id="si-rifle" value={form.rifle ?? ''} placeholder="The academy's code, e.g. C9" onChange={(e) => set('rifle', e.target.value)} />
             </Field>
             <Field>
               <FieldLabel>Status</FieldLabel>
