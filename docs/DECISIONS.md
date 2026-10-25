@@ -562,10 +562,16 @@ The manager's answers to A1–A9 (`docs/QUESTIONS.md`), and Goo's calls on them.
   each week from August 31: make-ups, practice, trials, absences, and the monthly make-up Friday. Under each day, each
   time slot has six seats in two columns. Each seat holds a level with the student's rifle (`C9`; also `(P)` or `JG`,
   kept as written), then the student's name. No sheet names the coaches, but their days are known (A2): Monday three
-  coaches, Tuesday to Thursday two, Sunday two plus one in rotation, and the manager every day. Goo, from a visit: a class is one time range with about six students, taught by two or
-  more coaches together, not one coach per three students. The sheets agree: each slot mixes the same levels in both
-  columns, and a slot usually gathers one level (Precision, Marksman, Scout). To confirm (A16): it decides how the app
-  shows classes, whose model (one coach per student per class) comes from HyberCRM's tutoring.
+  coaches, Tuesday to Thursday two, Sunday two plus one in rotation, and the manager every day.
+- **Classes are taught by every coach on duty together** (A16, the manager, 2026-10-25): the coaches help each other,
+  and a class usually has four or five students. Mondays, three coaches come at 4 PM and one leaves after the first
+  class ends at 6 PM; the other days have two. So a class belongs to the academy, not to one coach, and the app's model
+  (one coach per student per class, from HyberCRM's tutoring) changes. Goo picks how classes look from design options
+  first (`docs/TODO.md`); the classes are imported in that shape.
+- **The students' spreadsheet** (A1, 2026-10-25): each student's school grade and a parent's email and phone, two
+  parents for some families, no parents' names. The grades are for the academy's owner to review; where both tabs give
+  one, they agree. Every student on it is on the sheets (a few seats use a first name only, or another spelling). Four
+  students on November's sheet aren't on it: asked back (A17). Grades now start at 1st (the list began at 3rd).
 - **Moving the real data in** (Goo, 2026-10-24): only after Apple's review, since the App Store's review logins are
   sample people. The import adds everyone's records but no access, so nobody is emailed. The office gives access from
   the website when it's ready, and that sends the sign-in emails. The steps are in `docs/TODO.md`.

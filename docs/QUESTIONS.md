@@ -14,20 +14,18 @@ Only what the app can't know: whatever the academy can set itself in Settings (o
 size, the pay period) isn't a question ([`DECISIONS.md`](DECISIONS.md) §7), and any rule the academy gives becomes a
 setting it can change later. Numbered as in the email Goo sends the academy, so answers can be matched by number. The email itself, with names, lives in `docs/internal/`.
 
-### First email: answered (2026-10-24)
+### First email and follow-up: answered (2026-10-24 and 2026-10-25)
 
-The manager answered A2–A9 and sent the schedule sheets (A4); the answers are in [`DECISIONS.md`](DECISIONS.md) §20,
-with names, contacts and pay rates in `docs/internal/academy-answers-2026-10.md`. Still open from it:
+The manager answered A2–A9 and sent the schedule sheets (A4), then the students' spreadsheet (A1) and how classes are
+taught (A16); the answers are in [`DECISIONS.md`](DECISIONS.md) §20, with names, contacts and pay rates in
+`docs/internal/academy-answers-2026-10.md`.
 
-| | Question | Needed for | Until answered |
-|---|---|---|---|
-| **A1** | **Students:** their names, levels and programs are in the schedule sheets; their **grades and a parent's or guardian's name, email and phone** come in the spreadsheet the manager is sending. | Importing the real data | [Sample data](DEPLOY.md#sample-data) |
-
-### Follow-up (a text or a short email)
+### Follow-up (a text)
 
 | | Question | Needed for | Until answered |
 |---|---|---|---|
-| **A16** | **Classes and coaches:** the coaches' days are known (A2), so each day has two or three coaches on duty. Do they teach each class together, or does each coach take some of the students (a column of the sheet each)? | How the app shows classes, and importing them | The classes aren't imported |
+| **A17** | **Four students on November's sheet aren't on the spreadsheet** (named in `docs/internal/`): their parents' emails and phones, and their grades. | Importing the real data | Imported without parents; the office adds them |
+| **A18** | **The academy owner's sign-in email:** the academy's owner runs payroll, so they get the owner's access. | Access at launch | Goo's owner access only |
 
 ### Later: before launch (a second email)
 
