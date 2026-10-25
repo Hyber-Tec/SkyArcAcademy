@@ -144,7 +144,8 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   },
   students: {
     autoStatus: { enabled: true, inactivityPauseDays: 20, respectManual: true },
-    gradeOptions: ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'College', 'Adult'],
+    // School grades from 1st, as the website's trial form asks.
+    gradeOptions: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'College', 'Adult'],
     // The ladder on the academy's class sheets, and the programs on skyarcacademy.com (docs/DECISIONS.md §5).
     levels: ['Discovery', 'Scout', 'Hunter', 'Hunter+', 'Marksman', 'Marksman+', 'Sharp Shooter', 'Expert', 'Precision'],
     programs: ['Launchpad', 'Foundations', 'Development', 'Performance'],
