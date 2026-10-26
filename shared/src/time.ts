@@ -208,6 +208,13 @@ export function weekdayOf(key: DateKey): Weekday {
   return WEEKDAYS[weekdayIndex(key)]
 }
 
+/**
+ * Month calendars (every month view, the mini calendars and the date pickers) start their weeks on Sunday, as calendars
+ * do (the owner, 2026-10-26), whatever day the academy's week starts on (`settings.general.weekStartsOn`: the
+ * schedule's week and the week's totals).
+ */
+export const CALENDAR_WEEK_START: Weekday = 'sunday'
+
 export function startOfWeek(key: DateKey, weekStartsOn: Weekday = 'sunday'): DateKey {
   const startIdx = WEEKDAYS.indexOf(weekStartsOn)
   const delta = (weekdayIndex(key) - startIdx + 7) % 7

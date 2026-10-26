@@ -15,7 +15,7 @@ import { fitsCapacity } from './lanes'
  * - `no_coach`: no coach is in for all or part of its class.
  * - `over_capacity`: its class has more students than seats.
  * - `coach_inactive`, `coach_unavailable`: the one coach a session had before classes were taught together is
- *   inactive, or their availability doesn't cover it (`sessionConflicts`, still read by the phone app).
+ *   inactive, or their availability doesn't cover it (`sessionConflicts`, for sessions that still have one).
  * - `student_double_booked`: the student has another session at the same time.
  * - `student_inactive`: the student is paused or no longer coming.
  */
@@ -159,7 +159,7 @@ function inSeat(s: Pick<ConflictSeat, 'status' | 'isDeleted'>): boolean {
 
 /**
  * Every reason a session with its own coach (from before classes were taught together) may not happen as booked
- * (empty: none). Order: most fundamental first. The phone app reads it until its update.
+ * (empty: none). Order: most fundamental first.
  */
 export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conflict[] {
   if (!isCheckable(s)) return []
@@ -211,28 +211,6 @@ export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conf
     out.push({ kind: 'student_inactive', message: `${s.studentName || 'The student'} is marked ${STUDENT_STATUS_LABELS[ctx.studentStatus]}.` })
   }
   return out
-}
-
-/** What the coach reads on a session in conflict: it isn't certain, and the admin decides. */
-export function coachConflictText(conflicts: readonly Conflict[]): string | null {
-  if (conflicts.length === 0) return null
-  const kinds = new Set(conflicts.map((c) => c.kind))
-  const why = kinds.has('center_closed')
-    ? 'The academy is closed that day.'
-    : kinds.has('outside_hours')
-      ? 'It’s outside the academy’s opening hours.'
-      : kinds.has('no_coach')
-        ? 'No coach is in for all of it.'
-        : kinds.has('coach_unavailable')
-        ? 'You’re not available at this time.'
-        : kinds.has('over_capacity')
-          ? 'You have more students at once than allowed.'
-          : kinds.has('student_double_booked')
-            ? 'The student has another class at this time.'
-            : kinds.has('student_inactive')
-              ? 'The student isn’t attending right now.'
-              : 'Something changed since it was booked.'
-  return `${why} Waiting for the admin to move or cancel it.`
 }
 
 /** Short label for a conflict on cards and lists. */

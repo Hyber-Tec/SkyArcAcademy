@@ -13,12 +13,16 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    reviewers' login is an admin with the academy's real data: paste the new notes (`docs/store/review-notes.md`) into
    App Review Information if App Store Connect lets you while it waits. No second submission while it's in review
    (Goo, 2026-10-26): the phone's update for classes taught together goes up afterwards, when Goo says.
-2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
-   two-week closed test comes first (`docs/publishing/google-play/account.md`).
+2. **Google Play:** HyberTec's developer account is verified as an organization (HyberTec LLC; 2026-10-26), so no
+   closed test comes first. Publish the Android app once the phone's update below is merged: try it on Android (the
+   emulator, `npm run android:sim`, or internal testing), then `docs/publishing/google-play/testing.md` and
+   `production.md`.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
-4. **The phone app, on the MacBook Pro:** start a Claude Code session there with the prompt in `docs/mobile-classes.md`;
-   it brings the phone app to classes taught together, on top of the website's branch.
+4. **The phone app's update for classes taught together** (`feat/mobile-classes`, `docs/mobile-classes.md`): look at it
+   on the simulator (`npm run iphone:sim`, from a copy of the repository whose folder path has no spaces: the iPhone
+   build fails in `Sky Arc Academy`, `docs/running-the-apps.md`), merge it, and upload it once Apple's review of 1.0 is
+   over (`docs/publishing/updates.md`; its What's New is in `docs/store/listing.md`). Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 
@@ -75,10 +79,9 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   2. **Who's in on Sundays:** the coach in turn isn't on the sheets, so Sundays show the every-Sunday coach and the
      manager only; the office adds that week's coach in "Who's in". The make-up Friday of October 23 has nobody in,
      and one student was in two classes at once that day.
-  3. **The week starting on Monday**, as the sheets do, if Goo likes it so (Settings → General).
-  4. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
+  3. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
      owner as an owner, A18).
-  5. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
+  4. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
      open a class. Once the phone's update reads classes (`docs/mobile-classes.md`) is out, run
      `npx tsx scripts/lead-coach.ts --clear`; until then, run `--apply` again after the office adds students.
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

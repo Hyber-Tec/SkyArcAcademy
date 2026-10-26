@@ -318,7 +318,6 @@ export default function ScoreScreen() {
         title="The day it was shot"
         value={draft.dateKey}
         today={today}
-        weekStartsOn={settings.general.weekStartsOn}
         max={today}
         onPick={(d) => {
           change({ dateKey: d });

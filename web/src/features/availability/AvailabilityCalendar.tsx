@@ -549,7 +549,6 @@ export function AvailabilityCalendar({
         <MonthScroller
           ref={scroller}
           anchor={today}
-          weekStartsOn={settings.general.weekStartsOn}
           onVisibleRangeChange={onVisibleRangeChange}
           onTopMonthChange={setTopMonth}
           className="h-[min(70svh,760px)] px-2"

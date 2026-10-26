@@ -1,8 +1,9 @@
 import { dayStartInstant, effectiveRanges, normalizeRanges, rangesContain } from './availability'
-import { isAhead, isCheckable } from './schedule/conflicts'
+import { type ClassCoach, type DayRecord, coachesIn, takesSeat, uncovered } from './schedule/classes'
+import { isAhead } from './schedule/conflicts'
 import type { DayHours } from './settings/defaults'
 import { type DateKey, formatDateKey, formatTimeRange, weekdayOf } from './time'
-import type { Availability, AvailabilityRange, Session, StaffRole, WithId } from './types'
+import type { AcademyClass, Availability, AvailabilityRange, Session, StaffRole, WithId } from './types'
 
 /**
  * One day of a change to a coach's availability, as the website and the phone app save it: times, "not available",
@@ -65,8 +66,8 @@ export function availabilitySummary(staffName: string, days: readonly DayWrite[]
 }
 
 /**
- * The days of a change that lose time, so only their classes can end up outside the coach's availability:
- * `currentRanges` is what counts today on a date (its saved times inside its hours; none when it's marked not available).
+ * The days of a change that lose time, so only their classes can be left with no coach in: `currentRanges` is what
+ * counts today on a date (its saved times inside its hours; none when it's marked not available).
  */
 export function shrinkingDays(days: readonly DayWrite[], currentRanges: (dateKey: DateKey) => readonly AvailabilityRange[], hoursOf: (dateKey: DateKey) => DayHours): DateKey[] {
   return days
@@ -77,43 +78,76 @@ export function shrinkingDays(days: readonly DayWrite[], currentRanges: (dateKey
     .map((d) => d.dateKey)
 }
 
+/** A class that a change to someone's hours would leave without a coach in, for all or part of it. */
+export interface UncoveredClass {
+  dateKey: DateKey
+  startMin: number
+  endMin: number
+  /** Students in it (canceled ones left out). */
+  students: number
+}
+
+/** Minutes of a class nobody covers. */
+const gapMinutes = (c: Pick<AcademyClass, 'startMin' | 'endMin'>, coaches: readonly ClassCoach[]) =>
+  uncovered(c, coaches.flatMap((k) => k.ranges)).reduce((m, g) => m + g.endMin - g.startMin, 0)
+
 /**
- * Booked classes (pending or confirmed, still ahead) that a change would leave outside the coach's availability,
- * though they were inside it before: the classes of the shrinking days, as each platform reads them.
+ * Classes still ahead, with students, that a change to someone's hours would leave with no coach in for all or part of
+ * them, though they were covered before: classes are taught by every coach in, so only the other coaches' hours that
+ * day count, and someone who doesn't teach (the manager) changes nothing. Each platform reads the classes, their
+ * students and everyone's records on the change's shrinking days (`shrinkingDays`) and passes them here.
  */
-export function sessionsLeftUncovered(opts: {
+export function classesLeftUncovered(opts: {
+  staffId: string
+  staffRole?: StaffRole
   days: readonly DayWrite[]
-  currentRanges: (dateKey: DateKey) => readonly AvailabilityRange[]
+  classes: readonly WithId<AcademyClass>[]
+  seats: readonly Pick<Session, 'classId' | 'status' | 'isDeleted'>[]
+  /** Everyone's availability on those days. */
+  records: readonly DayRecord[]
   hoursOf: (dateKey: DateKey) => DayHours
-  sessions: readonly WithId<Session>[]
+  /** Who teaches, when the caller knows it (admins); otherwise each day's records say. */
+  isCoach?: (staffId: string) => boolean
   today: DateKey
   nowMin: number
-}): WithId<Session>[] {
-  const after = new Map(opts.days.map((d) => [d.dateKey, d.unavailable ? [] : effectiveRanges(normalizeRanges(d.ranges), opts.hoursOf(d.dateKey))]))
-  return opts.sessions
-    .filter((s) => {
-      if (!after.has(s.dateKey) || !isCheckable(s) || !isAhead(s, opts.today, opts.nowMin)) return false
-      return rangesContain(opts.currentRanges(s.dateKey), s.startMin, s.endMin) && !rangesContain(after.get(s.dateKey) ?? [], s.startMin, s.endMin)
-    })
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin)
+}): UncoveredClass[] {
+  const { staffId, hoursOf, isCoach } = opts
+  if (opts.staffRole && opts.staffRole !== 'coach') return []
+  const change = new Map(opts.days.map((d) => [d.dateKey, d]))
+  const students = new Map<string, number>()
+  for (const s of opts.seats) if (s.classId && takesSeat(s)) students.set(s.classId, (students.get(s.classId) ?? 0) + 1)
+  const out: UncoveredClass[] = []
+  for (const c of opts.classes) {
+    const n = students.get(c.id) ?? 0
+    const day = change.get(c.dateKey)
+    if (c.isDeleted || !n || !day || !isAhead(c, opts.today, opts.nowMin)) continue
+    const others = opts.records.filter((a) => a.dateKey === c.dateKey && a.staffId !== staffId)
+    const mine = opts.records.filter((a) => a.dateKey === c.dateKey && a.staffId === staffId)
+    const after = { staffId, dateKey: c.dateKey, ranges: day.unavailable ? [] : normalizeRanges(day.ranges), unavailable: !!day.unavailable }
+    const hours = hoursOf(c.dateKey)
+    if (gapMinutes(c, coachesIn(c, [...others, after], hours, isCoach)) > gapMinutes(c, coachesIn(c, [...others, ...mine], hours, isCoach))) {
+      out.push({ dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, students: n })
+    }
+  }
+  return out.sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin)
 }
 
-/** "Ava Patel (Fri, Oct 2, 4:00 PM - 5:30 PM), Theo Roberts (…) and 2 more" */
-export function describeSessions(list: readonly Pick<Session, 'studentName' | 'dateKey' | 'startMin' | 'endMin'>[], max = 3): string {
-  const shown = list.slice(0, max).map((s) => `${s.studentName} (${formatDateKey(s.dateKey, 'weekdayMedium')}, ${formatTimeRange(s.startMin, s.endMin)})`)
+/** "Tue, Oct 27, 4:30 PM – 6:00 PM (5 students), … and 2 more" */
+function describeClasses(list: readonly UncoveredClass[], max = 3): string {
+  const shown = list.slice(0, max).map((c) => `${formatDateKey(c.dateKey, 'weekdayMedium')}, ${formatTimeRange(c.startMin, c.endMin)} (${c.students} student${c.students === 1 ? '' : 's'})`)
   const more = list.length - shown.length
-  return more > 0 ? `${shown.join(', ')} and ${more} more` : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : (shown[0] ?? '')
+  return more > 0 ? `${shown.join('; ')} and ${more} more` : shown.length > 1 ? `${shown.slice(0, -1).join('; ')} and ${shown.at(-1)}` : (shown[0] ?? '')
 }
 
-/** What a coach is told before saving a change that leaves booked classes outside their availability. */
-export function uncoveredWarning(uncovered: readonly Pick<Session, 'studentName' | 'dateKey' | 'startMin' | 'endMin'>[], mode: 'coach' | 'admin'): { title: string; description: string } {
-  const n = uncovered.length
+/** What someone is told before saving a change that leaves classes with no coach in. */
+export function noCoachWarning(list: readonly UncoveredClass[], mode: 'coach' | 'admin'): { title: string; description: string } {
+  const n = list.length
   const many = n > 1
   return {
-    title: `${n} booked class${many ? 'es are' : ' is'} in this time`,
+    title: `${n} class${many ? 'es' : ''} would have no coach in`,
     description:
       mode === 'coach'
-        ? `${describeSessions(uncovered)} ${many ? 'are' : 'is'} booked in the time you’re removing. If you save, ${many ? 'they stay' : 'it stays'} booked and ${many ? 'show' : 'shows'} as a conflict until the admin moves, reassigns or cancels ${many ? 'them' : 'it'}. If it’s urgent, tell the admin too.`
-        : `${describeSessions(uncovered)} ${many ? 'are' : 'is'} booked in this time. If you save, ${many ? 'they' : 'it'} will show as ${many ? 'conflicts' : 'a conflict'} on the schedule until ${many ? 'they’re' : 'it’s'} moved, reassigned or canceled.`,
+        ? `No other coach is in for all or part of ${describeClasses(list)}. If you save, ${many ? 'they stay' : 'it stays'} on the schedule without a coach until another coach is in. If it’s urgent, tell the admin too.`
+        : `No other coach is in for all or part of ${describeClasses(list)}. If you save, ${many ? 'they show' : 'it shows'} on Home without a coach until another coach is in.`,
   }
 }

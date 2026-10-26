@@ -2,10 +2,12 @@ import { collection, doc, limit, orderBy, query, where } from "@react-native-fir
 import { dayHours } from "@shared/availability";
 import type { DriveFile } from "@shared/drive/types";
 import { COL, DOC, ROOT } from "@shared/paths";
+import { classViews } from "@shared/schedule/classes";
 import type { Evaluation } from "@shared/shooting/evaluation";
+import type { DayHours } from "@shared/settings/defaults";
 import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
-import type { DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
-import { useEffect, useMemo, useState } from "react";
+import type { AcademyClass, Availability, DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
 import { db } from "@/lib/firebase";
 import { useDoc, useQuery } from "@/lib/firestore";
@@ -13,12 +15,14 @@ import { useBranch } from "@/state/BranchProvider";
 
 /**
  * The app's live data, read as the website's hooks read it (web/src/features/data/hooks.ts): always the academy
- * (`branches/skyarc`). The office reads it all; a coach reads what the rules give them (their own classes and staff
- * record, no family contacts), so their queries ask for exactly that (a query the rules would refuse fails whole).
- * Firestore de-duplicates identical listeners, so several screens can use the same hook.
+ * (`branches/skyarc`). The office reads it all; a coach reads what the rules give them (every class, its students and
+ * who's in, their own staff record, no family contacts), so their queries ask for exactly that (a query the rules
+ * would refuse fails whole). Firestore de-duplicates identical listeners, so several screens can use the same hook.
  */
 
 export type SessionDoc = Session & { id: string };
+export type ClassDoc = AcademyClass & { id: string };
+export type AvailabilityDoc = Availability & { id: string };
 export type StaffDoc = Staff & { id: string };
 export type StudentDoc = Student & { id: string };
 export type EvaluationDoc = Evaluation & { id: string };
@@ -42,26 +46,51 @@ export function useAcademyNow(): { today: DateKey; nowMin: number; now: number }
 }
 
 /**
- * The classes between two dates (inclusive), deleted ones (Trash) left out, in time order: every coach's for the office,
- * a coach's own for a coach.
+ * The academy's classes between two dates (inclusive), live, as the website's schedule reads them
+ * (web/src/features/schedule/useClassData.ts, with the shared `classViews`): each class with its students (in the
+ * order booked) and the coaches in at its time, by date, earliest first; and who's in each day (everyone's hours, their
+ * availability, the manager's too). Classes are taught together by every coach in, so the office and coaches alike read
+ * every class. Who teaches comes from the staff list for the office (the active coaches), and from each day's records
+ * for a coach, who can't read the staff list. Null dates pause it.
  */
-export function useSessionsBetween(from: DateKey, to: DateKey) {
-  const { branchId, isCoach, staffId } = useBranch();
-  const state = useQuery<Session>(
-    isCoach ? (staffId ? `sessions-${branchId}-${staffId}-${from}-${to}` : null) : `sessions-${branchId}-${from}-${to}`,
-    () =>
-      isCoach
-        ? query(col(branchId, COL.sessions), where("coachId", "==", staffId), where("dateKey", ">=", from), where("dateKey", "<=", to))
-        : query(col(branchId, COL.sessions), where("dateKey", ">=", from), where("dateKey", "<=", to)),
+export function useClassesBetween(from: DateKey | null, to: DateKey | null = from) {
+  const { branchId, isAdmin, settings } = useBranch();
+  const range = from && to ? `${branchId}-${from}-${to}` : null;
+  const classes = useQuery<AcademyClass>(range && `classes-${range}`, () => query(col(branchId, COL.classes), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const seats = useQuery<Session>(range && `seats-${range}`, () => query(col(branchId, COL.sessions), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const whosIn = useQuery<Availability>(range && `whos-in-${range}`, () => query(col(branchId, COL.availability), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const configs = useDayConfigs(from, to);
+  const staff = useStaffList();
+  // The office knows who teaches; until its staff list is in, nobody would count as a coach.
+  const isCoach = useMemo(() => {
+    if (!isAdmin) return undefined;
+    const ids = new Set(staff.data.filter((s) => s.role === "coach" && s.status === "active").map((s) => s.id));
+    return (id: string) => ids.has(id);
+  }, [isAdmin, staff.data]);
+  const hoursOf = useCallback((d: DateKey): DayHours => dayHours(d, settings, configs.map), [settings, configs.map]);
+  const byDate = useMemo(() => classViews(classes.data, seats.data, whosIn.data, hoursOf, isCoach), [classes.data, seats.data, whosIn.data, hoursOf, isCoach]);
+  /** Everyone with hours that day (coaches and the manager), earliest first. */
+  const inOn = useCallback(
+    (d: DateKey) =>
+      whosIn.data
+        .filter((a) => a.dateKey === d && !a.unavailable && (a.ranges ?? []).length > 0)
+        .sort((a, b) => a.ranges[0].startMin - b.ranges[0].startMin || (a.staffName ?? "").localeCompare(b.staffName ?? "")),
+    [whosIn.data],
   );
-  const data = useMemo(
-    () =>
-      state.data
-        .filter((s) => !s.isDeleted)
-        .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)),
-    [state.data],
-  );
-  return { ...state, data };
+  return {
+    byDate,
+    availability: whosIn.data,
+    inOn,
+    hoursOf,
+    loading: classes.loading || seats.loading || whosIn.loading || configs.loading || (isAdmin && staff.loading),
+    error: classes.error ?? seats.error ?? whosIn.error,
+  };
+}
+
+/** One class's record (its time, seats and note; its students are its sessions). */
+export function useAcademyClass(id: string | null) {
+  const { branchId } = useBranch();
+  return useDoc<AcademyClass>(id ? `${ROOT.branches}/${branchId}/${COL.classes}/${id}` : null);
 }
 
 /** Every employee (owners, admins and coaches), by name; a coach has only their own record. */
@@ -97,20 +126,17 @@ export function useStudentPrivate(id: string | null) {
 }
 
 /**
- * A student's next classes (from today) and last ones (before today), a few of each, deleted ones left out. Uses the
- * website's indexes on `studentId` + `dateKey`.
+ * A student's next classes (from today) and last ones (before today), a few of each, deleted ones left out: every one,
+ * for the office and coaches alike (classes are taught together). Uses the website's indexes on `studentId` +
+ * `dateKey`.
  */
 export function useStudentClasses(studentId: string | null, today: DateKey) {
-  const { branchId, isCoach, staffId } = useBranch();
-  // A coach sees their own classes with the student (the rules give them no one else's).
-  const mine = isCoach ? [where("coachId", "==", staffId)] : [];
-  const who = isCoach ? `${staffId}-` : "";
-  const ok = !!studentId && (!isCoach || !!staffId);
-  const next = useQuery<Session>(ok ? `student-next-${branchId}-${who}${studentId}-${today}` : null, () =>
-    query(col(branchId, COL.sessions), where("studentId", "==", studentId), ...mine, where("dateKey", ">=", today), orderBy("dateKey", "asc"), limit(8)),
+  const { branchId } = useBranch();
+  const next = useQuery<Session>(studentId ? `student-next-${branchId}-${studentId}-${today}` : null, () =>
+    query(col(branchId, COL.sessions), where("studentId", "==", studentId), where("dateKey", ">=", today), orderBy("dateKey", "asc"), limit(8)),
   );
-  const last = useQuery<Session>(ok ? `student-last-${branchId}-${who}${studentId}-${today}` : null, () =>
-    query(col(branchId, COL.sessions), where("studentId", "==", studentId), ...mine, where("dateKey", "<", today), orderBy("dateKey", "desc"), limit(8)),
+  const last = useQuery<Session>(studentId ? `student-last-${branchId}-${studentId}-${today}` : null, () =>
+    query(col(branchId, COL.sessions), where("studentId", "==", studentId), where("dateKey", "<", today), orderBy("dateKey", "desc"), limit(8)),
   );
   return useMemo(() => {
     const live = (list: SessionDoc[]) => list.filter((s) => !s.isDeleted);
@@ -165,10 +191,10 @@ export function useDriveFile(id: string | null) {
   return useDoc<DriveFile>(id ? `${ROOT.branches}/${branchId}/${COL.driveFiles}/${id}` : null);
 }
 
-/** Per-date opening hours (day configs) between two dates, as a map by dateKey. */
-export function useDayConfigs(from: DateKey, to: DateKey) {
+/** Per-date opening hours (day configs) between two dates, as a map by dateKey. Null dates pause it. */
+export function useDayConfigs(from: DateKey | null, to: DateKey | null) {
   const { branchId } = useBranch();
-  const state = useQuery<DayConfig>(`dayconfigs-${branchId}-${from}-${to}`, () => query(col(branchId, COL.dayConfigs), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const state = useQuery<DayConfig>(from && to ? `dayconfigs-${branchId}-${from}-${to}` : null, () => query(col(branchId, COL.dayConfigs), where("dateKey", ">=", from), where("dateKey", "<=", to)));
   const map = useMemo(() => new Map(state.data.map((d) => [d.dateKey, d])), [state.data]);
   return { map, loading: state.loading };
 }
@@ -177,7 +203,8 @@ export function useDayConfigs(from: DateKey, to: DateKey) {
 export function useHoursOf(from: DateKey, to: DateKey) {
   const { settings } = useBranch();
   const { map, loading } = useDayConfigs(from, to);
-  return { hoursOf: (dateKey: DateKey) => dayHours(dateKey, settings, map), loading };
+  const hoursOf = useCallback((dateKey: DateKey) => dayHours(dateKey, settings, map), [settings, map]);
+  return { hoursOf, loading };
 }
 
 /** A document reference inside the academy, for writes. */

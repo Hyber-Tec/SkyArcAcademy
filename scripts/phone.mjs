@@ -839,13 +839,14 @@ function ensureIosRuntime(env) {
 /**
  * Picks the newest standard iPhone (not Pro, Plus or Max) the newest iOS runs: the size most people carry. For the
  * store screenshots, the newest Pro: its 6.3-inch screen (1206 × 2622) is the size App Store Connect requires since
- * October 2026 ("iPhone with Dynamic Island (medium display)"; it no longer takes a Pro Max's in that slot).
+ * October 2026 ("iPhone with Dynamic Island (medium display)"; it no longer takes a Pro Max's in that slot). `exact`:
+ * none rather than another iPhone when the runtime has no such model.
  */
-function pickIphone(runtime, store = false) {
+function pickIphone(runtime, store = false, exact = false) {
   const iphones = (runtime.supportedDeviceTypes ?? []).filter((t) => t.productFamily === "iPhone");
   const number = (t) => Number(/\d+/.exec(t.name)?.[0] ?? 0);
   const wanted = iphones.filter((t) => (store ? /^iPhone \d+ Pro$/ : /^iPhone \d+$/).test(t.name)).sort((a, b) => number(b) - number(a));
-  return wanted[0] ?? iphones.at(-1);
+  return wanted[0] ?? (exact ? undefined : iphones.at(-1));
 }
 
 /** The Apple teams Xcode is signed in to (Xcode → Settings… → Accounts). */
@@ -931,7 +932,9 @@ function iosSimulator(which, env) {
     .flat()
     .find((d) => d.name === name)?.udid;
   if (!udid) {
-    const runtime = iosRuntimes(env)[0];
+    // The newest iOS that runs that iPhone: a newer one can come for a new model only (iOS 27.1, for the iPhone Duo).
+    const runtimes = iosRuntimes(env);
+    const runtime = runtimes.find((r) => pickIphone(r, which === "screenshots", true)) ?? runtimes[0];
     const type = runtime && pickIphone(runtime, which === "screenshots");
     if (!type) stop("Xcode has no iPhone simulators. Open Xcode → Settings… → Components, click Get next to iOS, then run this again.");
     udid = read("xcrun", ["simctl", "create", name, type.identifier, runtime.identifier], { env })?.trim();

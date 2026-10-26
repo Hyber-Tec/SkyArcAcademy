@@ -55,7 +55,7 @@ function CoachAccount() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { branchId, actor, staff, staffId, member, name: academy, rules, settings } = useBranch();
+  const { branchId, actor, staff, staffId, member, name: academy, rules } = useBranch();
   const { email } = useAuth();
   const { today } = useAcademyNow();
   const comp = useDoc<Compensation>(staffId ? `${ROOT.branches}/${branchId}/${COL.staff}/${staffId}/private/${DOC.compensation}` : null);
@@ -181,7 +181,6 @@ function CoachAccount() {
             onChange={(dob) => edit({ dob })}
             onClear={() => edit({ dob: null })}
             today={today}
-            weekStartsOn={settings.general.weekStartsOn}
             max={today}
             yearJump
             pickerTitle="Your date of birth"

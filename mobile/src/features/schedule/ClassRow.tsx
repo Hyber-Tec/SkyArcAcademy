@@ -1,100 +1,122 @@
-import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
+import { takesSeat } from "@shared/schedule/classes";
+import { ChevronRight } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
+import { Avatar } from "@/components/Avatar";
+import { Badge } from "@/components/Badge";
 import { T } from "@/components/Text";
-import { radius, space, useColors, useStatusColors } from "@/theme";
-import type { ClassGroup } from "./classes";
-import { plural, timeRange } from "./format";
+import { radius, space, useColors } from "@/theme";
+import { type ClassView, firstName, isOnNow, isOver } from "./classes";
+import { clock, listWords, nameList, plural, shortName, timeRange } from "./format";
+import { SeatCount, type StaffLook } from "./parts";
+
+/** How a class stands, as the website's Home says it. */
+function stateOf(v: ClassView, today: string, nowMin: number): string {
+  if (isOver(v, today, nowMin)) return "Done";
+  if (isOnNow(v, today, nowMin)) return "In progress";
+  if (!v.taken) return "No students";
+  return v.taken >= v.c.seats ? "Full" : `${plural(v.c.seats - v.taken, "seat")} open`;
+}
 
 /**
- * One class as a card: its time, the coach (their schedule colour on the edge) and each student with their status and
- * the class's note ("MU for 10/12", "Trial 1"). Tapping it opens the class.
+ * A class in a list (Home's day, a coach's days), as the website's Home lists them: when it starts and ends, its
+ * students, the seats taken ("4/6": full, or the seats still open) and the coaches in (for a coach, the others in with
+ * them); "In progress" while it's on, and faded once it's done. Tapping it opens the class.
  */
 export function ClassRow({
-  group,
-  color,
+  v,
+  today,
+  nowMin,
   hour12,
-  showCoach = true,
-  live = false,
+  me = null,
+  look,
+  divider = false,
   onPress,
   testID,
 }: {
-  group: ClassGroup;
-  /** The coach's colour on the schedule. */
-  color: string | null;
+  v: ClassView;
+  today: string;
+  nowMin: number;
   hour12: boolean;
-  showCoach?: boolean;
-  /** Happening now. */
-  live?: boolean;
+  /** The coach looking (null for the office): the line names the other coaches in with them. */
+  me?: string | null;
+  look: StaffLook;
+  /** Set by ListSection on every row after the first. */
+  divider?: boolean;
   onPress: () => void;
   testID?: string;
 }) {
   const colors = useColors();
-  const status = useStatusColors();
-  const count = group.active.length;
+  const { c } = v;
+  const names = v.seats.filter(takesSeat).map((s) => shortName(s.studentName));
+  const state = stateOf(v, today, nowMin);
+  const done = state === "Done";
+  const others = v.coaches.filter((k) => k.staffId !== me);
+  // A coach reads who else is in; the office sees each coach's initials (the class names them all).
+  const withOthers = others.length ? `With ${listWords(others.map((k) => firstName(look.nameOf(k.staffId, k.name))))}` : "No other coach in";
+  const coachNames = listWords(v.coaches.map((k) => firstName(look.nameOf(k.staffId, k.name))));
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={`${timeRange(group.startMin, group.endMin, hour12)}, ${group.coachName}, ${plural(count, "student")}`}
+      accessibilityLabel={[timeRange(c.startMin, c.endMin, hour12), names.length ? nameList(names) : "no students yet", `${v.taken} of ${c.seats} seats`, me ? withOthers : v.coaches.length ? `coaches in: ${coachNames}` : "no coach in", state].join(", ")}
       onPress={onPress}
-      style={({ pressed }) => [styles.card, { backgroundColor: pressed ? colors.accent : colors.card, borderColor: colors.border }]}
+      style={({ pressed }) => [styles.row, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, pressed && { backgroundColor: colors.accent }]}
     >
-      <View style={[styles.edge, { backgroundColor: color ?? colors.mutedForeground }]} />
-      <View style={styles.body}>
-        <View style={styles.head}>
-          <T variant="label" style={styles.grow} numberOfLines={1}>
-            {timeRange(group.startMin, group.endMin, hour12)}
-          </T>
-          {live ? (
-            <View style={[styles.live, { backgroundColor: colors.brandTint }]}>
-              <View style={[styles.liveDot, { backgroundColor: colors.brand }]} />
-              <T variant="tiny" style={{ color: colors.brandText, fontWeight: "700" }}>
-                NOW
-              </T>
-            </View>
-          ) : (
-            <T variant="small" tone="muted">
-              {plural(count, "student")}
+      <View style={[styles.times, done && styles.faded]}>
+        <T variant="label" style={styles.figure}>
+          {clock(c.startMin, hour12)}
+        </T>
+        <T variant="small" tone="muted" style={styles.figure}>
+          {clock(c.endMin, hour12)}
+        </T>
+      </View>
+      <View style={[styles.grow, done && styles.faded]}>
+        <T variant="label" tone={names.length ? "default" : "muted"} numberOfLines={2}>
+          {names.length ? nameList(names) : "No students yet"}
+        </T>
+        <View style={styles.meta}>
+          <SeatCount used={v.taken} of={c.seats} />
+          {!v.coaches.length ? (
+            <T variant="small" style={[styles.shrink, { color: colors.warning, fontWeight: "600" }]} numberOfLines={1}>
+              No coach in
             </T>
+          ) : me ? (
+            <T variant="small" tone="muted" numberOfLines={1} style={styles.shrink}>
+              {withOthers}
+            </T>
+          ) : (
+            <View style={styles.badges}>
+              {v.coaches.map((k, i) => (
+                <View key={k.staffId} style={[styles.badge, i > 0 && styles.overlap, { borderColor: colors.card }]}>
+                  <Avatar name={look.nameOf(k.staffId, k.name)} size={20} color={look.colorOf(k.staffId)} />
+                </View>
+              ))}
+            </View>
           )}
-        </View>
-        {showCoach ? (
-          <T variant="small" tone="muted" numberOfLines={1}>
-            {group.coachName}
-          </T>
-        ) : null}
-        <View style={styles.students}>
-          {group.sessions.map((s) => {
-            const canceled = s.status === "canceled";
-            return (
-              <View key={s.id} style={styles.student}>
-                <View style={[styles.dot, { backgroundColor: status[s.status].bar }]} />
-                <T variant="small" numberOfLines={1} style={[styles.name, canceled && { color: colors.mutedForeground, textDecorationLine: "line-through" }]}>
-                  {s.studentName}
-                </T>
-                <T variant="small" tone="muted" numberOfLines={1} style={styles.note}>
-                  {[SESSION_STATUS_LABELS[s.status], s.note?.trim()].filter(Boolean).join(" · ")}
-                </T>
-              </View>
-            );
-          })}
+          {/* The seats taken say whether it's full or has room; a class on now says so. */}
+          {state === "In progress" ? (
+            <>
+              <View style={styles.spacer} />
+              <Badge tone="success">{state}</Badge>
+            </>
+          ) : null}
         </View>
       </View>
+      <ChevronRight size={16} color={colors.mutedForeground} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: "row", borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  edge: { width: 5 },
-  body: { flex: 1, paddingHorizontal: space.md, paddingVertical: space.md, gap: 2 },
-  head: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  grow: { flex: 1 },
-  students: { marginTop: space.xs, gap: 3 },
-  student: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  name: { flexShrink: 1, fontWeight: "500" },
-  note: { flexShrink: 1, marginLeft: "auto", textAlign: "right" },
-  live: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.full },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  row: { flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 60 },
+  times: { width: 64, alignSelf: "flex-start" },
+  figure: { fontVariant: ["tabular-nums"] },
+  grow: { flex: 1, gap: 6 },
+  faded: { opacity: 0.6 },
+  meta: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  badges: { flexDirection: "row" },
+  badge: { borderWidth: 1.5, borderRadius: radius.full },
+  overlap: { marginLeft: -6 },
+  shrink: { flexShrink: 1 },
+  spacer: { flex: 1 },
 });

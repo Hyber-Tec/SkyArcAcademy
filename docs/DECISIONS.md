@@ -514,8 +514,8 @@ homepage now … I'll actually test and verify from the live website".
   first. The owner uploads and submits; Claude Code prepares everything else, and runs the upload only when asked.
 - **The guides**: `docs/publishing.md` is the map ("should be just a summary to navigate which one to follow"), with
   step-by-step guides and their links in `docs/publishing/`: `apple/` (`app-store.md`, `testflight.md`, and
-  `rules.md`, the reasons behind the answers), `google-play/` (`account.md`, `testing.md`, `production.md`) and
-  `updates.md`. The texts to paste stay in `docs/store/`.
+  `rules.md`, the reasons behind the answers), `google-play/` (`testing.md`, `production.md`) and `updates.md`. The
+  texts to paste stay in `docs/store/`.
 - **Screenshots from the owner's iPhone** ("can't i just take screenshot from my iphone and just use that?"): eight of
   them, the families' first (a progress report, its target, Scores, Home), then the office's (Home, Schedule, Scan,
   Students). At 1179 × 2556 they are the 6.3-inch size Apple now requires; a 6.9-inch copy waits in case App Store
@@ -528,8 +528,9 @@ homepage now … I'll actually test and verify from the live website".
   Chat" Yes (neither changes the 9+ rating); the privacy answers add what coaches enter (their phone, address, birth
   date and availability), comments and what people opened. On Google Play the target audience includes the academy's
   youngest students, which puts the app under Google's Families policy (no ads or advertising ID, as already).
-- **Google Play account**: an organization account for HyberTec LLC is the recommendation (no two-week closed test);
-  the owner checks which kind HyberTec has (`docs/TODO.md`).
+- **Google Play account**: an organization account for HyberTec LLC was the recommendation (no two-week closed test).
+  **It is one** (the owner, 2026-10-26): HyberTec LLC's developer account is verified as an organization, so the
+  Android app goes from internal testing to the release with no closed test (`docs/publishing/google-play/`).
 
 ## 20. The academy's answers to the first email (2026-10-24)
 
@@ -587,6 +588,10 @@ modern, professional", without changing much more.
   their rifle code; make-ups, extra practice and trials in the sheets' label colours; open seats hatched. Day: the same
   classes larger, to mark who's here. Drag a student to an open seat to move them; open a class to change it. Fridays
   and Saturdays fold into one "closed" marker. **No Month view**: the academy plans a week at a time.
+- **The week runs Monday to Sunday** (Goo, the same day: "i want Monday to be first and sunday to be last"), as the
+  sheets do: the schedule's week on the website and the phone, Duplicate a week, Copy last week and the week's totals
+  (Settings → Schedule, "Weeks start on", now Monday by default). **Month calendars start on Sunday** ("that's how
+  calendar works"): every month view, the schedule's mini calendar and the date pickers (`CALENDAR_WEEK_START`).
 - **Gentler colours:** the sheets' own colours, lighter (Goo: "same colour, just lighter"), and a dark wash of each in
   dark mode (`shared/src/schedule/seatColors.ts`, for the phone too).
 - **A floating panel on the right** that closes and opens again (Esc, or the button in the header), like the schedule's

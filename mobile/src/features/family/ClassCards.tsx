@@ -5,16 +5,16 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
 import { T } from "@/components/Text";
-import type { ClassGroup } from "@/features/schedule/classes";
 import { duration, longDay, shortDay, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
 import { radius, space, useColors } from "@/theme";
+import type { FamilyClass } from "./classes";
 import { FamilyStatus } from "./FamilyStatus";
 import { useFamily } from "./FamilyProvider";
 import { hasEnded, isOnNow, namesList, relativeDay } from "./format";
 
 /**
- * A family's classes, as cards and rows. A class is one coach's students at one time (ClassGroup): a parent's children
- * in the same class share one row, each with their own status and note; a student sees their own.
+ * A family's classes, as cards and rows (FamilyClass): a parent's children in the same class share one row, each with
+ * their own status and note; a student sees their own. No coach: every coach in at its time teaches it.
  */
 
 interface When {
@@ -52,10 +52,11 @@ function NowPill() {
 }
 
 /**
- * One class in a list: its time (and the day in a tile, where the list has no day headings), the coach, and each of
- * the family's students in it with their status and the class's note ("Makeup for 10/12"). Tapping it opens the class.
+ * One class in a list: its time (and the day in a tile, where the list has no day headings), how long it is, and each
+ * of the family's students in it with their status and the class's note ("Makeup for 10/12"). Tapping it opens the
+ * class.
  */
-export function FamilyClassRow({ group, when, showDate = false, divider = false, onPress, testID }: { group: ClassGroup; when: When; showDate?: boolean; divider?: boolean; onPress: () => void; testID?: string }) {
+export function FamilyClassRow({ group, when, showDate = false, divider = false, onPress, testID }: { group: FamilyClass; when: When; showDate?: boolean; divider?: boolean; onPress: () => void; testID?: string }) {
   const colors = useColors();
   const { who, firstName, shown } = useFamily();
   // A child's name where more than one child shows.
@@ -67,7 +68,8 @@ export function FamilyClassRow({ group, when, showDate = false, divider = false,
   const names = group.sessions.map((s) => firstName(s.studentId, s.studentName));
   const off = group.active.length === 0;
   const note = single ? familyNote(only.note) : "";
-  const label = [shortDay(group.dateKey), timeRange(group.startMin, group.endMin, when.hour12), who === "parent" ? namesList(names) : null, `with ${group.coachName}`].filter(Boolean).join(", ");
+  const length = duration(group.endMin - group.startMin);
+  const label = [shortDay(group.dateKey), timeRange(group.startMin, group.endMin, when.hour12), length, who === "parent" ? namesList(names) : null].filter(Boolean).join(", ");
   return (
     <Pressable
       testID={testID}
@@ -87,7 +89,7 @@ export function FamilyClassRow({ group, when, showDate = false, divider = false,
           {single ? <FamilyStatus status={only.status} ended={ended} /> : null}
         </View>
         <T variant="small" tone="muted">
-          {[single && named ? names[0] : null, `with ${group.coachName}`].filter(Boolean).join(" · ")}
+          {[single && named ? names[0] : null, length].filter(Boolean).join(" · ")}
         </T>
         {note ? (
           <T variant="small" tone="muted">
@@ -121,10 +123,10 @@ export function FamilyClassRow({ group, when, showDate = false, divider = false,
 }
 
 /**
- * The next class, large: when (today's with how long until it starts, or how long is left), the time, the coach, and
- * each of the family's students in it with their status and the class's note. Tapping it opens the class.
+ * The next class, large: when (today's with how long until it starts, or how long is left), the time and how long it
+ * is, and each of the family's students in it with their status and the class's note. Tapping it opens the class.
  */
-export function NextClassCard({ group, when, onPress, testID }: { group: ClassGroup; when: When; onPress: () => void; testID?: string }) {
+export function NextClassCard({ group, when, onPress, testID }: { group: FamilyClass; when: When; onPress: () => void; testID?: string }) {
   const colors = useColors();
   const { who, firstName } = useFamily();
   const near = relativeDay(group.dateKey, when.today);
@@ -134,7 +136,7 @@ export function NextClassCard({ group, when, onPress, testID }: { group: ClassGr
   const names = group.sessions.map((s) => firstName(s.studentId, s.studentName));
   const time = timeRange(group.startMin, group.endMin, when.hour12);
   return (
-    <Card onPress={onPress} testID={testID} accessibilityLabel={[label, time, who === "parent" ? namesList(names) : null, `with ${group.coachName}`, soon].filter(Boolean).join(", ")} style={styles.card}>
+    <Card onPress={onPress} testID={testID} accessibilityLabel={[label, time, duration(group.endMin - group.startMin), who === "parent" ? namesList(names) : null, soon].filter(Boolean).join(", ")} style={styles.card}>
       <View style={styles.line}>
         <T variant="small" numberOfLines={1} style={[styles.when, { color: group.dateKey === when.today ? colors.brandText : colors.mutedForeground }]}>
           {label.toUpperCase()}
@@ -148,9 +150,7 @@ export function NextClassCard({ group, when, onPress, testID }: { group: ClassGr
       <T variant="title" style={styles.time} numberOfLines={1} adjustsFontSizeToFit>
         {time}
       </T>
-      <T tone="muted">
-        with {group.coachName} · {duration(group.endMin - group.startMin)}
-      </T>
+      <T tone="muted">{duration(group.endMin - group.startMin)}</T>
       {who === "student" ? (
         group.sessions.map((s) => {
           const note = familyNote(s.note);

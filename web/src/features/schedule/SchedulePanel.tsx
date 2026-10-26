@@ -63,7 +63,6 @@ export function SchedulePanel(p: {
           variant="compact"
           anchor={p.date}
           focusDate={p.date}
-          weekStartsOn={p.weekStartsOn}
           className="h-60"
           renderDay={(d) => {
             const on = active(d)

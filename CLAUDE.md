@@ -149,6 +149,8 @@ Carried over from HyberCRM, adapted to one academy:
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say
   what will happen.
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
+  Their weeks start on Sunday, as calendars do (`CALENDAR_WEEK_START`); the academy's week, the schedule's, runs Monday
+  to Sunday (`settings.general.weekStartsOn`; `docs/DECISIONS.md` §21).
 - **Language:** English for now. Keep text in the code, never in images, so the translation pass (several languages, not
   only Korean) can come later.
 - **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logos are fixed in the code ("Brand and logos" below); Settings can't change them.

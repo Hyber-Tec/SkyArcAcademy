@@ -1,6 +1,5 @@
-import { type DateKey, addDays } from "@shared/time";
 import { router } from "expo-router";
-import { CalendarClock, CalendarX2, ChevronRight, CircleCheck, type LucideIcon, Megaphone } from "lucide-react-native";
+import { CalendarClock, ChevronRight, CircleCheck, type LucideIcon, Megaphone } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SectionTitle } from "@/components/SectionTitle";
@@ -8,7 +7,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { postedDay } from "@/features/announcements/format";
 import { useAcademyNow } from "@/features/data/hooks";
-import { clock, listWords, longDay, plural, shortDay, timeRange } from "@/features/schedule/format";
+import { longDay, plural, timeRange } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 import { useCoachToDo } from "./useCoachToDo";
@@ -25,10 +24,9 @@ interface Item {
 }
 
 /**
- * A coach's to-do on Home, as the website's coach Home has it: their classes waiting for the admin (something changed
- * since they were booked), the open days in their notice still to answer on the Availability tab, and the posts they
- * haven't read. Each line opens the place to do it: the class, that day of their availability, the post. When there's
- * nothing, it says they're all caught up.
+ * A coach's to-do on Home, as the website's coach Home has it: the open days in their notice still to answer on the
+ * Availability tab, and the posts they haven't read. Each line opens the place to do it: that day of their
+ * availability, the post. When there's nothing, it says they're all caught up.
  */
 export function ToDoCard() {
   const { settings, timezone, name } = useBranch();
@@ -36,8 +34,7 @@ export function ToDoCard() {
   const { today } = useAcademyNow();
   const t = useCoachToDo();
   const hour12 = settings.general.timeFormat !== "24h";
-  const day = (d: DateKey) => (d === today ? "Today" : d === addDays(today, 1) ? "Tomorrow" : shortDay(d));
-  const { waiting, gaps, unread, total } = t;
+  const { gaps, unread, total } = t;
   const lead = settings.availability.leadTimeDays;
   const lock = settings.availability.lockWindowDays;
 
@@ -59,38 +56,14 @@ export function ToDoCard() {
             <View style={styles.grow}>
               <T variant="label">You’re all caught up</T>
               <T variant="small" tone="muted">
-                {settings.availability.leadTimeEnforcement === "off"
-                  ? "No class is waiting for the admin, and you’ve read every post."
-                  : "Your availability is set and you’ve read every post."}
+                {settings.availability.leadTimeEnforcement === "off" ? "You’ve read every post." : "Your availability is set and you’ve read every post."}
               </T>
             </View>
           </View>
         ) : (
           <>
-            {waiting.length ? (
-              <Group
-                icon={CalendarX2}
-                tint={colors.destructiveTint}
-                color={colors.destructive}
-                title={`${plural(waiting.length, "class", "classes")} waiting for the admin`}
-                subtitle={
-                  waiting.length === 1
-                    ? "Something changed since it was booked. Don’t count on it until the admin moves, reassigns or cancels it."
-                    : "Something changed since they were booked. Don’t count on them until the admin moves, reassigns or cancels them."
-                }
-                items={waiting.map(({ group: g, reason }) => ({
-                  key: g.id,
-                  title: listWords(g.sessions.map((s) => s.studentName)),
-                  detail: `${day(g.dateKey)}, ${clock(g.startMin, hour12)}${reason ? ` · ${reason}` : ""}`,
-                  onPress: () => router.push({ pathname: "/class/[id]", params: { id: g.id } }),
-                  testID: `today-todo-class-${g.id}`,
-                }))}
-                testID="today-todo-waiting"
-              />
-            ) : null}
             {gaps.length ? (
               <Group
-                divider={waiting.length > 0}
                 icon={CalendarClock}
                 tint={colors.warningTint}
                 color={colors.warning}
@@ -113,7 +86,7 @@ export function ToDoCard() {
             ) : null}
             {unread.length ? (
               <Group
-                divider={waiting.length + gaps.length > 0}
+                divider={gaps.length > 0}
                 icon={Megaphone}
                 tint={colors.infoTint}
                 color={colors.info}

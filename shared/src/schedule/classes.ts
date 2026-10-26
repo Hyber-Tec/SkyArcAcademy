@@ -1,7 +1,7 @@
 import { effectiveRanges } from '../availability'
 import type { DayHours } from '../settings/defaults'
 import { type DateKey, parseDateKey } from '../time'
-import type { AcademyClass, Availability, AvailabilityRange, Session } from '../types'
+import type { AcademyClass, Availability, AvailabilityRange, Session, WithId } from '../types'
 
 /**
  * Classes taught together (docs/DECISIONS.md §21): a class is one time on one day with its seats, every coach in at that
@@ -37,7 +37,8 @@ export function openSeats(c: Pick<AcademyClass, 'seats'>, seats: readonly Pick<S
 }
 
 type ClassTime = Pick<AcademyClass, 'dateKey' | 'startMin' | 'endMin'>
-type DayRecord = Pick<Availability, 'staffId' | 'dateKey' | 'ranges' | 'unavailable'> & Partial<Pick<Availability, 'staffName' | 'staffRole'>>
+/** Someone's hours on a day (their availability record), as who's in reads it. */
+export type DayRecord = Pick<Availability, 'staffId' | 'dateKey' | 'ranges' | 'unavailable'> & Partial<Pick<Availability, 'staffName' | 'staffRole'>>
 
 /** A coach teaching a class: their hours that day that overlap it. */
 export interface ClassCoach {
@@ -63,6 +64,70 @@ export function coachesIn(c: ClassTime, day: readonly DayRecord[], hours: DayHou
     out.push({ staffId: a.staffId, name: a.staffName ?? '', ranges, partial: uncovered(c, ranges).length > 0 })
   }
   return out.sort((a, b) => a.ranges[0].startMin - b.ranges[0].startMin || a.name.localeCompare(b.name))
+}
+
+/** A class as the schedule shows it: its seats (canceled ones too, in the order booked), and who teaches it. */
+export interface ClassView {
+  c: WithId<AcademyClass>
+  seats: WithId<Session>[]
+  /** Seats in use (a canceled student frees theirs). */
+  taken: number
+  coaches: ClassCoach[]
+}
+
+const stamp = (t: unknown) => (t && typeof t === 'object' && 'toMillis' in t ? (t as { toMillis: () => number }).toMillis() : 0)
+
+/**
+ * Classes as the website's schedule and Home and the phone app read them: each with its students (in the order booked)
+ * and the coaches in at its time, by date, earliest first. `isCoach` says who teaches (the manager can be in without
+ * teaching). Classes and students in the Trash are left out, and so are students from before classes were taught
+ * together (no class).
+ */
+export function classViews(
+  classes: readonly WithId<AcademyClass>[],
+  seats: readonly WithId<Session>[],
+  availability: readonly DayRecord[],
+  hoursOf: (dateKey: DateKey) => DayHours,
+  isCoach?: (staffId: string) => boolean,
+): Map<DateKey, ClassView[]> {
+  const seatsOf = new Map<string, WithId<Session>[]>()
+  for (const s of seats) {
+    if (s.isDeleted || !s.classId) continue
+    const list = seatsOf.get(s.classId)
+    if (list) list.push(s)
+    else seatsOf.set(s.classId, [s])
+  }
+  const dayOf = new Map<DateKey, DayRecord[]>()
+  for (const a of availability) {
+    const list = dayOf.get(a.dateKey)
+    if (list) list.push(a)
+    else dayOf.set(a.dateKey, [a])
+  }
+  const out = new Map<DateKey, ClassView[]>()
+  for (const c of classes) {
+    if (c.isDeleted) continue
+    const list = (seatsOf.get(c.id) ?? []).sort((a, b) => (a.visualOrder ?? 0) - (b.visualOrder ?? 0) || stamp(a.createdAt) - stamp(b.createdAt))
+    const view: ClassView = { c, seats: list, taken: list.filter(takesSeat).length, coaches: coachesIn(c, dayOf.get(c.dateKey) ?? [], hoursOf(c.dateKey), isCoach) }
+    const day = out.get(c.dateKey)
+    if (day) day.push(view)
+    else out.set(c.dateKey, [view])
+  }
+  for (const list of out.values()) list.sort((a, b) => a.c.startMin - b.c.startMin || a.c.endMin - b.c.endMin)
+  return out
+}
+
+/**
+ * A class's cells as the sheet keeps them: every seat in its place, a canceled one too (it frees its seat, so it shows
+ * faded where the student was), then the open seats. When canceled seats would overflow the class (it's been
+ * refilled), the latest ones leave the grid for a line below.
+ */
+export function cellsOf<S extends Pick<Session, 'status'>>(seats: readonly S[], capacity: number): { cells: S[]; open: number; overflow: S[] } {
+  const live = seats.filter((s) => s.status !== 'canceled').length
+  const off = seats.filter((s) => s.status === 'canceled')
+  const extra = Math.max(0, live + off.length - capacity)
+  const overflow = extra ? off.slice(off.length - extra) : []
+  const cells = seats.filter((s) => !overflow.includes(s))
+  return { cells, open: Math.max(0, capacity - cells.length), overflow }
 }
 
 /** The parts of a class nobody covers, given everyone's hours. */

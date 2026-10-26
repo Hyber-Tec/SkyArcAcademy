@@ -22,7 +22,7 @@ import { useFamilyNews, useIsNewNews } from "@/features/family/news";
 import { NewsRow } from "@/features/family/NewsRow";
 import { ReportRow } from "@/features/family/ReportRow";
 import { ScoreRow } from "@/features/family/ScoreRow";
-import { classIdOf, groupClasses } from "@/features/schedule/classes";
+import { familyClassId, familyClasses } from "@/features/family/classes";
 import { longDay, plural } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
@@ -45,7 +45,7 @@ const LATEST_NEWS = 3;
 
 /**
  * The family's first page (the app opens here): a greeting with the date; each student's next class (a parent's
- * children in the same class share a card) with the coach, its status and the class's note; the rest of this week (or
+ * children in the same class share a card) with its status and the class's note; the rest of this week (or
  * next week's, once this one has nothing left); the academy's latest news for families (when it has any; all of it on
  * the News page); the latest scores (each opens its own screen; all of them are a tab away); the latest shared progress
  * report; attendance over the last 30 days; and how to reach the academy. A parent with several children picks All or
@@ -74,15 +74,15 @@ export default function FamilyHomeScreen() {
   // class join its card.
   const nextOf = new Map<string, SessionDoc>();
   for (const s of coming) if (s.status !== "canceled" && !nextOf.has(s.studentId)) nextOf.set(s.studentId, s);
-  const nextClassIds = new Set([...nextOf.values()].map(classIdOf));
-  const nextGroups = groupClasses(coming.filter((s) => nextClassIds.has(classIdOf(s))));
+  const nextClassIds = new Set([...nextOf.values()].map(familyClassId));
+  const nextGroups = familyClasses(coming.filter((s) => nextClassIds.has(familyClassId(s))));
   const nothingFor = family.shown.filter((id) => !nextOf.has(id));
 
   // The rest of this week after those, or next week's once this one has nothing left.
   const weekEnd = weekDays(today, settings.general.weekStartsOn)[6];
-  const after = coming.filter((s) => !nextClassIds.has(classIdOf(s)));
-  const thisWeek = groupClasses(after.filter((s) => s.dateKey <= weekEnd));
-  const nextWeek = groupClasses(after.filter((s) => s.dateKey > weekEnd && s.dateKey <= addDays(weekEnd, 7)));
+  const after = coming.filter((s) => !nextClassIds.has(familyClassId(s)));
+  const thisWeek = familyClasses(after.filter((s) => s.dateKey <= weekEnd));
+  const nextWeek = familyClasses(after.filter((s) => s.dateKey > weekEnd && s.dateKey <= addDays(weekEnd, 7)));
   const week = thisWeek.length ? { title: "Rest of this week", list: thisWeek } : nextWeek.length ? { title: "Next week", list: nextWeek } : null;
 
   // The newest shared report of each student shown.

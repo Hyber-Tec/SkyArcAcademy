@@ -143,16 +143,5 @@ export function useDropTarget(v: ClassView) {
   }
 }
 
-/**
- * A class's cells as the sheet keeps them: every seat in its place, a canceled one too (it frees its seat, so it shows
- * faded where the student was), then the open seats. When canceled seats would overflow the class (it's been
- * refilled), the latest ones leave the grid for a line below.
- */
-export function cellsOf(seats: readonly WithId<Session>[], capacity: number): { cells: WithId<Session>[]; open: number; overflow: WithId<Session>[] } {
-  const live = seats.filter((s) => s.status !== 'canceled').length
-  const off = seats.filter((s) => s.status === 'canceled')
-  const extra = Math.max(0, live + off.length - capacity)
-  const overflow = extra ? off.slice(off.length - extra) : []
-  const cells = seats.filter((s) => !overflow.includes(s))
-  return { cells, open: Math.max(0, capacity - cells.length), overflow }
-}
+/** A class's cells as the sheet keeps them (shared with the phone app). */
+export { cellsOf } from '@shared/schedule/classes'

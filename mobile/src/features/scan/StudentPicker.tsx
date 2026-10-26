@@ -1,4 +1,5 @@
 import { studentLabel } from "@shared/people";
+import { takesSeat } from "@shared/schedule/classes";
 import { formatTimeRange } from "@shared/time";
 import { Search } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -7,8 +8,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
-import { type StudentDoc, useAcademyNow, useSessionsBetween, useStudentList } from "@/features/data/hooks";
-import { groupClasses } from "@/features/schedule/classes";
+import { type StudentDoc, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
+import { firstName } from "@/features/schedule/classes";
+import { listWords } from "@/features/schedule/format";
+import { useStaffLook } from "@/features/schedule/parts";
 import { radius, space, useColors } from "@/theme";
 
 export interface PickedStudent {
@@ -17,8 +20,8 @@ export interface PickedStudent {
 }
 
 /**
- * Who shot the card: today's classes first (the one on now, or that just ended, at the top), each with its students,
- * then everyone, with a search. Finished students show only when searched for.
+ * Who shot the card: today's classes first (the one on now, or that just ended, at the top), each with its time, the
+ * coaches in and its students, then everyone, with a search. Finished students show only when searched for.
  */
 export function StudentPicker({
   open,
@@ -35,16 +38,17 @@ export function StudentPicker({
   const colors = useColors();
   const { today, nowMin } = useAcademyNow();
   const { data: students } = useStudentList();
-  const { data: sessions } = useSessionsBetween(today, today);
+  const day = useClassesBetween(today);
+  const look = useStaffLook();
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
 
   const classes = useMemo(() => {
-    const list = groupClasses(sessions).filter((c) => c.active.length);
+    const list = (day.byDate.get(today) ?? []).map((v) => ({ c: v.c, coaches: v.coaches, here: v.seats.filter(takesSeat) })).filter((x) => x.here.length);
     // The class on now or the latest one that ended, then the rest in time order.
-    const score = (c: (typeof list)[number]) => (c.startMin <= nowMin && c.endMin + 60 >= nowMin ? 0 : c.endMin < nowMin ? 1 : 2);
-    return list.sort((a, b) => score(a) - score(b) || (score(a) === 1 ? b.endMin - a.endMin : a.startMin - b.startMin));
-  }, [sessions, nowMin]);
+    const score = (x: (typeof list)[number]) => (x.c.startMin <= nowMin && x.c.endMin + 60 >= nowMin ? 0 : x.c.endMin < nowMin ? 1 : 2);
+    return list.sort((a, b) => score(a) - score(b) || (score(a) === 1 ? b.c.endMin - a.c.endMin : a.c.startMin - b.c.startMin));
+  }, [day.byDate, today, nowMin]);
 
   const everyone = useMemo(
     () => students.filter((s) => (q ? s.nameLower.includes(q) || s.name.toLowerCase().includes(q) : s.status !== "finished")),
@@ -90,9 +94,9 @@ export function StudentPicker({
                     <ListRow title={recent.name} onPress={() => pick(recent)} testID={`pick-recent-${recent.id}`} />
                   </ListSection>
                 ) : null}
-                {classes.slice(0, 4).map((c) => (
-                  <ListSection key={c.id} title={`${formatTimeRange(c.startMin, c.endMin)} · ${c.coachName}`}>
-                    {c.active.map((s) => (
+                {classes.slice(0, 4).map(({ c, coaches, here }) => (
+                  <ListSection key={c.id} title={[formatTimeRange(c.startMin, c.endMin), coaches.length ? listWords(coaches.map((k) => firstName(look.nameOf(k.staffId, k.name)))) : null].filter(Boolean).join(" · ")}>
+                    {here.map((s) => (
                       <ListRow
                         key={s.id}
                         title={s.studentName}

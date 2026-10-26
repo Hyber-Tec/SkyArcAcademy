@@ -215,6 +215,7 @@ The commands say in plain words what is wrong when they know it, and what to do.
 | "The practice copy didn't start" | Run it again. If it still fails: "the practice copy won't start" to Claude Code. |
 | The Android emulator stays black, or "didn't finish starting" | Close its window and run the command again. |
 | "signed differently" when installing on an Android phone | Delete Sky Arc from the phone, then run `npm run android` again. |
+| "Generate app.config for prebuilt Constants.manifest" failed, "No such file or directory" and a path cut at a space | The iPhone build can't run from a folder whose path has a space (`Sky Arc Academy`): one of Expo's build scripts doesn't quote it. Clone the repository into a folder without spaces (`git clone … SkyArcAcademy`) and run the command there. |
 
 ## What a simulator cannot do
 

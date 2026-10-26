@@ -1,47 +1,57 @@
+import { gradeLabel } from "@shared/people";
+import type { SessionStatus } from "@shared/settings/defaults";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { CalendarDays, ExternalLink, X } from "lucide-react-native";
+import { CalendarDays, ChevronRight, ExternalLink, StickyNote, X } from "lucide-react-native";
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { formatPhone, gradeLabel } from "@shared/people";
-import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
-import { ContactButtons } from "@/components/ContactButtons";
+import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { Hatch } from "@/components/Hatch";
 import { IconButton } from "@/components/IconButton";
 import { ListRow, ListSection } from "@/components/List";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { useSessionsBetween, useStaff, useStudentList } from "@/features/data/hooks";
-import { groupClasses, parseClassId } from "@/features/schedule/classes";
-import { duration, longDay, plural, timeRange } from "@/features/schedule/format";
-import { studentLine } from "@/features/students/format";
+import { type SessionDoc, type StudentDoc, useAcademyClass, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
+import { setSeatStatus } from "@/features/schedule/api";
+import { type ClassView, isOnNow, isOver, levelsOf, ownTime } from "@/features/schedule/classes";
+import { duration, longDay, plural, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
+import { KindTag, LevelChip, SeatCount, plainNote, useStaffLook } from "@/features/schedule/parts";
 import { openWebsite } from "@/lib/links";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useStatusColors } from "@/theme";
 
+/** The marks, in the sheets' words: here and no-show belong to the day of the class (a class next week has nothing to mark yet). */
+const MARK: Record<SessionStatus, string> = { pending: "Coming", confirmed: "Coming", present: "Here", no_show: "No-show", canceled: "Canceled" };
+const ALL_MARKS: SessionStatus[] = ["confirmed", "present", "no_show", "canceled"];
+const AHEAD_MARKS: SessionStatus[] = ["confirmed", "canceled"];
+
 /**
- * A class, over the screen it was opened from (a sheet; loaded from its id, so a link opens it too): when, the coach
- * with a call or a text away (for the office; a coach's classes are their own), and each student with their status, the
- * class's note and their page. Changes are made on the website.
+ * A class, over the screen it was opened from (a sheet, loaded by the class's ID, so a link opens it too), as the
+ * website's class sheet: when, its levels and seats taken; the coaches in at its time (who's in, every one of them
+ * teaching it; the office opens a coach's page from here); the note for the coaches; and its students in their level's
+ * colour with the rifle code and their label. The office marks each student as the website does (Coming, Here and
+ * No-show on the day, Canceled), on today and the days ahead; other changes are made on the website.
  */
 export default function ClassSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const parsed = parseClassId(id ?? "");
-  const { settings, isCoach } = useBranch();
+  const { settings, isAdmin, isCoach, staffId, branchId, actor } = useBranch();
   const colors = useColors();
-  const statusColors = useStatusColors();
   const hour12 = settings.general.timeFormat !== "24h";
-  const day = parsed?.dateKey ?? "1970-01-01";
-  const sessions = useSessionsBetween(day, day);
-  const coach = useStaff(parsed?.coachId ?? null);
+  const { today, nowMin } = useAcademyNow();
+  const record = useAcademyClass(id ?? null);
+  const day = record.data?.dateKey ?? null;
+  const data = useClassesBetween(day);
+  const look = useStaffLook();
   const students = useStudentList();
   const studentById = useMemo(() => new Map(students.data.map((s) => [s.id, s])), [students.data]);
-  const group = useMemo(() => groupClasses(sessions.data).find((g) => g.id === decodeURIComponent(id ?? "")) ?? null, [sessions.data, id]);
+  const v = day ? ((data.byDate.get(day) ?? []).find((x) => x.c.id === id) ?? null) : null;
   const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
-  if (parsed && sessions.loading) {
+  if (record.loading || (day && data.loading)) {
     return (
       <View style={[styles.fill, { backgroundColor: colors.grouped }]} testID="class-sheet">
         <View style={styles.content}>
@@ -53,13 +63,13 @@ export default function ClassSheet() {
       </View>
     );
   }
-  if (!parsed || !group) {
+  if (!v) {
     return (
       <View style={[styles.fill, { backgroundColor: colors.grouped }]} testID="class-sheet">
         <EmptyState
           icon={<CalendarDays size={26} color={colors.mutedForeground} />}
           title="This class isn’t on the schedule"
-          text="It may have been moved or deleted on the website."
+          text="It may have been removed on the website."
           action={
             <Button variant="outline" onPress={close} testID="class-close">
               Close
@@ -70,67 +80,226 @@ export default function ClassSheet() {
     );
   }
 
-  const coachName = coach.data?.name || group.coachName;
+  const { c } = v;
+  const me = isCoach ? staffId : null;
+  // The rules let the office change a seat until its day is over.
+  const editable = isAdmin && c.dateKey >= today;
+  const marks = c.dateKey <= today ? ALL_MARKS : AHEAD_MARKS;
+  // Canceled students last: they free their seat.
+  const seats = [...v.seats].sort((a, b) => Number(a.status === "canceled") - Number(b.status === "canceled"));
+  const levels = levelsOf(v, (sid) => studentById.get(sid)?.level);
+  const live = isOnNow(v, today, nowMin);
+  const soon = c.dateKey === today && !isOver(v, today, nowMin) ? (live ? `On now · ${timeLeft(c.endMin - nowMin)}` : `Starts ${startsIn(c.startMin - nowMin)}`) : null;
+  const open = Math.max(0, c.seats - v.taken);
+
   return (
     <ScrollView style={[styles.fill, { backgroundColor: colors.grouped }]} contentContainerStyle={styles.content} testID="class-sheet">
       <View style={styles.top}>
         <View style={styles.grow}>
-          <T variant="title" accessibilityRole="header">
-            {timeRange(group.startMin, group.endMin, hour12)}
+          <T variant="title" accessibilityRole="header" testID="class-time">
+            {timeRange(c.startMin, c.endMin, hour12)}
           </T>
           <T tone="muted">
-            {longDay(group.dateKey)} · {duration(group.endMin - group.startMin)}
+            {longDay(c.dateKey)} · {duration(c.endMin - c.startMin)}
           </T>
+          {soon ? (
+            <T variant="small" style={{ color: colors.brandText, fontWeight: "600" }}>
+              {soon}
+            </T>
+          ) : null}
         </View>
         <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} filled testID="class-close" />
       </View>
+      <View style={styles.levels}>
+        {levels.map((l) => (
+          <LevelChip key={l} level={l} />
+        ))}
+        <View style={styles.grow} />
+        <SeatCount used={v.taken} of={c.seats} />
+      </View>
 
-      {isCoach ? null : (
-        <ListSection title="Coach">
-          <ListRow
-            icon={<Avatar name={coachName} size={38} color={coach.data?.color} />}
-            title={coachName}
-            subtitle={coach.data?.phone ? formatPhone(coach.data.phone) : (coach.data?.email ?? undefined)}
-            right={<ContactButtons phone={coach.data?.phone} email={coach.data?.email} name={coachName} />}
-            chevron={false}
-            onPress={() => router.push({ pathname: "/coach/[id]", params: { id: group.coachId } })}
-            testID="class-coach"
-          />
+      {v.coaches.length ? (
+        <ListSection title="Coaches" detail={plural(v.coaches.length, "coach", "coaches")} testID="class-coaches">
+          {v.coaches.map((k) => {
+            const name = look.nameOf(k.staffId, k.name);
+            const r = k.ranges;
+            const sub = k.partial
+              ? `Only ${timeRange(Math.max(r[0].startMin, c.startMin), Math.min(r[r.length - 1].endMin, c.endMin), hour12)}`
+              : `In ${r.map((x) => timeRange(x.startMin, x.endMin, hour12)).join(", ")}`;
+            return (
+              <ListRow
+                key={k.staffId}
+                icon={<Avatar name={name} size={36} color={look.colorOf(k.staffId)} />}
+                title={k.staffId === me ? `${name} (you)` : name}
+                subtitle={
+                  <T variant="small" style={{ color: k.partial ? colors.warning : colors.mutedForeground, fontWeight: k.partial ? "600" : "400" }}>
+                    {sub}
+                  </T>
+                }
+                // The office opens a coach's page (their phone and email); coaches can't read each other's records.
+                onPress={isAdmin ? () => router.push({ pathname: "/coach/[id]", params: { id: k.staffId } }) : undefined}
+                testID={`class-coach-${k.staffId}`}
+              />
+            );
+          })}
         </ListSection>
+      ) : (
+        <Card style={[styles.warn, { backgroundColor: colors.warningTint, borderColor: colors.warningTint }]} testID="class-no-coach">
+          <T variant="label" style={{ color: colors.warning }}>
+            No coach is in at this time
+          </T>
+          <T variant="small" tone="muted">
+            {isAdmin ? "Set who’s in on the website’s schedule." : "The office sets who’s in; your own hours are on the Availability tab."}
+          </T>
+        </Card>
       )}
 
-      <ListSection title="Students" detail={plural(group.active.length, "student")} testID="class-students">
-        {group.sessions.map((s) => {
-          const student = studentById.get(s.studentId);
-          const line = [student ? studentLine(student) : s.studentGrade ? gradeLabel(s.studentGrade) : "", s.note?.trim()].filter(Boolean).join(" · ");
-          const tone = statusColors[s.status];
-          return (
-            <ListRow
-              key={s.id}
-              icon={<Avatar name={s.studentName} size={38} />}
-              title={s.studentName}
-              subtitle={line || undefined}
-              right={
-                <Badge bg={tone.bg} fg={tone.text}>
-                  {SESSION_STATUS_LABELS[s.status]}
-                </Badge>
-              }
-              onPress={() => router.push({ pathname: "/student/[id]", params: { id: s.studentId } })}
-              testID={`class-student-${s.studentId}`}
-            />
-          );
-        })}
+      {c.note?.trim() ? (
+        <ListSection title="Note for the coaches" testID="class-note">
+          <View style={styles.noteRow}>
+            <StickyNote size={16} color={colors.mutedForeground} />
+            <T style={styles.grow}>{c.note.trim()}</T>
+          </View>
+        </ListSection>
+      ) : null}
+
+      <ListSection title="Students" detail={`${v.taken} of ${plural(c.seats, "seat")}`} footer={editable ? "Marks save at once, as on the website." : undefined} testID="class-students">
+        {[
+          ...seats.map((s) => (
+            <SeatRow key={s.id} seat={s} v={v} student={studentById.get(s.studentId)} hour12={hour12} marks={editable ? marks : null} onMark={(status) => setSeatStatus(branchId, actor, s, status)} />
+          )),
+          ...(open ? [<OpenSeats key="open" count={open} />] : []),
+          ...(!seats.length && !open ? [<ListRow key="none" title="No students" />] : []),
+        ]}
       </ListSection>
 
       <Button
         variant="outline"
         icon={<ExternalLink size={18} color={colors.foreground} />}
-        onPress={() => void openWebsite(isCoach ? "/coach/schedule" : `/admin/schedule/day/${group.dateKey}`)}
+        onPress={() => void openWebsite(`/${isAdmin ? "admin" : "coach"}/schedule/day/${c.dateKey}?class=${c.id}`)}
         testID="class-open-website"
       >
-        Open the day on the website
+        {isAdmin ? "Change it on the website" : "Open on the website"}
       </Button>
     </ScrollView>
+  );
+}
+
+/**
+ * A student in the class: their name and grade, their level in its colour with the rifle code, the label ("MU for
+ * 10/13", "Trial 1") and their own time when they're in for part of it; then their mark: buttons for the office, or
+ * what it is. Tapping the name opens the student.
+ */
+function SeatRow({
+  seat,
+  v,
+  student,
+  hour12,
+  marks,
+  onMark,
+  divider = false,
+}: {
+  seat: SessionDoc;
+  v: ClassView;
+  student: StudentDoc | undefined;
+  hour12: boolean;
+  /** The marks the office can set; null: read-only. */
+  marks: SessionStatus[] | null;
+  onMark: (status: SessionStatus) => void;
+  divider?: boolean;
+}) {
+  const colors = useColors();
+  const status = useStatusColors();
+  const canceled = seat.status === "canceled";
+  const grade = student?.grade ?? seat.studentGrade;
+  const note = plainNote(seat.note);
+  const own = ownTime(seat, v) ? timeRange(seat.startMin, seat.endMin, hour12) : null;
+  const shown: SessionStatus = seat.status === "pending" ? "confirmed" : seat.status;
+  return (
+    <View style={[styles.seat, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID={`class-student-${seat.studentId}`}>
+      <Pressable
+        onPress={() => router.push({ pathname: "/student/[id]", params: { id: seat.studentId } })}
+        accessibilityRole="button"
+        accessibilityLabel={[seat.studentName, grade ? gradeLabel(grade) : null, student?.level ?? "no level yet", student?.rifle ? `rifle ${student.rifle}` : null, (seat.note ?? "").trim() || null, own, MARK[seat.status]].filter(Boolean).join(", ")}
+        accessibilityHint="Opens the student"
+        style={({ pressed }) => [styles.seatHead, pressed && styles.pressed]}
+      >
+        <View style={[styles.grow, canceled && styles.faded]}>
+          <View style={styles.nameLine}>
+            <T variant="label" style={[styles.shrink, canceled && styles.struck]} numberOfLines={1}>
+              {seat.studentName}
+            </T>
+            {grade ? (
+              <T variant="small" tone="muted">
+                {gradeLabel(grade)}
+              </T>
+            ) : null}
+          </View>
+          <View style={styles.tags}>
+            <LevelChip level={student?.level} rifle={student?.rifle} />
+            <KindTag note={seat.note} />
+            {own ? (
+              <T variant="tiny" tone="muted" style={styles.figure}>
+                {own}
+              </T>
+            ) : null}
+            {note ? (
+              <T variant="tiny" tone="muted" numberOfLines={1} style={styles.shrink}>
+                {note}
+              </T>
+            ) : null}
+          </View>
+        </View>
+        {!marks && (seat.status === "present" || seat.status === "no_show" || seat.status === "canceled") ? (
+          <Badge bg={status[seat.status].bg} fg={status[seat.status].text}>
+            {MARK[seat.status]}
+          </Badge>
+        ) : null}
+        <ChevronRight size={16} color={colors.mutedForeground} />
+      </Pressable>
+      {marks ? (
+        <View style={styles.marks} accessibilityRole="radiogroup" accessibilityLabel={`Mark ${seat.studentName}`}>
+          {marks.map((m) => {
+            const on = shown === m;
+            const tone = m === "canceled" ? { bg: colors.destructiveTint, fg: colors.destructive } : m === "present" ? { bg: colors.successTint, fg: colors.success } : { bg: colors.secondary, fg: colors.foreground };
+            return (
+              <Pressable
+                key={m}
+                onPress={() => {
+                  if (on) return;
+                  void Haptics.selectionAsync().catch(() => undefined);
+                  onMark(m);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={MARK[m]}
+                style={({ pressed }) => [styles.mark, { borderColor: on ? tone.fg : colors.border, backgroundColor: on ? tone.bg : "transparent" }, pressed && !on && { backgroundColor: colors.accent }]}
+                testID={`class-mark-${seat.studentId}-${m}`}
+              >
+                <T variant="small" style={{ color: on ? tone.fg : colors.mutedForeground, fontWeight: on ? "700" : "500" }} numberOfLines={1}>
+                  {MARK[m]}
+                </T>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** The seats still free, hatched as the sheets blacken them. */
+function OpenSeats({ count, divider = false }: { count: number; divider?: boolean }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.openRow, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID="class-open-seats">
+      <View style={[styles.openBox, { borderColor: colors.border }]}>
+        <Hatch />
+        <T variant="small" tone="muted" style={styles.openText}>
+          {plural(count, "open seat")}
+        </T>
+      </View>
+    </View>
   );
 }
 
@@ -139,4 +308,21 @@ const styles = StyleSheet.create({
   content: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl * 2 },
   top: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   grow: { flex: 1, gap: 2 },
+  shrink: { flexShrink: 1 },
+  levels: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: -space.sm },
+  warn: { gap: 2 },
+  noteRow: { flexDirection: "row", alignItems: "flex-start", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.md },
+  seat: { paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
+  seatHead: { flexDirection: "row", alignItems: "center", gap: space.md },
+  pressed: { opacity: 0.6 },
+  faded: { opacity: 0.6 },
+  nameLine: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  struck: { textDecorationLine: "line-through" },
+  tags: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, marginTop: 3 },
+  figure: { fontVariant: ["tabular-nums"] },
+  marks: { flexDirection: "row", gap: 6 },
+  mark: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 34, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: 4 },
+  openRow: { padding: space.md },
+  openBox: { height: 40, borderRadius: radius.md, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  openText: { fontWeight: "500" },
 });

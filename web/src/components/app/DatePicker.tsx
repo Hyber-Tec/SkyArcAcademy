@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { LuCalendar, LuX } from 'react-icons/lu'
-import { type DateKey, type Weekday, formatDateKey, todayKey } from '@shared/time'
+import { type DateKey, formatDateKey, todayKey } from '@shared/time'
 import { useOptionalBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -9,7 +9,7 @@ import { MonthScroller, type MonthScrollerHandle } from './MonthScroller'
 
 /**
  * A date field whose calendar scrolls vertically through months (owner rule:
- * no ‹ › month arrows anywhere). Replaces the browser's date input.
+ * no ‹ › month arrows anywhere), its weeks from Sunday. Replaces the browser's date input.
  */
 export function DatePicker({
   value,
@@ -22,7 +22,6 @@ export function DatePicker({
   disabled,
   className,
   onClear,
-  weekStartsOn,
   format = 'medium',
   size = 'default',
   'aria-label': ariaLabel,
@@ -39,14 +38,12 @@ export function DatePicker({
   className?: string
   /** Shows a Clear button when there is a value. */
   onClear?: () => void
-  weekStartsOn?: Weekday
   format?: 'medium' | 'short' | 'weekdayMedium' | 'long'
   size?: 'default' | 'sm'
   'aria-label'?: string
 }) {
   const branch = useOptionalBranch()
   const tz = branch?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-  const weekStart = weekStartsOn ?? branch?.settings.general.weekStartsOn ?? 'sunday'
   const today = todayKey(tz)
   const [open, setOpen] = useState(false)
   const scroller = useRef<MonthScrollerHandle>(null)
@@ -110,7 +107,6 @@ export function DatePicker({
           variant="compact"
           anchor={value ?? (min && today < min ? min : today)}
           focusDate={value}
-          weekStartsOn={weekStart}
           onTopMonthChange={setTopMonth}
           className="h-72"
           renderDay={(d) => {

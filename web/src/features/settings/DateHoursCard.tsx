@@ -154,7 +154,6 @@ export function DateHoursCard() {
           <MonthScroller
             ref={scroller}
             anchor={today}
-            weekStartsOn={settings.general.weekStartsOn}
             onVisibleRangeChange={onVisibleRangeChange}
             onTopMonthChange={setTopMonth}
             className="h-[min(62svh,560px)] px-2"

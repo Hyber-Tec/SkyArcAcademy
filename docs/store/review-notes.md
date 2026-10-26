@@ -32,7 +32,7 @@ Until 2026-10-26 there were four sample people (an office, a coach, a parent and
   capitals:
 
 ```
-Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy, for its families and staff. The academy runs its classes, coaches, students and results on our website; the app brings them to phones. Parents and students see their classes, every score and the progress reports the academy shares. Coaches see their classes and the students, set their availability and score paper targets from a photo. The office (owners and admins) sees the day, the schedule and every student.
+Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy, for its families and staff. The academy runs its classes, coaches, students and results on our website; the app brings them to phones. Parents and students see their classes, every score and the progress reports the academy shares. Coaches see every class and who's in, set their availability and score paper targets from a photo. The office (owners and admins) sees the day, the schedule and every student.
 
 WHO PUBLISHES IT
 HyberTec LLC designed, built and runs the Sky Arc platform (this app, its website and its server) for Sky Arc Sports Academy, which has given us permission to publish it under its name and logo: its written permission is attached. Sky Arc is not made from a template or an app generation service; it is its own product for one sport.
@@ -100,30 +100,12 @@ Thank you for the review. HyberTec LLC designed, built and operates the Sky Arc 
 ## Google Play: Sign-in details
 
 Play Console → **App content** → **Sign-in details** (or **App access**) → **All or some functionality is restricted**
-→ **Add instructions**, once per login: the name below, its email and password, and its text.
+→ **Add instructions**, once: the name below, the review login's email and password (as for Apple), and its text.
 
 `Office login`:
 
 ```
-Every part of the app needs an account that Sky Arc Sports Academy has created. Sign in with the email and password (no Google needed). This is an admin of the academy, with sample data only (made-up people; New York time): Home, Schedule (tap a class), Scan (photograph or choose a paper target, then save it for a student), Students (open a student and a file) and More.
-```
-
-`Coach login`:
-
-```
-A coach of the academy, with sample data only: their own classes, their availability (tap a day), the students without their families' contact details, Scan, and their pay in More.
-```
-
-`Parent login`:
-
-```
-A parent of two students, with sample data only: their classes, scores (open one to see its shots) and progress reports; More switches between the two children.
-```
-
-`Student login, for account deletion`:
-
-```
-A student, with sample data only. Use this login to try More → Delete my account; the other logins stay as they are.
+Every part of the app needs an account that Sky Arc Sports Academy has created. Sign in with the email and password (no Google needed). This is an admin of the academy (the office) and shows the academy's real schedule and students, in New York time: please look around without changing or deleting anything. Home (today's classes; tap one), Schedule (another day; tap a class), Scan (photograph or choose a paper target; you can leave without saving), Students (open a student) and More. Coaches, parents and students see a part of the same app.
 ```
 
 ## Google Play: other declarations

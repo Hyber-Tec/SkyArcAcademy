@@ -19,8 +19,8 @@ import { FamilyClassMonth } from "@/features/family/ClassMonth";
 import { useFamilySessions } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
+import { type FamilyClass, familyClasses } from "@/features/family/classes";
 import { dayHeading, hasEnded } from "@/features/family/format";
-import { type ClassGroup, groupClasses } from "@/features/schedule/classes";
 import { plural } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
@@ -36,8 +36,8 @@ const MAX_BACK_WEEKS = 52;
 
 /**
  * The family's classes, as a list or on the months (List / Month, by the title, as on the website). The list goes day
- * by day: what's coming (earliest first) or what's past (latest first), each with the coach, its status in plain words
- * and the class's note. The months scroll vertically, each day marked with its classes (FamilyClassMonth), and the day
+ * by day: what's coming (earliest first) or what's past (latest first), each with its status in plain words and the
+ * class's note. The months scroll vertically, each day marked with its classes (FamilyClassMonth), and the day
  * tapped shows its classes under them. A parent with several children picks All or one child. A class opens its sheet.
  * Read-only: the academy books and changes classes.
  */
@@ -66,10 +66,10 @@ export default function FamilyClassesScreen() {
   const days = useMemo(() => {
     const shown = new Set(family.shown);
     const list = sessions.data.filter((s) => shown.has(s.studentId) && hasEnded(s, today, nowMin) !== upcoming);
-    const groups = groupClasses(list);
+    const groups = familyClasses(list);
     // Coming: earliest first. Past: the latest first, day by day and within a day.
     const ordered = upcoming ? groups : groups.reverse();
-    const byDay = new Map<DateKey, ClassGroup[]>();
+    const byDay = new Map<DateKey, FamilyClass[]>();
     for (const g of ordered) byDay.set(g.dateKey, [...(byDay.get(g.dateKey) ?? []), g]);
     return [...byDay.entries()];
   }, [sessions.data, family.shown, today, nowMin, upcoming]);

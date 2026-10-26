@@ -14,7 +14,6 @@ import { MonthScroller, type MonthScrollerHandle, WeekdayHeader } from "@/compon
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { type SessionDoc, useAcademyNow, useStudent } from "@/features/data/hooks";
-import { classIdOf } from "@/features/schedule/classes";
 import { longDay, plural, shortDay, timeRange } from "@/features/schedule/format";
 import { useDayConfigsBetween, useLoadWindow, useStudentClassesBetween } from "@/features/students/calendar";
 import { useBranch } from "@/state/BranchProvider";
@@ -31,20 +30,18 @@ const MARKS = 3;
  * ID, as the family's Classes tab shows its months (src/features/family/ClassMonth.tsx): the months scroll vertically
  * like the phone's Calendar (permanent rule: never a month with ‹ › arrows), each day with its number (today in the
  * academy's red, the chosen day in a filled circle, a closed day greyed) and a dot per class in its status's colour (a
- * canceled one an open ring). Under the months, the chosen day's classes; each opens the class. A coach sees their own
- * classes with the student, as on the website (the rules give them no others); the office sees every class. Changes
- * are made on the website.
+ * canceled one an open ring). Under the months, the chosen day's classes; each opens the class. The office and coaches
+ * alike see every class (classes are taught together). Changes are made on the website.
  */
 export default function StudentCalendarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { settings, isCoach } = useBranch();
+  const { settings } = useBranch();
   const colors = useColors();
   const status = useStatusColors();
   const { height } = useWindowDimensions();
   // Smaller weeks on a smaller phone, so the chosen day's classes keep room under the months.
   const rowHeight = height >= 800 ? 46 : height >= 700 ? 42 : 38;
   const hour12 = settings.general.timeFormat !== "24h";
-  const weekStartsOn = settings.general.weekStartsOn;
   const { today } = useAcademyNow();
   // Fixed once open: a new day at midnight doesn't move the months under the person's finger.
   const [anchor] = useState(today);
@@ -158,15 +155,14 @@ export default function StudentCalendarScreen() {
     <View style={[styles.fill, { backgroundColor: colors.grouped }]} testID="student-calendar">
       {header}
       <T variant="small" tone="muted" style={styles.caption} numberOfLines={1}>
-        {s ? (isCoach ? `Your classes with ${first}` : `${first}’s classes, with every coach`) : " "}
+        {s ? `${first}’s classes` : " "}
       </T>
       <View style={[styles.months, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <WeekdayHeader weekStartsOn={weekStartsOn} />
+        <WeekdayHeader />
         <View style={{ height: MONTH_TITLE + 6 * rowHeight + MONTH_GAP }}>
           <MonthScroller
             ref={scroller}
             anchor={anchor}
-            weekStartsOn={weekStartsOn}
             rowHeight={rowHeight}
             variant="clean"
             renderDay={renderDay}
@@ -220,15 +216,15 @@ export default function StudentCalendarScreen() {
                 key={c.id}
                 icon={<View style={[styles.bar, { backgroundColor: status[c.status].bar }]} />}
                 title={timeRange(c.startMin, c.endMin, hour12)}
-                subtitle={[c.coachName, SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
-                onPress={() => router.push({ pathname: "/class/[id]", params: { id: classIdOf(c) } })}
+                subtitle={[SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
+                onPress={c.classId ? () => router.push({ pathname: "/class/[id]", params: { id: c.classId } }) : undefined}
                 testID={`student-calendar-class-${c.id}`}
               />
             ))}
           </ListSection>
         ) : (
           <Card style={styles.none} testID="student-calendar-none">
-            <T tone="muted">{isClosed ? "The academy is closed on this day." : isCoach ? "No class with you on this day." : "No classes on this day."}</T>
+            <T tone="muted">{isClosed ? "The academy is closed on this day." : "No classes on this day."}</T>
             {next && nextClass ? (
               <Pressable
                 onPress={() => go(next[0])}

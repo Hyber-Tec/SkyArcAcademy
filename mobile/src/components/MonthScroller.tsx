@@ -1,4 +1,4 @@
-import { type DateKey, type Weekday, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from "@shared/time";
+import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from "@shared/time";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, StyleSheet, View, type LayoutChangeEvent, type ViewToken } from "react-native";
 import { T } from "@/components/Text";
@@ -7,9 +7,13 @@ import { space, useColors } from "@/theme";
 /**
  * Months stacked vertically and scrolled like the iOS Calendar app (permanent rule: every month calendar scrolls
  * vertically, never a static month with ‹ › arrows), as the website's MonthScroller. It opens on the anchor's month,
- * with earlier months above it; later months are added as the end comes near. Each month shows only its own days,
- * starting on the branch's week start. Only the months near the screen are drawn, so a long list stays smooth.
+ * with earlier months above it; later months are added as the end comes near. Each month shows only its own days, its
+ * weeks from Sunday as calendars have them (`CALENDAR_WEEK_START`; the academy's week can start on another day). Only
+ * the months near the screen are drawn, so a long list stays smooth.
  */
+
+/** Blank days before the 1st, so it lands under its weekday. */
+const leadOf = (month: DateKey) => (weekdayIndex(month) - WEEKDAYS.indexOf(CALENDAR_WEEK_START) + 7) % 7;
 
 export interface MonthScrollerHandle {
   /** Brings a date's month to the top (adding the months up to it first when they aren't there yet). */
@@ -19,7 +23,6 @@ export interface MonthScrollerHandle {
 export interface MonthScrollerProps {
   /** The month (any date in it) shown at the top when the calendar opens. */
   anchor: DateKey;
-  weekStartsOn: Weekday;
   /** One day cell's content; the scroller draws the cell box and its lines. */
   renderDay: (date: DateKey, size: { width: number; height: number }) => ReactNode;
   /** Height of a week row. */
@@ -48,10 +51,9 @@ const TITLE_HEIGHT = { full: 52, clean: 56, compact: 36 } as const;
 const MONTH_GAP = { full: 12, clean: 16, compact: 8 } as const;
 
 /** Weeks a month spans, from its first day's weekday. */
-function weeksIn(month: DateKey, weekStartsOn: Weekday): number {
-  const lead = (weekdayIndex(month) - WEEKDAYS.indexOf(weekStartsOn) + 7) % 7;
+function weeksIn(month: DateKey): number {
   const days = Number(endOfMonth(month).slice(8));
-  return Math.ceil((lead + days) / 7);
+  return Math.ceil((leadOf(month) + days) / 7);
 }
 
 /** Whole months from `a` to `b` (both first-of-month keys). */
@@ -60,7 +62,6 @@ const monthsBetween = (a: DateKey, b: DateKey) => (Number(b.slice(0, 4)) - Numbe
 export const MonthScroller = forwardRef<MonthScrollerHandle, MonthScrollerProps>(function MonthScroller(
   {
     anchor,
-    weekStartsOn,
     renderDay,
     rowHeight,
     monthSignature,
@@ -87,7 +88,7 @@ export const MonthScroller = forwardRef<MonthScrollerHandle, MonthScrollerProps>
 
   const titleHeight = TITLE_HEIGHT[variant];
   const gap = MONTH_GAP[variant];
-  const heights = useMemo(() => months.map((m) => titleHeight + weeksIn(m, weekStartsOn) * rowHeight + gap), [months, titleHeight, weekStartsOn, rowHeight, gap]);
+  const heights = useMemo(() => months.map((m) => titleHeight + weeksIn(m) * rowHeight + gap), [months, titleHeight, rowHeight, gap]);
   const offsets = useMemo(() => {
     const out: number[] = [];
     let y = 0;
@@ -157,7 +158,6 @@ export const MonthScroller = forwardRef<MonthScrollerHandle, MonthScrollerProps>
           renderItem={({ item }) => (
             <MonthBlock
               month={item}
-              weekStartsOn={weekStartsOn}
               cellWidth={cellWidth}
               rowHeight={rowHeight}
               titleHeight={titleHeight}
@@ -187,12 +187,12 @@ export const MonthScroller = forwardRef<MonthScrollerHandle, MonthScrollerProps>
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 1 };
 
-/** The weekday letters above the months, in the branch's week order, lined up with the day columns. */
-export function WeekdayHeader({ weekStartsOn, inset = space.sm }: { weekStartsOn: Weekday; inset?: number }) {
+/** The weekday letters above the months, from Sunday as the months are, lined up with the day columns. */
+export function WeekdayHeader({ inset = space.sm }: { inset?: number }) {
   const colors = useColors();
   return (
     <View style={[styles.weekdays, { paddingHorizontal: inset, borderBottomColor: colors.border }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {orderedWeekdays(weekStartsOn).map((d) => (
+      {orderedWeekdays(CALENDAR_WEEK_START).map((d) => (
         <T key={d} variant="tiny" tone="muted" style={styles.weekday}>
           {WEEKDAY_SHORT[d].toUpperCase()}
         </T>
@@ -203,7 +203,6 @@ export function WeekdayHeader({ weekStartsOn, inset = space.sm }: { weekStartsOn
 
 interface MonthBlockProps {
   month: DateKey;
-  weekStartsOn: Weekday;
   cellWidth: number;
   rowHeight: number;
   titleHeight: number;
@@ -217,9 +216,9 @@ interface MonthBlockProps {
 
 /** One month: its title, then its weeks; with `full`, lines around the month's own days only (the website's "staircase"). */
 const MonthBlock = memo(
-  function MonthBlock({ month, weekStartsOn, cellWidth, rowHeight, titleHeight, gap, inset, variant, renderDay, title }: MonthBlockProps) {
+  function MonthBlock({ month, cellWidth, rowHeight, titleHeight, gap, inset, variant, renderDay, title }: MonthBlockProps) {
     const colors = useColors();
-    const lead = (weekdayIndex(month) - WEEKDAYS.indexOf(weekStartsOn) + 7) % 7;
+    const lead = leadOf(month);
     const days = Number(endOfMonth(month).slice(8));
     const cells: (DateKey | null)[] = [...Array<null>(lead).fill(null), ...Array.from({ length: days }, (_, i) => addDays(month, i))];
     while (cells.length % 7) cells.push(null);
@@ -259,7 +258,6 @@ const MonthBlock = memo(
     a.signature === b.signature &&
     a.cellWidth === b.cellWidth &&
     a.rowHeight === b.rowHeight &&
-    a.weekStartsOn === b.weekStartsOn &&
     a.variant === b.variant &&
     a.inset === b.inset &&
     // Without a signature the month follows every render.

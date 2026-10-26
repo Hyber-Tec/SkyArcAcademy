@@ -65,7 +65,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         path: 'general.weekStartsOn',
         label: 'Weeks start on',
         options: WEEKDAYS.map((d) => ({ value: d, label: WEEKDAY_LABELS[d] })),
-        help: 'The first column of the schedule’s week and of every calendar.',
+        help: 'The first day of the schedule’s week (also for Duplicate a week and the week’s totals). Month calendars always start on Sunday.',
       },
       { kind: 'weekHours', path: 'schedule.defaultWeek', label: 'Default opening hours', help: 'When the academy is open each weekday, not only class times: start early and end late enough that the schedule also shows coaches arriving before the first class and leaving after the last. Dates set in “Opening hours by date” below (or edited on the schedule) override them. Classes already booked outside new hours stay booked and show as conflicts on the schedule until moved.' },
       { kind: 'number', path: 'schedule.defaultSessionMinutes', label: 'Default class length', min: 15, max: 480, step: 5, suffix: 'min' },

@@ -1,4 +1,4 @@
-import { type DateKey, type Weekday, startOfMonth } from "@shared/time";
+import { type DateKey, startOfMonth } from "@shared/time";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { useCallback, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -17,8 +17,8 @@ const monthsBetween = (a: DateKey, b: DateKey) => (Number(b.slice(0, 4)) - Numbe
 
 /**
  * Picks a date from months that scroll vertically (permanent rule: never a month with ‹ › arrows, date pickers
- * included), in a card over the dimmed app like the Dialog. Dates outside `min`–`max`, or that `isDisabled` refuses,
- * can't be picked. `yearJump`, for far dates (a birthday), as the website's picker has it: the year on screen is a
+ * included), their weeks from Sunday, in a card over the dimmed app like the Dialog. Dates outside `min`–`max`, or
+ * that `isDisabled` refuses, can't be picked. `yearJump`, for far dates (a birthday), as the website's picker has it: the year on screen is a
  * button that shows the years, and picking one brings its months up; they still scroll one by one.
  */
 export function DatePickerDialog({
@@ -26,7 +26,6 @@ export function DatePickerDialog({
   title,
   value,
   today,
-  weekStartsOn,
   min,
   max,
   isDisabled,
@@ -41,7 +40,6 @@ export function DatePickerDialog({
   value: DateKey | null;
   /** The branch's today (marked). */
   today: DateKey;
-  weekStartsOn: Weekday;
   min?: DateKey | null;
   max?: DateKey | null;
   isDisabled?: (date: DateKey) => boolean;
@@ -140,12 +138,11 @@ export function DatePickerDialog({
             ) : null}
           </View>
           <View>
-            <WeekdayHeader weekStartsOn={weekStartsOn} inset={space.md} />
+            <WeekdayHeader inset={space.md} />
             <View style={styles.months}>
               <MonthScroller
                 ref={scroller}
                 anchor={anchor}
-                weekStartsOn={weekStartsOn}
                 rowHeight={ROW}
                 variant="compact"
                 inset={space.md}
