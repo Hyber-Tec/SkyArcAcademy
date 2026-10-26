@@ -66,3 +66,13 @@
     @apply pointer-events-none float-left h-0 text-muted-foreground;
   }
 }
+
+/* The schedule: hatching on a class's unused seats (as the academy's sheets blacken them) and on closed days. */
+@layer components {
+  .hatch-empty {
+    background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklch, var(--foreground) 6%, transparent) 6px 7px);
+  }
+  .hatch-off {
+    background-image: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in oklch, var(--foreground) 7%, transparent) 5px 6px);
+  }
+}

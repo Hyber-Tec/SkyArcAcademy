@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { attendanceFacts } from '@shared/reports/facts'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10 } from '@shared/shooting/evaluation'
 import { personalBestIds } from '@shared/shooting/progress'
-import { addDays, diffDays, formatDateKey, formatMinutes, formatTimeRange, nowMinutes, todayKey, weekdayOf, WEEKDAY_LABELS } from '@shared/time'
+import { addDays, diffDays, formatDateKey, formatDuration, formatMinutes, formatTimeRange, nowMinutes, todayKey, weekdayOf, WEEKDAY_LABELS } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { Badge } from '@/components/ui/badge'
@@ -168,7 +168,7 @@ function SeeAll({ to, children }: { to: string; children: React.ReactNode }) {
   )
 }
 
-/** Each child's next class (the student's own): the day, the time, the coach, the status and the note. */
+/** Each child's next class (the student's own): the day, the time, the status and the note. */
 function NextClasses({
   family,
   next,
@@ -231,13 +231,12 @@ function NextClass({ s, family, showKid, today, now, onOpen }: { s: WithId<Sessi
       <div className="min-w-0 flex-1">
         {showKid ? <p className="text-sm font-medium">{family.firstName(s.studentId)}</p> : null}
         <p className={cn('font-semibold tracking-tight', showKid ? 'text-base' : 'text-lg')}>{dayTitle(s.dateKey, today)}</p>
-        {/* Phones: the time, then the coach under it. */}
         <p className="mt-0.5 flex flex-wrap gap-x-1.5 text-sm text-muted-foreground">
           <span className="whitespace-nowrap tabular-nums">{formatTimeRange(s.startMin, s.endMin)}</span>
-          <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden>
+          <span className="text-muted-foreground/50" aria-hidden>
             ·
           </span>
-          <span className="basis-full sm:basis-auto">with {s.coachName}</span>
+          <span className="whitespace-nowrap">{formatDuration(s.endMin - s.startMin)}</span>
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <FamilyStatus session={s} now={now} />

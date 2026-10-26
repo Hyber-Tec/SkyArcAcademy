@@ -1,7 +1,7 @@
 import { type DateKey, addDays } from '../time'
 
 /**
- * Core business rules of the academy: how coaches are paid and how many students a coach takes at once. They live in
+ * Core business rules of the academy: how coaches are paid and how many seats a class has. They live in
  * `branches/{b}.businessRules`; only the academy's owner changes them (Settings → Academy rules), and admins see them
  * read-only.
  */
@@ -43,7 +43,12 @@ export interface BusinessRules {
    * that date keeps the model it was earned under.
    */
   payModels: PayModelPeriod[]
-  /** Students a coach can teach at the same time (1 = strictly one-to-one). */
+  /** Seats a new class has, as on the sheets (each class keeps its own number, which the office can change). */
+  seatsPerClass: number
+  /**
+   * Students one coach taught at once, from when each student had one coach. Classes are taught together now, so only
+   * the phone app reads it until its update.
+   */
   maxStudentsPerCoach: number
 }
 
@@ -52,9 +57,13 @@ export const PAY_MODEL_SINCE_START: DateKey = '2000-01-01'
 
 export const MAX_STUDENTS_PER_COACH_LIMIT = 6
 
-/** Until the owner changes them: pay for classes taught, and up to 5 students at once, as on the class sheets. */
+/** The most seats a class can have. */
+export const MAX_SEATS_PER_CLASS = 12
+
+/** Until the owner changes them: pay for classes taught, and six seats a class, as on the class sheets. */
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
   payModels: [{ model: 'classes', from: PAY_MODEL_SINCE_START }],
+  seatsPerClass: 6,
   maxStudentsPerCoach: 5,
 }
 
@@ -64,8 +73,10 @@ export function resolveBusinessRules(stored: Partial<BusinessRules> | null | und
     .filter((p) => p && (PAY_MODELS as readonly string[]).includes(p.model) && typeof p.from === 'string')
     .sort((a, b) => a.from.localeCompare(b.from))
   const max = Number(stored?.maxStudentsPerCoach)
+  const seats = Number(stored?.seatsPerClass)
   return {
     payModels: payModels.length ? payModels : DEFAULT_BUSINESS_RULES.payModels,
+    seatsPerClass: Number.isInteger(seats) && seats >= 1 ? Math.min(seats, MAX_SEATS_PER_CLASS) : DEFAULT_BUSINESS_RULES.seatsPerClass,
     maxStudentsPerCoach: Number.isInteger(max) && max >= 1 ? Math.min(max, MAX_STUDENTS_PER_COACH_LIMIT) : DEFAULT_BUSINESS_RULES.maxStudentsPerCoach,
   }
 }

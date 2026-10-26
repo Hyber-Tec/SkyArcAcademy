@@ -1,4 +1,4 @@
-import { DEFAULT_BUSINESS_RULES, MAX_STUDENTS_PER_COACH_LIMIT, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
+import { DEFAULT_BUSINESS_RULES, MAX_SEATS_PER_CLASS, PAY_MODELS, PAY_MODEL_HELP, PAY_MODEL_LABELS, type PayModel } from '@shared/settings/businessRules'
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -25,35 +25,24 @@ export function PayModelChoice({ value, onChange, idPrefix }: { value: PayModel;
   )
 }
 
-/** Students per coach at once: the schedule's capacity rule. */
-export function CapacityField({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+/** Seats per class: how many students a new class takes. */
+export function SeatsField({ value, onChange }: { value: number; onChange: (next: number) => void }) {
   return (
     <Field>
-      <FieldLabel>Students per coach at once</FieldLabel>
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        value={String(value)}
-        onValueChange={(v) => v && onChange(Number(v))}
-        className="justify-start"
-      >
-        {Array.from({ length: MAX_STUDENTS_PER_COACH_LIMIT }, (_, i) => i + 1).map((n) => (
+      <FieldLabel>Seats per class</FieldLabel>
+      <ToggleGroup type="single" variant="outline" value={String(value)} onValueChange={(v) => v && onChange(Number(v))} className="flex-wrap justify-start" aria-label="Seats per class">
+        {Array.from({ length: MAX_SEATS_PER_CLASS }, (_, i) => i + 1).map((n) => (
           <ToggleGroupItem
             key={n}
             value={String(n)}
-            className="w-11 tabular-nums data-[state=on]:bg-foreground data-[state=on]:text-background"
-            aria-label={`${n} at once`}
+            className="w-10 tabular-nums data-[state=on]:bg-foreground data-[state=on]:text-background"
+            aria-label={`${n} seat${n === 1 ? '' : 's'}`}
           >
             {n}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <FieldDescription>
-        {value === 1
-          ? 'Strictly one-to-one: the schedule never gives a coach two students at the same time.'
-          : `The schedule never gives a coach more than ${value} students at the same time.`}{' '}
-        Lowering it leaves classes already booked above the new limit as conflicts on the schedule until they’re moved.
-      </FieldDescription>
+      <FieldDescription>A new class has this many seats; each class can have its own.</FieldDescription>
     </Field>
   )
 }

@@ -1,19 +1,20 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { db, LIGHT } from './app'
 import { pinHash } from './pins'
-import { deliverSessionNotices, snapshotOf } from './sessionNotify'
+import { dayStaffing, deliverSessionNotices, snapshotOf, teachingCoaches, withCoachesIn } from './sessionNotify'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { dayHours } from '@shared/availability'
 import { COL, ROOT, availabilityDocId } from '@shared/paths'
-import { type ConflictSession, sessionConflicts, staffCoachState } from '@shared/schedule/conflicts'
+import { coachesIn } from '@shared/schedule/classes'
+import { type ConflictSeat, type ConflictSession, seatConflicts, sessionConflicts, staffCoachState } from '@shared/schedule/conflicts'
 import { resolveBusinessRules } from '@shared/settings/businessRules'
-import { sessionCreatedNotices } from '@shared/schedule/notify'
+import { type SessionSnapshot, inNoticeWindow, sessionCreatedNotices } from '@shared/schedule/notify'
 import { resolveSettings } from '@shared/settings/resolve'
 import type { BranchSettings } from '@shared/settings/defaults'
 import { addDays, dateKeyOf, formatMinutes, minutesOf, parseHHMM, toInstant, todayKey } from '@shared/time'
-import type { Availability, Branch, DayConfig, Member, Session, StaffStatus, StudentStatus } from '@shared/types'
+import type { AcademyClass, Availability, Branch, DayConfig, Member, Session, StaffStatus, StudentStatus } from '@shared/types'
 
 
 // ------------------------------------------------------------------ helpers
@@ -245,11 +246,15 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
 })
 
 /**
- * Whether a session may not happen as booked (the same check the schedules show:
- * coach unavailable or inactive, day closed, outside hours, too many students,
- * student double-booked or inactive).
+ * Whether a session may not happen as booked (the same check the schedules show). A seat in a class: day closed or
+ * class outside hours, no coach in for it, more students than seats, student double-booked or inactive. A session
+ * with its own coach, from before classes were taught together: coach unavailable or inactive, day closed, outside
+ * hours, too many students, student double-booked or inactive.
  */
 async function inConflict(branchId: string, id: string, data: FirebaseFirestore.DocumentData, settings: BranchSettings, branch: Branch | undefined) {
+  if (data.classId) return seatInConflict(branchId, id, data, settings)
+  // Neither a class nor a coach of its own: nobody teaches it.
+  if (!data.coachId) return true
   const base = `${ROOT.branches}/${branchId}`
   const [cfg, avail, staff, student, day, members] = await Promise.all([
     db.doc(`${base}/${COL.dayConfigs}/${data.dateKey}`).get(),
@@ -274,6 +279,31 @@ async function inConflict(branchId: string, id: string, data: FirebaseFirestore.
   return conflicts.length > 0
 }
 
+/** A seat in a class: its class's time and seats, the coaches in at that time, and the student's other classes that day. */
+async function seatInConflict(branchId: string, id: string, data: FirebaseFirestore.DocumentData, settings: BranchSettings) {
+  const base = `${ROOT.branches}/${branchId}`
+  const [cls, { hours, day }, teaching, student, sessions] = await Promise.all([
+    db.doc(`${base}/${COL.classes}/${data.classId}`).get(),
+    dayStaffing(branchId, data.dateKey, settings),
+    teachingCoaches(branchId),
+    data.studentId ? db.doc(`${base}/${COL.students}/${data.studentId}`).get() : null,
+    db.collection(`${base}/${COL.sessions}`).where('dateKey', '==', data.dateKey).get(),
+  ])
+  const c = cls.data() as AcademyClass | undefined
+  // Its class is gone or in the Trash: it waits for an admin.
+  if (!c || c.isDeleted) return true
+  const seats = sessions.docs.map((d) => ({ id: d.id, ...(d.data() as Session) })).filter((s) => !s.isDeleted)
+  const conflicts = seatConflicts({ id, ...data } as ConflictSeat, {
+    hours,
+    class: c,
+    coaches: coachesIn(c, day, hours, (staffId) => teaching.has(staffId)),
+    classSeats: seats.filter((s) => s.classId === data.classId),
+    studentStatus: student?.exists ? ((student.data()?.status as StudentStatus) ?? null) : null,
+    studentSeats: seats.filter((s) => s.studentId === data.studentId),
+  })
+  return conflicts.length > 0
+}
+
 async function confirmIfDue(
   branchId: string,
   ref: FirebaseFirestore.DocumentReference,
@@ -286,7 +316,7 @@ async function confirmIfDue(
   const start = (data.startAt as Timestamp).toMillis()
   const now = Date.now()
   if (start <= now || start > now + ac.hoursBefore * 3_600_000) return false
-  // A session in conflict stays Pending until an admin moves, reassigns or cancels it.
+  // A session in conflict stays Pending until an admin sorts it out.
   if (await inConflict(branchId, ref.id, data, settings, branch)) return false
   await ref.update({ status: 'confirmed', confirmedAt: FieldValue.serverTimestamp(), confirmedBy: 'auto', updatedAt: FieldValue.serverTimestamp(), updatedBy: 'system' })
   await audit(branchId, {
@@ -297,8 +327,8 @@ async function confirmIfDue(
     dateKey: data.dateKey,
     studentId: data.studentId,
     studentName: data.studentName,
-    coachId: data.coachId,
-    coachName: data.coachName,
+    coachId: data.coachId || null,
+    coachName: data.coachName || null,
     summary: `Confirmed ${data.studentName}’s class automatically`,
     changes: [{ field: 'status', label: 'Status', from: 'Pending', to: 'Confirmed' }],
   })
@@ -326,8 +356,8 @@ export const autoConfirmSessions = onSchedule({ schedule: 'every 60 minutes', ti
 
 /**
  * A session created inside the auto-confirm window is confirmed right away;
- * if it is confirmed and starts inside the notification window, the coach
- * gets "Session Confirmed" in their inbox.
+ * if it is confirmed and starts inside the notification window, the coaches
+ * who teach it (those in at its time) get "Session Confirmed" in their inbox.
  */
 export const onSessionCreated = onDocumentCreated({ document: `${ROOT.branches}/{branchId}/${COL.sessions}/{sessionId}`, ...LIGHT }, async (event) => {
   const snap = event.data
@@ -337,11 +367,12 @@ export const onSessionCreated = onDocumentCreated({ document: `${ROOT.branches}/
   const data = snap.data()
   const confirmed = (await confirmIfDue(branchId, snap.ref, data, settings, branch)) || data.status === 'confirmed'
   if (!confirmed || branch.status !== 'active') return
-  const notices = sessionCreatedNotices(
-    { ...snapshotOf(data), status: 'confirmed' },
-    { now: Date.now(), today: todayKey(branch.timezone), windowHours: settings.notifications.sessionChangeWindowHours },
-  )
-  await deliverSessionNotices(branchId, sessionId, notices, `sess-${sessionId}-created`)
+  const notice = { now: Date.now(), today: todayKey(branch.timezone), windowHours: settings.notifications.sessionChangeWindowHours }
+  const s: SessionSnapshot = { ...snapshotOf(data), status: 'confirmed' }
+  // Most classes are added further ahead: who's in is read only for one that notifies.
+  if (!inNoticeWindow(s, notice)) return
+  const [seat] = await withCoachesIn(branchId, settings, [s])
+  await deliverSessionNotices(branchId, sessionId, sessionCreatedNotices(seat, notice), `sess-${sessionId}-created`)
 })
 
 export { onAnnouncementComment, onAnnouncementRead, onAnnouncementWritten } from './announcements'

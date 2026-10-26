@@ -99,7 +99,7 @@ export const studentLifecycleDaily = onSchedule({ schedule: '0 8 * * *', timeZon
   }
 })
 
-/** Daily: deletes inbox items and trashed sessions older than each branch's retention. */
+/** Daily: deletes inbox items, and trashed classes and sessions, older than each branch's retention. */
 export const purgeExpired = onSchedule({ schedule: '30 8 * * *', timeZone: 'UTC', timeoutSeconds: 540, ...LIGHT }, async () => {
   const branches = await db.collection(ROOT.branches).get()
   for (const b of branches.docs) {
@@ -108,21 +108,28 @@ export const purgeExpired = onSchedule({ schedule: '30 8 * * *', timeZone: 'UTC'
     const now = Date.now()
     const inboxCutoff = Timestamp.fromMillis(now - settings.notifications.retentionDays * DAY_MS)
     const trashCutoff = now - settings.trash.retentionDays * DAY_MS
-    const [inbox, trash] = await Promise.all([
+    const [inbox, trash, trashedClasses] = await Promise.all([
       db.collection(`${base}/${COL.notifications}`).where('createdAt', '<', inboxCutoff).limit(5000).get(),
       db.collection(`${base}/${COL.sessions}`).where('isDeleted', '==', true).get(),
+      db.collection(`${base}/${COL.classes}`).where('isDeleted', '==', true).get(),
     ])
     const writer = db.bulkWriter()
     for (const d of inbox.docs) void writer.delete(d.ref)
-    let purged = 0
-    for (const d of trash.docs) {
-      const at = (d.get('deletedAt') as Timestamp | null)?.toMillis() ?? 0
-      if (at && at < trashCutoff) {
-        void writer.delete(d.ref)
-        purged++
+    // A class goes to the Trash with its students, so both leave it on the same day.
+    const purge = (docs: FirebaseFirestore.QueryDocumentSnapshot[]) => {
+      let n = 0
+      for (const d of docs) {
+        const at = (d.get('deletedAt') as Timestamp | null)?.toMillis() ?? 0
+        if (at && at < trashCutoff) {
+          void writer.delete(d.ref)
+          n++
+        }
       }
+      return n
     }
+    const sessions = purge(trash.docs)
+    const classes = purge(trashedClasses.docs)
     await writer.close()
-    if (inbox.size || purged) logger.info('Purged', { branchId: b.id, notifications: inbox.size, sessions: purged })
+    if (inbox.size || sessions || classes) logger.info('Purged', { branchId: b.id, notifications: inbox.size, sessions, classes })
   }
 })

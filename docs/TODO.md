@@ -6,22 +6,21 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 
 ## The owner's to-do (left for later on purpose)
 
-1. **The App Store:** Sky Arc 1.0.0 (build 2, uploaded 2026-10-21) is waiting for Apple's review (still on 2026-10-25,
+1. **The App Store:** Sky Arc 1.0.0 (build 2, uploaded 2026-10-21) is waiting for Apple's review (still on 2026-10-26,
    submitted 2026-10-21). When Apple
    answers: release it (`docs/publishing/apple/app-store.md`, steps 25–26), or give Claude Code Apple's message. If
    Apple asks for the academy's permission (guideline 5.2.1), attach the academy's email. Keep the sample data and the
-   reviewers' logins in production until then.
+   reviewers' logins in production until then. No second submission while it's in review (Goo, 2026-10-26): the
+   phone's update for classes taught together goes up afterwards, when Goo says.
 2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
    two-week closed test comes first (`docs/publishing/google-play/account.md`).
-3. **The academy:** text the manager A17–A18 (four students' parents and grades, the academy owner's email); the
-   academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15 (`docs/QUESTIONS.md`).
+3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
+   (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
+4. **The phone app, on the MacBook Pro:** start a Claude Code session there with the prompt in `docs/mobile-classes.md`;
+   it brings the phone app to classes taught together, on top of the website's branch.
 
 ## Product questions waiting for the owner
 
-- **Classes taught by every coach on duty together** (A16, confirmed 2026-10-25, `docs/DECISIONS.md` §20): the
-  schedule needs a new shape (today a class is one coach's, from HyberCRM's tutoring), and with it, which classes a
-  coach sees (today only their own). Goo picks from design options before it's built; the classes are imported in
-  that shape.
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
@@ -68,14 +67,16 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 - **Moving the real data in** (`docs/DECISIONS.md` §20), once Apple has finished its review (the manager answered A16
   and sent the spreadsheet on 2026-10-25):
   1. Take away the reviewers' logins and the sample data: `npx tsx scripts/review-logins.ts --remove`, then
-     `npm run seed:sample -- --remove` (it also removes the logins made for testing with `--login`).
+     `npm run seed:sample -- --remove` (it also removes the logins made for testing with `--login`). Then merge the
+     pull request for classes taught together (`docs/DECISIONS.md` §21), and let it deploy.
   2. Settings: the **Hourly** pay model from the start (Settings → Academy rules); Sunday's hours to cover classes until
-     7:30 PM (the default is 1–6 PM); the month's make-up Friday opened on its date.
-  3. The import (Claude Code builds it in the shape Goo picks for classes; the sheets and the spreadsheet are read, in
+     7:30 PM (the default is 1–6 PM); the month's make-up Friday opened on its date; the week starting on Monday, as
+     the sheets do, if Goo likes it so (Settings → General).
+  3. The import (`scripts/import-academy.ts`; the sheets and the spreadsheet are read, in
      `docs/internal/schedule-import/`): the staff with their rates and usual days; the students with their levels,
      rifle codes, grades and parents; the classes from August 31 (past weeks as they happened, with absences and
-     make-ups) through November's standing week. Download November's sheet and the spreadsheet again just before:
-     the manager is still editing both. Nobody gets access or email.
+     make-ups) through November's standing week, and who's in each day. Download November's sheet and the spreadsheet
+     again just before: the manager is still editing both. Nobody gets access or email.
   4. Access, from the website, when the office is ready: each sends that person's sign-in email.
   5. The next App Store update needs review logins that see no real student (`docs/publishing/updates.md`).
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

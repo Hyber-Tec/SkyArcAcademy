@@ -1,26 +1,22 @@
-import { LuCalendarClock, LuCalendarDays, LuGraduationCap, LuSparkles, LuStickyNote, LuTriangleAlert } from 'react-icons/lu'
+import { LuCalendarClock, LuCalendarDays, LuChevronRight, LuSparkles, LuStickyNote } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { coachConflictText } from '@shared/schedule/conflicts'
+import { takesSeat } from '@shared/schedule/classes'
 import { isFirstSession } from '@shared/schedule/firstSession'
 import { addDays, formatDateKey, formatDuration, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
-import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StatePill } from '@/features/home/parts'
-import { SESSION_CARD_STYLE } from '@/features/schedule/cardStyle'
+import { StatePill, nameList, plural } from '@/features/home/parts'
+import { KindTag, LevelChip, SeatCount, StatusDot, gradeLabel } from '@/features/schedule/seatParts'
+import type { ClassView } from '@/features/schedule/useClassData'
 import { cn } from '@/lib/utils'
 import { leftText, untilText } from '../sessionUi'
 import type { CoachDay } from './useCoachDay'
 
-/** Sessions shown in the card before "and N more". */
-const SHOWN = 3
-
 /**
- * The session that matters now: the ones in progress (with what's left and
- * what comes after), else the next start today with a countdown, else the
- * next day with sessions.
+ * The class that matters now: the one in progress (with what's left and what comes after), else the next one today
+ * with a countdown, else the next day with classes in the coach's hours. Each with its students and who else is in.
  */
 export function NextUpCard({ t }: { t: CoachDay }) {
   const { settings } = useBranch()
@@ -46,9 +42,9 @@ export function NextUpCard({ t }: { t: CoachDay }) {
             <LuCalendarClock className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold">No classes booked in the next four weeks</h2>
+            <h2 className="text-base font-semibold">No classes in the next two weeks</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Classes are booked inside your availability. Keep it set at least {settings.availability.leadTimeDays} days ahead.
+              Your classes are the ones in your hours. Keep your availability set at least {settings.availability.leadTimeDays} days ahead.
             </p>
           </div>
           <Button variant="outline" asChild>
@@ -59,9 +55,7 @@ export function NextUpCard({ t }: { t: CoachDay }) {
     )
   }
 
-  const first = next.sessions[0]
-  const shown = next.sessions.slice(0, SHOWN)
-  const more = next.sessions.length - shown.length
+  const first = next.classes[0].c
   const header =
     next.kind === 'now' ? (
       <>
@@ -72,10 +66,10 @@ export function NextUpCard({ t }: { t: CoachDay }) {
           </span>
           Now
           <span className="font-normal text-muted-foreground">
-            {next.sessions.length > 1 ? `· ${next.sessions.length} classes` : `· ends at ${formatMinutes(first.endMin)}`}
+            {next.classes.length > 1 ? `· ${next.classes.length} classes` : `· ends at ${formatMinutes(first.endMin)}`}
           </span>
         </Eyebrow>
-        <span className="text-sm font-medium text-muted-foreground tabular-nums">{leftText(Math.min(...next.sessions.map((s) => s.endMin)) - t.nowMin)}</span>
+        <span className="text-sm font-medium text-muted-foreground tabular-nums">{leftText(Math.min(...next.classes.map((v) => v.c.endMin)) - t.nowMin)}</span>
       </>
     ) : next.kind === 'later' ? (
       <>
@@ -96,8 +90,10 @@ export function NextUpCard({ t }: { t: CoachDay }) {
       </>
     )
 
-  // How far the first session in progress has run.
+  // How far the first class in progress has run.
   const progress = next.kind === 'now' ? Math.min(1, Math.max(0, (t.nowMin - first.startMin) / Math.max(1, first.endMin - first.startMin))) : null
+  // A day ahead shows its first class; the others are in the footer.
+  const shown = next.kind === 'day' ? next.classes.slice(0, 1) : next.classes
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="next-up" aria-label="Next up">
@@ -108,91 +104,92 @@ export function NextUpCard({ t }: { t: CoachDay }) {
         </div>
       ) : null}
       <ul className="mt-3 divide-y">
-        {shown.map((s) => (
-          <NextSession key={s.id} s={s} t={t} />
+        {shown.map((v) => (
+          <NextClass key={v.c.id} v={v} t={t} />
         ))}
       </ul>
       {next.kind === 'now' && next.then ? (
         <Footer>
-          Then at <span className="font-medium text-foreground tabular-nums">{formatMinutes(next.then.startMin)}</span> · {next.then.studentName}
+          Then at <span className="font-medium text-foreground tabular-nums">{formatMinutes(next.then.c.startMin)}</span> · {plural(next.then.taken, 'student')}
         </Footer>
       ) : null}
       {next.kind === 'day' ? (
         <Footer
           action={
-            <Link to={`${coach}/schedule?date=${next.dateKey}`} className="inline-flex items-center gap-1 font-medium text-foreground hover:underline">
+            <Link to={`${coach}/schedule/day/${next.dateKey}`} className="inline-flex items-center gap-1 font-medium text-foreground hover:underline">
               <LuCalendarDays className="size-3.5" /> Open in schedule
             </Link>
           }
         >
-          {next.sessions.length} {next.sessions.length === 1 ? 'class' : 'classes'} that day, {formatMinutes(first.startMin)} –{' '}
-          {formatMinutes(Math.max(...next.sessions.map((s) => s.endMin)))}
-        </Footer>
-      ) : more > 0 ? (
-        <Footer>
-          and {more} more at the same time
+          {plural(next.classes.length, 'class')} that day, {formatMinutes(first.startMin)} – {formatMinutes(Math.max(...next.classes.map((v) => v.c.endMin)))}
         </Footer>
       ) : null}
     </section>
   )
 }
 
-function NextSession({ s, t }: { s: WithId<Session>; t: CoachDay }) {
+/** One class: its time and seats, who else is in, the note for the coaches, and its students. */
+function NextClass({ v, t }: { v: ClassView; t: CoachDay }) {
   const { settings } = useBranch()
-  const student = t.student(s.studentId)
-  const waiting = coachConflictText(t.conflictsOf(s.id))
-  // The schedule bell's "First session" notice, from the same rule.
-  const first = settings.schedule.alerts.firstSession && !!student && isFirstSession(s, student, t.sessions)
-  const bar = SESSION_CARD_STYLE[s.status]?.bar ?? '#a1a1aa'
+  const { c } = v
+  const others = v.coaches.filter((k) => k.staffId !== t.staffId).map((k) => k.name || 'Coach')
+  // Canceled students last: they free their seat.
+  const seats = [...v.seats.filter(takesSeat), ...v.seats.filter((s) => !takesSeat(s))]
   return (
-    <li className="flex gap-4 px-5 py-4" data-testid="next-session">
-      <span className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: bar }} aria-hidden />
-      <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h2 className="truncate text-lg leading-tight font-semibold">{s.studentName}</h2>
-            {s.studentGrade ? <span className="text-sm text-muted-foreground">{gradeLabel(s.studentGrade)}</span> : null}
-            {first ? (
-              <StatePill tone="info">
-                <LuSparkles className="size-3" /> First class
-              </StatePill>
-            ) : null}
-            {s.status === 'pending' && !waiting ? (
-              <StatePill tone="warn" title="Booked, not confirmed yet.">
-                Unconfirmed
-              </StatePill>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <span className="whitespace-nowrap tabular-nums">
-              {formatMinutes(s.startMin)} – {formatMinutes(s.endMin)}
-            </span>
-            <span className="mx-1.5 text-muted-foreground/50">·</span>
-            <span className="whitespace-nowrap">{formatDuration(s.endMin - s.startMin)}</span>
-          </p>
-          {s.note ? (
-            <p className="mt-2.5 flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-              <LuStickyNote className="mt-0.5 size-3.5 shrink-0" />
-              {s.note}
-            </p>
-          ) : null}
-          {waiting ? (
-            <p className="mt-2.5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-              <LuTriangleAlert className="mt-0.5 size-3.5 shrink-0 text-red-600" />
-              <span>
-                <span className="font-semibold">Not confirmed:</span> {waiting}
-              </span>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`/coach/students/${s.studentId}`}>
-              <LuGraduationCap /> Student
-            </Link>
-          </Button>
-        </div>
+    <li className="px-5 py-4" data-testid="next-class">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 className="text-lg leading-tight font-semibold tabular-nums">
+          {formatMinutes(c.startMin)} – {formatMinutes(c.endMin)}
+        </h2>
+        <span className="text-sm text-muted-foreground">{formatDuration(c.endMin - c.startMin)}</span>
+        <SeatCount used={v.taken} of={c.seats} className="ml-auto" />
       </div>
+      <p className="mt-1 text-sm text-muted-foreground">{others.length ? `With ${nameList(others, 3)}` : 'No other coach in'}</p>
+      {c.note ? (
+        <p className="mt-2.5 flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+          <LuStickyNote className="mt-0.5 size-3.5 shrink-0" />
+          {c.note}
+        </p>
+      ) : null}
+      {seats.length ? (
+        <ul className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-2">
+          {seats.map((s) => (
+            <NextStudent key={s.id} s={s} t={t} levels={settings.students.levels} firstOn={settings.schedule.alerts.firstSession} />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">No students in this class yet.</p>
+      )}
+      <div className="mt-3">
+        <Button variant="ghost" size="sm" className="-ml-2.5 text-muted-foreground" asChild>
+          <Link to={`/coach/schedule/day/${c.dateKey}?class=${c.id}`}>
+            Open the class <LuChevronRight />
+          </Link>
+        </Button>
+      </div>
+    </li>
+  )
+}
+
+function NextStudent({ s, t, levels, firstOn }: { s: WithId<Session>; t: CoachDay; levels: readonly string[]; firstOn: boolean }) {
+  const student = t.student(s.studentId)
+  const away = !takesSeat(s)
+  // The schedule bell's "First class" notice, from the same rule.
+  const first = firstOn && !!student && isFirstSession(s, student, t.seats)
+  return (
+    <li className={cn('flex min-w-0 items-center gap-2 py-1', away && 'opacity-60')}>
+      <Link to={`/coach/students/${s.studentId}`} className={cn('min-w-0 truncate text-sm font-medium hover:underline', away && 'line-through')}>
+        {s.studentName}
+      </Link>
+      <StatusDot status={s.status} />
+      {s.studentGrade ? <span className="shrink-0 text-xs text-muted-foreground">{gradeLabel(s.studentGrade)}</span> : null}
+      <LevelChip level={student?.level ?? null} levels={levels} rifle={student?.rifle} short />
+      <KindTag note={s.note} />
+      {first ? (
+        <StatePill tone="info">
+          <LuSparkles className="size-3" /> First class
+        </StatePill>
+      ) : null}
     </li>
   )
 }

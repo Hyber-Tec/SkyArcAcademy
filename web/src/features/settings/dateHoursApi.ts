@@ -1,9 +1,9 @@
-import { type WriteBatch, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { type WriteBatch, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
 import { COL } from '@shared/paths'
 import { type DateKey, formatDateKey, formatTimeRange } from '@shared/time'
 import { type Actor, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
-import { branchDocRef } from '@/lib/firestore'
+import { branchCol, branchDocRef } from '@/lib/firestore'
 
 /** What a date's hours become: open with times, closed, or back to the weekly default. */
 export type DateHoursValue = { isOpen: true; openMin: number; closeMin: number } | { isOpen: false } | 'default'
@@ -16,8 +16,8 @@ export function describeHoursValue(v: DateHoursValue): string {
 /**
  * Sets the opening hours of many dates at once (Settings → Schedule). Writes the
  * per-date records the schedule and availability read (`dayConfigs`), in
- * batches, with one audit entry. Closing dates moves their sessions to Trash,
- * as closing a day on the schedule does.
+ * batches, with one audit entry. Closing dates moves their classes to Trash with
+ * their students (they come back together), as closing a day on the schedule does.
  */
 export async function setDateHours(opts: {
   branchId: string
@@ -31,7 +31,15 @@ export async function setDateHours(opts: {
   trashSessionIds?: string[]
 }) {
   const { branchId, actor, dates, value } = opts
-  const trash = value !== 'default' && !value.isOpen ? (opts.trashSessionIds ?? []) : []
+  const closing = value !== 'default' && !value.isOpen
+  const trash = closing ? (opts.trashSessionIds ?? []) : []
+  const wanted = new Set(dates)
+  const classes = closing
+    ? (await getDocs(query(branchCol(branchId, COL.classes), where('dateKey', '>=', dates[0]), where('dateKey', '<=', dates[dates.length - 1])))).docs.filter(
+        (d) => wanted.has(d.get('dateKey') as string) && d.get('isDeleted') !== true,
+      )
+    : []
+  const gone = () => ({ isDeleted: true, deletedAt: serverTimestamp(), deletedBy: actor.name, updatedAt: serverTimestamp(), updatedBy: actor.email })
   const writes: ((b: WriteBatch) => void)[] = [
     ...dates.map((d) => (b: WriteBatch) => {
       const ref = branchDocRef(branchId, COL.dayConfigs, d)
@@ -46,15 +54,8 @@ export async function setDateHours(opts: {
           updatedBy: actor.email,
         })
     }),
-    ...trash.map((id) => (b: WriteBatch) => {
-      b.update(branchDocRef(branchId, COL.sessions, id), {
-        isDeleted: true,
-        deletedAt: serverTimestamp(),
-        deletedBy: actor.name,
-        updatedAt: serverTimestamp(),
-        updatedBy: actor.email,
-      })
-    }),
+    ...classes.map((c) => (b: WriteBatch) => b.update(c.ref, gone())),
+    ...trash.map((id) => (b: WriteBatch) => b.update(branchDocRef(branchId, COL.sessions, id), gone())),
   ]
   for (let i = 0; i < writes.length; i += 400) {
     const batch = writeBatch(db)
@@ -71,14 +72,15 @@ export async function setDateHours(opts: {
             ? `Set ${formatDateKey(dates[0], 'weekdayMedium')} to ${describeHoursValue(value)}`
             : `Set ${dates.length} dates to ${describeHoursValue(value)} (${opts.summaryRange})`,
       })
-      if (trash.length) {
+      if (trash.length || classes.length) {
+        const what = classes.length ? `${classes.length} class${classes.length > 1 ? 'es' : ''}${trash.length ? ` with ${trash.length} student${trash.length > 1 ? 's' : ''}` : ''}` : `${trash.length} student${trash.length > 1 ? 's' : ''}`
         addAudit(batch, branchId, actor, {
           action: 'session.delete_day',
           category: 'schedule',
           entityType: 'session',
           entityId: dates[0],
           dateKey: dates[0],
-          summary: `Moved ${trash.length} class${trash.length > 1 ? 'es' : ''} to Trash when closing ${dates.length === 1 ? formatDateKey(dates[0], 'weekdayMedium') : opts.summaryRange}`,
+          summary: `Moved ${what} to Trash when closing ${dates.length === 1 ? formatDateKey(dates[0], 'weekdayMedium') : opts.summaryRange}`,
         })
       }
     }

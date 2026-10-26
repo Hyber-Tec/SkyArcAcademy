@@ -30,7 +30,7 @@ export interface BranchContextValue {
   branchId: string
   branch: WithId<Branch>
   settings: BranchSettings
-  /** Core rules the owner sets (pay model, students per coach at once). */
+  /** Core rules the owner sets (pay model, seats per class). */
   rules: BusinessRules
   timezone: string
   /** The signed-in person's member doc. */

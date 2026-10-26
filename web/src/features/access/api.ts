@@ -73,6 +73,7 @@ export function newStudentData(input: { firstName: string; lastName: string; cre
     school: '',
     level: null,
     program: null,
+    rifle: null,
     status: 'signed_up',
     statusSource: 'auto',
     signUpDate: null,

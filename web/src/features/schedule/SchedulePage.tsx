@@ -1,107 +1,76 @@
+import { query, where } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuCalendarCog, LuCalendarDays, LuPlus } from 'react-icons/lu'
+import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
-import { dayHours, effectiveRanges, rangesContain } from '@shared/availability'
-import { isInactiveStudent } from '@shared/people'
-import type { Conflict } from '@shared/schedule/conflicts'
-import { buildDayRows, orderCoaches } from '@shared/schedule/dayModel'
-import { fitsCapacity, seatsLeft, unionMinutes } from '@shared/schedule/lanes'
-import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import type { ScheduleView, SessionStatus } from '@shared/settings/defaults'
-import {
-  type DateKey,
-  addDays,
-  addMonths,
-  formatDateKey,
-  formatTimeRange,
-  nowMinutes,
-  startOfMonth,
-  todayKey,
-  weekDays,
-} from '@shared/time'
-import type { Session, WithId } from '@shared/types'
+import { COL } from '@shared/paths'
+import { makeupsOwed } from '@shared/schedule/classes'
+import type { SessionStatus } from '@shared/settings/defaults'
+import { type DateKey, addDays, formatDateKey, formatMinutesShort, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
+import type { Availability, Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { useMembers, useStaffList, useStudentList } from '@/features/data/hooks'
+import { useStaffList, useStudentList } from '@/features/data/hooks'
+import { useShifts } from '@/features/timeclock/api'
 import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useLoadWindow } from '@/lib/useLoadWindow'
-import { cn } from '@/lib/utils'
-import { type ScheduleCtx, createSession, deleteSession, reorderSessions, updateSession } from './api'
-import { computeConflicts } from './conflicts'
-import { writeAvailability } from '@/features/availability/api'
-import { useNavigate } from 'react-router'
-import { type BellItem, type ScheduleUi, ScheduleUiContext, type Selection } from './context'
-import { DaySection } from './DaySection'
-import { BellDialog } from './dialogs/BellDialog'
-import { DayEditDialog } from './dialogs/DayEditDialog'
+import { branchCol, useQuery } from '@/lib/firestore'
+import { AddClassDialog } from './AddClassDialog'
+import { AddSeatDialog } from './AddSeatDialog'
+import type { ScheduleCtx } from './api'
+import { type Board, BoardContext } from './board'
+import { addSeat, createClass, moveSeat, removeClass, removeSeat, saveWhosIn, setSeatLabel, setSeatStatus, updateClass } from './classApi'
+import { ClassSheet } from './ClassSheet'
+import { DayList } from './DayList'
+import { DayHoursDialog } from './dialogs/DayHoursDialog'
 import { DuplicateDialog } from './dialogs/DuplicateDialog'
 import { EventDialog, type EventDialogState } from './dialogs/EventDialog'
-import { SessionDialog, type SessionDialogState } from './dialogs/SessionDialog'
 import { TrashDialog } from './dialogs/TrashDialog'
-import { CoachOrderDialog } from './dialogs/CoachOrderDialog'
-import { deleteEvent, moveEventTime } from './eventsApi'
-import { MonthView } from './MonthView'
-import { COMPACT_BELOW } from './geometry'
-import { useScheduleData } from './useScheduleData'
-import { useShifts } from '@/features/timeclock/api'
-import type { ClockInterval } from '@shared/schedule/dayModel'
+import { type ClassViewMode, SchedulePanel, ViewSwitch } from './SchedulePanel'
+import { coachColor } from './seatParts'
+import { useClassData } from './useClassData'
 import { useScheduleRoute } from './useScheduleRoute'
-import { type RailNumbers, type RailCoach, ScheduleMenu, ScheduleRail, SlimRail, ViewSwitch } from './ScheduleRail'
-import { WeekEventHeader } from './WeekEventHeader'
+import { WeekGrid } from './WeekGrid'
+import { WhosInDialog } from './WhosInDialog'
 
-const CLIP_KEY = 'skyarc:schedule-clipboard'
-// The redesign starts everyone at 100% (the old key held True Education's 80%).
-const ZOOM_KEY = 'skyarc:schedule-zoom'
+const PANEL_KEY = 'skyarc:schedule-panel'
+/** The page is this wide or wider: the panel sits beside the classes; narrower, it floats over them. */
+const DOCK_FROM = 1100
 
-interface Clip {
-  studentId: string
-  studentName: string
-  studentGrade: string
-  note: string
-  durationMin: number
-}
-
-function readClip(): Clip | null {
+function readPanel(): boolean | null {
   try {
-    return JSON.parse(localStorage.getItem(CLIP_KEY) ?? 'null') as Clip | null
+    const v = localStorage.getItem(PANEL_KEY)
+    return v === 'open' ? true : v === 'closed' ? false : null
   } catch {
     return null
   }
 }
 
-const NO_CONFLICTS: Conflict[] = []
-
-/** "Oct 18 – 24", or "Oct 28 – Nov 3" across two months. */
-function shortWeek(days: DateKey[]): string {
-  const first = days[0]
-  const last = days[days.length - 1]
-  return `${formatDateKey(first, 'monthDay')} – ${first.slice(0, 7) === last.slice(0, 7) ? Number(last.slice(8)) : formatDateKey(last, 'monthDay')}`
-}
-
-const PANEL_KEY = 'skyarc:schedule-panel'
-
-function readPanelOpen(): boolean {
-  try {
-    return localStorage.getItem(PANEL_KEY) !== 'closed'
-  } catch {
-    return true
-  }
-}
-
+/** The office's schedule (the owner's pick of the design options, 2026-10-26): the academy's classes as on its sheets. */
 export function SchedulePage() {
-  const { confirm, dialog: confirmDialog } = useConfirm()
+  return <ClassSchedule mode="admin" basePath="/admin/schedule" />
+}
+
+/**
+ * The schedule, as the academy's sheets lay it out (docs/DECISIONS.md §21): a week of classes, six seats each, every
+ * student in their level's colour, or a day larger to mark who's here; a panel on the right with the calendar and
+ * who's in. Coaches see the same, read-only.
+ */
+export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; basePath: string }) {
   const branch = useBranch()
-  const { branchId, settings, timezone, actor } = branch
+  const { branchId, settings, timezone, actor, rules } = branch
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const isMobile = useIsMobile()
-  // A narrow schedule (a phone, or the side rail open on a tablet) gives the classes the room, not the names.
-  const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
-  const compact = areaWidth ? areaWidth < COMPACT_BELOW : isMobile
-  const route = useScheduleRoute(`/admin/schedule`)
-  const { view, date } = route
+  const { confirm, dialog: confirmDialog } = useConfirm()
+  const route = useScheduleRoute(basePath)
+  const view: ClassViewMode = route.view === 'day' ? 'day' : 'week'
+  const date = route.date
   const weekStartsOn = settings.general.weekStartsOn
+  const week = useMemo(() => weekDays(date, weekStartsOn), [date, weekStartsOn])
   const [today, setToday] = useState(() => todayKey(timezone))
   const [nowMin, setNowMin] = useState(() => nowMinutes(timezone))
   useEffect(() => {
@@ -112,592 +81,203 @@ export function SchedulePage() {
     return () => clearInterval(t)
   }, [timezone])
 
-  const [coachFilter, setCoachFilter] = useState<string | null>(null)
-  const [selection, setSelection] = useState<Selection>(null)
-  // The floating panel (TE's week bar): opened and closed by hand or with Escape; remembered in this browser.
-  const [panelOpen, setPanelOpenState] = useState(() => readPanelOpen())
-  const setPanelOpen = useCallback((open: boolean | ((o: boolean) => boolean)) => {
-    setPanelOpenState((prev) => {
-      const next = typeof open === 'function' ? open(prev) : open
-      try {
-        localStorage.setItem(PANEL_KEY, next ? 'open' : 'closed')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-  const [topMonth, setTopMonth] = useState<DateKey | null>(null)
-  const [zoom, setZoomState] = useState(() => {
-    try {
-      return Number(localStorage.getItem(ZOOM_KEY) ?? '1') || 1
-    } catch {
-      return 1
-    }
-  })
-  const setZoom = (z: number) => {
-    setZoomState(z)
-    try {
-      localStorage.setItem(ZOOM_KEY, String(z))
-    } catch {
-      /* ignore */
-    }
-  }
+  const admin = mode === 'admin'
+  const { data: staff } = useStaffList(admin)
+  const { data: students } = useStudentList()
+  const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
+  const studentById = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
+  // The office knows everyone's role; a coach sees only availability, kept by coaches (the manager's too, who doesn't
+  // teach: their record says so once the office has saved it).
+  const isCoach = useCallback((id: string) => (admin ? staffById.get(id)?.role === 'coach' && staffById.get(id)?.status === 'active' : true), [admin, staffById])
+  const data = useClassData(week[0], week[6], { isCoach, keepPrevious: true })
+  const { data: shifts } = useShifts(today, today, null, admin)
 
-  const [sessionDialog, setSessionDialog] = useState<SessionDialogState>(null)
-  const [eventDialog, setEventDialog] = useState<EventDialogState>(null)
-  const [dayEdit, setDayEdit] = useState<DateKey | null>(null)
+  // ---------------------------------------------------------------- dialogs
+  const [classId, setClassId] = useState<string | null>(() => params.get('class'))
+  const [seatFor, setSeatFor] = useState<string | null>(null)
+  const [whosIn, setWhosIn] = useState<DateKey | null>(null)
+  const [newClass, setNewClass] = useState<{ dateKey: DateKey; key: number } | null>(null)
+  const [hoursDay, setHoursDay] = useState<DateKey | null>(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [dupOpen, setDupOpen] = useState(false)
-  const [orderOpen, setOrderOpen] = useState(false)
-  const [bell, setBell] = useState<{ session: WithId<Session>; items: BellItem[] } | null>(null)
+  const [eventDialog, setEventDialog] = useState<EventDialogState>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
-  const { data: staff } = useStaffList()
-  const { data: students } = useStudentList()
-  const { data: members } = useMembers()
-  const studentMap = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
-  const staffMap = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
+  // A class opened from elsewhere (Home, a student's page) arrives as ?class=…, a day (a notification's link) as ?date=…
+  useEffect(() => {
+    const id = params.get('class')
+    const day = params.get('date')
+    if (!id && !day) return
+    if (id) setClassId(id)
+    params.delete('class')
+    params.delete('date')
+    if (day && isDateKey(day)) route.go({ view: 'day', date: day }, true)
+    else setParams(params, { replace: true })
+  }, [params, setParams, route])
 
-  // Visible range (Month view scrolls: it loads the months around what's on screen)
-  const monthWindow = useLoadWindow(date)
-  const range = useMemo(() => {
-    if (view === 'day') return { from: date, to: date }
-    if (view === 'week') {
-      const days = weekDays(date, weekStartsOn)
-      return { from: days[0], to: days[6] }
-    }
-    return { from: monthWindow.from, to: monthWindow.to }
-  }, [view, date, weekStartsOn, monthWindow.from, monthWindow.to])
-
-  // Every coach's sessions load (the rail counts them all); the coach filter only changes the rows shown.
-  const data = useScheduleData(range.from, range.to, null, { eventsOnly: view === 'month', keepPrevious: view === 'month' })
-  const { data: shifts } = useShifts(range.from, range.to, null, view !== 'month')
-  const clocksByKey = useMemo(() => {
-    const m = new Map<string, ClockInterval[]>()
-    for (const sh of shifts) {
-      const endMin = sh.status === 'open' ? -1 : sh.outDateKey && sh.outDateKey > sh.dateKey ? 1440 : (sh.outMin ?? sh.inMin)
-      const key = `${sh.staffId}|${sh.dateKey}`
-      m.set(key, [...(m.get(key) ?? []), { id: sh.id, startMin: sh.inMin, endMin, open: sh.status === 'open' }].sort((a, b) => a.startMin - b.startMin))
-    }
-    return m
-  }, [shifts])
-  const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, data.dayConfigs), [settings, data.dayConfigs])
-  const isClosed = useCallback((d: DateKey) => !hoursOf(d).isOpen, [hoursOf])
-  const isLocked = useCallback((d: DateKey) => d < today, [today])
-
-  const coaches = useMemo(
-    () =>
-      orderCoaches(
-        staff.filter((s) => s.role === 'coach' && s.status !== 'finished'),
-        settings.schedule.coachOrder,
-      ).map((s) => ({ id: s.id, name: s.name })),
-    [staff, settings.schedule.coachOrder],
-  )
-  const visibleCoaches = coachFilter ? coaches.filter((t) => t.id === coachFilter) : coaches
-
-  const days = useMemo(() => {
-    if (view === 'day') return [date]
-    // Closed days stay hidden unless sessions are still booked on them (they show as conflicts).
-    if (view === 'week') return weekDays(date, weekStartsOn).filter((d) => !isClosed(d) || (data.sessionsByDate.get(d) ?? []).some((s) => s.status !== 'canceled'))
-    return []
-  }, [view, date, weekStartsOn, isClosed, data.sessionsByDate])
-
-  const maxLanes = branch.rules.maxStudentsPerCoach
-  const conflicts = useMemo(
-    () =>
-      computeConflicts({
-        sessions: data.sessions,
-        availabilityByKey: data.availabilityByKey,
-        hoursOf,
-        staffById: staffMap,
-        members,
-        studentsById: studentMap,
-        maxPerCoach: maxLanes,
-        today,
-        nowMin,
-      }),
-    [data.sessions, data.availabilityByKey, hoursOf, staffMap, members, studentMap, maxLanes, today, nowMin],
-  )
-  const conflictsOf = useCallback((s: WithId<Session>) => conflicts.get(s.id) ?? NO_CONFLICTS, [conflicts])
-  const sections = useMemo(
-    () =>
-      days.map((d) => {
-        const hours = hoursOf(d)
-        const rows = buildDayRows({
-          dateKey: d,
-          today,
-          hours,
-          coaches: visibleCoaches,
-          // Only the part of saved availability inside that date's opening hours counts.
-          availability: (id) => {
-            const a = data.availabilityByKey.get(`${id}|${d}`)
-            return a ? { ranges: effectiveRanges(a.ranges, hours), unavailable: a.unavailable, hidden: a.hidden } : null
-          },
-          // Showing one coach: only their sessions (others would get rows of their own).
-          sessions: (data.sessionsByDate.get(d) ?? []).filter((s) => !coachFilter || s.coachId === coachFilter),
-          clocks: (id) => (clocksByKey.get(`${id}|${d}`) ?? []).map((c) => (c.open ? { ...c, endMin: d === today ? nowMin : 1440 } : c)),
-          maxLanes,
-          addEmptyLane: true,
-          nameFor: (id) => staffMap.get(id)?.name ?? 'Former coach',
-        })
-        return { dateKey: d, hours, rows, events: data.eventsByDate.get(d) ?? [] }
-      }),
-    [days, hoursOf, today, nowMin, visibleCoaches, coachFilter, data.availabilityByKey, data.sessionsByDate, data.eventsByDate, maxLanes, staffMap, clocksByKey],
-  )
-
-  const ctx: ScheduleCtx = useMemo(() => ({ branchId, actor, timezone, settings, maxStudentsPerCoach: maxLanes }), [branchId, actor, timezone, settings, maxLanes])
+  const ctx: ScheduleCtx = useMemo(() => ({ branchId, actor, timezone, settings, maxStudentsPerCoach: rules.maxStudentsPerCoach }), [branchId, actor, timezone, settings, rules.maxStudentsPerCoach])
   const run = useCallback(async (fn: () => Promise<unknown>, ok?: string) => {
     try {
       await fn()
       if (ok) toast.success(ok)
     } catch (e) {
-      toast.error((e as Error).message.includes('permission') ? 'This change isn’t allowed (past day or no access).' : (e as Error).message)
+      const m = (e as Error).message
+      toast.error(m.includes('permission') ? 'This change isn’t allowed (a past day, or no access).' : m)
     }
   }, [])
 
-  // Sessions by id (visible range)
-  const sessionById = useMemo(() => new Map(data.sessions.map((s) => [s.id, s])), [data.sessions])
-
-  // ------------------------------------------------------------- bell items
-  const firstSessionIds = useMemo(() => {
-    const first = new Map<string, WithId<Session>>()
-    for (const s of [...data.sessions].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin)) {
-      if (s.status === 'canceled' || first.has(s.studentId)) continue
-      first.set(s.studentId, s)
+  // ------------------------------------------------------------------ board
+  const classById = useCallback((id: string) => {
+    for (const list of data.byDate.values()) {
+      const v = list.find((x) => x.c.id === id)
+      if (v) return v
     }
-    return new Set([...first.values()].map((s) => s.id))
-  }, [data.sessions])
+    return undefined
+  }, [data.byDate])
+  const [drag, setDrag] = useState<Board['drag']>(null)
+  const [lifted, setLifted] = useState<string | null>(null)
+  const [over, setOver] = useState<string | null>(null)
+  const nextOrder = (v: { seats: { visualOrder?: number }[] } | undefined) => Math.max(-1, ...(v?.seats ?? []).map((s) => s.visualOrder ?? 0)) + 1
 
-  const bellFor = useCallback(
-    (s: WithId<Session>): BellItem[] => {
-      const st = studentMap.get(s.studentId)
-      if (!st) return []
-      const items: BellItem[] = []
-      if (settings.schedule.alerts.firstSession && s.status !== 'canceled') {
-        const noHistory = !st.lastSessionDate
-        const isFirst = st.firstSessionDate ? st.firstSessionDate === s.dateKey : firstSessionIds.has(s.id)
-        if (noHistory && isFirst && !isInactiveStudent(st.status)) {
-          items.push({ kind: 'first_session', title: 'First class', subtitle: 'This student is attending a first class.' })
-        }
-      }
-      return items
+  const board: Board = {
+    mode,
+    me: admin ? null : (branch.staffId ?? null),
+    today,
+    nowMin,
+    levels: settings.students.levels,
+    byDate: data.byDate,
+    classById,
+    inOn: data.inOn,
+    isOpen: (d) => data.hoursOf(d).isOpen,
+    hoursOf: data.hoursOf,
+    eventsOn: (d) => data.eventsByDate.get(d) ?? [],
+    student: (id) => studentById.get(id),
+    staffName: (id, fallback) => staffById.get(id)?.name ?? fallback ?? (admin ? 'Former staff' : 'A coach'),
+    staffColor: (id) => coachColor(id, staffById.get(id)?.color),
+    clockedIn: (id) => shifts.find((s) => s.staffId === id && s.status === 'open')?.inMin ?? null,
+    canEdit: (d) => admin && d >= today,
+    openClass: setClassId,
+    openDay: (d) => route.go({ view: 'day', date: d }),
+    addSeat: setSeatFor,
+    addClass: (d) => setNewClass({ dateKey: d, key: Date.now() }),
+    editWhosIn: setWhosIn,
+    openEvent: admin ? (e) => setEventDialog({ mode: 'edit', event: e }) : undefined,
+    setStatus: (s, status: SessionStatus) => void run(() => setSeatStatus(ctx, s, status)),
+    setLabel: (s, l) => void run(() => setSeatLabel(ctx, s, l)),
+    move: (s, to) => void run(() => moveSeat(ctx, s, to, nextOrder(classById(to.id))), `${s.studentName} moved to ${formatDateKey(to.dateKey, 'weekdayMedium')}, ${formatMinutesShort(to.startMin)}`),
+    removeSeat: async (s) => {
+      const ok = await confirm({ title: `Take ${s.studentName} out of this class?`, description: 'It goes to the Trash, from where it can come back. To mark an absence, use Canceled instead.', confirmLabel: 'Take out', destructive: true })
+      if (ok) void run(() => removeSeat(ctx, s), `${s.studentName} taken out of the class`)
     },
-    [studentMap, settings.schedule.alerts, firstSessionIds],
-  )
-
-  // ------------------------------------------------------------- actions
-  const navigate = useNavigate()
-
-  const reassignOptions = useCallback(
-    (s: WithId<Session>) => {
-      // With one coach shown, other coaches' sessions aren't loaded: the edit dialog checks instead.
-      if (coachFilter) return null
-      const hours = hoursOf(s.dateKey)
-      if (!hours.isOpen) return []
-      return coaches.flatMap((t) => {
-        if (t.id === s.coachId || staffMap.get(t.id)?.status !== 'active') return []
-        const a = data.availabilityByKey.get(`${t.id}|${s.dateKey}`)
-        const ranges = a && !a.unavailable ? effectiveRanges(a.ranges, hours) : []
-        if (!rangesContain(ranges, s.startMin, s.endMin)) return []
-        const theirs = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.coachId === t.id && x.status !== 'canceled')
-        const seats = seatsLeft(theirs, s.startMin, s.endMin, maxLanes)
-        return seats > 0 ? [{ id: t.id, name: t.name, seats }] : []
+    saveClass: (v, patch) => void run(() => updateClass(ctx, v.c, patch, v.seats), 'Class saved'),
+    removeClass: async (v) => {
+      const n = v.seats.length
+      const ok = await confirm({
+        title: 'Remove this class?',
+        description: n ? `Its ${n} ${n === 1 ? 'student goes' : 'students go'} to the Trash with it, and come back together.` : 'It goes to the Trash.',
+        confirmLabel: 'Remove',
+        destructive: true,
       })
+      if (ok) void run(() => removeClass(ctx, v.c, v.seats), 'Class removed')
     },
-    [coachFilter, hoursOf, coaches, staffMap, data.availabilityByKey, data.sessionsByDate, maxLanes],
-  )
-
-  const moveSession = useCallback(
-    (id: string, staffId: string, dateKey: DateKey, startMin: number) => {
-      const s = sessionById.get(id)
-      if (!s) return
-      if (isLocked(s.dateKey) || isLocked(dateKey)) return toast.error('Past days can’t be changed.')
-      const duration = Math.max(5, s.endMin - s.startMin)
-      const endMin = startMin + duration
-      const avail = data.availabilityByKey.get(`${staffId}|${dateKey}`)
-      const ranges = avail && !avail.unavailable ? effectiveRanges(avail.ranges, hoursOf(dateKey)) : []
-      if (!rangesContain(ranges, startMin, endMin)) {
-        return toast.error('This start time does not fit the full class duration within the coach’s availability.')
-      }
-      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.coachId === staffId && x.status !== 'canceled')
-      if (s.status !== 'canceled' && !fitsCapacity(others, startMin, endMin, maxLanes, s.id)) {
-        return toast.error(`This coach already has ${maxLanes} students at that time.`)
-      }
-      if (staffId === s.coachId && dateKey === s.dateKey && startMin === s.startMin) return
-      const coach = staffMap.get(staffId)
-      void run(() =>
-        updateSession(ctx, s, { coachId: staffId, coachName: coach?.name ?? s.coachName, dateKey, startMin, endMin }),
-      )
-      setSelection({ kind: 'session', id })
+    drag,
+    lifted,
+    startDrag: (d) => {
+      setDrag(d)
+      requestAnimationFrame(() => setLifted(d.seatId))
     },
-    [sessionById, isLocked, data.availabilityByKey, hoursOf, data.sessionsByDate, maxLanes, staffMap, run, ctx],
-  )
-
-  const setStatus = useCallback(
-    (s: WithId<Session>, status: SessionStatus) => {
-      if (status === s.status) return
-      if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      if (s.status === 'canceled') {
-        const others = (data.sessionsByDate.get(s.dateKey) ?? []).filter((x) => x.coachId === s.coachId && x.status !== 'canceled')
-        if (!fitsCapacity(others, s.startMin, s.endMin, maxLanes, s.id)) return toast.error('It is already full.')
-      }
-      void run(() => updateSession(ctx, s, { status }), `Status changed to ${SESSION_STATUS_LABELS[status]}`)
-      if (s.status === 'canceled') {
-        // Un-canceling checks seats only: say so when the session comes back in conflict.
-        const back = computeConflicts({
-          sessions: data.sessions.map((x) => (x.id === s.id ? { ...x, status } : x)),
-          availabilityByKey: data.availabilityByKey,
-          hoursOf,
-          staffById: staffMap,
-          members,
-          studentsById: studentMap,
-          maxPerCoach: maxLanes,
-          today,
-          nowMin,
-        }).get(s.id)
-        if (back?.length) toast.warning('The class is back, but it’s in conflict', { description: back[0].message })
-      }
+    endDrag: () => {
+      setDrag(null)
+      setLifted(null)
+      setOver(null)
     },
-    [isLocked, data.sessionsByDate, data.sessions, data.availabilityByKey, hoursOf, staffMap, members, studentMap, maxLanes, run, ctx, today, nowMin],
-  )
+    over,
+    setOver,
+  }
 
-  const reorder = useCallback(
-    (draggedId: string, targetId: string) => {
-      const a = sessionById.get(draggedId)
-      const b = sessionById.get(targetId)
-      if (!a || !b || a.coachId !== b.coachId || a.dateKey !== b.dateKey || isLocked(a.dateKey)) return
-      if (a.status === 'canceled' || b.status === 'canceled' || a.endMin <= b.startMin || b.endMin <= a.startMin) return
-      const lo = Math.max(a.startMin, b.startMin)
-      const hi = Math.min(a.endMin, b.endMin)
-      const group = (data.sessionsByDate.get(a.dateKey) ?? [])
-        .filter((x) => x.coachId === a.coachId && x.status !== 'canceled' && x.startMin < hi && x.endMin > lo)
-        .sort((x, y) => (x.visualOrder ?? 0) - (y.visualOrder ?? 0) || x.startMin - y.startMin || x.endMin - y.endMin)
-      const without = group.filter((x) => x.id !== a.id)
-      const idx = without.findIndex((x) => x.id === b.id)
-      without.splice(idx, 0, a)
-      const updates = without.map((x, i) => ({ id: x.id, visualOrder: i })).filter((u) => (sessionById.get(u.id)?.visualOrder ?? 0) !== u.visualOrder)
-      if (updates.length) void run(() => reorderSessions(ctx, updates))
-    },
-    [sessionById, isLocked, data.sessionsByDate, run, ctx],
-  )
-
-  const reassign = useCallback(
-    (s: WithId<Session>, staffId: string) => {
-      if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      const coach = staffMap.get(staffId)
-      void run(() => updateSession(ctx, s, { coachId: staffId, coachName: coach?.name ?? s.coachName }), `Class given to ${coach?.name ?? 'the coach'}`)
-    },
-    [isLocked, staffMap, run, ctx],
-  )
-
-  const makeAvailable = useCallback(
-    (s: WithId<Session>) => {
-      if (isLocked(s.dateKey)) return toast.error('Past days can’t be changed.')
-      const a = data.availabilityByKey.get(`${s.coachId}|${s.dateKey}`)
-      const saved = a && !a.unavailable ? a.ranges : []
-      const time = formatTimeRange(s.startMin, s.endMin)
-      void run(
-        () =>
-          writeAvailability({
-            branchId,
-            actor,
-            timezone,
-            staffId: s.coachId,
-            staffName: s.coachName,
-            via: 'admin',
-            days: [{ dateKey: s.dateKey, ranges: [...saved, { startMin: s.startMin, endMin: s.endMin }] }],
-            summary: `Made ${s.coachName} available ${time} on ${formatDateKey(s.dateKey, 'medium')} for ${s.studentName}’s class`,
-          }),
-        `${s.coachName} is now available ${time}`,
-      )
-    },
-    [isLocked, data.availabilityByKey, run, branchId, actor, timezone],
-  )
-
-  const duplicateSession = useCallback((s: WithId<Session>) => {
-    setSessionDialog({
-      mode: 'create',
-      draft: {
-        coachId: s.coachId,
-        coachName: s.coachName,
-        studentId: s.studentId,
-        studentName: s.studentName,
-        studentGrade: s.studentGrade,
-        note: s.note,
-        status: 'pending',
-        dateKey: addDays(s.dateKey, 7),
-        startMin: s.startMin,
-        endMin: s.endMin,
-      },
-    })
-  }, [])
-
-  const trashSession = useCallback(
-    async (s: WithId<Session>) => {
-      if (isLocked(s.dateKey)) return void toast.error('Past days can’t be changed.')
-      if (!(await confirm({ title: 'Delete this class?', description: 'It goes to the Trash, where you can restore it.', confirmLabel: 'Delete', destructive: true }))) return
-      void run(() => deleteSession(ctx, s), 'Class moved to Trash')
-      setSelection(null)
-    },
-    [isLocked, run, ctx, confirm],
-  )
-
-  // ------------------------------------------------------------- clipboard / hotkeys
-  const copySession = useCallback(
-    (s: WithId<Session>) => {
-      const clip: Clip = {
-        studentId: s.studentId,
-        studentName: s.studentName,
-        studentGrade: studentMap.get(s.studentId)?.grade ?? s.studentGrade,
-        note: s.note,
-        durationMin: Math.max(5, s.endMin - s.startMin),
-      }
-      localStorage.setItem(CLIP_KEY, JSON.stringify(clip))
-      toast.success('Class copied — select a time and paste')
-    },
-    [studentMap],
-  )
-
-  const copy = useCallback(() => {
-    if (selection?.kind !== 'session') return
-    const s = sessionById.get(selection.id)
-    if (!s) return
-    copySession(s)
-  }, [selection, sessionById, copySession])
-
-  const pasteAt = useCallback(
-    (staffId: string, dateKey: DateKey, startMin: number) => {
-      const clip = readClip()
-      if (!clip) return toast.info('Copy a class first.')
-      if (isLocked(dateKey)) return toast.error('Past days can’t be changed.')
-      const endMin = startMin + clip.durationMin
-      const avail = data.availabilityByKey.get(`${staffId}|${dateKey}`)
-      const ranges = avail && !avail.unavailable ? effectiveRanges(avail.ranges, hoursOf(dateKey)) : []
-      if (!rangesContain(ranges, startMin, endMin)) return toast.error('This start time does not fit the full class duration within the coach’s availability.')
-      const others = (data.sessionsByDate.get(dateKey) ?? []).filter((x) => x.coachId === staffId && x.status !== 'canceled')
-      if (!fitsCapacity(others, startMin, endMin, maxLanes)) return toast.error(`This coach already has ${maxLanes} students at that time.`)
-      const coach = staffMap.get(staffId)
-      void run(() =>
-        createSession(
-          ctx,
-          { ...clip, coachId: staffId, coachName: coach?.name ?? '', status: settings.schedule.pasteStatus, dateKey, startMin, endMin },
-          'paste',
-        ),
-      )
-    },
-    [isLocked, data.availabilityByKey, hoursOf, data.sessionsByDate, maxLanes, staffMap, run, ctx, settings.schedule.pasteStatus],
-  )
-
-  const paste = useCallback(() => {
-    if (selection?.kind !== 'slot') return
-    pasteAt(selection.staffId, selection.dateKey, selection.startMin)
-  }, [selection, pasteAt])
-
-  const removeSelected = useCallback(async () => {
-    if (selection?.kind !== 'session') return
-    const s = sessionById.get(selection.id)
-    if (!s) return
-    if (isLocked(s.dateKey)) return void toast.error('Past days can’t be changed.')
-    if (!(await confirm({ title: 'Delete this class?', description: 'It goes to the Trash, where you can restore it.', confirmLabel: 'Delete', destructive: true }))) return
-    void run(() => deleteSession(ctx, s), 'Class moved to Trash')
-    setSelection(null)
-  }, [selection, sessionById, isLocked, run, ctx, confirm])
-
-  const nav = useMemo(() => {
-    const step = (dir: 1 | -1) => {
+  // --------------------------------------------------------------- nav
+  const step = useCallback(
+    (dir: 1 | -1) => {
       if (view === 'week') return route.go({ date: addDays(date, 7 * dir) })
-      if (view === 'month') return route.go({ date: addMonths(startOfMonth(date), dir) })
       let d = date
       for (let i = 0; i < 14; i++) {
         d = addDays(d, dir)
-        if (!isClosed(d)) return route.go({ date: d })
+        if (data.hoursOf(d).isOpen) return route.go({ date: d })
       }
       route.go({ date: addDays(date, dir) })
-    }
-    const goToday = () => {
-      let d = today
-      for (let i = 0; i < 7 && isClosed(d); i++) d = addDays(d, 1)
-      route.go({ date: view === 'month' ? today : d })
-      if (view === 'week') setTimeout(() => document.getElementById(`day-${d}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
-    }
-    return { prev: () => step(-1), next: () => step(1), today: goToday }
-  }, [view, date, route, isClosed, today])
+    },
+    [view, date, route, data],
+  )
+  const goToday = useCallback(() => {
+    let d = today
+    if (view === 'day') for (let i = 0; i < 7 && !data.hoursOf(d).isOpen; i++) d = addDays(d, 1)
+    route.go({ date: d })
+  }, [today, view, data, route])
+  const onView = (v: ClassViewMode) => {
+    if (v === 'day' && view !== 'day') {
+      let d = week.includes(today) ? today : date
+      for (let i = 0; i < 7 && !data.hoursOf(d).isOpen; i++) d = addDays(d, 1)
+      route.go({ view: 'day', date: d })
+    } else route.go({ view: v })
+  }
+  // A month view from an old link shows its week.
+  useEffect(() => {
+    if (route.view === 'month') route.go({ view: 'week' }, true)
+  }, [route])
 
-  const anyDialog = !!(sessionDialog || eventDialog || dayEdit || trashOpen || dupOpen || orderOpen || bell)
-  const keysRef = useRef({ copy, paste, removeSelected, nav, anyDialog, hasSelection: !!selection })
-  keysRef.current = { copy, paste, removeSelected, nav, anyDialog, hasSelection: !!selection }
+  // -------------------------------------------------------------- panel
+  const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
+  // Before the first measure, a guess from the window (the sidebar takes about 300 px), so the panel doesn't flash.
+  const docked = (areaWidth || window.innerWidth - 300) >= DOCK_FROM
+  const [shown, setShownState] = useState<boolean | null>(() => readPanel())
+  const panelOpen = !isMobile && (shown ?? docked)
+  const setShown = useCallback((open: boolean) => {
+    setShownState(open)
+    try {
+      localStorage.setItem(PANEL_KEY, open ? 'open' : 'closed')
+    } catch {
+      /* not kept */
+    }
+  }, [])
+
+  // ←/→ step through days or weeks; Escape folds or opens the panel.
+  const keys = useRef({ step, panelOpen, setShown })
+  keys.current = { step, panelOpen, setShown }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const k = keysRef.current
-      if (k.anyDialog) return
       const t = e.target as HTMLElement
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable || t.closest('[role="dialog"],[role="menu"],[role="listbox"]')) return
-      const mod = e.metaKey || e.ctrlKey
-      if (mod && e.key.toLowerCase() === 'c') {
-        k.copy()
-      } else if (mod && e.key.toLowerCase() === 'v') {
-        e.preventDefault()
-        k.paste()
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        k.removeSelected()
-      } else if (e.key === 'Escape') {
-        // Escape clears the selection; with nothing selected it folds or opens the side rail.
-        if (k.hasSelection) setSelection(null)
-        else setPanelOpen((o) => !o)
-      } else if (e.key === 'ArrowLeft' && !mod) {
-        k.nav.prev()
-      } else if (e.key === 'ArrowRight' && !mod) {
-        k.nav.next()
-      }
+      if (e.metaKey || e.ctrlKey || e.altKey || t.closest('input, textarea, select, [contenteditable], [role=dialog], [role=menu], [role=listbox]')) return
+      if (document.querySelector('[role=dialog]')) return
+      if (e.key === 'ArrowLeft') keys.current.step(-1)
+      else if (e.key === 'ArrowRight') keys.current.step(1)
+      else if (e.key === 'Escape') keys.current.setShown(!keys.current.panelOpen)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setPanelOpen])
-
-  // Make the URL explicit on first load.
-  useEffect(() => {
-    if (!route.explicit) {
-      let d = date
-      if (view === 'day') for (let i = 0; i < 7 && isClosed(d); i++) d = addDays(d, 1)
-      route.go({ view, date: d }, true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const ui: ScheduleUi = {
-    mode: 'admin',
-    compact,
-    today,
-    nowMin,
-    maxLanes,
-    snap: settings.schedule.snapMinutes,
-    defaultDuration: settings.schedule.defaultSessionMinutes,
-    selection,
-    select: setSelection,
-    students: studentMap,
-    isLocked,
-    bellFor,
-    conflictsOf,
-    createAt: (staffId, dateKey, startMin, endMin) => {
-      const t = staffMap.get(staffId)
-      setSessionDialog({ mode: 'create', draft: { coachId: staffId, coachName: t?.name ?? '', dateKey, startMin, endMin, status: 'pending' } })
-    },
-    editSession: (s) => setSessionDialog({ mode: 'edit', session: s }),
-    setStatus,
-    moveSession,
-    resizeSession: (s, startMin, endMin) => void run(() => updateSession(ctx, s, { startMin, endMin })),
-    reorderSession: reorder,
-    openStudent: (s, newTab) => {
-      const path = `/admin/students/${s.studentId}/info`
-      if (newTab) window.open(path, '_blank', 'noopener')
-      else navigate(path)
-    },
-    showBell: (session, items) => setBell({ session, items }),
-    reassignOptions,
-    reassign,
-    makeAvailable,
-    copySession,
-    duplicateSession,
-    trashSession,
-    openEmployee: (staffId, newTab) => {
-      const path = `/admin/employees/directory/${staffId}`
-      if (newTab) window.open(path, '_blank', 'noopener')
-      else navigate(path)
-    },
-    showOnlyCoach: (staffId) => setCoachFilter(staffId),
-    pasteAt,
-    hasClipboard: () => readClip() !== null,
-    createEvent: (dateKey, startMin) =>
-      setEventDialog({ mode: 'create', dateKey, startMin, endMin: Math.min(startMin + settings.schedule.events.defaultMinutes, hoursOf(dateKey).closeMin) }),
-    editEvent: (e) => setEventDialog({ mode: 'edit', event: e }),
-    moveEvent: (e, startMin) => void run(() => moveEventTime(ctx, e, startMin)),
-    deleteEvent: async (e) => {
-      const ok = await confirm({
-        title: e.recurrence ? 'Delete this recurring event?' : 'Delete this event?',
-        description: e.recurrence ? 'The whole series is removed.' : undefined,
-        confirmLabel: 'Delete',
-        destructive: true,
-      })
-      if (ok) void run(() => deleteEvent(ctx, e), 'Event deleted')
-    },
-    editDay: (d) => setDayEdit(d),
-    coachColor: (id) => staffMap.get(id)?.color,
-  }
+  // --------------------------------------------------------- make-ups owed
+  // Absences of the last six weeks still without a make-up, for "Add a student".
+  const since = addDays(today, -42)
+  const owedQ = useMemo(
+    () => (admin && seatFor ? query(branchCol(branchId, COL.sessions), where('dateKey', '>=', since), where('dateKey', '<=', addDays(today, 28))) : null),
+    [admin, seatFor, branchId, since, today],
+  )
+  const recent = useQuery<Session>(owedQ, `owed-${branchId}-${since}`)
+  const owed = useMemo(() => makeupsOwed(recent.data, since), [recent.data, since])
 
-  // ------------------------------------------------------------- rail
-  const shownDays = view === 'day' ? [date] : view === 'week' ? weekDays(date, weekStartsOn) : []
-  const railCoaches: RailCoach[] = useMemo(() => {
-    const inRange = (d: DateKey) => shownDays.includes(d)
-    return coaches.map((t) => {
-      const own = data.sessions.filter((s) => s.coachId === t.id && inRange(s.dateKey) && s.status !== 'canceled')
-      const minutes = shownDays.reduce((n, d) => n + unionMinutes(own.filter((s) => s.dateKey === d)), 0)
-      return {
-        id: t.id,
-        name: t.name,
-        color: staffMap.get(t.id)?.color,
-        sessions: own.length,
-        minutes,
-        conflicts: own.filter((s) => (conflicts.get(s.id) ?? []).length > 0).length,
-        clockedIn: (clocksByKey.get(`${t.id}|${today}`) ?? []).some((c) => c.open),
-        available: shownDays.some((d) => {
-          const a = data.availabilityByKey.get(`${t.id}|${d}`)
-          return !!a && !a.unavailable && effectiveRanges(a.ranges, hoursOf(d)).length > 0
-        }),
-      }
-    })
-    // shownDays is derived from view, date and weekStartsOn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coaches, data.sessions, data.availabilityByKey, view, date, weekStartsOn, staffMap, conflicts, clocksByKey, today, hoursOf])
-  const railNumbers: RailNumbers | null = useMemo(() => {
-    if (view === 'month') return null
-    const shown = data.sessions.filter((s) => shownDays.includes(s.dateKey))
-    const list = shown.filter((s) => s.status !== 'canceled')
-    const ended = (s: WithId<Session>) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin)
-    return {
-      label: view === 'day' ? (date === today ? 'Today' : formatDateKey(date, 'weekdayMedium')) : weekDays(date, weekStartsOn).includes(today) ? 'This week' : `Week of ${formatDateKey(shownDays[0], 'monthDay')}`,
-      sessions: list.length,
-      conflicts: list.filter((s) => (conflicts.get(s.id) ?? []).length > 0).length,
-      pending: list.filter((s) => s.status === 'pending' && !ended(s)).length,
-      canceled: shown.length - list.length,
-    }
-    // shownDays is derived from view, date and weekStartsOn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, date, weekStartsOn, data.sessions, today, nowMin, conflicts])
+  const title = view === 'day' ? formatDateKey(date, 'weekdayLong').replace(/, \d{4}$/, '') : `${formatDateKey(week[0], 'monthDay')} – ${formatDateKey(week[6], 'medium')}`
+  const phoneTitle = view === 'day' ? formatDateKey(date, 'weekdayMedium') : `${formatDateKey(week[0], 'monthDay')} – ${week[0].slice(0, 7) === week[6].slice(0, 7) ? Number(week[6].slice(8)) : formatDateKey(week[6], 'monthDay')}`
+  const seatClass = seatFor ? classById(seatFor) ?? null : null
+  const dayClasses = (d: DateKey) => data.byDate.get(d) ?? []
+  const savedOn = (d: DateKey) => new Map<string, Availability>(data.availability.filter((a) => a.dateKey === d).map((a) => [a.staffId, a]))
+  const people = staff.filter((s) => s.status === 'active')
 
-  const monthShown = view === 'month' && topMonth ? topMonth : date
-  const railTitle =
-    view === 'day'
-      ? { title: formatDateKey(date, 'weekdayLong').split(',')[0], subtitle: formatDateKey(date, 'long') }
-      : view === 'week'
-        ? { title: `Week of ${formatDateKey(weekDays(date, weekStartsOn)[0], 'monthDay')}`, subtitle: `${formatDateKey(weekDays(date, weekStartsOn)[0], 'short')} – ${formatDateKey(weekDays(date, weekStartsOn)[6], 'short')}` }
-        : { title: formatDateKey(monthShown, 'monthYear').split(' ')[0], subtitle: monthShown.slice(0, 4) }
-  const headTitle =
-    view === 'day'
-      ? formatDateKey(date, 'weekdayLong').replace(/, \d{4}$/, '')
-      : view === 'week'
-        ? `${formatDateKey(weekDays(date, weekStartsOn)[0], 'monthDay')} – ${formatDateKey(weekDays(date, weekStartsOn)[6], 'medium')}`
-        : formatDateKey(monthShown, 'monthYear')
-  // Phones: the same, short enough to sit beside Day / Week / Month ("Thu, Oct 22", "Oct 18 – 24").
-  const phoneTitle = view === 'day' ? formatDateKey(date, 'weekdayMedium') : view === 'week' ? shortWeek(weekDays(date, weekStartsOn)) : headTitle
-  const onView = (v: ScheduleView) => {
-    if (v === 'day' && view !== 'day') {
-      const inWeek = weekDays(date, weekStartsOn).includes(today)
-      let d = inWeek ? today : date
-      for (let i = 0; i < 7 && isClosed(d); i++) d = addDays(d, 1)
-      route.go({ view: v, date: d })
-    } else route.go({ view: v })
-  }
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const tools = { zoom, onZoom: setZoom, onDuplicate: () => setDupOpen(true), onTrash: () => setTrashOpen(true), onCoachOrder: () => setOrderOpen(true) }
-  const rail = (inSheet: boolean) => (
-    <ScheduleRail
+  const panel = (inSheet: boolean) => (
+    <SchedulePanel
       view={view}
       date={date}
-      today={today}
       weekStartsOn={weekStartsOn}
-      isClosed={isClosed}
-      title={railTitle.title}
-      subtitle={railTitle.subtitle}
       onView={(v) => {
         onView(v)
         setSheetOpen(false)
@@ -706,189 +286,179 @@ export function SchedulePage() {
         route.go({ date: d })
         setSheetOpen(false)
       }}
-      onPrev={nav.prev}
-      onNext={nav.next}
-      onToday={nav.today}
-      coaches={railCoaches}
-      showNumbers={view !== 'month'}
-      coachFilter={coachFilter}
-      onCoachFilter={(id) => {
-        setCoachFilter(id)
-        setSheetOpen(false)
-      }}
-      numbers={railNumbers}
-      topMonth={view === 'month' ? topMonth : null}
-      onHide={inSheet ? undefined : () => setPanelOpen(false)}
-      onClose={inSheet ? () => setSheetOpen(false) : undefined}
-      {...tools}
+      onPrev={() => step(-1)}
+      onNext={() => step(1)}
+      onToday={goToday}
+      onClose={() => (inSheet ? setSheetOpen(false) : setShown(false))}
+      className={inSheet ? 'rounded-none border-0 shadow-none' : 'max-h-[calc(100svh-7rem)]'}
     />
   )
-  const filtered = coachFilter ? staffMap.get(coachFilter) : null
-  const dayLocked = view === 'day' && isLocked(date)
 
   return (
-    <ScheduleUiContext value={ui}>
-      <div className="-m-4 flex h-[calc(100svh-3rem)] min-h-0 sm:-m-6 md:h-svh">
-        {!isMobile ? (
-          <div className={cn('shrink-0 border-r bg-muted/40', panelOpen ? 'w-72' : 'w-14')} data-testid="schedule-panel">
-            {panelOpen ? (
-              rail(false)
-            ) : (
-              <SlimRail coaches={railCoaches} coachFilter={coachFilter} onCoachFilter={setCoachFilter} onShow={() => setPanelOpen(true)} onPrev={nav.prev} onNext={nav.next} />
-            )}
+    <BoardContext value={board}>
+      <div className="-m-4 flex h-[calc(100svh-3rem)] min-h-0 flex-col sm:-m-6 md:h-svh" data-testid="schedule">
+        <div className="flex items-center gap-2 border-b bg-background px-3 py-2.5 sm:px-4">
+          {isMobile ? (
+            <Button variant="ghost" size="icon" aria-label="Calendar and who's in" onClick={() => setSheetOpen(true)}>
+              <LuCalendarDays className="size-5" />
+            </Button>
+          ) : null}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
+              <span className="sm:hidden">{phoneTitle}</span>
+              <span className="hidden sm:inline">{title}</span>
+            </h1>
+            {view === 'day' && date === today ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">TODAY</span> : null}
+            {view === 'day' && !data.hoursOf(date).isOpen ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
+            {view === 'day' && date < today ? <span className="hidden text-xs text-muted-foreground sm:inline">Past · view only</span> : null}
           </div>
-        ) : null}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center gap-2 border-b bg-background px-3 py-2.5 sm:px-4">
-            {isMobile ? (
-              <Button variant="ghost" size="icon" aria-label="Calendar and coaches" onClick={() => setSheetOpen(true)}>
-                <LuCalendarDays className="size-5" />
-              </Button>
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
-                  <span className="sm:hidden">{phoneTitle}</span>
-                  <span className="hidden sm:inline">{headTitle}</span>
-                </h1>
-                {view === 'day' && date === today ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">TODAY</span> : null}
-                {view === 'day' && isClosed(date) ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
-                {dayLocked ? <span className="hidden text-xs text-muted-foreground sm:inline">Past · view only</span> : null}
-              </div>
-              {filtered && view !== 'month' ? (
-                <div className="text-xs text-muted-foreground">
-                  Showing only {filtered.name} ·{' '}
-                  <button type="button" className="font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setCoachFilter(null)}>
-                    Show all
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            {isMobile || !panelOpen ? <ViewSwitch view={view} onView={onView} /> : null}
-            {view === 'day' && !dayLocked ? (
-              <>
-                <Button variant="outline" size="sm" className="hidden rounded-full sm:inline-flex" onClick={() => setDayEdit(date)}>
-                  <LuCalendarCog /> Edit day
-                </Button>
-                {hoursOf(date).isOpen ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hidden rounded-full lg:inline-flex"
-                    onClick={() =>
-                      setEventDialog({ mode: 'create', dateKey: date, startMin: hoursOf(date).openMin, endMin: Math.min(hoursOf(date).openMin + settings.schedule.events.defaultMinutes, hoursOf(date).closeMin) })
-                    }
-                  >
-                    <LuPlus /> Event
-                  </Button>
-                ) : null}
-              </>
-            ) : view === 'day' ? (
-              <Button variant="outline" size="sm" className="hidden rounded-full sm:inline-flex" onClick={() => setDayEdit(date)}>
-                <LuCalendarCog /> Day details
-              </Button>
-            ) : null}
-            <ScheduleMenu {...tools} />
-          </div>
-          {view === 'month' ? (
-            <MonthView
-              anchor={date}
-              focusDate={date}
-              eventsByDate={data.eventsByDate}
-              isClosed={isClosed}
-              today={today}
-              onDay={(d) => route.go({ view: 'day', date: d })}
-              onCreateEvent={(d) => setEventDialog({ mode: 'create', dateKey: d, startMin: settings.schedule.events.monthDefaultStartMin, endMin: settings.schedule.events.monthDefaultStartMin + 60 })}
-              onEditEvent={(e) => setEventDialog({ mode: 'edit', event: e })}
-              onVisibleRangeChange={monthWindow.onVisibleRangeChange}
-              onTopMonthChange={setTopMonth}
-              className="min-h-0 flex-1"
-            />
-          ) : (
+          {!panelOpen ? (
             <>
-              {view === 'week' ? (
-                <div className="border-b bg-muted/30 px-3 py-2 sm:px-4">
-                  <WeekEventHeader
-                    days={weekDays(date, weekStartsOn)}
-                    today={today}
-                    isClosed={isClosed}
-                    eventsByDate={data.eventsByDate}
-                    onDay={(d) => document.getElementById(`day-${d}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    onEditEvent={(e) => setEventDialog({ mode: 'edit', event: e })}
-                  />
-                </div>
-              ) : null}
-              <div
-                ref={areaRef}
-                className={cn('min-h-0 flex-1 overflow-auto', view === 'week' ? 'bg-muted/30' : 'bg-background')}
-                onMouseDown={(e) => e.target === e.currentTarget && setSelection(null)}
-                data-testid="schedule-area"
-              >
-                <div className={cn('w-max min-w-full', view === 'week' && 'p-3 sm:p-4')} style={{ zoom }}>
-                  <div className={cn('flex flex-col', view === 'week' && 'gap-6')}>
-                    {sections.map((s) => (
-                      <DaySection
-                        key={s.dateKey}
-                        sectionId={`day-${s.dateKey}`}
-                        dateKey={s.dateKey}
-                        hours={s.hours}
-                        rows={s.rows}
-                        events={s.events}
-                        showHeader={view === 'week'}
-                        stickyAxis={view === 'day'}
-                      />
-                    ))}
-                    {sections.length === 0 ? (
-                      <div className="m-4 rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
-                        {view === 'day' ? `Closed on ${formatDateKey(date, 'weekdayLong')}.` : 'The academy is closed all week.'}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="h-6" />
-                </div>
+              <div className="hidden items-center gap-1 sm:flex">
+                <Button variant="ghost" size="icon-sm" aria-label="Previous" title="Previous (←)" onClick={() => step(-1)}>
+                  <LuChevronLeft />
+                </Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={goToday}>
+                  Today
+                </Button>
+                <Button variant="ghost" size="icon-sm" aria-label="Next" title="Next (→)" onClick={() => step(1)}>
+                  <LuChevronRight />
+                </Button>
               </div>
+              <ViewSwitch view={view} onView={onView} compact />
             </>
-          )}
+          ) : null}
+          {!isMobile && !panelOpen ? (
+            <Button variant="outline" size="icon-sm" aria-label="Open the calendar panel" title="Open the calendar panel (Esc)" onClick={() => setShown(true)}>
+              <LuPanelRightOpen />
+            </Button>
+          ) : null}
+          {admin ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Schedule tools">
+                  <LuEllipsisVertical />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {view === 'day' && date >= today ? (
+                  <>
+                    <DropdownMenuItem onSelect={() => setNewClass({ dateKey: date, key: Date.now() })}>
+                      <LuPlus /> Add a class
+                    </DropdownMenuItem>
+                    {data.hoursOf(date).isOpen ? (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          const h = data.hoursOf(date)
+                          setEventDialog({ mode: 'create', dateKey: date, startMin: h.openMin, endMin: Math.min(h.openMin + settings.schedule.events.defaultMinutes, h.closeMin) })
+                        }}
+                      >
+                        <LuPlus /> Add an event
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem onSelect={() => setHoursDay(date)}>
+                      <LuCalendarCog /> Opening hours this day
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                <DropdownMenuItem onSelect={() => setDupOpen(true)}>
+                  <LuCopyPlus /> Duplicate a week
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setTrashOpen(true)}>
+                  <LuTrash2 /> Trash
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => navigate('/admin/settings')}>
+                  <LuClock /> Usual opening hours
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
-        {isMobile ? (
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent side="left" className="w-[88%] max-w-80 gap-0 overflow-y-auto bg-muted p-0" showCloseButton={false}>
-              <SheetHeader className="sr-only">
-                <SheetTitle>Schedule</SheetTitle>
-              </SheetHeader>
-              {rail(true)}
-            </SheetContent>
-          </Sheet>
-        ) : null}
+        <div ref={areaRef} className="relative flex min-h-0 flex-1 items-start gap-5 overflow-auto px-3 pt-4 pb-16 sm:px-5" data-testid="schedule-area">
+          <div className="min-w-0 flex-1">{view === 'week' ? <WeekGrid days={week} /> : <DayList dateKey={date} />}</div>
+          {panelOpen ? (
+            docked ? (
+              <div className="sticky top-0 w-[280px] shrink-0">{panel(false)}</div>
+            ) : (
+              <div className="absolute top-4 right-4 z-30 w-[min(300px,calc(100%-2rem))]">{panel(false)}</div>
+            )
+          ) : null}
+        </div>
       </div>
+      {isMobile ? (
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent side="right" className="w-[88%] max-w-80 gap-0 overflow-y-auto p-0" showCloseButton={false}>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Calendar and who's in</SheetTitle>
+            </SheetHeader>
+            {panel(true)}
+          </SheetContent>
+        </Sheet>
+      ) : null}
 
-      <SessionDialog
-        state={sessionDialog}
-        conflicts={sessionDialog?.mode === 'edit' ? conflictsOf(sessionDialog.session) : NO_CONFLICTS}
-        onClose={() => setSessionDialog(null)}
-        students={students.filter((s) => s.status !== 'finished')}
-        staff={staff}
-        isLocked={isLocked}
-        onSave={async (draft, existing) => {
-          if (existing) await updateSession(ctx, existing, draft)
-          else await createSession(ctx, draft)
-          toast.success(existing ? 'Class updated' : 'Class created')
-          if (!existing && draft.dateKey !== date && view === 'day') route.go({ date: draft.dateKey })
-        }}
-        onDelete={async (s) => {
-          await deleteSession(ctx, s)
-          toast.success('Class moved to Trash')
-        }}
-      />
-      <EventDialog state={eventDialog} onClose={() => setEventDialog(null)} ctx={ctx} />
-      <DayEditDialog dateKey={dayEdit} onClose={() => setDayEdit(null)} ctx={ctx} coaches={coaches} sessions={dayEdit ? data.sessionsByDate.get(dayEdit) ?? [] : []} availabilityByKey={data.availabilityByKey} dayConfigs={data.dayConfigs} />
-      <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} coachFilter={coachFilter} />
-      <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={today} />
+      <ClassSheet classId={classId} onClose={() => setClassId(null)} />
+      {admin ? (
+        <>
+          <AddSeatDialog
+            v={seatClass}
+            open={!!seatClass}
+            onOpenChange={(o) => !o && setSeatFor(null)}
+            students={students}
+            levels={settings.students.levels}
+            owed={owed}
+            onAdd={(st: WithId<Student>, l, part) => {
+              const v = seatClass
+              setSeatFor(null)
+              if (v) void run(() => addSeat(ctx, v.c, { student: st, label: l, ...(part ?? {}) }, nextOrder(v)), `${st.name} added${l ? ` (${l})` : ''}`)
+            }}
+          />
+          {newClass ? (
+            <AddClassDialog
+              key={newClass.key}
+              dateKey={newClass.dateKey}
+              open
+              onOpenChange={(o) => !o && setNewClass(null)}
+              hours={data.hoursOf(newClass.dateKey)}
+              after={dayClasses(newClass.dateKey).reduce<number | null>((m, v) => Math.max(m ?? 0, v.c.endMin), null)}
+              length={settings.schedule.defaultSessionMinutes}
+              seats={rules.seatsPerClass}
+              onCreate={(d) => {
+                setNewClass(null)
+                void run(() => createClass(ctx, d), 'Class added')
+              }}
+            />
+          ) : null}
+          <WhosInDialog
+            dateKey={whosIn}
+            open={!!whosIn}
+            onOpenChange={(o) => !o && setWhosIn(null)}
+            staff={people}
+            saved={whosIn ? savedOn(whosIn) : new Map()}
+            hours={whosIn ? data.hoursOf(whosIn) : { openMin: 960, closeMin: 1260 }}
+            colorOf={board.staffColor}
+            onSave={(rows) => {
+              const d = whosIn
+              setWhosIn(null)
+              if (d) void run(() => saveWhosIn(ctx, d, rows, savedOn(d)), `Who's in saved for ${formatDateKey(d, 'weekdayMedium')}`)
+            }}
+          />
+          <DayHoursDialog
+            dateKey={hoursDay}
+            onClose={() => setHoursDay(null)}
+            ctx={ctx}
+            dayConfigs={data.dayConfigs}
+            classesOutside={(d, h) => dayClasses(d).filter((v) => !h.isOpen || v.c.startMin < h.openMin || v.c.endMin > h.closeMin).length}
+            seatsOn={(d) => dayClasses(d).flatMap((v) => v.seats.map((s) => s.id))}
+          />
+          <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} />
+          <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={date} />
+          <EventDialog state={eventDialog} onClose={() => setEventDialog(null)} ctx={ctx} />
+        </>
+      ) : null}
       {confirmDialog}
-      <CoachOrderDialog open={orderOpen} onOpenChange={setOrderOpen} ctx={ctx} coaches={coaches} />
-      <BellDialog state={bell} onClose={() => setBell(null)} />
       {data.error ? <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-lg bg-destructive px-3 py-2 text-sm text-white">{data.error.message}</div> : null}
-    </ScheduleUiContext>
+    </BoardContext>
   )
 }
-

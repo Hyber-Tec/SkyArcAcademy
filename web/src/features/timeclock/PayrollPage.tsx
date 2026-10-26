@@ -28,7 +28,7 @@ import { PayGapNotice, RateMissingNotice } from '@/features/employees/PayGapNoti
 import { usePayGaps } from '@/features/employees/payGaps'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { type ClockShift, deleteShift, useSessionsRange, useShifts } from './api'
+import { type ClockShift, deleteShift, namesFrom, useAvailabilityRange, useSessionsRange, useShifts } from './api'
 import { useCompensationMap, usePayrollState } from './hooks'
 import { DateSortHead, GenerateClear, PayFilters, PayPager, PayRangeFields, PayRates, PayRecordsHeading, PayTiles, PayTypeBadge } from './PayParts'
 import { PayPeriodsDialog } from './PayPeriodsDialog'
@@ -116,21 +116,24 @@ export function PayrollPage() {
   const qTo = report ? report.to : today
   const who = report?.staffId ?? null
   const { data: shifts, loading: loadingShifts } = useShifts(qFrom, qTo, who, true, { keepPrevious: true })
-  const { data: sessions, loading: loadingSessions } = useSessionsRange(addDays(qFrom, -1), addDays(qTo, 1), who, true, { keepPrevious: true })
+  // Every class: they're taught together, so anyone's teaching can come from any of them.
+  const { data: sessions, loading: loadingSessions } = useSessionsRange(addDays(qFrom, -1), addDays(qTo, 1), true, { keepPrevious: true })
   const olderQuery = useMemo(
     () => (isReport ? null : query(branchCol(branchId, COL.clockShifts), where('dateKey', '<', browseFrom), orderBy('dateKey', 'desc'), limit(1))),
     [branchId, browseFrom, isReport],
   )
   const { data: older, loading: loadingOlder } = useQuery<ClockShift>(olderQuery, `pay-older-${branchId}-${browseFrom}-${isReport}`, { keepPrevious: true })
-  // Classes taught are paid from the schedule, so older classes also mean older records.
+  // Classes taught are paid from the schedule, so older classes also mean older records; a class counts for every coach
+  // in at its time.
   const paysClasses = rules.payModels.some((p) => p.model === 'classes')
+  const { data: availability, loading: loadingAvailability } = useAvailabilityRange(qFrom, qTo, who, paysClasses, { keepPrevious: true })
   const olderClassQuery = useMemo(
     () =>
       isReport || !paysClasses ? null : query(branchCol(branchId, COL.sessions), where('dateKey', '<', browseFrom), orderBy('dateKey', 'desc'), limit(1)),
     [branchId, browseFrom, isReport, paysClasses],
   )
   const { data: olderClass, loading: loadingOlderClass } = useQuery<Session>(olderClassQuery, `pay-older-classes-${branchId}-${browseFrom}-${isReport}`, { keepPrevious: true })
-  const loading = loadingShifts || loadingSessions || loadingOlder || loadingOlderClass
+  const loading = loadingShifts || loadingSessions || loadingAvailability || loadingOlder || loadingOlderClass
   const comps = useCompensationMap(staff.map((s) => s.id))
 
   const rows = useMemo(() => {
@@ -140,19 +143,19 @@ export function PayrollPage() {
       return isReport || matches(person) || (!person && role === 'all' && status === 'all') ? (person?.name ?? fallbackName) : null
     }
     const out: PayRow[] = []
-    const names = new Map(sessions.map((s) => [s.coachId, s.coachName]))
-    for (const l of payLines({ shifts, sessions, settings, rules, ratesFor, from: qFrom, to: qTo })) {
-      // A time entry still clocked in has no pay yet.
-      if (l.open) continue
+    const names = namesFrom(availability, sessions)
+    for (const l of payLines({ shifts, sessions, availability, settings, rules, ratesFor, from: qFrom, to: qTo })) {
+      // A time entry still clocked in has no pay yet; a report is one employee's.
+      if (l.open || (report && l.staffId !== report.staffId)) continue
       const name = shown(l.staffId, l.shift ? l.shift.staffName : (names.get(l.staffId) ?? 'Coach'))
       if (name === null) continue
       out.push({ id: l.key, staffId: l.staffId, dateKey: l.dateKey, type: l.type, shift: l.shift, seg: l.segment, name, parts: l.parts, students: l.students ?? 0 })
     }
     const dir = sortAsc ? 1 : -1
     return out.sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.name.localeCompare(b.name) || a.seg.startMs - b.seg.startMs)
-    // `matches` reads role and status.
+    // `matches` reads role and status; `report` is the employee and the dates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shifts, sessions, settings, rules, staffById, comps, isReport, role, status, sortAsc, qFrom, qTo])
+  }, [shifts, sessions, availability, settings, rules, staffById, comps, isReport, who, role, status, sortAsc, qFrom, qTo])
 
   const size = report ? REPORT_PAGE : BROWSE_PAGE
   const pageCount = Math.max(1, Math.ceil(rows.length / size))
@@ -409,7 +412,7 @@ export function PayrollPage() {
       </Card>
       <p className="mt-2 text-xs text-muted-foreground">
         {paysClasses
-          ? 'Under Classes taught, a coach’s rows are the class blocks they taught, each paid once however many students were in it. '
+          ? 'Under Classes taught, a coach’s rows are the class blocks they taught (every coach in at a class’s time teaches it), each paid once however many students were in it. '
           : null}
         Under Hourly, all of a coach’s clocked time is teaching time; under the other models it’s clocked time inside classes. Classes count when they’re marked{' '}
         {settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(', ')}. Hours are rounded to 0.01 h; pay is computed from the rounded hours. A row from a time

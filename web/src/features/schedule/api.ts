@@ -1,11 +1,9 @@
-import { type WriteBatch, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore'
-import { dayStartInstant } from '@shared/availability'
-import { COL, availabilityDocId } from '@shared/paths'
-import { type LaneItem, fitsCapacity } from '@shared/schedule/lanes'
-import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import type { BranchSettings, SessionStatus } from '@shared/settings/defaults'
+import { type WriteBatch, deleteDoc, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
+import { COL } from '@shared/paths'
+import { fitsCapacity } from '@shared/schedule/lanes'
+import type { BranchSettings } from '@shared/settings/defaults'
 import { type DateKey, dayEndInstant, formatDateKey, formatTimeRange, toInstant, weekdayOf } from '@shared/time'
-import type { AuditChange, AvailabilityRange, Session, WithId } from '@shared/types'
+import type { Session, WithId } from '@shared/types'
 import { type Actor, type AuditInput, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
@@ -15,21 +13,8 @@ export interface ScheduleCtx {
   actor: Actor
   timezone: string
   settings: BranchSettings
-  /** The branch rule: students a coach can teach at the same time. */
+  /** Students one coach taught at once, for sessions from before classes were taught together (the Trash). */
   maxStudentsPerCoach: number
-}
-
-export interface SessionDraft {
-  coachId: string
-  coachName: string
-  studentId: string
-  studentName: string
-  studentGrade: string
-  note: string
-  status: SessionStatus
-  dateKey: DateKey
-  startMin: number
-  endMin: number
 }
 
 export function timeFields(dateKey: DateKey, startMin: number, endMin: number, tz: string) {
@@ -44,139 +29,29 @@ export function timeFields(dateKey: DateKey, startMin: number, endMin: number, t
   }
 }
 
-/** "Wednesday, 9/30/2026 (4:00 PM - 5:50 PM)". */
-export function sessionContext(s: Pick<Session, 'dateKey' | 'startMin' | 'endMin'>): string {
+/** "Wednesday, 9/30/2026 (4:00 PM - 5:50 PM)": a session from before classes were taught together, in the audit log. */
+function sessionContext(s: Pick<Session, 'dateKey' | 'startMin' | 'endMin'>): string {
   return `${formatDateKey(s.dateKey, 'weekdayLong').split(',')[0]}, ${formatDateKey(s.dateKey, 'short')} (${formatTimeRange(s.startMin, s.endMin)})`
 }
 
-function audit(batch: WriteBatch, ctx: ScheduleCtx, s: Pick<Session, 'dateKey' | 'startMin' | 'endMin' | 'studentId' | 'studentName' | 'coachId' | 'coachName'>, input: Omit<AuditInput, 'category' | 'entityType' | 'context' | 'dateKey' | 'studentId' | 'studentName' | 'coachId' | 'coachName'> & { context?: string }) {
+function audit(batch: WriteBatch, ctx: ScheduleCtx, s: Pick<Session, 'dateKey' | 'startMin' | 'endMin' | 'studentId' | 'studentName' | 'coachId' | 'coachName'>, input: Omit<AuditInput, 'category' | 'entityType' | 'context' | 'dateKey' | 'studentId' | 'studentName' | 'coachId' | 'coachName'>) {
   addAudit(batch, ctx.branchId, ctx.actor, {
     category: 'schedule',
     entityType: 'session',
-    context: input.context ?? sessionContext(s),
+    context: sessionContext(s),
     dateKey: s.dateKey,
     studentId: s.studentId,
     studentName: s.studentName,
-    coachId: s.coachId,
-    coachName: s.coachName,
+    coachId: s.coachId || null,
+    coachName: s.coachName || null,
     ...input,
   })
 }
 
-export function newSessionData(ctx: ScheduleCtx, d: SessionDraft, source: Session['source']) {
-  return {
-    coachId: d.coachId,
-    coachName: d.coachName,
-    studentId: d.studentId,
-    studentName: d.studentName,
-    studentGrade: d.studentGrade,
-    note: d.note.trim(),
-    status: d.status,
-    ...timeFields(d.dateKey, d.startMin, d.endMin, ctx.timezone),
-    visualOrder: 0,
-    confirmedAt: null,
-    confirmedBy: null,
-    source,
-    isDeleted: false,
-    deletedAt: null,
-    deletedBy: null,
-    createdAt: serverTimestamp(),
-    createdBy: ctx.actor.email,
-    updatedAt: serverTimestamp(),
-    updatedBy: ctx.actor.email,
-  }
-}
-
-export async function createSession(ctx: ScheduleCtx, d: SessionDraft, source: Session['source'] = 'manual'): Promise<string> {
-  const ref = doc(branchCol(ctx.branchId, COL.sessions))
-  const batch = writeBatch(db)
-  batch.set(ref, newSessionData(ctx, d, source))
-  audit(batch, ctx, { ...d }, {
-    action: 'session.create',
-    entityId: ref.id,
-    summary: `Created a class for ${d.studentName} with ${d.coachName}`,
-    changes: [{ field: 'status', label: 'Status', from: null, to: SESSION_STATUS_LABELS[d.status] }],
-  })
-  await batch.commit()
-  return ref.id
-}
-
-export type SessionPatch = Partial<Pick<SessionDraft, 'coachId' | 'coachName' | 'studentId' | 'studentName' | 'studentGrade' | 'note' | 'status' | 'dateKey' | 'startMin' | 'endMin'>> & {
-  visualOrder?: number
-}
-
-export async function updateSession(ctx: ScheduleCtx, before: WithId<Session>, patch: SessionPatch) {
-  const next = { ...before, ...patch }
-  const timeChanged = next.dateKey !== before.dateKey || next.startMin !== before.startMin || next.endMin !== before.endMin
-  const changes: AuditChange[] = []
-  const actions: string[] = []
-  if (next.coachId !== before.coachId) {
-    changes.push({ field: 'coach', label: 'Coach', from: before.coachName, to: next.coachName })
-    actions.push('session.coach')
-  }
-  if (timeChanged) {
-    if (next.dateKey !== before.dateKey) {
-      changes.push({ field: 'date', label: 'Date', from: formatDateKey(before.dateKey, 'weekdayMedium'), to: formatDateKey(next.dateKey, 'weekdayMedium') })
-    }
-    if (next.startMin !== before.startMin || next.endMin !== before.endMin) {
-      changes.push({ field: 'time', label: 'Time', from: formatTimeRange(before.startMin, before.endMin), to: formatTimeRange(next.startMin, next.endMin) })
-    }
-    actions.push('session.move')
-  }
-  if (next.status !== before.status) {
-    changes.push({ field: 'status', label: 'Status', from: SESSION_STATUS_LABELS[before.status], to: SESSION_STATUS_LABELS[next.status] })
-    actions.push('session.status')
-  }
-  if ((next.note ?? '') !== (before.note ?? '')) {
-    changes.push({ field: 'note', label: 'Note', from: before.note || null, to: next.note || null })
-    actions.push('session.note')
-  }
-  if (next.studentId !== before.studentId) {
-    changes.push({ field: 'student', label: 'Student', from: before.studentName, to: next.studentName })
-    actions.push('session.student')
-  }
-
-  const batch = writeBatch(db)
-  batch.update(branchDocRef(ctx.branchId, COL.sessions, before.id), {
-    ...patch,
-    ...(timeChanged ? timeFields(next.dateKey, next.startMin, next.endMin, ctx.timezone) : {}),
-    ...(patch.status === 'confirmed' && before.status !== 'confirmed' ? { confirmedAt: serverTimestamp(), confirmedBy: ctx.actor.email } : {}),
-    updatedAt: serverTimestamp(),
-    updatedBy: ctx.actor.email,
-  })
-  if (actions.length > 0) {
-    const action = actions.length > 1 ? 'session.update' : actions[0]
-    const verb: Record<string, string> = {
-      'session.coach': 'Changed the coach of',
-      'session.move': 'Moved',
-      'session.status': 'Changed the status of',
-      'session.note': 'Changed the note on',
-      'session.student': 'Changed the student of',
-      'session.update': 'Updated',
-    }
-    audit(batch, ctx, before, {
-      action,
-      entityId: before.id,
-      summary: `${verb[action]} ${before.studentName}’s class`,
-      changes,
-    })
-  }
-  await batch.commit()
-}
-
-export async function deleteSession(ctx: ScheduleCtx, s: WithId<Session>) {
-  const batch = writeBatch(db)
-  batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), {
-    isDeleted: true,
-    deletedAt: serverTimestamp(),
-    deletedBy: ctx.actor.name,
-    updatedAt: serverTimestamp(),
-    updatedBy: ctx.actor.email,
-  })
-  audit(batch, ctx, s, { action: 'session.delete', entityId: s.id, summary: `Deleted ${s.studentName}’s class with ${s.coachName}` })
-  await batch.commit()
-}
-
+/**
+ * Brings a session from before classes were taught together (it has its own coach and no class) back from the Trash,
+ * if that coach still has a seat at its time.
+ */
 export async function restoreSession(ctx: ScheduleCtx, s: WithId<Session>) {
   // Coming back must not put the coach over the students-per-coach limit.
   if (s.status !== 'canceled') {
@@ -217,14 +92,6 @@ export async function purgeSessions(ctx: ScheduleCtx, sessions: WithId<Session>[
   }
 }
 
-export async function reorderSessions(ctx: ScheduleCtx, orders: { id: string; visualOrder: number }[]) {
-  const batch = writeBatch(db)
-  for (const o of orders) {
-    batch.update(branchDocRef(ctx.branchId, COL.sessions, o.id), { visualOrder: o.visualOrder, updatedAt: serverTimestamp(), updatedBy: ctx.actor.email })
-  }
-  await batch.commit()
-}
-
 // ---------------------------------------------------------------- day setup
 
 export async function saveDayConfig(ctx: ScheduleCtx, dateKey: DateKey, cfg: { isOpen: boolean; openMin: number; closeMin: number }, batch?: WriteBatch) {
@@ -243,153 +110,4 @@ export async function saveDayConfig(ctx: ScheduleCtx, dateKey: DateKey, cfg: { i
 
 export async function clearDayConfig(ctx: ScheduleCtx, dateKey: DateKey) {
   await deleteDoc(branchDocRef(ctx.branchId, COL.dayConfigs, dateKey))
-}
-
-/** Edit Day → availability override for one coach on one date. */
-export function setDayAvailability(
-  batch: WriteBatch,
-  ctx: ScheduleCtx,
-  staffId: string,
-  dateKey: DateKey,
-  value: { ranges: AvailabilityRange[]; unavailable: boolean; hidden: boolean },
-) {
-  batch.set(branchDocRef(ctx.branchId, COL.availability, availabilityDocId(staffId, dateKey)), {
-    staffId,
-    dateKey,
-    weekday: weekdayOf(dateKey),
-    ranges: value.unavailable ? [] : value.ranges,
-    unavailable: value.unavailable,
-    hidden: value.hidden,
-    dayStartAt: dayStartInstant(dateKey, ctx.timezone),
-    updatedVia: 'admin',
-    updatedAt: serverTimestamp(),
-    updatedBy: ctx.actor.email,
-  })
-}
-
-export async function saveCoachOrder(ctx: ScheduleCtx, order: string[], currentOverrides: Record<string, unknown>) {
-  const schedule = { ...((currentOverrides.schedule as Record<string, unknown>) ?? {}), coachOrder: order }
-  await updateDoc(doc(db, 'branches', ctx.branchId), {
-    settings: { ...currentOverrides, schedule },
-    updatedAt: serverTimestamp(),
-    updatedBy: ctx.actor.email,
-  })
-}
-
-
-// ---------------------------------------------------------------- duplicate
-
-export interface DuplicateSource {
-  weekday: string
-  startMin: number
-  endMin: number
-  coachId: string
-  coachName: string
-  studentId: string
-  studentName: string
-  studentGrade: string
-  note: string
-  visualOrder?: number
-}
-
-/**
- * Copies sessions into a target week (TE "Duplicate Week"): optionally clears the
- * target days first (only when there is something to copy), skips closed and past
- * days, and creates the copies with the paste status. Returns the number created.
- */
-export async function duplicateIntoWeek(
-  ctx: ScheduleCtx,
-  opts: {
-    sources: DuplicateSource[]
-    targetDays: { dateKey: DateKey; weekday: string; open: boolean }[]
-    existingTarget: WithId<Session>[]
-    liveGrade: (studentId: string) => string | undefined
-    label: string
-  },
-): Promise<{ created: number; skipped: number }> {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: ctx.timezone }).format(new Date())
-  const days = opts.targetDays.filter((d) => d.open && d.dateKey >= today)
-  const wanted = opts.sources.flatMap((src) => {
-    const day = days.find((d) => d.weekday === src.weekday)
-    return day ? [{ src, dateKey: day.dateKey }] : []
-  })
-  if (wanted.length === 0) return { created: 0, skipped: 0 }
-  const toClear = ctx.settings.schedule.duplicate.overwriteTargetDays
-    ? opts.existingTarget.filter((s) => !s.isDeleted && days.some((d) => d.dateKey === s.dateKey))
-    : []
-  // The branch's students-per-coach limit: sessions that would go over it are skipped.
-  const cleared = new Set(toClear.map((s) => s.id))
-  const seated = new Map<string, LaneItem[]>()
-  const seat = (coachId: string, dateKey: string) => {
-    const k = `${coachId}|${dateKey}`
-    if (!seated.has(k)) seated.set(k, [])
-    return seated.get(k)!
-  }
-  for (const s of opts.existingTarget) {
-    if (!s.isDeleted && !cleared.has(s.id) && s.status !== 'canceled') seat(s.coachId, s.dateKey).push({ id: s.id, startMin: s.startMin, endMin: s.endMin })
-  }
-  const plan = wanted
-    .slice()
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.src.startMin - b.src.startMin)
-    .filter(({ src, dateKey }, i) => {
-      const placed = seat(src.coachId, dateKey)
-      if (!fitsCapacity(placed, src.startMin, src.endMin, ctx.maxStudentsPerCoach)) return false
-      placed.push({ id: `new-${i}`, startMin: src.startMin, endMin: src.endMin })
-      return true
-    })
-  const skipped = wanted.length - plan.length
-  if (plan.length === 0) return { created: 0, skipped }
-  const ops: ((b: WriteBatch) => void)[] = []
-  for (const s of toClear) {
-    ops.push((b) =>
-      b.update(branchDocRef(ctx.branchId, COL.sessions, s.id), {
-        isDeleted: true,
-        deletedAt: serverTimestamp(),
-        deletedBy: ctx.actor.name,
-        updatedAt: serverTimestamp(),
-        updatedBy: ctx.actor.email,
-      }),
-    )
-  }
-  for (const { src, dateKey } of plan) {
-    ops.push((b) =>
-      b.set(
-        doc(branchCol(ctx.branchId, COL.sessions)),
-        {
-          ...newSessionData(
-            ctx,
-            {
-              coachId: src.coachId,
-              coachName: src.coachName,
-              studentId: src.studentId,
-              studentName: src.studentName,
-              studentGrade: opts.liveGrade(src.studentId) ?? src.studentGrade,
-              note: src.note,
-              status: ctx.settings.schedule.pasteStatus,
-              dateKey,
-              startMin: src.startMin,
-              endMin: src.endMin,
-            },
-            'duplicate_week',
-          ),
-          visualOrder: src.visualOrder ?? 0,
-        },
-      ),
-    )
-  }
-  for (let i = 0; i < ops.length; i += 400) {
-    const batch = writeBatch(db)
-    for (const op of ops.slice(i, i + 400)) op(batch)
-    if (i === 0) {
-      addAudit(batch, ctx.branchId, ctx.actor, {
-        action: 'schedule.duplicate_week',
-        category: 'schedule',
-        entityType: 'session',
-        entityId: 'many',
-        summary: `Duplicated ${plan.length} classes (${opts.label})${toClear.length ? `, replacing ${toClear.length}` : ''}${skipped ? `; skipped ${skipped} (coach full)` : ''}`,
-      })
-    }
-    await batch.commit()
-  }
-  return { created: plan.length, skipped }
 }

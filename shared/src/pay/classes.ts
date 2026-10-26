@@ -1,11 +1,23 @@
 import { type BusinessRules, payModelOn } from '../settings/businessRules'
 import type { BranchSettings } from '../settings/defaults'
 import type { DateKey } from '../time'
-import type { Session } from '../types'
+import type { Availability, Session } from '../types'
 import { type Interval, type PricedSegment, hoursOf, round2 } from './segment'
 import type { StaffPay } from './shifts'
 
-type TaughtClass = Pick<Session, 'coachId' | 'studentId' | 'dateKey' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
+type TaughtClass = Pick<Session, 'coachId' | 'studentId' | 'dateKey' | 'startMin' | 'endMin' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
+/** Who's in on a day: each coach's hours (their availability). */
+export type DayHoursRecord = Pick<Availability, 'staffId' | 'dateKey' | 'ranges' | 'unavailable'>
+
+/**
+ * Who taught a seat: the coaches in at its time (classes are taught together), or the one coach a session had before.
+ */
+export function teachersOf(s: Pick<Session, 'coachId' | 'dateKey' | 'startMin' | 'endMin'>, availability: readonly DayHoursRecord[] = []): string[] {
+  if (s.coachId) return [s.coachId]
+  return availability
+    .filter((a) => a.dateKey === s.dateKey && !a.unavailable && (a.ranges ?? []).some((r) => r.startMin < s.endMin && r.endMin > s.startMin))
+    .map((a) => a.staffId)
+}
 
 /** A block of classes a coach taught, paid under Classes taught. */
 export interface ClassBlockPay {
@@ -35,11 +47,13 @@ function blocksOf(spans: readonly Interval[]): Interval[] {
  * Pay under Classes taught: coaches are paid their teaching rate for the classes they taught, from the schedule, not
  * the clock. Only classes whose status counts as teaching (`payroll.teachingSessionStatuses`, by default attended
  * ones) and only on dates the academy pays this way. Each block is paid once however many students are in it (a
- * trial visit inside a block adds nothing). Owners and admins are paid for their clocked time instead, under every
- * model.
+ * trial visit inside a block adds nothing). A class counts for every coach in at its time (`availability`, who's in).
+ * Owners and admins are paid for their clocked time instead, under every model.
  */
 export function priceClassBlocks(opts: {
   sessions: readonly TaughtClass[]
+  /** Who's in on the sessions' dates; a session with its own coach (from before) doesn't need it. */
+  availability?: readonly DayHoursRecord[]
   settings: Pick<BranchSettings, 'payroll'>
   rules: Pick<BusinessRules, 'payModels'>
   ratesFor: (staffId: string) => StaffPay
@@ -48,12 +62,15 @@ export function priceClassBlocks(opts: {
   const days = new Map<string, TaughtClass[]>()
   for (const s of opts.sessions) {
     if (s.isDeleted || !counted.has(s.status) || payModelOn(opts.rules, s.dateKey) !== 'classes') continue
-    const key = `${s.coachId}|${s.dateKey}`
-    days.set(key, [...(days.get(key) ?? []), s])
+    for (const staffId of teachersOf(s, opts.availability)) {
+      const key = `${staffId}|${s.dateKey}`
+      days.set(key, [...(days.get(key) ?? []), s])
+    }
   }
   const out: ClassBlockPay[] = []
-  for (const list of days.values()) {
-    const { coachId: staffId, dateKey } = list[0]
+  for (const [key, list] of days) {
+    const staffId = key.slice(0, key.lastIndexOf('|'))
+    const { dateKey } = list[0]
     const { rates, role } = opts.ratesFor(staffId)
     if (role === 'owner' || role === 'admin') continue
     const spans = list.map((s) => ({ startMs: s.startAt.toMillis(), endMs: s.endAt.toMillis(), studentId: s.studentId }))

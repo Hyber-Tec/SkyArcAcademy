@@ -75,7 +75,7 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
                       key={s.id}
                       type="button"
                       onClick={() => onOpen(s)}
-                      title={`${showKid ? `${kid} · ` : ''}${formatTimeRange(s.startMin, s.endMin)} · ${s.coachName} · ${familyStatusLabel(s.status, ended)}`}
+                      title={`${showKid ? `${kid} · ` : ''}${formatTimeRange(s.startMin, s.endMin)} · ${familyStatusLabel(s.status, ended)}`}
                       aria-label={`${showKid ? `${kid}, ` : ''}${formatDateKey(d, 'weekdayMedium')}, ${formatTimeRange(s.startMin, s.endMin)}, ${familyStatusLabel(s.status, ended)}`}
                       className={cn(
                         // Each class is a box filling the day; several share the height.
@@ -89,7 +89,7 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
                     >
                       <span className="text-[10.5px] font-semibold tabular-nums sm:hidden">{formatMinutesShort(s.startMin)}</span>
                       <span className="hidden text-xs font-semibold text-balance tabular-nums sm:block">{timeRange(s.startMin, s.endMin)}</span>
-                      <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{showKid ? kid : s.coachName.split(' ')[0]}</span>
+                      {showKid ? <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{kid}</span> : null}
                       {showKid ? <span className="w-full truncate text-[10px] font-medium opacity-80 sm:hidden">{kid}</span> : null}
                     </button>
                   )

@@ -35,9 +35,9 @@ export async function saveMyDetails(branchId: string, actor: Actor, staff: WithI
 /** The four notification switches, in the order the page shows them. */
 export const NOTIFICATION_SWITCHES: { key: keyof NotificationPrefs; label: string; description: string }[] = [
   { key: 'announcements', label: 'Announcements', description: 'New posts from the academy, and posts sent to you again.' },
-  { key: 'sessionCreated', label: 'New classes', description: 'A class booked for you.' },
-  { key: 'sessionChanged', label: 'Class changes', description: 'A new day or time, a no-show, or a class moved to or from you.' },
-  { key: 'sessionCanceled', label: 'Cancellations', description: 'A confirmed class canceled, removed or put back.' },
+  { key: 'sessionCreated', label: 'New classes', description: 'A student booked into a class you teach.' },
+  { key: 'sessionChanged', label: 'Class changes', description: 'A new day or time, or a no-show, in a class you teach.' },
+  { key: 'sessionCanceled', label: 'Cancellations', description: 'A student’s confirmed class canceled, removed or put back.' },
 ]
 
 /** A missing switch counts as on (as on the server). */

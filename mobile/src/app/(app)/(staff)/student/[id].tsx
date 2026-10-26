@@ -105,9 +105,9 @@ export default function StudentScreen() {
             {parents.map((x, i) => (
               <ListRow
                 key={`${x.name}-${i}`}
-                icon={<Avatar name={x.name || "?"} size={38} />}
-                title={x.name || "Parent"}
-                subtitle={[x.relation, x.phone ? formatPhone(x.phone) : x.email].filter(Boolean).join(" · ")}
+                icon={<Avatar name={x.name || x.email || "?"} size={38} />}
+                title={x.name || x.email || "Parent"}
+                subtitle={[x.relation, x.phone ? formatPhone(x.phone) : x.name ? x.email : null].filter(Boolean).join(" · ")}
                 right={<ContactButtons phone={x.phone} email={x.email} name={x.name || "the parent"} />}
                 testID={`student-parent-${i}`}
               />
@@ -230,6 +230,7 @@ export default function StudentScreen() {
           <FactRow label="Grade" value={s.grade ? gradeLabel(s.grade) : "—"} />
           <FactRow label="Level" value={s.level || "—"} />
           <FactRow label="Program" value={s.program || "—"} />
+          <FactRow label="Rifle" value={s.rifle || "—"} />
           <FactRow label="Status" value={<Badge tone={s.status === "enrolled" ? "success" : "secondary"}>{STUDENT_STATUS_LABELS[s.status]}</Badge>} />
           <FactRow label="School" value={s.school || "—"} />
           <FactRow label="Sign-up date" value={s.signUpDate ? formatDateKey(s.signUpDate, "medium") : "—"} />

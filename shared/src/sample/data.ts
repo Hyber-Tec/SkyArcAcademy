@@ -1,16 +1,19 @@
-import { dayStartInstant } from '../availability'
+import { availabilityRecord } from '../availabilityWrites'
 import { newMemberData } from '../branchFactory'
 import { STAFF_COLORS } from '../colors'
 import { COL, DOC, availabilityDocId } from '../paths'
+import { makeupLabel } from '../schedule/classes'
+import { DEFAULT_BUSINESS_RULES } from '../settings/businessRules'
 import type { SessionStatus, WeekHours } from '../settings/defaults'
 import { type DateKey, type Weekday, addDays, dayEndInstant, diffDays, makeDateKey, minutesOf, parseDateKey, toInstant, weekdayOf } from '../time'
-import type { StudentStatus } from '../types'
+import type { AvailabilityRange, StudentStatus } from '../types'
 import { chance } from './random'
 
 /**
  * Sample data, for trying the app before the academy's real data arrives: fictional coaches, a manager, students and
- * their families, classes in the academy's real weekly blocks with makeups and trials, availability, time entries,
- * announcements and events, around today. Everything is made up: the names match nobody at the academy, emails use the
+ * their families; ten weeks of classes around today in the academy's weekly layout, taught together by the coaches in
+ * (each class's students are its seats, labelled as the sheets do: make-ups, practice, trials); who's in each day, time
+ * entries, announcements and events. Everything is made up: the names match nobody at the academy, emails use the
  * reserved `.test` domain (no email is ever sent to them), and every document ID starts with `sample-`, so
  * `npm run seed:sample -- --remove` deletes all of it, along with anything the app later made for these people.
  */
@@ -32,13 +35,15 @@ export interface SampleOptions {
   /** Today in the academy's zone. */
   today: DateKey
   now: Date
-  /** The academy's opening hours: classes only land in blocks inside them. */
+  /** The academy's opening hours: only the weekly classes inside them run. */
   week: WeekHours
   /** `settings.students.levels` and `.programs`. */
   levels: readonly string[]
   programs: readonly string[]
-  /** The academy's students-per-coach rule; a block never seats more (and never more than 5, as on the sheets). */
-  maxStudentsPerCoach: number
+  /** Seats a class has (`businessRules.seatsPerClass`, 6 by default); its regular students leave one free. */
+  seatsPerClass?: number
+  /** From when each student had one coach; unused since classes are taught together. */
+  maxStudentsPerCoach?: number
   /** Classes from this many days back to this many ahead (default 28 and 42). */
   daysBack?: number
   daysAhead?: number
@@ -48,32 +53,58 @@ export interface SampleSummary {
   staff: number
   students: number
   parents: number
+  /** Classes, and the students' seats in them. */
   classes: number
+  seats: number
+  /** Seats labelled as the sheets do: make-ups, practice, trial visits. */
   makeups: number
+  practice: number
   trials: number
+  /** Who's in: the staff's hours, one record per person and day (the manager's included). */
+  whosIn: number
   shifts: number
 }
 
 // ----------------------------------------------------------------- the week
 
+/** Which students a class takes: the sheets group them by level. */
+type Band = 'top' | 'advanced' | 'middle' | 'young'
+
 interface Block {
   startMin: number
   endMin: number
-  /** Precision blocks are 90 minutes and seat the top levels. */
-  precision?: boolean
+  band: Band
 }
 
-/** The class blocks on the academy's weekly sheets (docs/HYBERCRM_REVIEW.md §6). */
+const t = (h: number, m = 0) => h * 60 + m
+const block = (startMin: number, endMin: number, band: Band): Block => ({ startMin, endMin, band })
+
+/**
+ * A standing week modelled on the academy's sheets (docs/DECISIONS.md §20): Monday 4:30, 6 and 7 PM; Tuesday to
+ * Thursday 5, 6 and 7 PM; Sunday 2, 3:30, 5 and 6 PM. The 90-minute classes are the top level's, except Sunday's
+ * second, the advanced students'; the others are the middle levels' or the youngest's. A class runs only when it fits
+ * the opening hours (Sunday's last needs the academy open until 7 PM).
+ */
 const BLOCKS: Partial<Record<Weekday, Block[]>> = {
-  sunday: [{ startMin: 840, endMin: 900 }, { startMin: 900, endMin: 990, precision: true }, { startMin: 990, endMin: 1050 }],
-  monday: [{ startMin: 990, endMin: 1080, precision: true }, { startMin: 1080, endMin: 1140 }, { startMin: 1140, endMin: 1200 }],
-  tuesday: [{ startMin: 1020, endMin: 1080 }, { startMin: 1080, endMin: 1140 }, { startMin: 1140, endMin: 1200 }],
-  wednesday: [{ startMin: 1020, endMin: 1080 }, { startMin: 1080, endMin: 1140 }, { startMin: 1140, endMin: 1200 }],
-  thursday: [{ startMin: 1020, endMin: 1080 }, { startMin: 1080, endMin: 1140 }, { startMin: 1140, endMin: 1230, precision: true }],
+  sunday: [block(t(14), t(15, 30), 'top'), block(t(15, 30), t(17), 'advanced'), block(t(17), t(18), 'middle'), block(t(18), t(19), 'young')],
+  monday: [block(t(16, 30), t(18), 'top'), block(t(18), t(19), 'middle'), block(t(19), t(20), 'middle')],
+  tuesday: [block(t(17), t(18), 'young'), block(t(18), t(19), 'middle'), block(t(19), t(20), 'young')],
+  wednesday: [block(t(17), t(18), 'young'), block(t(18), t(19), 'middle'), block(t(19), t(20), 'young')],
+  thursday: [block(t(17), t(18), 'young'), block(t(18), t(19), 'middle'), block(t(19), t(20, 30), 'top')],
 }
 
-/** Levels from this index up (Expert, Precision on the default ladder) take the Precision blocks. */
-const PRECISION_FROM = 7
+/** On the default levels: Precision is the top, Sharp Shooter and Expert advanced, Hunter and below the youngest. */
+const TOP_LEVEL = 8
+const ADVANCED_FROM = 6
+const YOUNG_UP_TO = 2
+
+/** The classes a level takes, the preferred first. */
+function bandsFor(level: number | null): Band[] {
+  if (level === null || level <= YOUNG_UP_TO) return ['young']
+  if (level >= TOP_LEVEL) return ['top']
+  if (level >= ADVANCED_FROM) return ['advanced', 'middle']
+  return ['middle']
+}
 
 // ----------------------------------------------------------------- people
 
@@ -84,18 +115,24 @@ interface SampleStaff {
   role: 'admin' | 'coach'
   rate: number
   since: DateKey
-  /** Weekdays with availability (Sundays also follow the rotation). */
+  /** Weekdays they're in, Sundays aside (the manager is in every open day). */
   days: Weekday[]
+  /** Sundays: every one, or in turn with the other coaches. */
+  sundays?: 'every' | 'turn'
+  /** Weekdays they leave when the first class ends. */
+  early?: Weekday[]
 }
 
 const MANAGER: SampleStaff = { key: 'paige-sutton', first: 'Paige', last: 'Sutton', role: 'admin', rate: 24, since: '2024-06-03', days: [] }
+/** Who's in, as at the academy: Monday three coaches (one until 6 PM), Tuesday to Thursday two, Sunday one plus one in turn. */
 const COACHES: SampleStaff[] = [
-  { key: 'daniel-reed', first: 'Daniel', last: 'Reed', role: 'coach', rate: 28, since: '2024-09-03', days: ['monday', 'wednesday', 'thursday'] },
-  { key: 'hannah-moreno', first: 'Hannah', last: 'Moreno', role: 'coach', rate: 25, since: '2025-01-13', days: ['tuesday', 'thursday'] },
-  { key: 'joel-kwon', first: 'Joel', last: 'Kwon', role: 'coach', rate: 22, since: '2025-08-24', days: ['sunday', 'wednesday'] },
-  { key: 'elena-webb', first: 'Elena', last: 'Webb', role: 'coach', rate: 22, since: '2026-02-01', days: ['sunday'] },
+  { key: 'daniel-reed', first: 'Daniel', last: 'Reed', role: 'coach', rate: 28, since: '2024-09-03', days: ['monday', 'tuesday', 'wednesday', 'thursday'], sundays: 'turn' },
+  { key: 'hannah-moreno', first: 'Hannah', last: 'Moreno', role: 'coach', rate: 25, since: '2025-01-13', days: ['monday', 'thursday'], sundays: 'turn' },
+  { key: 'joel-kwon', first: 'Joel', last: 'Kwon', role: 'coach', rate: 22, since: '2025-08-24', days: ['tuesday', 'wednesday'], sundays: 'turn' },
+  { key: 'elena-webb', first: 'Elena', last: 'Webb', role: 'coach', rate: 22, since: '2026-02-01', days: ['monday'], sundays: 'every', early: ['monday'] },
 ]
 const STAFF = [MANAGER, ...COACHES]
+const SUNDAY_TURN = COACHES.filter((c) => c.sundays === 'turn').map((c) => c.key)
 
 interface SampleStudent {
   key: string
@@ -108,49 +145,57 @@ interface SampleStudent {
   perWeek: 0 | 1 | 2
   /** Sign-up date; regular classes start a week later. A number counts days from today. */
   since: DateKey | number
-  /** Siblings share parents and come to the same classes. */
+  /** Siblings share parents and come together: to the same class at the same level, the same day otherwise. */
   family?: string
-  /** Signed up for a trial: two 30-minute visits ahead. */
+  /** Signed up for a trial: two visits ahead. */
   trial?: boolean
+  /** The academy's rifle they use, by its code; none for their own. */
+  rifle?: string
+  /** Only these weekdays. */
+  days?: Weekday[]
   note?: string
 }
 
 const STUDENTS: SampleStudent[] = [
-  { key: 'jiwoo-hwang', first: 'Jiwoo', last: 'Hwang', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-03-02', family: 'hwang' },
-  { key: 'minjun-hwang', first: 'Minjun', last: 'Hwang', grade: '6', level: 2, status: 'enrolled', perWeek: 2, since: '2025-09-07', family: 'hwang' },
+  { key: 'jiwoo-hwang', first: 'Jiwoo', last: 'Hwang', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-03-02', family: 'hwang', rifle: 'C2' },
+  { key: 'minjun-hwang', first: 'Minjun', last: 'Hwang', grade: '6', level: 2, status: 'enrolled', perWeek: 2, since: '2025-09-07', family: 'hwang', rifle: 'C21' },
   { key: 'seoyeon-lim', first: 'Seoyeon', last: 'Lim', grade: '10', level: 8, status: 'enrolled', perWeek: 2, since: '2024-09-08', note: 'Junior team. Plans to try out for the state match.' },
-  { key: 'isaac-brooks', first: 'Isaac', last: 'Brooks', grade: '9', level: 7, status: 'enrolled', perWeek: 2, since: '2024-11-03' },
-  { key: 'yuna-chung', first: 'Yuna', last: 'Chung', grade: '7', level: 1, status: 'enrolled', perWeek: 1, since: '2026-06-07' },
-  { key: 'leo-carter', first: 'Leo', last: 'Carter', grade: '6', level: 0, status: 'enrolled', perWeek: 1, since: -24 },
-  { key: 'haneul-moon', first: 'Haneul', last: 'Moon', grade: '11', level: 6, status: 'enrolled', perWeek: 2, since: '2025-01-05' },
-  { key: 'grace-ellis', first: 'Grace', last: 'Ellis', grade: '8', level: 3, status: 'enrolled', perWeek: 2, since: '2025-08-17' },
-  { key: 'doyun-rhee', first: 'Doyun', last: 'Rhee', grade: '9', level: 5, status: 'enrolled', perWeek: 2, since: '2025-04-13' },
-  { key: 'sophie-novak', first: 'Sophie', last: 'Novak', grade: '7', level: 2, status: 'enrolled', perWeek: 2, since: '2025-10-05' },
-  { key: 'owen-fischer', first: 'Owen', last: 'Fischer', grade: '10', level: 4, status: 'enrolled', perWeek: 2, since: '2025-02-09' },
+  { key: 'isaac-brooks', first: 'Isaac', last: 'Brooks', grade: '9', level: 8, status: 'enrolled', perWeek: 2, since: '2024-11-03' },
+  { key: 'yuna-chung', first: 'Yuna', last: 'Chung', grade: '7', level: 1, status: 'enrolled', perWeek: 2, since: '2026-06-07', rifle: 'C3' },
+  { key: 'leo-carter', first: 'Leo', last: 'Carter', grade: '2', level: 0, status: 'enrolled', perWeek: 1, since: -24, rifle: 'C6' },
+  { key: 'haneul-moon', first: 'Haneul', last: 'Moon', grade: '11', level: 8, status: 'enrolled', perWeek: 2, since: '2025-01-05' },
+  { key: 'grace-ellis', first: 'Grace', last: 'Ellis', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-08-17', rifle: 'C12' },
+  { key: 'doyun-rhee', first: 'Doyun', last: 'Rhee', grade: '9', level: 6, status: 'enrolled', perWeek: 2, since: '2025-04-13', rifle: 'C14' },
+  { key: 'sophie-novak', first: 'Sophie', last: 'Novak', grade: '7', level: 2, status: 'enrolled', perWeek: 2, since: '2025-10-05', rifle: 'C4' },
+  { key: 'owen-fischer', first: 'Owen', last: 'Fischer', grade: '10', level: 4, status: 'enrolled', perWeek: 2, since: '2025-02-09', rifle: 'C5' },
   { key: 'seojin-song', first: 'Seojin', last: 'Song', grade: '12', level: 8, status: 'enrolled', perWeek: 2, since: '2024-08-25' },
-  { key: 'lucas-ortiz', first: 'Lucas', last: 'Ortiz', grade: '6', level: 1, status: 'enrolled', perWeek: 1, since: '2026-08-16' },
-  { key: 'harin-ryu', first: 'Harin', last: 'Ryu', grade: '8', level: 3, status: 'enrolled', perWeek: 2, since: '2025-06-01' },
-  { key: 'nora-bennett', first: 'Nora', last: 'Bennett', grade: '9', level: 5, status: 'enrolled', perWeek: 2, since: '2025-03-16' },
-  { key: 'jiho-paek', first: 'Jiho', last: 'Paek', grade: '7', level: 2, status: 'enrolled', perWeek: 2, since: '2025-11-02' },
-  { key: 'elijah-hayes', first: 'Elijah', last: 'Hayes', grade: '11', level: 7, status: 'enrolled', perWeek: 2, since: '2024-10-06' },
-  { key: 'isla-quinn', first: 'Isla', last: 'Quinn', grade: '6', level: 0, status: 'enrolled', perWeek: 1, since: -17 },
-  { key: 'eunwoo-seo', first: 'Eunwoo', last: 'Seo', grade: '10', level: 6, status: 'enrolled', perWeek: 2, since: '2025-01-19' },
-  { key: 'mia-collins', first: 'Mia', last: 'Collins', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-05-04' },
-  { key: 'sua-jang', first: 'Sua', last: 'Jang', grade: '7', level: 1, status: 'enrolled', perWeek: 2, since: '2026-01-11', family: 'jang' },
-  { key: 'samuel-jang', first: 'Samuel', last: 'Jang', grade: '9', level: 3, status: 'enrolled', perWeek: 2, since: '2025-07-13', family: 'jang' },
-  { key: 'chaewon-byun', first: 'Chaewon', last: 'Byun', grade: '11', level: 6, status: 'enrolled', perWeek: 2, since: '2025-02-23' },
-  { key: 'henry-lane', first: 'Henry', last: 'Lane', grade: '5', level: 0, status: 'enrolled', perWeek: 1, since: '2026-09-06' },
-  { key: 'zoe-pierce', first: 'Zoe', last: 'Pierce', grade: '8', level: 2, status: 'enrolled', perWeek: 1, since: '2026-03-01' },
-  { key: 'yejun-noh', first: 'Yejun', last: 'Noh', grade: '9', level: 5, status: 'enrolled', perWeek: 2, since: '2025-04-27' },
-  { key: 'ava-monroe', first: 'Ava', last: 'Monroe', grade: '7', level: 1, status: 'enrolled', perWeek: 2, since: '2026-02-08' },
-  { key: 'arin-tak', first: 'Arin', last: 'Tak', grade: '10', level: 4, status: 'enrolled', perWeek: 2, since: '2025-05-18', family: 'tak' },
-  { key: 'theo-tak', first: 'Theo', last: 'Tak', grade: '8', level: 3, status: 'enrolled', perWeek: 1, since: '2025-09-14', family: 'tak' },
-  { key: 'wesley-hart', first: 'Wesley', last: 'Hart', grade: 'Adult', level: 7, status: 'enrolled', perWeek: 1, since: '2025-10-19', note: 'Adult shooter; Sunday Precision only.' },
+  { key: 'lucas-ortiz', first: 'Lucas', last: 'Ortiz', grade: '6', level: 1, status: 'enrolled', perWeek: 2, since: '2026-08-16', rifle: 'C9' },
+  { key: 'harin-ryu', first: 'Harin', last: 'Ryu', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-06-01', rifle: 'C15' },
+  { key: 'nora-bennett', first: 'Nora', last: 'Bennett', grade: '9', level: 7, status: 'enrolled', perWeek: 2, since: '2025-03-16', rifle: 'C18' },
+  { key: 'jiho-paek', first: 'Jiho', last: 'Paek', grade: '7', level: 4, status: 'enrolled', perWeek: 2, since: '2025-11-02', rifle: 'JG' },
+  { key: 'elijah-hayes', first: 'Elijah', last: 'Hayes', grade: '11', level: 8, status: 'enrolled', perWeek: 2, since: '2024-10-06' },
+  { key: 'isla-quinn', first: 'Isla', last: 'Quinn', grade: '3', level: 0, status: 'enrolled', perWeek: 1, since: -17, rifle: 'C1' },
+  { key: 'eunwoo-seo', first: 'Eunwoo', last: 'Seo', grade: '10', level: 7, status: 'enrolled', perWeek: 2, since: '2025-01-19', rifle: 'C10' },
+  { key: 'mia-collins', first: 'Mia', last: 'Collins', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-05-04', rifle: 'C7' },
+  { key: 'sua-jang', first: 'Sua', last: 'Jang', grade: '7', level: 1, status: 'enrolled', perWeek: 2, since: '2026-01-11', family: 'jang', rifle: 'C11' },
+  { key: 'samuel-jang', first: 'Samuel', last: 'Jang', grade: '9', level: 4, status: 'enrolled', perWeek: 2, since: '2025-07-13', family: 'jang', rifle: 'C16' },
+  { key: 'chaewon-byun', first: 'Chaewon', last: 'Byun', grade: '11', level: 8, status: 'enrolled', perWeek: 2, since: '2025-02-23' },
+  { key: 'henry-lane', first: 'Henry', last: 'Lane', grade: '5', level: 1, status: 'enrolled', perWeek: 2, since: '2026-09-06', rifle: 'C22' },
+  { key: 'zoe-pierce', first: 'Zoe', last: 'Pierce', grade: '8', level: 1, status: 'enrolled', perWeek: 2, since: '2026-03-01', rifle: 'C20' },
+  { key: 'yejun-noh', first: 'Yejun', last: 'Noh', grade: '9', level: 7, status: 'enrolled', perWeek: 2, since: '2025-04-27', rifle: 'P' },
+  { key: 'ava-monroe', first: 'Ava', last: 'Monroe', grade: '7', level: 1, status: 'enrolled', perWeek: 2, since: '2026-02-08', rifle: 'C19' },
+  { key: 'arin-tak', first: 'Arin', last: 'Tak', grade: '10', level: 4, status: 'enrolled', perWeek: 2, since: '2025-05-18', family: 'tak', rifle: 'C8' },
+  { key: 'theo-tak', first: 'Theo', last: 'Tak', grade: '8', level: 4, status: 'enrolled', perWeek: 1, since: '2025-09-14', family: 'tak', rifle: 'C17' },
+  { key: 'wesley-hart', first: 'Wesley', last: 'Hart', grade: 'Adult', level: 8, status: 'enrolled', perWeek: 1, since: '2025-10-19', days: ['sunday'], note: 'Adult shooter; Sunday Precision only.' },
   { key: 'juno-gil', first: 'Juno', last: 'Gil', grade: '6', level: null, status: 'signed_up', perWeek: 0, since: -2, trial: true },
   { key: 'hailey-underwood', first: 'Hailey', last: 'Underwood', grade: '7', level: null, status: 'signed_up', perWeek: 0, since: -4, trial: true },
   { key: 'kai-whitaker', first: 'Kai', last: 'Whitaker', grade: '9', level: null, status: 'signed_up', perWeek: 0, since: -1, trial: true },
-  { key: 'bella-vance', first: 'Bella', last: 'Vance', grade: '8', level: 2, status: 'paused', perWeek: 2, since: '2025-09-21', note: 'Paused for the fall soccer season.' },
+  { key: 'bella-vance', first: 'Bella', last: 'Vance', grade: '8', level: 2, status: 'paused', perWeek: 2, since: '2025-09-21', rifle: 'C13', note: 'Paused for the fall soccer season.' },
   { key: 'jasper-dalton', first: 'Jasper', last: 'Dalton', grade: 'College', level: 5, status: 'finished', perWeek: 0, since: '2023-09-10', note: 'Graduated in May.' },
+  { key: 'mason-reyes', first: 'Mason', last: 'Reyes', grade: '5', level: 1, status: 'enrolled', perWeek: 2, since: '2026-04-12', rifle: 'C23' },
+  { key: 'yerin-baek', first: 'Yerin', last: 'Baek', grade: '6', level: 2, status: 'enrolled', perWeek: 2, since: '2026-01-25', rifle: 'C24' },
+  { key: 'felix-grant', first: 'Felix', last: 'Grant', grade: '9', level: 4, status: 'enrolled', perWeek: 2, since: '2025-10-26', rifle: 'C25' },
+  { key: 'dahye-oh', first: 'Dahye', last: 'Oh', grade: '8', level: 4, status: 'enrolled', perWeek: 2, since: '2025-12-14', rifle: 'C26' },
 ]
 
 /** Parents, by family (siblings share them); `login` families can sign in to the parent portal. */
@@ -169,32 +214,23 @@ export const SAMPLE_MANAGER = { name: `${MANAGER.first} ${MANAGER.last}`, email:
 export const sampleStudentId = (key: string) => `${SAMPLE_PREFIX}${key}`
 /** Phone numbers in 555-0100…0199, which exist nowhere. */
 const phone = (n: number) => `(678) 555-01${String(n % 100).padStart(2, '0')}`
+const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}${String(min % 60).padStart(2, '0')}`
+const monthDay = (d: DateKey) => `${parseDateKey(d).month}/${parseDateKey(d).day}`
 
-/** Who teaches a block: rows by coach, with Sundays rotating between two coaches week by week. */
-function coachFor(dateKey: DateKey, weekday: Weekday, block: Block): SampleStaff {
-  const byKey = (key: string) => COACHES.find((c) => c.key === key)!
-  switch (weekday) {
-    case 'monday':
-    case 'wednesday':
-      return byKey('daniel-reed')
-    case 'tuesday':
-      return byKey('hannah-moreno')
-    case 'thursday':
-      return byKey(block.precision ? 'daniel-reed' : 'hannah-moreno')
-    default:
-      return byKey(sundayCoachKey(dateKey))
+/** Lexicographic order by a list of numbers. */
+const byRank =
+  <T>(rank: (x: T) => number[]) =>
+  (a: T, b: T): number => {
+    const ra = rank(a)
+    const rb = rank(b)
+    for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i]
+    return 0
   }
-}
 
-function sundayCoachKey(dateKey: DateKey): string {
+/** The coach whose Sunday it is, among those who take them in turn, week by week. */
+function sundayTurn(dateKey: DateKey): string {
   const weeks = Math.floor(diffDays('2026-01-04', dateKey) / 7)
-  return ((weeks % 2) + 2) % 2 === 0 ? 'joel-kwon' : 'elena-webb'
-}
-
-function worksOn(st: SampleStaff, dateKey: DateKey): boolean {
-  const wd = weekdayOf(dateKey)
-  if (!st.days.includes(wd)) return false
-  return wd !== 'sunday' || sundayCoachKey(dateKey) === st.key
+  return SUNDAY_TURN[((weeks % SUNDAY_TURN.length) + SUNDAY_TURN.length) % SUNDAY_TURN.length]
 }
 
 /** The fourth Thursday of November: the academy is closed on Thanksgiving. */
@@ -212,7 +248,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   const stamp = { createdAt: now, createdBy: SAMPLE_AUTHOR, updatedAt: now, updatedBy: SAMPLE_AUTHOR }
   const docs: SampleDoc[] = []
   const add = (path: string, data: Record<string, unknown>) => docs.push({ path: `${base}/${path}`, data })
-  const seats = Math.max(1, Math.min(5, opts.maxStudentsPerCoach))
+  const seats = Math.max(1, opts.seatsPerClass ?? DEFAULT_BUSINESS_RULES.seatsPerClass)
   const from = addDays(today, -(opts.daysBack ?? 28))
   const to = addDays(today, opts.daysAhead ?? 42)
   const nowMin = minutesOf(now, timezone)
@@ -223,7 +259,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   const programName = (i: number | null) => (i === null ? null : (opts.programs[i <= 1 ? 0 : i <= 3 ? 1 : i <= 6 ? 2 : 3] ?? null))
   const sinceOf = (s: SampleStudent) => (typeof s.since === 'number' ? addDays(today, s.since) : s.since)
 
-  // The blocks that fit the academy's opening hours, by weekday.
+  // The classes that fit the academy's opening hours, by weekday.
   const blocksOn = (wd: Weekday): Block[] => {
     const hours = opts.week[wd]
     if (!hours?.isOpen) return []
@@ -268,106 +304,113 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     })
   })
 
-  // Availability: each coach's working days, all opening hours ---------------
-  // Their other open days ahead are marked not available (an answer), the Sunday they're off in the rotation too,
-  // except Daniel's: he hasn't answered his yet, so his calendar shows the days still to set.
-  const hannahOff = days.find((d) => d >= addDays(today, 8) && weekdayOf(d) === 'tuesday' && isOpen(d)) ?? null
-  for (const coach of COACHES) {
-    const staffId = sampleStaffId(coach.key)
+  // Who's in: everyone's hours each open day ------------------------------------
+  // Joel is away one Tuesday ahead and Daniel leaves at 7 PM that day: its last class has no coach in until someone
+  // fills in.
+  const awayDay = days.find((d) => d >= addDays(today, 8) && weekdayOf(d) === 'tuesday' && isOpen(d)) ?? null
+  /** Someone's hours on a day, or null when they're not in. */
+  const hoursIn = (st: SampleStaff, d: DateKey): AvailabilityRange[] | null => {
+    if (!isOpen(d)) return null
+    const wd = weekdayOf(d)
+    const blocks = blocksOn(wd)
+    const hours = opts.week[wd]
+    // In from 30 minutes before the first class, to set up (docs/DECISIONS.md §20), to the end of the last.
+    const startMin = Math.max(hours.openMin, blocks[0].startMin - 30)
+    let endMin = Math.min(hours.closeMin, blocks[blocks.length - 1].endMin)
+    if (st.role === 'admin') return [{ startMin, endMin }]
+    const on = wd === 'sunday' ? st.sundays === 'every' || (st.sundays === 'turn' && sundayTurn(d) === st.key) : st.days.includes(wd)
+    if (!on || (d === awayDay && st.key === 'joel-kwon')) return null
+    if (st.early?.includes(wd)) endMin = blocks[0].endMin
+    if (d === awayDay && st.key === 'daniel-reed') endMin = Math.min(endMin, t(19))
+    return [{ startMin, endMin }]
+  }
+  // The coaches' other open days ahead are marked not available (an answer), except Daniel's: he hasn't answered his
+  // yet, so his calendar shows the days still to set.
+  let whosIn = 0
+  for (const st of STAFF) {
+    const staffId = sampleStaffId(st.key)
     for (const d of days) {
       if (!isOpen(d)) continue
-      if (!worksOn(coach, d)) {
-        if (coach.key === 'daniel-reed' || d < today) continue
-        add(`${COL.availability}/${availabilityDocId(staffId, d)}`, {
-          staffId,
-          dateKey: d,
-          weekday: weekdayOf(d),
-          ranges: [],
-          unavailable: true,
-          hidden: false,
-          dayStartAt: dayStartInstant(d, timezone),
-          updatedVia: 'coach',
-          ...stamp,
-        })
-        continue
-      }
-      const hours = opts.week[weekdayOf(d)]
-      // Hannah is out sick one Tuesday ahead: her classes that day show as conflicts to move.
-      const off = coach.key === 'hannah-moreno' && d === hannahOff
-      add(`${COL.availability}/${availabilityDocId(staffId, d)}`, {
-        staffId,
-        dateKey: d,
-        weekday: weekdayOf(d),
-        ranges: off ? [] : [{ startMin: hours.openMin, endMin: hours.closeMin }],
-        unavailable: off,
-        hidden: false,
-        dayStartAt: dayStartInstant(d, timezone),
-        updatedVia: 'admin',
-        ...stamp,
-      })
+      const ranges = hoursIn(st, d)
+      if (!ranges && (st.role !== 'coach' || d < today || st.key === 'daniel-reed')) continue
+      const record = availabilityRecord(staffId, { dateKey: d, ranges: ranges ?? [], unavailable: !ranges }, timezone, ranges ? 'admin' : 'coach', `${st.first} ${st.last}`, st.role)
+      if (!record) continue
+      add(`${COL.availability}/${availabilityDocId(staffId, d)}`, { ...record, ...stamp })
+      if (ranges) whosIn++
     }
   }
 
-  // Weekly seats: each enrolled student keeps the same blocks every week -----
-  const slots = (Object.keys(BLOCKS) as Weekday[]).flatMap((wd) => blocksOn(wd).map((block, index) => ({ wd, index, block, key: `${wd}:${index}` })))
+  // Weekly seats: each enrolled student keeps the same classes every week, among their level's ------------------
+  interface Slot {
+    wd: Weekday
+    block: Block
+    key: string
+  }
+  const slots: Slot[] = (Object.keys(BLOCKS) as Weekday[]).flatMap((wd) => blocksOn(wd).map((b) => ({ wd, block: b, key: `${wd}:${b.startMin}` })))
+  const slotsOn = (d: DateKey) => slots.filter((x) => x.wd === weekdayOf(d))
+  // The regulars leave a seat free for make-ups, practice and trials.
+  const regulars = Math.max(1, seats - 1)
   const fill = new Map<string, number>()
-  const weekly = new Map<string, string[]>()
-  const familySlots = new Map<string, string[]>()
+  const weekly = new Map<string, Slot[]>()
+  const familySlots = new Map<string, Slot[]>()
   for (const s of STUDENTS) {
     if (s.perWeek === 0) continue
-    const top = (s.level ?? 0) >= PRECISION_FROM
-    const allowed = slots.filter((x) => !!x.block.precision === top)
-    const chosen: string[] = []
-    // Siblings take the same blocks when there's room.
-    for (const key of (s.family && familySlots.get(s.family)) || []) {
-      if (chosen.length < s.perWeek && allowed.some((x) => x.key === key) && (fill.get(key) ?? 0) < seats) chosen.push(key)
-    }
+    const bands = bandsFor(s.level)
+    const family = (s.family && familySlots.get(s.family)) || []
+    const chosen: Slot[] = []
     while (chosen.length < s.perWeek) {
-      const usedDays = new Set(chosen.map((k) => k.split(':')[0]))
-      const options = allowed
-        .filter((x) => !usedDays.has(x.wd) && (fill.get(x.key) ?? 0) < seats)
-        .sort((a, b) => (fill.get(a.key) ?? 0) - (fill.get(b.key) ?? 0) || chance(s.key, a.key) - chance(s.key, b.key))
+      const usedDays = new Set(chosen.map((x) => x.wd))
+      const options = slots.filter((x) => bands.includes(x.block.band) && !usedDays.has(x.wd) && (!s.days || s.days.includes(x.wd)) && (fill.get(x.key) ?? 0) < regulars)
       if (!options.length) break
-      chosen.push(options[0].key)
+      // Siblings come together: to the same class when it's their level, on the same day otherwise.
+      const rank = (x: Slot) => [family.some((f) => f.key === x.key) ? 0 : family.some((f) => f.wd === x.wd) ? 1 : 2, bands.indexOf(x.block.band), fill.get(x.key) ?? 0, chance(s.key, x.key)]
+      const pick = options.sort(byRank(rank))[0]
+      chosen.push(pick)
+      fill.set(pick.key, (fill.get(pick.key) ?? 0) + 1)
     }
-    for (const key of chosen) fill.set(key, (fill.get(key) ?? 0) + 1)
     weekly.set(s.key, chosen)
-    if (s.family && !familySlots.has(s.family)) familySlots.set(s.family, chosen)
+    if (s.family) familySlots.set(s.family, [...family, ...chosen])
   }
 
-  // Classes -----------------------------------------------------------------
-  interface Made {
-    studentKey: string
+  // Seats ---------------------------------------------------------------------
+  interface Seat {
+    id: string
+    student: SampleStudent
     dateKey: DateKey
+    kind: 'class' | 'makeup' | 'practice' | 'trial'
     status: SessionStatus
-    kind: 'class' | 'makeup' | 'trial'
+    data: Record<string, unknown>
   }
-  const made: Made[] = []
-  const taken = new Map<string, number>() // `${dateKey}|${slotKey}` → seats taken
-  const busy = new Set<string>() // `${studentKey}|${dateKey}`
+  const made: Seat[] = []
+  const inClass = new Map<string, Seat[]>() // `${dateKey}|${slot.key}` → its seats
+  const busy = new Set<string>() // `${studentKey}|${dateKey}`: one class a day
+  const classIdOf = (d: DateKey, slot: Slot) => `${SAMPLE_PREFIX}class-${d}-${hhmm(slot.block.startMin)}`
+  /** Seats in use in a class: a canceled student frees theirs. */
+  const taken = (d: DateKey, slot: Slot) => (inClass.get(`${d}|${slot.key}`) ?? []).filter((x) => x.status !== 'canceled').length
   const ended = (d: DateKey, endMin: number) => d < today || (d === today && endMin <= nowMin)
-  const statusFor = (id: string, d: DateKey, endMin: number, kind: Made['kind']): SessionStatus => {
+  const statusFor = (id: string, d: DateKey, endMin: number, kind: Seat['kind']): SessionStatus => {
     const r = chance(id, 'status')
-    if (ended(d, endMin)) return kind === 'class' ? (r < 0.86 ? 'present' : r < 0.91 ? 'no_show' : 'canceled') : 'present'
+    if (ended(d, endMin)) return kind === 'class' ? (r < 0.88 ? 'present' : r < 0.92 ? 'no_show' : 'canceled') : 'present'
     if (kind === 'class' && r < 0.04) return 'canceled'
     return diffDays(today, d) <= 1 ? 'confirmed' : 'pending'
   }
-  const md = (d: DateKey) => `${parseDateKey(d).month}/${parseDateKey(d).day}`
 
-  const addClass = (s: SampleStudent, d: DateKey, slotKey: string, kind: Made['kind'], note: string, span?: { startMin: number; endMin: number }) => {
-    const slot = slots.find((x) => x.key === slotKey)!
-    const coach = coachFor(d, slot.wd, slot.block)
-    const startMin = span?.startMin ?? slot.block.startMin
-    const endMin = span?.endMin ?? slot.block.endMin
+  const addSeat = (s: SampleStudent, d: DateKey, slot: Slot, kind: Seat['kind'], note: string, span?: AvailabilityRange): Seat => {
+    // The youngest come for the last half hour of their class.
+    const half = s.level === 0 && slot.block.endMin - slot.block.startMin === 60 ? { startMin: slot.block.endMin - 30, endMin: slot.block.endMin } : null
+    const { startMin, endMin } = span ?? half ?? slot.block
     const id = `${SAMPLE_PREFIX}c-${d}-${s.key}`
     const status = statusFor(id, d, endMin, kind)
-    add(`${COL.sessions}/${id}`, {
-      coachId: sampleStaffId(coach.key),
-      coachName: `${coach.first} ${coach.last}`,
+    const list = inClass.get(`${d}|${slot.key}`) ?? []
+    const data: Record<string, unknown> = {
+      classId: classIdOf(d, slot),
+      coachId: '',
+      coachName: '',
       studentId: sampleStudentId(s.key),
       studentName: `${s.first} ${s.last}`,
       studentGrade: s.grade,
-      note,
+      // The sheets write "Absent" beside a student who canceled.
+      note: kind === 'class' && status === 'canceled' ? 'Absent' : note,
       status,
       dateKey: d,
       weekday: weekdayOf(d),
@@ -376,7 +419,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       startAt: toInstant(d, startMin, timezone),
       endAt: toInstant(d, endMin, timezone),
       dayEndAt: dayEndInstant(d, timezone),
-      visualOrder: 0,
+      visualOrder: list.length,
       confirmedAt: null,
       confirmedBy: null,
       source: 'seed',
@@ -384,61 +427,121 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       deletedAt: null,
       deletedBy: null,
       ...stamp,
-    })
-    taken.set(`${d}|${slotKey}`, (taken.get(`${d}|${slotKey}`) ?? 0) + 1)
+    }
+    const seat: Seat = { id, student: s, dateKey: d, kind, status, data }
+    list.push(seat)
+    inClass.set(`${d}|${slot.key}`, list)
     busy.add(`${s.key}|${d}`)
-    made.push({ studentKey: s.key, dateKey: d, status, kind })
-    return status
+    made.push(seat)
+    return seat
   }
 
   // Regular classes, every week in the window.
+  const activeOn = (s: SampleStudent, d: DateKey) => {
+    const start = addDays(sinceOf(s), 7)
+    return s.status === 'enrolled' ? d >= start : s.status === 'paused' ? d >= start && d <= addDays(today, -21) : false
+  }
   for (const d of days) {
     if (!isOpen(d)) continue
-    const wd = weekdayOf(d)
     for (const s of STUDENTS) {
-      const start = addDays(sinceOf(s), 7)
-      const active = s.status === 'enrolled' ? d >= start : s.status === 'paused' ? d >= start && d <= addDays(today, -21) : false
-      if (!active) continue
-      for (const key of weekly.get(s.key) ?? []) {
-        if (key.startsWith(`${wd}:`)) addClass(s, d, key, 'class', chance(s.key, d, 'note') < 0.04 ? 'Stayed 15 minutes extra' : '')
+      if (!activeOn(s, d)) continue
+      for (const slot of weekly.get(s.key) ?? []) {
+        if (slot.wd !== weekdayOf(d)) continue
+        const seat = addSeat(s, d, slot, 'class', '')
+        if (seat.status === 'present' && chance(s.key, d, 'note') < 0.03) seat.data.note = 'Stayed 15 minutes extra'
       }
     }
   }
 
-  // Makeups: about half the missed classes are made up within 16 days before or 18 after, as on the sheets.
+  // Make-ups: about half the missed classes are made up within 16 days before or 18 after, in a class of their level
+  // with a seat free, as on the sheets; the missed one says what became of it.
   const missed = made.filter((m) => m.kind === 'class' && (m.status === 'canceled' || m.status === 'no_show'))
   for (const m of missed) {
-    if (chance(m.studentKey, m.dateKey, 'makeup') >= 0.55) continue
-    const s = STUDENTS.find((x) => x.key === m.studentKey)!
-    const top = (s.level ?? 0) >= PRECISION_FROM
-    const tries = [3, 5, 6, 8, 10, -2, -4, 12, 14, -6, 17, -9, -13, -16, 18]
-    let placed = false
-    for (const off of tries) {
+    if (chance(m.student.key, m.dateKey, 'makeup') >= 0.55) continue
+    const bands = bandsFor(m.student.level)
+    for (const off of [3, 5, 6, 8, 10, -2, -4, 12, 14, -6, 17, -9, -13, -16, 18]) {
       const d = addDays(m.dateKey, off)
-      if (placed || d < from || d > to || !isOpen(d) || busy.has(`${s.key}|${d}`)) continue
-      const wd = weekdayOf(d)
-      const options = slots.filter((x) => x.wd === wd && !!x.block.precision === top && (taken.get(`${d}|${x.key}`) ?? 0) < seats)
-      if (!options.length) continue
-      addClass(s, d, options[0].key, 'makeup', `MU for ${md(m.dateKey)}`)
-      placed = true
+      if (d < from || d > to || !isOpen(d) || busy.has(`${m.student.key}|${d}`)) continue
+      const slot = slotsOn(d)
+        .filter((x) => bands.includes(x.block.band) && taken(d, x) < seats)
+        .sort(byRank((x) => [bands.indexOf(x.block.band), taken(d, x)]))[0]
+      if (!slot) continue
+      const mu = addSeat(m.student, d, slot, 'makeup', makeupLabel(m.dateKey))
+      if (m.status === 'canceled') m.data.note = mu.status === 'present' ? `Absent: made up on ${monthDay(d)}` : `Absent: make-up planned for ${monthDay(d)}`
+      break
     }
   }
 
-  // Trials: two 30-minute visits in the last half hour of an hour-long block, a week apart.
-  for (const s of STUDENTS.filter((x) => x.trial)) {
+  // Practice: now and then a student past the beginners' levels comes for extra practice (the light blue on the
+  // sheets) where a seat is free, in a class of their level, or the middle levels' for the advanced and the top.
+  const practicesIn = (s: SampleStudent, slot: Slot) =>
+    (!s.days || s.days.includes(slot.wd)) && (bandsFor(s.level).includes(slot.block.band) || (slot.block.band === 'middle' && (s.level ?? 0) >= ADVANCED_FROM))
+  for (const d of days) {
+    if (!isOpen(d)) continue
+    for (const slot of slotsOn(d)) {
+      if (chance(d, slot.key, 'practice') >= 0.22 || taken(d, slot) >= seats) continue
+      const who = STUDENTS.filter((s) => s.status === 'enrolled' && activeOn(s, d) && (s.level ?? 0) > YOUNG_UP_TO && !busy.has(`${s.key}|${d}`) && practicesIn(s, slot)).sort(
+        (a, b) => chance(a.key, d, 'practice') - chance(b.key, d, 'practice'),
+      )[0]
+      if (who) addSeat(who, d, slot, 'practice', 'Practice')
+    }
+  }
+
+  // Trials: two visits ahead in a beginners' class, a week apart (the first its last half hour, the second all of
+  // it), each new student starting on a different day.
+  const beginnersDays = days.filter((d) => d >= addDays(today, 2) && isOpen(d) && slotsOn(d).some((x) => x.block.band === 'young'))
+  const hasTrial = (d: DateKey, slot: Slot) => (inClass.get(`${d}|${slot.key}`) ?? []).some((x) => x.kind === 'trial')
+  for (const [i, s] of STUDENTS.filter((x) => x.trial).entries()) {
     let first: DateKey | null = null
     for (const visit of [1, 2] as const) {
-      const after = visit === 1 ? addDays(today, 2 + Math.floor(chance(s.key, 'trial') * 4)) : addDays(first ?? today, 7)
+      const after = visit === 1 ? (beginnersDays[i] ?? addDays(today, 2)) : addDays(first ?? today, 7)
       for (const d of days) {
         if (d < after || !isOpen(d) || busy.has(`${s.key}|${d}`)) continue
-        const wd = weekdayOf(d)
-        const slot = slots.find((x) => x.wd === wd && !x.block.precision && x.block.endMin - x.block.startMin === 60 && (taken.get(`${d}|${x.key}`) ?? 0) < seats)
+        const slot = slotsOn(d)
+          .filter((x) => x.block.band === 'young' && x.block.endMin - x.block.startMin === 60 && taken(d, x) < seats)
+          .sort(byRank((x) => [hasTrial(d, x) ? 1 : 0, taken(d, x)]))[0]
         if (!slot) continue
-        addClass(s, d, slot.key, 'trial', `Trial ${visit}`, { startMin: slot.block.endMin - 30, endMin: slot.block.endMin })
+        addSeat(s, d, slot, 'trial', `Trial ${visit}`, visit === 1 ? { startMin: slot.block.endMin - 30, endMin: slot.block.endMin } : slot.block)
         if (visit === 1) first = d
         break
       }
     }
+  }
+
+  // Classes, then their seats ------------------------------------------------------
+  // A note for the coaches on a few classes in the coming week.
+  const topAhead = days.find((d) => d >= today && isOpen(d) && slotsOn(d).some((x) => x.block.band === 'top')) ?? null
+  const noteFor = (d: DateKey, slot: Slot) => {
+    if (d < today || d > addDays(today, 7)) return ''
+    if ((inClass.get(`${d}|${slot.key}`) ?? []).some((x) => x.kind === 'trial')) return 'A trial visit: safety and range commands first.'
+    if (d === topAhead && slot.block.band === 'top') return 'Standing this week: holding drills first, then 20 shots on SIUS.'
+    return ''
+  }
+  let classes = 0
+  for (const d of days) {
+    if (!isOpen(d)) continue
+    for (const slot of slotsOn(d)) {
+      add(`${COL.classes}/${classIdOf(d, slot)}`, {
+        dateKey: d,
+        weekday: weekdayOf(d),
+        startMin: slot.block.startMin,
+        endMin: slot.block.endMin,
+        startAt: toInstant(d, slot.block.startMin, timezone),
+        endAt: toInstant(d, slot.block.endMin, timezone),
+        dayEndAt: dayEndInstant(d, timezone),
+        seats,
+        note: noteFor(d, slot),
+        source: 'seed',
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        ...stamp,
+      })
+      classes++
+    }
+  }
+  for (const seat of [...made].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || String(a.data.classId).localeCompare(String(b.data.classId)) || Number(a.data.visualOrder) - Number(b.data.visualOrder))) {
+    add(`${COL.sessions}/${seat.id}`, seat.data)
   }
 
   // Students, with dates the app keeps up to date ------------------------------
@@ -447,7 +550,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   STUDENTS.forEach((s, i) => {
     const id = sampleStudentId(s.key)
     const name = `${s.first} ${s.last}`
-    const own = made.filter((m) => m.studentKey === s.key)
+    const own = made.filter((m) => m.student.key === s.key)
     const attended = own.filter((m) => m.status === 'present' && m.dateKey <= today).map((m) => m.dateKey).sort()
     const ahead = own.filter((m) => m.status !== 'canceled' && m.dateKey >= today).map((m) => m.dateKey).sort()
     const since = sinceOf(s)
@@ -461,6 +564,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       school: !/^\d+$/.test(s.grade) ? '' : Number(s.grade) <= 5 ? SCHOOLS[4] : SCHOOLS[(Number(s.grade) >= 9 ? 1 : 0) + (i % 2) * 2],
       level: levelName(s.level),
       program: programName(s.level),
+      rifle: s.rifle ?? null,
       status: s.status,
       statusSource: 'auto',
       signUpDate: since,
@@ -517,9 +621,9 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     })
   }
 
-  // Time entries: each coach clocks in before the first class and out after the last; the manager works each open day.
+  // Time entries: everyone in clocks in when their hours start, give or take five minutes, and out a little after.
   let shifts = 0
-  const shift = (st: SampleStaff, d: DateKey, inMin: number, outMin: number, extra: Record<string, unknown> = {}) => {
+  const shift = (st: SampleStaff, d: DateKey, inMin: number, outMin: number) => {
     shifts++
     add(`${COL.clockShifts}/${SAMPLE_PREFIX}shift-${d}-${st.key}`, {
       staffId: sampleStaffId(st.key),
@@ -537,22 +641,18 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       forcedType: null,
       note: '',
       ...stamp,
-      ...extra,
     })
   }
-  const sessions = docs.filter((x) => x.path.includes(`/${COL.sessions}/`)).map((x) => x.data)
   let lastDanielDay: DateKey | null = null
   for (const d of days) {
     if (d >= today || !isOpen(d)) continue
-    const hours = opts.week[weekdayOf(d)]
-    shift(MANAGER, d, hours.openMin - 30 + Math.floor(chance(d, 'mgr-in') * 3) * 5, hours.closeMin + 10 + Math.floor(chance(d, 'mgr-out') * 3) * 5)
-    for (const coach of COACHES) {
-      const own = sessions.filter((x) => x.dateKey === d && x.coachId === sampleStaffId(coach.key) && x.status !== 'canceled')
-      if (!own.length) continue
-      const inMin = Math.min(...own.map((x) => x.startMin as number)) - 15 - Math.floor(chance(d, coach.key, 'in') * 3) * 5
-      const outMin = Math.max(...own.map((x) => x.endMin as number)) + 5 + Math.floor(chance(d, coach.key, 'out') * 3) * 5
-      shift(coach, d, inMin, outMin)
-      if (coach.key === 'daniel-reed') lastDanielDay = d
+    for (const st of STAFF) {
+      const ranges = hoursIn(st, d)
+      if (!ranges) continue
+      const inMin = ranges[0].startMin - 5 + Math.floor(chance(d, st.key, 'in') * 3) * 5
+      const outMin = ranges[ranges.length - 1].endMin + 5 + Math.floor(chance(d, st.key, 'out') * 3) * 5
+      shift(st, d, inMin, outMin)
+      if (st.key === 'daniel-reed') lastDanielDay = d
     }
   }
   // Daniel forgot to clock out on his last day: the automatic clock-out closed it at midnight.
@@ -649,14 +749,17 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     ...stamp,
   })
 
-  const classes = made.filter((m) => m.kind === 'class').length
+  const count = (kind: Seat['kind']) => made.filter((m) => m.kind === kind).length
   const summary: SampleSummary = {
     staff: STAFF.length,
     students: STUDENTS.length,
     parents,
     classes,
-    makeups: made.filter((m) => m.kind === 'makeup').length,
-    trials: made.filter((m) => m.kind === 'trial').length,
+    seats: made.length,
+    makeups: count('makeup'),
+    practice: count('practice'),
+    trials: count('trial'),
+    whosIn,
     shifts,
   }
   add(`${COL.auditLog}/${SAMPLE_PREFIX}data-added`, {
@@ -669,7 +772,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     category: 'settings',
     entityType: 'academy',
     entityId: `${SAMPLE_PREFIX}data`,
-    summary: `Added sample data: ${summary.staff} staff, ${summary.students} students, ${summary.classes + summary.makeups + summary.trials} classes`,
+    summary: `Added sample data: ${summary.staff} staff, ${summary.students} students, ${summary.classes} classes with ${summary.seats} seats`,
     context: '',
     dateKey: today,
     studentId: null,

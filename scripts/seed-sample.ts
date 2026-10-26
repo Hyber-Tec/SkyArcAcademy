@@ -1,10 +1,13 @@
 /**
  * Sample data for trying the app before the academy's real data arrives (shared/src/sample/data.ts): fictional
- * coaches, a manager, students and families, ten weeks of classes around today with makeups and trials, availability,
- * time entries, announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic
- * PDFs in the students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the
- * card in the Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
- * Running it again rewrites the same documents and adds classes around the new today.
+ * coaches, a manager, students and families, ten weeks of classes around today in the academy's weekly layout (taught
+ * together by the coaches in, with make-ups, practice and trials among their seats), who's in each day, time entries,
+ * announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic PDFs in the
+ * students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the card in the
+ * Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
+ * Running it again rewrites the same documents, and the sample's schedule (classes, seats, who's in, time entries)
+ * becomes the ten weeks around the new today: the sample's earlier ones are replaced, those from before classes were
+ * taught together too.
  *
  *   npm run seed:sample                # add it to production (skyarcacademy)
  *   npm run seed:sample -- --remove    # delete it, with everything the app made for the sample people
@@ -15,9 +18,9 @@
  *                                      # adds; --remove takes it away with the rest
  *
  * Removing finds sample documents by their `sample-` IDs and `@skyarc-sample.test` emails, and also deletes what the
- * app made for those people later: classes, time entries, kiosk PINs, notifications and audit entries. Real people and
- * their data are never touched. Uses the developer's gcloud login (scripts/lib/firestore-rest.ts), or the emulators
- * when FIRESTORE_EMULATOR_HOST is set. The academy must exist first (npm run seed).
+ * app made for those people later: their seats in classes, time entries, kiosk PINs, notifications and audit entries.
+ * Real people and their data are never touched. Uses the developer's gcloud login (scripts/lib/firestore-rest.ts), or
+ * the emulators when FIRESTORE_EMULATOR_HOST is set. The academy must exist first (npm run seed).
  */
 import { parseArgs } from 'node:util'
 import { ACADEMY_ID } from '../shared/src/academy'
@@ -50,6 +53,7 @@ const isSampleEmail = (v: unknown) => typeof v === 'string' && v.toLowerCase().e
 const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) => boolean> = {
   [COL.staff]: (id) => isSample(id),
   [COL.students]: (id) => isSample(id),
+  [COL.classes]: (id) => isSample(id),
   [COL.sessions]: (id, d) => isSample(id) || isSample(d.studentId) || isSample(d.coachId),
   [COL.availability]: (id, d) => isSample(id) || isSample(d.staffId),
   [COL.clockShifts]: (id, d) => isSample(id) || isSample(d.staffId),
@@ -73,6 +77,9 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.progressReports]: (id, d) => isSample(id) || isSample(d.studentId),
 }
 
+/** The sample's schedule, which each run replaces with the weeks around its today. */
+const SCHEDULE = [COL.classes, COL.sessions, COL.availability, COL.clockShifts] as const
+
 /** Sub-collections that go with a removed document. */
 const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }
 
@@ -91,12 +98,24 @@ async function add() {
     week: settings.schedule.defaultWeek,
     levels: settings.students.levels,
     programs: settings.students.programs,
-    maxStudentsPerCoach: rules.maxStudentsPerCoach,
+    seatsPerClass: rules.seatsPerClass,
   })
   const shooting = await sampleShooting(docs, academy, timezone, settings.students.levels, now)
+  // The sample's schedule from an earlier run that this one doesn't rewrite (other weeks, or from before classes were
+  // taught together): this run's weeks replace it.
+  const keep = new Set(docs.map((d) => d.path))
+  const stale: string[] = []
+  for (const col of SCHEDULE) {
+    for (const d of await listDocuments(`${base}/${col}`)) if (SAMPLE_RULES[col](d.id, d.data) && !keep.has(d.path)) stale.push(d.path)
+  }
+  if (stale.length) {
+    await deleteDocuments(stale)
+    console.log(`- ${stale.length} documents of the sample's earlier schedule, replaced`)
+  }
   await commit([...docs, ...shooting.docs], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
   console.log(`\n+ Sample data in ${PROJECT_ID}: ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
-  console.log(`  ${summary.classes} classes, ${summary.makeups} makeups, ${summary.trials} trial visits, ${summary.shifts} time entries`)
+  console.log(`  ${summary.classes} classes with ${summary.seats} seats (${summary.makeups} make-ups, ${summary.practice} practice, ${summary.trials} trial visits)`)
+  console.log(`  Who's in: ${summary.whosIn} days of the staff's hours; ${summary.shifts} time entries`)
   console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs and ${shooting.cards} scanned cards in the students' Drive folders), ${shooting.reports} progress reports`)
   console.log('  Remove it all with: npm run seed:sample -- --remove')
 }
@@ -266,8 +285,8 @@ async function remove() {
 }
 
 /**
- * Whose access a --login gives, by role: a coach with classes on Mondays, Wednesdays and Thursdays, a parent of two
- * children, and one of those children (so a parent's and a student's view of the same child compare).
+ * Whose access a --login gives, by role: a coach in Monday to Thursday and some Sundays, a parent of two children, and
+ * one of those children (so a parent's and a student's view of the same child compare).
  */
 type LoginRole = 'coach' | 'parent' | 'student'
 const LOGINS: Record<LoginRole, { name: string; access: { staffId?: string; studentId?: string; studentIds?: string[] }; check: string }> = {

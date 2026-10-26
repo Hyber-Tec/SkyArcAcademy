@@ -19,7 +19,7 @@ import { useStaffList } from '@/features/data/hooks'
 import { addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
-import { useSessionsRange, useShifts } from './api'
+import { namesFrom, useAvailabilityRange, useSessionsRange, useShifts } from './api'
 import { useCompensationMap, usePayPeriods, usePayrollState } from './hooks'
 
 const money = formatMoney
@@ -45,8 +45,10 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
   const comps = useCompensationMap(open ? staff.map((s) => s.id) : [])
   const { data: shifts, loading: l1 } = useShifts(period.start, period.end, null, open)
-  const { data: sessions, loading: l2 } = useSessionsRange(addDays(period.start, -1), addDays(period.end, 1), null, open)
-  const loading = l1 || l2
+  const { data: sessions, loading: l2 } = useSessionsRange(addDays(period.start, -1), addDays(period.end, 1), open)
+  // Who was in each day: a class counts for every coach in at its time (Classes taught).
+  const { data: availability, loading: l3 } = useAvailabilityRange(period.start, period.end, null, open && rules.payModels.some((p) => p.model === 'classes'))
+  const loading = l1 || l2 || l3
 
   // Each person's priced time in the period: their time entries, and the classes they taught under Classes taught.
   const people = useMemo(() => {
@@ -62,13 +64,13 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       if (p.open) e.open++
       e.segments.push(...p.segments.map((s) => ({ ...s, dateKey: p.shift.dateKey })))
     }
-    const coachNames = new Map(sessions.map((s) => [s.coachId, s.coachName]))
-    for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) {
+    const names = namesFrom(availability, sessions)
+    for (const b of priceClassBlocks({ sessions, availability, settings, rules, ratesFor })) {
       if (b.dateKey < period.start || b.dateKey > period.end) continue
-      entry(b.staffId, coachNames.get(b.staffId) ?? 'Coach').segments.push({ ...b.segment, dateKey: b.dateKey })
+      entry(b.staffId, names.get(b.staffId) ?? 'Coach').segments.push({ ...b.segment, dateKey: b.dateKey })
     }
     return [...by.entries()].map(([id, e]) => ({ id, name: e.name, segments: e.segments, t: totals(e.segments), open: e.open }))
-  }, [shifts, sessions, settings, rules, staffById, comps, period.start, period.end])
+  }, [shifts, sessions, availability, settings, rules, staffById, comps, period.start, period.end])
   const grand = totals(people.flatMap((p) => p.segments))
   const openShifts = people.reduce((n, p) => n + p.open, 0)
 

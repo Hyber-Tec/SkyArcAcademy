@@ -10,6 +10,8 @@ export const COL = {
   signupRequests: 'signupRequests',
   staff: 'staff',
   students: 'students',
+  /** Classes: a time on a day with its seats (`AcademyClass`); `sessions` are the students in them. */
+  classes: 'classes',
   sessions: 'sessions',
   availability: 'availability',
   dayConfigs: 'dayConfigs',

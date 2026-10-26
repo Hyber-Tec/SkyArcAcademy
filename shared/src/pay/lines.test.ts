@@ -27,6 +27,8 @@ const cls = (studentId: string, dateKey: string, start: string, end: string, ext
   coachId: 'maya',
   studentId,
   dateKey,
+  startMin: Number(start.slice(0, 2)) * 60 + Number(start.slice(3)),
+  endMin: Number(end.slice(0, 2)) * 60 + Number(end.slice(3)),
   status: 'present' as SessionStatus,
   isDeleted: false,
   startAt: at(dateKey, start),

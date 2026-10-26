@@ -95,6 +95,7 @@ const INFO_LABELS: Record<string, string> = {
   grade: 'Grade',
   level: 'Level',
   program: 'Program',
+  rifle: 'Rifle',
   school: 'School',
   status: 'Status',
   signUpDate: 'Sign-up date',

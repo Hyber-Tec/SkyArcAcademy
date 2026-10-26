@@ -3,7 +3,7 @@ import { LuBan, LuClipboardPaste, LuCopy, LuCopyPlus, LuLock, LuPencil, LuRepeat
 import { toast } from 'sonner'
 import { dayHours, dayMark, effectiveLockDays, effectiveRanges, fitRangesToDay, isInsideLeadTime, isLockedForCoach, normalizeRanges, weeklyRepeats } from '@shared/availability'
 import { type DateKey, addDays, dateRange, diffDays, formatDateKey, formatMinutesShort, nowMinutes, startOfWeek, todayKey } from '@shared/time'
-import type { AvailabilityRange } from '@shared/types'
+import type { AvailabilityRange, StaffRole } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { MonthScroller, type MonthScrollerHandle } from '@/components/app/MonthScroller'
 import { Badge } from '@/components/ui/badge'
@@ -12,14 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Kbd } from '@/components/ui/kbd'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import { useAvailability, useDayConfigs } from '@/features/data/hooks'
+import { useAvailability, useDayConfigs, useStaffList } from '@/features/data/hooks'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { timeRange } from '@/lib/calendar'
 import { useLoadWindow } from '@/lib/useLoadWindow'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/components/app/useConfirm'
-import { type DayWrite, describeRanges, sessionsLeftUncovered, uncoveredWarning, writeAvailability } from './api'
+import { type DayWrite, classesLeftWithoutCoach, describeRanges, noCoachWarning, writeAvailability } from './api'
 import { DayEditorDialog, type DayEditorState } from './DayEditorDialog'
 
 /** What is selected: one time range, or a run of days (Shift-click extends it). */
@@ -56,16 +56,28 @@ export interface AvailabilityCalendarHandle {
  */
 export function AvailabilityCalendar({
   staffId,
-  staffName,
+  staffName: recordName,
+  staffRole,
   mode,
   ref,
 }: {
   staffId: string
+  /** Their name; empty until it's known (a coach's own record still loading), when messages say "Me". */
   staffName: string
+  /** Their role, kept on each day: the manager can be in without teaching. A coach's own page says 'coach'. */
+  staffRole?: StaffRole
   mode: 'coach' | 'admin'
   ref?: React.Ref<AvailabilityCalendarHandle>
 }) {
   const { branchId, actor, settings, timezone } = useBranch()
+  const staffName = recordName || 'Me'
+  // The office knows who teaches (active coaches); a coach goes by each day's records.
+  const { data: staff } = useStaffList(mode === 'admin')
+  const isCoach = useMemo(() => {
+    if (mode !== 'admin' || !staff.length) return undefined
+    const ids = new Set(staff.filter((s) => s.role === 'coach' && s.status === 'active').map((s) => s.id))
+    return (id: string) => ids.has(id)
+  }, [mode, staff])
   const a = settings.availability
   const isMobile = useIsMobile()
   const now = useNow()
@@ -104,28 +116,30 @@ export function AvailabilityCalendar({
 
   const { confirm, dialog: confirmDialog } = useConfirm()
   /**
-   * Saves days of availability; first warns when booked sessions would end up
-   * outside it (they stay booked, as conflicts). False when the person cancels.
+   * Saves days of availability; first warns when classes with students would be left with no coach in (classes are
+   * taught by everyone in, so only when no other coach is). False when the person cancels.
    */
   const write = useCallback(
     async (days: DayWrite[], summary?: string): Promise<boolean> => {
-      const uncovered = await sessionsLeftUncovered({
+      const uncovered = await classesLeftWithoutCoach({
         branchId,
         staffId,
+        staffRole,
         days,
         currentRanges: rangesOf,
         hoursOf,
+        isCoach,
         today,
         nowMin: nowMinutes(timezone, new Date(now)),
       })
       if (uncovered.length) {
-        const ok = await confirm({ ...uncoveredWarning(uncovered, mode), confirmLabel: 'Save anyway' })
+        const ok = await confirm({ ...noCoachWarning(uncovered, mode), confirmLabel: 'Save anyway' })
         if (!ok) return false
       }
-      await writeAvailability({ branchId, actor, timezone, staffId, staffName, via: mode, days, summary })
+      await writeAvailability({ branchId, actor, timezone, staffId, staffName, recordName, staffRole, via: mode, days, summary })
       return true
     },
-    [branchId, actor, timezone, staffId, staffName, mode, rangesOf, hoursOf, today, now, confirm],
+    [branchId, actor, timezone, staffId, staffName, recordName, staffRole, isCoach, mode, rangesOf, hoursOf, today, now, confirm],
   )
 
   /**

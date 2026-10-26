@@ -47,7 +47,7 @@ const TONES = {
 }
 
 /**
- * Everything waiting on an admin, one line per kind ("2 sessions in conflict");
+ * Everything waiting on an admin, one line per kind ("2 classes in conflict");
  * a line opens to the items, each with its action. The count matches the
  * sidebar's Home badge.
  */
@@ -74,16 +74,22 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       tone: 'red',
       title: plural(attention.conflicts.length, 'class') + ' in conflict',
       subtitle: `${first.conflicts[0]?.message ?? ''}${attention.conflicts.length > 1 ? ` · +${attention.conflicts.length - 1} more` : ''}`,
-      items: attention.conflicts.map(({ session: s, conflicts }) => ({
-        key: s.id,
-        title: `${s.studentName} · ${s.coachName}`,
-        detail: `${dayLabel(s.dateKey, today)} · ${formatTimeRange(s.startMin, s.endMin)} · ${conflicts[0]?.message ?? ''}`,
-        onOpen: () => navigate(`${admin}/schedule/day/${s.dateKey}`),
-        actions: menu(
-          { label: 'Go to Schedule on this day', icon: LuCalendarDays, onSelect: () => navigate(`${admin}/schedule/day/${s.dateKey}`) },
-          { label: 'Open Schedule in new tab', onSelect: () => openTab(`${admin}/schedule/day/${s.dateKey}`) },
-        ),
-      })),
+      items: attention.conflicts.map(({ v, conflicts }) => {
+        const { c } = v
+        const day = `${admin}/schedule/day/${c.dateKey}`
+        const open = `${day}?class=${c.id}`
+        return {
+          key: c.id,
+          title: `${dayLabel(c.dateKey, today)} · ${formatTimeRange(c.startMin, c.endMin)}`,
+          detail: `${plural(v.taken, 'student')} · ${conflicts.map((k) => k.message).join(' ')}`,
+          onOpen: () => navigate(open),
+          actions: menu(
+            { label: 'Open the class', icon: LuCalendarDays, onSelect: () => navigate(open) },
+            { label: 'Go to Schedule on this day', onSelect: () => navigate(day) },
+            { label: 'Open Schedule in new tab', onSelect: () => openTab(day) },
+          ),
+        }
+      }),
     })
   }
   if (attention.pendingRequests.length) {

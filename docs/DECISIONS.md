@@ -571,7 +571,46 @@ The manager's answers to A1–A9 (`docs/QUESTIONS.md`), and Goo's calls on them.
 - **The students' spreadsheet** (A1, 2026-10-25): each student's school grade and a parent's email and phone, two
   parents for some families, no parents' names. The grades are for the academy's owner to review; where both tabs give
   one, they agree. Every student on it is on the sheets (a few seats use a first name only, or another spelling). Four
-  students on November's sheet aren't on it: asked back (A17). Grades now start at 1st (the list began at 3rd).
+  students on November's sheet aren't on it: not asked (§21). Grades now start at 1st (the list began at 3rd).
 - **Moving the real data in** (Goo, 2026-10-24): only after Apple's review, since the App Store's review logins are
   sample people. The import adds everyone's records but no access, so nobody is emailed. The office gives access from
   the website when it's ready, and that sends the sign-in emails. The steps are in `docs/TODO.md`.
+
+## 21. Classes taught together: the design (2026-10-26)
+
+Goo looked at the four design options for classes taught together (clickable demos, local only in
+`docs/internal/class-demos/`) and picked **option 1, "Like the sheets"**, with changes: "very clean, simple, easy,
+modern, professional", without changing much more.
+
+- **The schedule looks like the academy's sheets.** Week: a column per open day, who's in at the top, then each class
+  with its time on the left and its seats two across (six by default), every student in their level's colour with
+  their rifle code; make-ups, extra practice and trials in the sheets' label colours; open seats hatched. Day: the same
+  classes larger, to mark who's here. Drag a student to an open seat to move them; open a class to change it. Fridays
+  and Saturdays fold into one "closed" marker. **No Month view**: the academy plans a week at a time.
+- **Gentler colours:** the sheets' own colours, lighter (Goo: "same colour, just lighter"), and a dark wash of each in
+  dark mode (`shared/src/schedule/seatColors.ts`, for the phone too).
+- **A floating panel on the right** that closes and opens again (Esc, or the button in the header), like the schedule's
+  side rail before: the day, ‹ Today ›, Day / Week, the scrolling month calendar, who's in (with a dot on whoever has
+  clocked in), and the legend. With the panel closed, the header keeps the day's controls; on a phone it's a sheet.
+- **No absence list:** a canceled seat shows on its class; "Add a student" lists the make-ups still owed first.
+- **Here / No-show** only on today and earlier days: a class next week has nothing to mark yet.
+- **The model:**
+  - A class is the academy's own record (`classes`): a day, a time, its seats (Settings → Academy rules, "Seats per
+    class", six by default; each class can have its own) and a note for the coaches.
+  - Each student in it is a session with the class's `classId`. Its note is its label in the sheets' words ("MU for
+    10/13", "Practice", "Trial 1"), which also gives its colour. A seat can be part of the class (a half-hour trial).
+  - **Who's in** is each coach's availability that day: every coach in at a class's time teaches it. The office sets
+    it from the schedule ("Who's in"); coaches set their own as before. The manager can be in without teaching.
+  - Coaches see every class and its students, and who else is in, not only "their" students.
+  - Sessions keep an empty `coachId` (older ones keep theirs), so the phone app in the App Store keeps working until
+    its update.
+  - Pay: under Hourly (the academy's), nothing changes. Under the other models, a class counts for every coach in at
+    its time.
+  - Notices about a student's class go to the coaches in at its time.
+- **Not asked** (Goo): the manager answered well twice, so the four students missing from the spreadsheet come in
+  without parents, and the academy owner's sign-in email waits for access (A17, A18 dropped). The office fills both
+  in from the website.
+- **The phone app changes in its own session** (Goo's MacBook Pro), from `docs/mobile-classes.md`. No second App Store
+  submission while 1.0 is in review: the change ships as an update afterwards.
+- **When it goes live:** the website's change is merged at the move (`docs/TODO.md`), not before: production's sample
+  data still has one coach per class, and the reviewers' phone app reads it that way.

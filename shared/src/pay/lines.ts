@@ -2,7 +2,7 @@ import { type BusinessRules, type PayModel, payModelOn } from '../settings/busin
 import type { BranchSettings } from '../settings/defaults'
 import type { DateKey } from '../time'
 import type { ClockShift, Session } from '../types'
-import { priceClassBlocks } from './classes'
+import { type DayHoursRecord, priceClassBlocks } from './classes'
 import { type PayTotals, type PricedSegment, payModelFor, totals } from './segment'
 import { type StaffPay, priceShifts } from './shifts'
 
@@ -17,7 +17,7 @@ export type PayLineType = 'classes' | 'teaching' | 'admin'
 export const PAY_LINE_LABELS: Record<PayLineType, string> = { classes: 'Classes', teaching: 'Teaching', admin: 'Admin' }
 
 type LineShift = Pick<ClockShift, 'staffId' | 'dateKey' | 'inMin' | 'clockInAt' | 'clockOutAt' | 'forcedType'> & { id: string }
-type LineSession = Pick<Session, 'coachId' | 'studentId' | 'dateKey' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
+type LineSession = Pick<Session, 'coachId' | 'studentId' | 'dateKey' | 'startMin' | 'endMin' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
 
 /** A paid line: a part of a time entry, or a block of classes taught. */
 export interface PaidLine<S> {
@@ -60,6 +60,8 @@ export type PayLine<S> = PaidLine<S> | OpenLine<S>
 export function payLines<S extends LineShift>(opts: {
   shifts: readonly S[]
   sessions: readonly LineSession[]
+  /** Who's in on those dates, for classes taught together under Classes taught (each coach in taught them). */
+  availability?: readonly DayHoursRecord[]
   settings: Pick<BranchSettings, 'payroll'>
   rules: Pick<BusinessRules, 'payModels'>
   ratesFor: (staffId: string) => StaffPay
@@ -93,7 +95,7 @@ export function payLines<S extends LineShift>(opts: {
       }),
     )
   }
-  for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) {
+  for (const b of priceClassBlocks({ sessions, availability: opts.availability, settings, rules, ratesFor })) {
     if (!listed(b.dateKey)) continue
     out.push({
       open: false,

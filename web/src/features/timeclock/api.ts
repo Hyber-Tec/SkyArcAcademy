@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { COL } from '@shared/paths'
 import type { PayType } from '@shared/pay/segment'
 import { type DateKey, addDays, formatDateKey, formatMinutes, minutesOf, toInstant } from '@shared/time'
-import type { ClockShift, Session, WithId } from '@shared/types'
+import type { Availability, ClockShift, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { type Actor, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
@@ -24,17 +24,41 @@ export function useShifts(from: DateKey, to: DateKey, staffId: string | null, en
   return useQuery<ClockShift>(q, `shifts-${branchId}-${from}-${to}-${staffId}-${enabled}`, opts)
 }
 
-/** Sessions (teaching windows) in a date range (optionally one coach). */
-export function useSessionsRange(from: DateKey, to: DateKey, coachId: string | null, enabled = true, opts?: { keepPrevious?: boolean }) {
+/**
+ * Every student's sessions (the teaching windows) in a date range: classes are taught together, so anyone's pay can
+ * come from any class.
+ */
+export function useSessionsRange(from: DateKey, to: DateKey, enabled = true, opts?: { keepPrevious?: boolean }) {
+  const { branchId } = useBranch()
+  const q = useMemo(
+    (): Query<DocumentData> | null => (enabled ? query(branchCol(branchId, COL.sessions), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
+    [branchId, from, to, enabled],
+  )
+  return useQuery<Session>(q, `pay-sessions-${branchId}-${from}-${to}-${enabled}`, opts)
+}
+
+/**
+ * Who's in on each day of a date range (availability; optionally one employee's, all a page about them needs): a class
+ * counts for every coach in at its time.
+ */
+export function useAvailabilityRange(from: DateKey, to: DateKey, staffId: string | null, enabled = true, opts?: { keepPrevious?: boolean }) {
   const { branchId } = useBranch()
   const q = useMemo((): Query<DocumentData> | null => {
     if (!enabled) return null
-    const base = branchCol(branchId, COL.sessions)
-    return coachId
-      ? query(base, where('coachId', '==', coachId), where('dateKey', '>=', from), where('dateKey', '<=', to))
+    const base = branchCol(branchId, COL.availability)
+    return staffId
+      ? query(base, where('staffId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to))
       : query(base, where('dateKey', '>=', from), where('dateKey', '<=', to))
-  }, [branchId, from, to, coachId, enabled])
-  return useQuery<Session>(q, `pay-sessions-${branchId}-${from}-${to}-${coachId}-${enabled}`, opts)
+  }, [branchId, from, to, staffId, enabled])
+  return useQuery<Availability>(q, `pay-availability-${branchId}-${from}-${to}-${staffId}-${enabled}`, opts)
+}
+
+/** Names of the people in pay lines, for someone no longer on the staff list: from who's in, or a session's coach. */
+export function namesFrom(availability: readonly Pick<Availability, 'staffId' | 'staffName'>[], sessions: readonly Pick<Session, 'coachId' | 'coachName'>[]) {
+  const names = new Map<string, string>()
+  for (const s of sessions) if (s.coachId && s.coachName) names.set(s.coachId, s.coachName)
+  for (const a of availability) if (a.staffId && a.staffName) names.set(a.staffId, a.staffName)
+  return names
 }
 
 // ---------------------------------------------------------------- writes

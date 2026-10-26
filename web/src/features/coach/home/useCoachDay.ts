@@ -3,31 +3,30 @@ import { useCallback, useMemo } from 'react'
 import type { Announcement } from '@shared/comms'
 import { availabilityGaps, dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
-import type { Conflict } from '@shared/schedule/conflicts'
 import { unionMinutes } from '@shared/schedule/lanes'
-import { type DateKey, addDays, nowMinutes, startOfWeek, todayKey } from '@shared/time'
-import type { Availability, Session, Student, WithId } from '@shared/types'
+import { type DateKey, addDays, dateRange, nowMinutes, startOfWeek, todayKey } from '@shared/time'
+import type { Availability, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useMyAnnouncements, useMyReadIds } from '@/features/announcements/api'
 import { useDayConfigs, useStudentList } from '@/features/data/hooks'
-import { computeConflicts } from '@/features/schedule/conflicts'
+import { type ClassView, useClassData } from '@/features/schedule/useClassData'
 import { type ClockShift, useShifts } from '@/features/timeclock/api'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { useNow } from '@/lib/useNow'
 import { useMyStaff } from '../hooks'
 
-/** How far ahead Home looks for the next session and for sessions in conflict (four weeks, as admin Home). */
-const AHEAD_DAYS = 28
+/** How far ahead Home looks for the coach's next class (two weeks). */
+const AHEAD_DAYS = 14
 
 export type NextUp =
-  | { kind: 'now'; sessions: WithId<Session>[]; then: WithId<Session> | null }
-  | { kind: 'later'; startMin: number; sessions: WithId<Session>[] }
-  | { kind: 'day'; dateKey: DateKey; sessions: WithId<Session>[] }
+  | { kind: 'now'; classes: ClassView[]; then: ClassView | null }
+  | { kind: 'later'; startMin: number; classes: ClassView[] }
+  | { kind: 'day'; dateKey: DateKey; classes: ClassView[] }
   | { kind: 'none' }
 
 export interface WeekDay {
   dateKey: DateKey
-  sessions: number
+  classes: number
   done: number
   minutes: number
   isOpen: boolean
@@ -43,36 +42,39 @@ export interface ClockState {
 }
 
 const ms = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? 0
-const byTime = (a: WithId<Session>, b: WithId<Session>) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName)
+// Coaches can't read the staff list: who teaches comes from each day's records (the manager's says so).
+const anyone = () => true
+
+/** The coach's time in a class: their hours that overlap it. */
+function minutesIn(v: ClassView, staffId: string) {
+  const mine = v.coaches.find((k) => k.staffId === staffId)
+  return (mine?.ranges ?? []).map((r) => ({ startMin: Math.max(r.startMin, v.c.startMin), endMin: Math.min(r.endMin, v.c.endMin) }))
+}
 
 /**
- * Everything the coach's Home shows, from their own sessions,
- * availability, clock shifts and the posts addressed to them: what's on now
- * and next, today's list, what's left to do and how the week looks. All
- * dates and times are the branch's.
+ * Everything the coach's Home shows: their classes (every class in their hours, taught with the other coaches in), what
+ * they still have to do (days to set availability, posts not read), their clock shifts and how the week looks. All
+ * dates and times are the academy's.
  */
 export function useCoachDay() {
-  const { branchId, staffId, settings, rules, timezone } = useBranch()
+  const { branchId, staffId, settings, timezone } = useBranch()
   const now = useNow(20_000)
   const today = todayKey(timezone, now)
   const nowMin = nowMinutes(timezone, new Date(now))
   const weekStart = startOfWeek(today, settings.general.weekStartsOn)
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
-  const from = weekStart
-  const to = addDays(today, Math.max(AHEAD_DAYS, settings.availability.leadTimeDays + 1))
+  const to = addDays(today, AHEAD_DAYS)
+  const gapsTo = addDays(today, Math.max(AHEAD_DAYS, settings.availability.leadTimeDays + 1))
 
   const me = useMyStaff()
-  const sessionsQ = useMemo(
-    () => (staffId ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
-    [branchId, staffId, from, to],
-  )
-  const sessionsState = useQuery<Session>(sessionsQ, `coach-today-sessions-${staffId}-${from}-${to}`)
+  const data = useClassData(weekStart, to, { isCoach: anyone })
+  // Their own days, as far as the availability notice reaches (for the days still to set).
   const availQ = useMemo(
-    () => (staffId ? query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), where('dateKey', '>=', today), where('dateKey', '<=', to)) : null),
-    [branchId, staffId, today, to],
+    () => (staffId ? query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), where('dateKey', '>=', today), where('dateKey', '<=', gapsTo)) : null),
+    [branchId, staffId, today, gapsTo],
   )
-  const avail = useQuery<Availability>(availQ, `coach-today-avail-${staffId}-${today}-${to}`)
-  const { map: dayConfigs } = useDayConfigs(from, to)
+  const avail = useQuery<Availability>(availQ, `coach-today-avail-${staffId}-${today}-${gapsTo}`)
+  const { map: dayConfigs } = useDayConfigs(today, gapsTo)
   const students = useStudentList(!!staffId)
   // From the day before the week (or yesterday): a shift still open from last night counts.
   const shiftFrom = addDays(weekStart < today ? weekStart : today, -1)
@@ -81,44 +83,36 @@ export function useCoachDay() {
   const reads = useMyReadIds(!!staffId)
 
   const studentsById = useMemo(() => new Map(students.data.map((s) => [s.id, s])), [students.data])
-  const sessions = useMemo(() => sessionsState.data.filter((s) => !s.isDeleted).sort(byTime), [sessionsState.data])
   const hoursOf = useCallback((d: DateKey) => dayHours(d, settings, dayConfigs), [settings, dayConfigs])
 
-  const conflicts = useMemo(
-    () =>
-      computeConflicts({
-        sessions,
-        availabilityByKey: new Map(avail.data.map((a) => [`${a.staffId}|${a.dateKey}`, a])),
-        hoursOf,
-        staffById: null,
-        studentsById,
-        maxPerCoach: rules.maxStudentsPerCoach,
-        today,
-        nowMin,
-      }),
-    [sessions, avail.data, hoursOf, studentsById, rules.maxStudentsPerCoach, today, nowMin],
-  )
+  /** The coach's classes by date: every class they're in for (all or part of it). */
+  const mine = useMemo(() => {
+    const m = new Map<DateKey, ClassView[]>()
+    if (!staffId) return m
+    for (const [d, list] of data.byDate) {
+      const theirs = list.filter((v) => v.coaches.some((k) => k.staffId === staffId))
+      if (theirs.length) m.set(d, theirs)
+    }
+    return m
+  }, [data.byDate, staffId])
 
   const day = useMemo(() => {
-    const todays = sessions.filter((s) => s.dateKey === today)
-    const active = todays.filter((s) => s.status !== 'canceled')
-    const canceled = todays.filter((s) => s.status === 'canceled')
-    const current = active.filter((s) => s.startMin <= nowMin && s.endMin > nowMin && s.status !== 'no_show')
-    const later = active.filter((s) => s.startMin > nowMin)
-    const earlier = active.filter((s) => s.endMin <= nowMin)
+    const todays = mine.get(today) ?? []
+    const current = todays.filter((v) => v.c.startMin <= nowMin && v.c.endMin > nowMin)
+    const later = todays.filter((v) => v.c.startMin > nowMin)
+    const earlier = todays.filter((v) => v.c.endMin <= nowMin)
 
     let next: NextUp = { kind: 'none' }
-    if (current.length) next = { kind: 'now', sessions: current, then: later[0] ?? null }
-    else if (later.length) next = { kind: 'later', startMin: later[0].startMin, sessions: later.filter((s) => s.startMin === later[0].startMin) }
+    if (current.length) next = { kind: 'now', classes: current, then: later[0] ?? null }
+    else if (later.length) next = { kind: 'later', startMin: later[0].c.startMin, classes: later.filter((v) => v.c.startMin === later[0].c.startMin) }
     else {
-      const upcoming = sessions.filter((s) => s.dateKey > today && s.status !== 'canceled')
-      if (upcoming.length) next = { kind: 'day', dateKey: upcoming[0].dateKey, sessions: upcoming.filter((s) => s.dateKey === upcoming[0].dateKey) }
+      const d = dateRange(addDays(today, 1), to).find((x) => mine.has(x))
+      if (d) next = { kind: 'day', dateKey: d, classes: mine.get(d) ?? [] }
     }
-    return { todays, active, canceled, current, later, earlier, next }
-  }, [sessions, today, nowMin])
+    return { classes: todays, current, later, earlier, next }
+  }, [mine, today, nowMin, to])
 
   const todo = useMemo(() => {
-    const waiting = sessions.filter((s) => conflicts.has(s.id))
     const saved = new Map(avail.data.map((a) => [a.dateKey, a]))
     const gaps = availabilityGaps({ today, timeZone: timezone, settings, dayConfigs, dayOn: (d) => saved.get(d), now: new Date(now) })
     // Until both lists are in, nothing counts as unread (as the News badge).
@@ -126,31 +120,29 @@ export function useCoachDay() {
       feed.loading || reads.loading
         ? []
         : feed.data.filter((a) => !reads.ids.has(a.id)).sort((a, b) => Number(b.pinned) - Number(a.pinned) || ms(b.createdAt) - ms(a.createdAt))
-    return { waiting, gaps, unread, total: waiting.length + gaps.length + unread.length }
-  }, [sessions, today, conflicts, avail.data, timezone, settings, dayConfigs, now, reads.ids, reads.loading, feed.data, feed.loading])
+    return { gaps, unread, total: gaps.length + unread.length }
+  }, [today, avail.data, timezone, settings, dayConfigs, now, reads.ids, reads.loading, feed.data, feed.loading])
 
+  const classHours = data.hoursOf
   const week = useMemo(() => {
     const days: WeekDay[] = weekDays.map((d) => {
-      const list = sessions.filter((s) => s.dateKey === d && s.status !== 'canceled')
-      const ended = list.filter((s) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin))
+      const list = mine.get(d) ?? []
       return {
         dateKey: d,
-        sessions: list.length,
-        done: ended.length,
-        // Booked time is the coach's: sessions side by side count once.
-        minutes: unionMinutes(list),
-        isOpen: hoursOf(d).isOpen,
+        classes: list.length,
+        done: list.filter((v) => d < today || (d === today && v.c.endMin <= nowMin)).length,
+        // Their time in classes: classes side by side count once.
+        minutes: staffId ? unionMinutes(list.flatMap((v) => minutesIn(v, staffId))) : 0,
+        isOpen: classHours(d).isOpen,
       }
     })
-    const inWeek = sessions.filter((s) => s.dateKey >= weekStart && s.dateKey <= weekDays[6] && s.status !== 'canceled')
-    const ended = inWeek.filter((s) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin))
     return {
       days,
-      sessions: inWeek.length,
-      done: ended.length,
+      classes: days.reduce((n, d) => n + d.classes, 0),
+      done: days.reduce((n, d) => n + d.done, 0),
       minutes: days.reduce((m, d) => m + d.minutes, 0),
     }
-  }, [weekDays, sessions, today, nowMin, hoursOf, weekStart])
+  }, [weekDays, mine, today, nowMin, classHours, staffId])
 
   const clock = useMemo<ClockState>(() => {
     const minutesOf = (s: WithId<ClockShift>) => Math.max(0, ((s.status === 'open' ? now : ms(s.clockOutAt)) - ms(s.clockInAt)) / 60_000)
@@ -163,6 +155,7 @@ export function useCoachDay() {
 
   return {
     me: me.data,
+    staffId,
     now,
     today,
     nowMin,
@@ -173,12 +166,11 @@ export function useCoachDay() {
     clock,
     /** Opening hours of a date (per-date hours included). */
     hoursOf,
-    conflictsOf: (id: string): Conflict[] => conflicts.get(id) ?? [],
     student: (id: string): WithId<Student> | undefined => studentsById.get(id),
-    /** Sessions loaded for the page (the last two weeks to four weeks ahead), for first-session checks. */
-    sessions,
-    loading: me.loading || sessionsState.loading,
-    todoLoading: sessionsState.loading || avail.loading || feed.loading || reads.loading,
+    /** The students in classes loaded for the page (this week to two weeks ahead), for first-class checks. */
+    seats: data.seats,
+    loading: me.loading || data.loading,
+    todoLoading: avail.loading || feed.loading || reads.loading,
   }
 }
 

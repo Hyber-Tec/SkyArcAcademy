@@ -2,15 +2,13 @@ import { LuPlus } from 'react-icons/lu'
 import { SESSION_STATUSES } from '@shared/schedule/status'
 import type { DateKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
-import { useBranch } from '@/branch/BranchProvider'
 import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
 import { Button } from '@/components/ui/button'
 import { StudentMonthCalendar } from '@/features/schedule/StudentMonthCalendar'
 
 /**
- * Student page → Calendar: the student's sessions month by month (scrolling).
- * Admins click a day to create a session and a session to open it (date, time,
- * coach and status change there); coaches see their own sessions.
+ * Student page → Calendar: the student's classes month by month (scrolling). A class opens it on the schedule; admins
+ * also click a day to book the student into one of its classes.
  */
 export function StudentCalendarView({
   studentId,
@@ -23,7 +21,6 @@ export function StudentCalendarView({
   onCreate?: (dateKey?: DateKey) => void
   onOpen?: (session: WithId<Session>) => void
 }) {
-  const { staffId } = useBranch()
   return (
     <div>
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -35,21 +32,20 @@ export function StudentCalendarView({
           </div>
           {!readOnly && onCreate ? (
             <Button variant="outline" size="sm" className="ml-auto" onClick={() => onCreate()}>
-              <LuPlus /> New class
+              <LuPlus /> Book a class
             </Button>
           ) : null}
         </div>
         <StudentMonthCalendar
           studentId={studentId}
-          coachId={readOnly ? staffId : undefined}
           frameless
           className="h-[min(74svh,740px)]"
           onPickDay={readOnly ? undefined : (d) => onCreate?.(d)}
-          onPickSession={readOnly ? undefined : onOpen}
+          onPickSession={onOpen}
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {readOnly ? 'Your classes with this student · Scroll for other months.' : 'Click a day to create a class · Click a class to open it · Scroll for other months.'}
+        {readOnly ? 'Click a class to open it · Scroll for other months.' : 'Click a day to book a class · Click a class to open it · Scroll for other months.'}
       </p>
     </div>
   )

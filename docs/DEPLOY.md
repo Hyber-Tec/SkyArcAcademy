@@ -185,13 +185,17 @@ left alone. (Done on 2026-10-15.)
 Until the academy's real data arrives (A1–A4 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
 tried with real-looking weeks. `npm run seed:sample` adds:
 
-- a manager and four coaches with pay rates, availability (their days off ahead marked not available, except one coach
-  who hasn't answered yet, so the days still to set show) and four weeks of time entries;
+- a manager and four coaches with pay rates, who's in each day (their hours: Monday three coaches from 4 PM, one leaving
+  at 6; the other days two; Sunday two, one of them in turn; the manager every day without teaching), their days off
+  ahead marked not available except one coach's Sundays (so the days still to set show), and time entries that follow
+  their hours;
 - the students' shooting: about 100 results, most as synthetic SIUS PDFs in their Drive folders (uploaded to
   Storage), a few typed paper cards, a few scanned ones with a made-up picture of the card (to try correcting a card on
   the website), and progress reports (shared with each family that has a sign-in, and one draft);
-- 35 students with levels, programs and families (seven parents and three students with a sign-in);
-- ten weeks of classes in the academy's blocks, with makeups, trial visits, one coach's sick day and Thanksgiving;
+- 39 students with levels, rifle codes, programs and families (seven parents and three students with a sign-in);
+- ten weeks of classes as on the academy's sheets (`docs/DECISIONS.md` §21): each class with six seats and four or five
+  students grouped by level, make-ups ("MU for 10/13"), extra practice and trials (Trial 1 for the last half hour),
+  absences, Thanksgiving, and one class ahead with no coach in (Tuesday 7 PM, to show the warning);
 - announcements and events.
 
 Everything is fictional (`shared/src/sample/data.ts`): document IDs start with `sample-`, and emails end in
@@ -209,7 +213,9 @@ reviewers sign in as sample people): first `npx tsx scripts/review-logins.ts --r
 `npm run seed:sample -- --remove`. It also deletes what the app
 made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and
 never touches anyone else; the Drive files' bytes go with their records. Running `npm run seed:sample` again
-refreshes the classes around the new date.
+refreshes the classes around the new date, and replaces the sample's earlier schedule. **Don't run it on production
+while a store review is under way:** since classes are taught together the sample's classes have no coach of their
+own, and the phone app in review (1.0) still finds a coach's classes by their coach.
 
 ## Moving to skyarcacademy.com (launch)
 

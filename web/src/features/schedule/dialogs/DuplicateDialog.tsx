@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
 import { type DateKey, type Weekday, WEEKDAY_SHORT, addDays, formatDateKey, orderedWeekdays, startOfWeek, weekDays, weekdayOf } from '@shared/time'
-import type { DayConfig, Session, WithId } from '@shared/types'
+import type { AcademyClass, DayConfig, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { useStudentList } from '@/features/data/hooks'
 import { branchCol } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { type DuplicateSource, type ScheduleCtx, duplicateIntoWeek } from '../api'
+import type { ScheduleCtx } from '../api'
+import { duplicateClasses } from '../classApi'
 
 function WeekPicker({ value, onChange }: { value: DateKey; onChange: (d: DateKey) => void }) {
   const { settings } = useBranch()
@@ -59,37 +60,40 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
     const label = `${formatDateKey(startOfWeek(from, weekStartsOn), 'monthDay')} → ${formatDateKey(targetDays[0], 'monthDay')}`
     const ok = await confirm({
       title: `Duplicate ${selected.length} day${selected.length > 1 ? 's' : ''}?`,
-      description: `${label}. Classes already on those days in the target week move to the Trash.`,
+      description: `${label}. Each class comes with its regular students (make-ups, practice and trials stay behind).${settings.schedule.duplicate.overwriteTargetDays ? ' Classes already on those days in the target week move to the Trash.' : ''}`,
       confirmLabel: 'Duplicate',
     })
     if (!ok) return
     setBusy(true)
     try {
       const srcDays = weekDays(from, weekStartsOn)
-      const snap = await getDocs(query(branchCol(ctx.branchId, COL.sessions), where('dateKey', '>=', srcDays[0]), where('dateKey', '<=', srcDays[6])))
-      const sources: DuplicateSource[] = snap.docs
-        .map((d) => d.data() as Session)
-        .filter((s) => !s.isDeleted && s.status !== 'canceled' && selected.includes(weekdayOf(s.dateKey)))
-        .map((s) => ({ ...s, weekday: weekdayOf(s.dateKey) }))
-      const [tSnap, cSnap] = await Promise.all([
-        getDocs(query(branchCol(ctx.branchId, COL.sessions), where('dateKey', '>=', targetDays[0]), where('dateKey', '<=', targetDays[6]))),
+      const week = (days: DateKey[]) =>
+        Promise.all([
+          getDocs(query(branchCol(ctx.branchId, COL.classes), where('dateKey', '>=', days[0]), where('dateKey', '<=', days[6]))),
+          getDocs(query(branchCol(ctx.branchId, COL.sessions), where('dateKey', '>=', days[0]), where('dateKey', '<=', days[6]))),
+        ]).then(([cSnap, sSnap]) => {
+          const seats = sSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Session) }) as WithId<Session>)
+          return cSnap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as AcademyClass) }) as WithId<AcademyClass>)
+            .filter((c) => !c.isDeleted)
+            .map((c) => ({ c, seats: seats.filter((x) => x.classId === c.id) }))
+        })
+      const [sources, existingTarget, cfgSnap] = await Promise.all([
+        week(srcDays),
+        week(targetDays),
         getDocs(query(branchCol(ctx.branchId, COL.dayConfigs), where('dateKey', '>=', targetDays[0]), where('dateKey', '<=', targetDays[6]))),
       ])
-      const configs = new Map(cSnap.docs.map((d) => [d.id, d.data() as DayConfig]))
-      const existingTarget = tSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Session) }) as WithId<Session>)
+      const configs = new Map(cfgSnap.docs.map((d) => [d.id, d.data() as DayConfig]))
       const grades = new Map(students.map((s) => [s.id, s.grade]))
-      const { created: n, skipped } = await duplicateIntoWeek(ctx, {
-        sources,
-        targetDays: targetDays
-          .filter((d) => selected.includes(weekdayOf(d)))
-          .map((d) => ({ dateKey: d, weekday: weekdayOf(d), open: dayHours(d, settings, configs).isOpen })),
+      const { classes: n, students: kids } = await duplicateClasses(ctx, {
+        sources: sources.filter((x) => selected.includes(weekdayOf(x.c.dateKey))),
+        targetDays: targetDays.filter((d) => selected.includes(weekdayOf(d))).map((d) => ({ dateKey: d, open: dayHours(d, settings, configs).isOpen })),
         existingTarget,
         liveGrade: (id) => grades.get(id),
         label,
       })
-      const full = skipped ? ` ${skipped} skipped: the coach already had ${ctx.maxStudentsPerCoach} ${ctx.maxStudentsPerCoach === 1 ? 'student' : 'students'} at that time.` : ''
-      if (n) toast.success(`Duplicated ${n} classes.${full}`)
-      else toast.info(skipped ? `Nothing copied.${full}` : 'Nothing to copy on those days (closed and past days are skipped).')
+      if (n) toast.success(`Duplicated ${n} ${n === 1 ? 'class' : 'classes'} with ${kids} ${kids === 1 ? 'student' : 'students'}.`)
+      else toast.info('Nothing to copy on those days (closed and past days are skipped).')
       if (n) onOpenChange(false)
     } catch (e) {
       toast.error('Duplicate failed', { description: (e as Error).message })
@@ -103,7 +107,7 @@ export function DuplicateDialog({ open, onOpenChange, ctx, anchor }: { open: boo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Duplicate schedule</DialogTitle>
-          <DialogDescription>Copy classes into another week as {settings.schedule.pasteStatus === 'pending' ? 'Pending' : 'Confirmed'} classes.</DialogDescription>
+          <DialogDescription>Copy classes and their regular students into another week, as {settings.schedule.pasteStatus === 'pending' ? 'Pending' : 'Confirmed'}.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="text-xs font-semibold text-muted-foreground uppercase">From</div>

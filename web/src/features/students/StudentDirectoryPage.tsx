@@ -226,6 +226,7 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
                     <TableCell>{s.grade || '—'}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {s.level ? <span>{s.level}</span> : <span className="text-muted-foreground">—</span>}
+                      {s.rifle ? <span className="text-muted-foreground"> · {s.rifle}</span> : null}
                       {s.program ? <div className="text-xs text-muted-foreground">{s.program}</div> : null}
                     </TableCell>
                     <TableCell onClick={(e) => isAdmin && e.stopPropagation()}>

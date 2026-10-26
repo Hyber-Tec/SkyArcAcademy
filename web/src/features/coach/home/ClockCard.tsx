@@ -18,13 +18,13 @@ function clockState(t: CoachDay): { tone: Tone; title: string; detail: string } 
     return {
       tone: 'muted',
       title: `Clocked out at ${last.outMin != null ? formatMinutes(last.outMin) : '—'}`,
-      detail: later ? `${formatDuration(clock.todayMinutes)} today. Clock in again before ${formatMinutes(later.startMin)}.` : `${formatDuration(clock.todayMinutes)} today.`,
+      detail: later ? `${formatDuration(clock.todayMinutes)} today. Clock in again before ${formatMinutes(later.c.startMin)}.` : `${formatDuration(clock.todayMinutes)} today.`,
     }
   }
   if (day.current.length) {
-    return { tone: 'warn', title: 'Not clocked in', detail: `Your ${formatMinutes(day.current[0].startMin)} class has started. Clock in at the kiosk with your PIN.` }
+    return { tone: 'warn', title: 'Not clocked in', detail: `Your ${formatMinutes(day.current[0].c.startMin)} class has started. Clock in at the kiosk with your PIN.` }
   }
-  if (later) return { tone: 'muted', title: 'Not clocked in yet', detail: `Your first class is at ${formatMinutes(later.startMin)}. Clock in at the kiosk when you arrive.` }
+  if (later) return { tone: 'muted', title: 'Not clocked in yet', detail: `Your first class is at ${formatMinutes(later.c.startMin)}. Clock in at the kiosk when you arrive.` }
   return { tone: 'muted', title: 'Not clocked in today', detail: 'Nothing on your schedule today.' }
 }
 

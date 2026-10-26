@@ -29,7 +29,7 @@ import { auditData } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { useDoc } from '@/lib/firestore'
 import { useBranch } from '@/branch/BranchProvider'
-import { CapacityField, PayModelChoice } from './BusinessRulesFields'
+import { PayModelChoice, SeatsField } from './BusinessRulesFields'
 
 /** Owners only: the academy's core rules, including pay-model changes from a date. Admins see them read-only. */
 export function AcademyRulesCard() {
@@ -40,8 +40,8 @@ export function AcademyRulesCard() {
   const { data: payroll } = useDoc<{ lockedThrough?: DateKey | null }>(stateRef)
   const lockedThrough = payroll?.lockedThrough ?? null
   const [draft, setDraft] = useState<number | null>(null)
-  const value = draft ?? rules.maxStudentsPerCoach
-  const dirty = value !== rules.maxStudentsPerCoach
+  const value = draft ?? rules.seatsPerClass
+  const dirty = value !== rules.seatsPerClass
   const [busy, setBusy] = useState(false)
   const [changing, setChanging] = useState(false)
 
@@ -55,13 +55,11 @@ export function AcademyRulesCard() {
     await batch.commit()
   }
 
-  async function saveCapacity() {
-    const next: BusinessRules = { ...rules, maxStudentsPerCoach: value }
+  async function saveSeats() {
+    const next: BusinessRules = { ...rules, seatsPerClass: value }
     setBusy(true)
     try {
-      await write(next, 'Changed the academy rules', [
-        { field: 'maxStudentsPerCoach', label: 'Students per coach at once', from: rules.maxStudentsPerCoach, to: next.maxStudentsPerCoach },
-      ])
+      await write(next, 'Changed the academy rules', [{ field: 'seatsPerClass', label: 'Seats per class', from: rules.seatsPerClass, to: next.seatsPerClass }])
       setDraft(null)
       toast.success('Academy rules saved')
     } catch (e) {
@@ -77,7 +75,7 @@ export function AcademyRulesCard() {
     <Card>
       <CardHeader>
         <CardTitle>Academy rules</CardTitle>
-        <CardDescription>How coaches are paid and how many students they take at once. Only owners can change these; admins see them read-only.</CardDescription>
+        <CardDescription>How coaches are paid and how many seats a class has. Only owners can change these; admins see them read-only.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
@@ -109,12 +107,12 @@ export function AcademyRulesCard() {
         </div>
         <Separator />
         <FieldGroup>
-          <CapacityField value={value} onChange={setDraft} />
+          <SeatsField value={value} onChange={setDraft} />
         </FieldGroup>
-        {value < rules.maxStudentsPerCoach ? (
+        {dirty ? (
           <Alert>
             <LuClock />
-            <AlertDescription>Classes already on the schedule stay as they are; new classes, moves and pastes follow the new limit.</AlertDescription>
+            <AlertDescription>Classes already on the schedule keep their seats; new classes get {value}.</AlertDescription>
           </Alert>
         ) : null}
       </CardContent>
@@ -122,7 +120,7 @@ export function AcademyRulesCard() {
         <Button variant="outline" disabled={!dirty || busy} onClick={() => setDraft(null)}>
           Discard
         </Button>
-        <Button disabled={!dirty || busy} onClick={() => void saveCapacity()}>
+        <Button disabled={!dirty || busy} onClick={() => void saveSeats()}>
           {busy ? <Spinner /> : null} Save rules
         </Button>
       </CardFooter>

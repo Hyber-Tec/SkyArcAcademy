@@ -1,12 +1,20 @@
+import { query, where } from 'firebase/firestore'
+import { useMemo } from 'react'
 import { LuArrowRight, LuCalendarPlus, LuMail, LuPhone } from 'react-icons/lu'
+import { dayHours } from '@shared/availability'
+import { COL } from '@shared/paths'
 import { formatPhone, gradeLabel } from '@shared/people'
+import { coachesIn } from '@shared/schedule/classes'
 import { formatDateKey } from '@shared/time'
-import type { Staff, Student, StudentPrivateProfile, WithId } from '@shared/types'
+import type { Availability, Session, Staff, Student, StudentPrivateProfile, WithId } from '@shared/types'
+import { useBranch } from '@/branch/BranchProvider'
 import { StudentStatusBadge } from '@/components/app/StatusBadge'
 import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useDayConfigs } from '@/features/data/hooks'
+import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { initialsOf, timeSpan } from './model'
 import type { StudentActivity } from './useStudentActivity'
@@ -16,8 +24,8 @@ export type ProfileTab = 'sessions' | 'scores' | 'info' | 'calendar'
 const actionClass = 'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/50 hover:text-foreground [&_svg]:size-[18px] [&_svg]:text-foreground'
 
 /**
- * The student page's left column: who the student is, quick actions, attendance, the next session, family and coaches.
- * It stays in view while the tabs change.
+ * The student page's left column: who the student is, quick actions, attendance, the next class (with the coaches in
+ * at its time) and family. It stays in view while the tabs change.
  */
 export function IdentityColumn({
   student,
@@ -34,12 +42,14 @@ export function IdentityColumn({
   /** Contact details (admins only). */
   priv: StudentPrivateProfile | null
   isAdmin: boolean
+  /** The staff list (admins only): names, and who teaches. */
   staffById: Map<string, WithId<Staff>>
   onTab: (tab: ProfileTab) => void
   onNewSession: () => void
   onOpenSession: (id: string) => void
 }) {
   const { attendance, next } = activity
+  const coaches = useCoachesIn(next, isAdmin ? staffById : null)
   const upcoming = activity.sessions.filter(
     (s) => s.status !== 'canceled' && (s.dateKey > activity.today || (s.dateKey === activity.today && s.endMin > activity.nowMin)),
   ).length
@@ -82,6 +92,7 @@ export function IdentityColumn({
           <div className="mt-3 flex flex-wrap gap-1.5">
             <StudentStatusBadge status={student.status} />
             {student.level ? <Badge variant="outline">{student.level}</Badge> : null}
+            {student.rifle ? <Badge variant="outline">Rifle {student.rifle}</Badge> : null}
             {student.program ? <Badge variant="secondary">{student.program}</Badge> : null}
           </div>
           {actions.length ? (
@@ -90,9 +101,7 @@ export function IdentityColumn({
             </div>
           ) : null}
         </div>
-        {/* A coach sees only their own classes with the student, so the numbers say so. */}
-        {isAdmin ? null : <p className="border-t px-5 pt-3 text-xs font-medium text-muted-foreground">Your classes with {first}</p>}
-        <dl className={cn('grid grid-cols-2 text-center', isAdmin && 'border-t')}>
+        <dl className="grid grid-cols-2 border-t text-center">
           <Stat label="Attended" value={String(attendance.attended)} className="border-r border-b" />
           <Stat label="Missed" value={String(attendance.missed)} className="border-b" />
           <Stat label="Attendance" value={attendance.percent !== null ? `${attendance.percent}%` : '—'} className="border-r" />
@@ -109,27 +118,28 @@ export function IdentityColumn({
         {next ? (
           <>
             <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-              <span className="font-medium tracking-wide uppercase">{isAdmin ? 'Next class' : 'Next class with you'}</span>
+              <span className="font-medium tracking-wide uppercase">Next class</span>
               <SessionStatusBadge status={next.status} />
             </div>
             <div className="mt-3 text-lg font-semibold">{formatDateKey(next.dateKey, 'weekdayLong').replace(/, \d{4}$/, '')}</div>
             <div className="text-sm text-zinc-300">
               {timeSpan(next.startMin, next.endMin)}
+              {next.note ? ` · ${next.note}` : ''}
             </div>
             <div className="mt-3 flex items-center gap-2 text-sm">
-              <span className="flex size-6 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold">{initialsOf(next.coachName)}</span>
-              <span className="truncate">{next.coachName}</span>
-              {isAdmin ? (
-                <button type="button" className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-zinc-300 hover:text-white" onClick={() => onOpenSession(next.id)}>
-                  Open <LuArrowRight className="size-3.5" />
-                </button>
-              ) : null}
+              {/* The coaches in at that time teach it. */}
+              <span className={cn('min-w-0 truncate', !coaches.length && 'text-zinc-400')} title={coaches.map((k) => k.name).join(', ')}>
+                {coaches.length ? `With ${coaches.map((k) => k.name.split(' ')[0]).join(', ')}` : 'No coach in yet'}
+              </span>
+              <button type="button" className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs font-medium text-zinc-300 hover:text-white" onClick={() => onOpenSession(next.id)}>
+                Open <LuArrowRight className="size-3.5" />
+              </button>
             </div>
           </>
         ) : (
           <>
-            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">{isAdmin ? 'Next class' : 'Next class with you'}</div>
-            <div className="mt-2 text-sm text-zinc-300">{isAdmin ? 'Nothing booked yet.' : 'Nothing booked with you.'}</div>
+            <div className="text-xs font-medium tracking-wide text-zinc-400 uppercase">Next class</div>
+            <div className="mt-2 text-sm text-zinc-300">Nothing booked yet.</div>
             {isAdmin ? (
               <Button size="sm" variant="secondary" className="mt-3" onClick={onNewSession}>
                 <LuCalendarPlus /> Book a class
@@ -151,13 +161,14 @@ export function IdentityColumn({
             <ul className="space-y-3">
               {priv.parents.map((p, i) => (
                 <li key={i} className="flex items-center gap-3">
-                  <Avatar name={p.name || '?'} />
+                  <Avatar name={p.name || p.email || '?'} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{p.name || 'No name'}</div>
-                    <div className="truncate text-xs text-muted-foreground">{[p.relation, p.phone ? formatPhone(p.phone) : null].filter(Boolean).join(' · ') || p.email}</div>
+                    {/* A parent known only by email (as the academy's spreadsheet gives them) shows by it. */}
+                    <div className="truncate text-sm font-medium">{p.name || p.email || 'Parent'}</div>
+                    <div className="truncate text-xs text-muted-foreground">{[p.relation, p.phone ? formatPhone(p.phone) : null].filter(Boolean).join(' · ') || (p.name ? p.email : '')}</div>
                   </div>
                   {p.email ? (
-                    <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name}`}>
+                    <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name || p.email}`}>
                       <LuMail className="size-4" />
                     </a>
                   ) : null}
@@ -169,27 +180,27 @@ export function IdentityColumn({
           )}
         </div>
       ) : null}
-
-      {/* A coach sees only their own classes, so the list would only ever name them. */}
-      {isAdmin && activity.coaches.length ? (
-        <div className="hidden rounded-xl border bg-card p-4 lg:block">
-          <h2 className="mb-3 text-sm font-semibold">Coaches</h2>
-          <ul className="space-y-3">
-            {activity.coaches.slice(0, 6).map((t) => (
-              <li key={t.id} className="flex items-center gap-3">
-                <Avatar name={t.name} color={staffById.get(t.id)?.color} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{t.name}</div>
-                </div>
-                <span className="text-xs text-muted-foreground tabular-nums">{`${t.sessions} class${t.sessions === 1 ? '' : 'es'}`}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
     </aside>
   )
+}
+
+/**
+ * Who teaches a class: the coaches in at its time that day (their availability), named from the staff list when the
+ * viewer has it (admins), else from the day's records.
+ */
+function useCoachesIn(s: WithId<Session> | null, staffById: Map<string, WithId<Staff>> | null): { id: string; name: string }[] {
+  const { branchId, settings } = useBranch()
+  const day = s?.dateKey ?? null
+  const q = useMemo(() => (day ? query(branchCol(branchId, COL.availability), where('dateKey', '==', day)) : null), [branchId, day])
+  const { data } = useQuery<Availability>(q, `student-next-in-${branchId}-${day}`)
+  const { map: dayConfigs } = useDayConfigs(day ?? '', day ?? '', { enabled: !!day })
+  return useMemo(() => {
+    if (!s) return []
+    // Admins know who teaches (active coaches); a coach, or the list still loading, goes by each record's role.
+    const staff = staffById?.size ? staffById : null
+    const isCoach = (id: string) => !staff || (staff.get(id)?.role === 'coach' && staff.get(id)?.status === 'active')
+    return coachesIn(s, data, dayHours(s.dateKey, settings, dayConfigs), isCoach).map((k) => ({ id: k.staffId, name: staff?.get(k.staffId)?.name ?? (k.name || 'Coach') }))
+  }, [s, data, settings, dayConfigs, staffById])
 }
 
 function Stat({ label, value, className }: { label: string; value: string; className?: string }) {
