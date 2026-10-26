@@ -14,15 +14,14 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    App Review Information if App Store Connect lets you while it waits. No second submission while it's in review
    (Goo, 2026-10-26): the phone's update for classes taught together goes up afterwards, when Goo says.
 2. **Google Play:** HyberTec's developer account is verified as an organization (HyberTec LLC; 2026-10-26), so no
-   closed test comes first. Publish the Android app once the phone's update below is merged: try it on Android (the
-   emulator, `npm run android:sim`, or internal testing), then `docs/publishing/google-play/testing.md` and
-   `production.md`.
+   closed test comes first. Sky Arc 1.0.0 (build 3, with the update for classes taught together) is in internal
+   testing since 2026-10-26, uploaded by hand. Next: `docs/publishing/google-play/testing.md` from step 4 (the testers,
+   Google sign-in's fingerprints, uploads by command), then `production.md` once the testers have tried it.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
-4. **The phone app's update for classes taught together** (`feat/mobile-classes`, `docs/mobile-classes.md`): look at it
-   on the simulator (`npm run iphone:sim`, from a copy of the repository whose folder path has no spaces: the iPhone
-   build fails in `Sky Arc Academy`, `docs/running-the-apps.md`), merge it, and upload it once Apple's review of 1.0 is
-   over (`docs/publishing/updates.md`; its What's New is in `docs/store/listing.md`). Then clear the lead coach (below).
+4. **The iPhone's update for classes taught together** (merged on 2026-10-26, #34; Android's build 3 already has it):
+   upload it once Apple's review of 1.0 is over (`docs/publishing/updates.md`; its What's New is in
+   `docs/store/listing.md`). Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 
