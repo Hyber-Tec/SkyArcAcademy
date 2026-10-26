@@ -519,7 +519,8 @@ homepage now … I'll actually test and verify from the live website".
 - **Screenshots from the owner's iPhone** ("can't i just take screenshot from my iphone and just use that?"): eight of
   them, the families' first (a progress report, its target, Scores, Home), then the office's (Home, Schedule, Scan,
   Students). At 1179 × 2556 they are the 6.3-inch size Apple now requires; a 6.9-inch copy waits in case App Store
-  Connect asks for that size too. Android's come from an Android phone when Android is ready.
+  Connect asks for that size too. Android's were made on an Android emulator from the practice copy (the owner,
+  2026-10-26), at the sizes Google's page gives.
 - **The reviewers' logins**: four sample people in production (the office, a coach, a parent, and a student for trying
   Delete my account), made by `scripts/review-logins.ts`, their passwords only on the owner's Mac.
 - **Expo's modules are built from source** (`mobile/app.config.ts`): the prebuilt image module carried SDWebImage

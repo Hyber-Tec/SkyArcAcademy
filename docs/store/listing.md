@@ -138,8 +138,8 @@ sample academy's made-up people:
 - `ios/`: the eight the owner took on their iPhone on 2026-10-20, 1179 × 2556, the 6.3-inch size App Store Connect
   requires ("iPhone with Dynamic Island (medium display)").
 - `ios-6.9-inch/`: the same eight at 1290 × 2796, only if App Store Connect also asks for the 6.9-inch display.
-- `android/`: not yet. When Android is ready, take the same eight screens on an Android phone and give them to Claude
-  Code: it frames them to Google's shape (no taller than twice their width, no transparency) and adds `icon-512.png` and
+- `android/`: the same eight screens on a Pixel 9 emulator (2026-10-26, the app with classes taught together), as
+  JPEGs of 1368 × 2432 (white margins to exactly 9:16, no transparency), with `icon-512.png` (a 32-bit PNG) and
   `feature-graphic-1024x500.jpg` (the official white logo on black), which the Play Console requires.
 
 Upload them in this order (the families' first: most people who look the app up are parents):
@@ -149,7 +149,8 @@ Upload them in this order (the families' first: most people who look the app up 
 3. `03-scores`: Scores, every result by position.
 4. `04-family-home`: the family's Home, the next class and the week.
 5. `05-today`: the office's Home, the day's classes.
-6. `06-schedule`: Schedule, the day's classes by coach.
+6. `06-schedule`: Schedule, the day's classes (by coach in the iPhone's 1.0 pictures; laid out like the academy's
+   sheets in Android's).
 7. `07-scan`: Scan, photographing a paper target.
 8. `08-students`: Students, the academy's students.
 

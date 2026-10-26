@@ -42,6 +42,7 @@ when the app opens.
 | Login | Who | What the app shows |
 | --- | --- | --- |
 | `owner@example.test` | The academy's owner | The staff's tabs, everything |
+| `paige.sutton@skyarc-sample.test` | The sample admin, the academy's manager (the stores' office pictures) | The staff's tabs, the office's view |
 | `daniel.reed@skyarc-sample.test` | A sample coach | The staff's tabs, a coach's view |
 | `jiyeon.hwang@skyarc-sample.test` | A sample parent | The family's tabs, with her two children |
 | `seoyeon.lim@skyarc-sample.test` | A sample student (her parent has a login too; a shared report) | The family's tabs, her own |

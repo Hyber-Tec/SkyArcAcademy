@@ -87,6 +87,7 @@ const PLATFORM = { ios: "iPhone", android: "Android" };
 const PRACTICE_OWNER = { email: "owner@example.test", name: "Test Owner" };
 const PRACTICE_LOGINS = [
   { ...PRACTICE_OWNER, role: "owner" },
+  { email: "paige.sutton@skyarc-sample.test", name: "Paige Sutton", role: "admin" },
   { email: "daniel.reed@skyarc-sample.test", name: "Daniel Reed", role: "coach" },
   { email: "jiyeon.hwang@skyarc-sample.test", name: "Jiyeon Hwang", role: "parent" },
   { email: "seoyeon.lim@skyarc-sample.test", name: "Seoyeon Lim", role: "student" },
@@ -662,7 +663,7 @@ function practiceLoginLines() {
   const password = practicePassword();
   return [
     `  Sign in with an email and password (no Google on the practice copy). The password of each is ${password}`,
-    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the staff's tabs, everything" : l.role === "coach" ? "a coach: the staff's tabs, a coach's view" : `a ${l.role}: the family's tabs`}`),
+    ...PRACTICE_LOGINS.map((l) => `    ${l.email.padEnd(34)} ${l.role === "owner" ? "the owner: the staff's tabs, everything" : l.role === "admin" ? "an admin: the staff's tabs, the office's view" : l.role === "coach" ? "a coach: the staff's tabs, a coach's view" : `a ${l.role}: the family's tabs`}`),
   ];
 }
 
@@ -1532,8 +1533,8 @@ async function prepare() {
 const SCREENS_DIR = path.join(mobile, ".publish", "screenshots");
 /**
  * The eight screens both stores get, uploaded in this order (the set the owner chose on 2026-10-20, from their iPhone): the
- * family's first (most people who find the app are parents), as the sample parent, then the office's, as the practice
- * owner. `flow` opens the screen: a tab of either app, or the newest progress report.
+ * family's first (most people who find the app are parents), as the sample parent, then the office's, as the sample
+ * admin. `flow` opens the screen: a tab of either app, or the newest progress report.
  */
 const SCREENS = [
   { file: "01-report", as: "family", flow: "maestro/screenshots/family-report.yaml", env: {}, what: "A progress report, as a parent sees it" },
@@ -1541,12 +1542,14 @@ const SCREENS = [
   { file: "03-scores", as: "family", flow: "maestro/screenshots/family-tab.yaml", env: { TAB: "scores", LABEL: "Scores" }, what: "Scores: every result, by position" },
   { file: "04-family-home", as: "family", flow: "maestro/screenshots/family-tab.yaml", env: { TAB: "home", LABEL: "Home" }, what: "The family's Home: the next class and the week" },
   { file: "05-today", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "today", LABEL: "Home" }, what: "The office's Home: the day's classes" },
-  { file: "06-schedule", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "schedule", LABEL: "Schedule" }, what: "Schedule: the day's classes by coach" },
+  { file: "06-schedule", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "schedule", LABEL: "Schedule" }, what: "Schedule: the day's classes, laid out like the academy's sheets" },
   { file: "07-scan", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "scan", LABEL: "Scan" }, what: "Scan: photographing a paper target" },
   { file: "08-students", as: "office", flow: "maestro/screenshots/tab.yaml", env: { TAB: "students", LABEL: "Students" }, what: "Students: the academy's students" },
 ];
 /** The sample parent the family's screens are taken as (a practice login: two children, shared reports). */
 const SCREENS_PARENT = "jiyeon.hwang@skyarc-sample.test";
+/** The sample admin the office's are taken as (a practice login), so Home greets a person, as the iPhone's pictures do. */
+const SCREENS_OFFICE = "paige.sutton@skyarc-sample.test";
 
 /** The size of a PNG, from sips. */
 function imageSize(file) {
@@ -1555,7 +1558,7 @@ function imageSize(file) {
 }
 
 /**
- * Signs in on one device as the practice owner (sign-in.yaml) and takes the office's screens, then signs in as the
+ * Signs in on one device as the sample admin (sign-in.yaml) and takes the office's screens, then signs in as the
  * sample parent (screenshots/family-sign-in.yaml) and takes the family's, each opened by its flow, with the status bar
  * as the stores like it.
  */
@@ -1565,7 +1568,7 @@ async function shoot(maestro, signIn, device, dir) {
   const failed = (what) =>
     stop([`${what} on ${device.label}. Maestro's own screenshots and logs are in ~/.maestro/tests (the newest folder).`, `Run this again; if it fails the same way, ask Claude Code: "npm run publish:screenshots fails".`]);
   try {
-    step(`Signing in on ${device.label} as the practice owner`);
+    step(`Signing in on ${device.label} as the sample admin`);
     device.reset();
     if (!maestro(device.testId, "maestro/sign-in.yaml", signIn)) failed("The app didn't sign in");
     for (const as of ["office", "family"]) {
@@ -1639,21 +1642,26 @@ function androidStatusBar(a, serial, on) {
   demo("-e", "command", "enter");
   demo("-e", "command", "clock", "-e", "hhmm", "0941");
   demo("-e", "command", "battery", "-e", "level", "100", "-e", "plugged", "false");
-  demo("-e", "command", "network", "-e", "wifi", "show", "-e", "level", "4", "-e", "mobile", "show", "-e", "datatype", "lte", "-e", "level", "4");
+  // Full Wi-Fi without the emulator's "no internet" mark, and no mobile network (Android 16 showed its type as 3G).
+  demo("-e", "command", "network", "-e", "wifi", "show", "-e", "level", "4", "-e", "fully", "true", "-e", "mobile", "hide");
   demo("-e", "command", "notifications", "-e", "visible", "false");
 }
 
 /**
- * Google Play refuses a phone screenshot taller than twice its width (a Pixel's screen is 2.24:1): each is given white
- * margins to 9:16, the classic phone shape, which keeps every pixel of the app. Play also refuses a screenshot with
- * transparency, which Android's PNGs carry (even when nothing is see-through), so each becomes a JPEG at its best quality.
+ * Google Play refuses a phone screenshot taller than twice its width (a Pixel's screen is 2.24:1), and its
+ * recommendations take portrait screenshots of 9:16, at least 1080 × 1920: each is given white margins to exactly 9:16,
+ * the classic phone shape, which keeps every pixel of the app (a Pixel 9's 1080 × 2424 becomes 1368 × 2432). Play also
+ * refuses a screenshot with transparency, which Android's PNGs carry (even when nothing is see-through), so each becomes
+ * a JPEG at its best quality.
  */
 function padForPlay(dir) {
   for (const f of fs.readdirSync(dir).filter((n) => /^\d\d-.*\.png$/.test(n))) {
     const file = path.join(dir, f);
     const { height, width } = imageSize(file);
-    const wanted = Math.ceil((height * 9) / 16);
-    if (wanted > width) read("sips", ["--padToHeightWidth", String(height), String(wanted), "--padColor", "FFFFFF", file]);
+    // Whole pixels at exactly 9:16: the height up to a multiple of 16, the width 9/16 of it.
+    const tall = Math.ceil(Math.max(height, (width * 16) / 9) / 16) * 16;
+    const wide = (tall / 16) * 9;
+    if (tall !== height || wide !== width) read("sips", ["--padToHeightWidth", String(tall), String(wide), "--padColor", "FFFFFF", file]);
     read("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "best", file, "--out", file.replace(/\.png$/, ".jpg")]);
     fs.rmSync(file);
   }
@@ -1677,12 +1685,14 @@ function largeIphoneCopies(dir) {
 }
 
 /**
- * The Play Console's icon (512 × 512) and feature graphic (1024 × 500, a JPEG: Play refuses transparency in it): the
- * app's icon, and the official white logo on the logo's black (the logo carries the academy's name, so no name is written
- * beside it: CLAUDE.md "Brand and logos").
+ * The Play Console's icon (512 × 512, a 32-bit PNG: Google asks for one with an alpha channel, which the App Store's
+ * must not have) and feature graphic (1024 × 500, a JPEG: Play refuses transparency in it): the app's icon, and the
+ * official white logo on the logo's black (the logo carries the academy's name, so no name is written beside it:
+ * CLAUDE.md "Brand and logos").
  */
 async function storeImages(dir) {
-  read("sips", ["-z", "512", "512", path.join(mobile, "assets", "images", "icon.png"), "--out", path.join(dir, "icon-512.png")]);
+  const icon = path.join(dir, "icon-512.png");
+  read("sips", ["-z", "512", "512", path.join(mobile, "assets", "images", "icon.png"), "--out", icon]);
   const logo = fs.readFileSync(path.join(root, "web", "public", "brand", "skyarc-logo-white.svg"), "utf8").replace(/<svg /, '<svg style="height:250px;width:auto" ');
   const html = `<!doctype html><html><body style="margin:0;width:1024px;height:500px;background:#0A0A0A;display:flex;align-items:center;justify-content:center">${logo}</body></html>`;
   try {
@@ -1693,17 +1703,28 @@ async function storeImages(dir) {
       const page = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
       await page.setContent(html);
       await page.screenshot({ path: path.join(dir, "feature-graphic-1024x500.jpg"), type: "jpeg", quality: 100 });
+      // The icon's own pixels, saved again from a canvas, whose PNGs keep an alpha channel (sips can't add one, and
+      // Chrome's screenshots drop it from an opaque picture).
+      const png = await page.evaluate(async (src) => {
+        const img = new Image();
+        img.src = src;
+        await img.decode();
+        const canvas = Object.assign(document.createElement("canvas"), { width: img.naturalWidth, height: img.naturalHeight });
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        return canvas.toDataURL("image/png");
+      }, `data:image/png;base64,${fs.readFileSync(icon).toString("base64")}`);
+      fs.writeFileSync(icon, Buffer.from(png.split(",")[1], "base64"));
     } finally {
       await browser.close();
     }
   } catch (e) {
-    note(`The feature graphic wasn't made (it needs Google Chrome on this Mac): ${String(e.message ?? e).split("\n")[0]}`);
+    note(`The feature graphic wasn't made, and the icon has no alpha channel (both need Google Chrome on this Mac): ${String(e.message ?? e).split("\n")[0]}`);
   }
 }
 
 /**
  * `npm run publish:screenshots`: every image the App Store and Google Play ask for, from the practice copy (the sample
- * academy's made-up people, as the practice owner and the sample parent), into mobile/.publish/screenshots/ (ios/ at
+ * academy's made-up people, as the sample admin and the sample parent), into mobile/.publish/screenshots/ (ios/ at
  * the 6.3-inch iPhone size App Store Connect requires, and ios-6.9-inch/ the same at the large size in case it asks;
  * android/ with the Play Console's icon and feature graphic).
  * Screenshots taken on a real iPhone of that size (or an iPhone 15 or 16: 1179 × 2556) do as well. On a simulator and an emulator of
@@ -1717,7 +1738,7 @@ async function screenshots() {
   const made = [];
   prepareApp();
   await startPracticeCopy();
-  const signIn = { EMAIL: PRACTICE_OWNER.email, PASSWORD: practicePassword() };
+  const signIn = { EMAIL: SCREENS_OFFICE, PASSWORD: practicePassword() };
 
   if (only !== "android") await iosScreenshots(maestro, signIn, made);
   if (only !== "ios") await androidScreenshots(maestro, signIn, made);

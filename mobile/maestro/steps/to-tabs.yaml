@@ -1,0 +1,27 @@
+# A step the flows run (not a test of its own): back to the tabs from a screen opened over them (a report, a class),
+# which hides the tab bar. It goes back while the header's back button shows: "BackButton" on an iPhone, "Navigate up"
+# on Android (as steps/back.yaml), at most three screens.
+appId: com.skyarcacademy.app
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - repeat:
+          times: 3
+          while:
+            visible:
+              id: "BackButton"
+          commands:
+            - tapOn:
+                id: "BackButton"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - repeat:
+          times: 3
+          while:
+            visible: "Navigate up"
+          commands:
+            - back
