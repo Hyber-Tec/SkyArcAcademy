@@ -66,7 +66,6 @@ export function FamilyClassMonth({
   const { height } = useWindowDimensions();
   // Smaller weeks on a smaller phone, so the chosen day's classes keep room under the months.
   const rowHeight = height >= 800 ? 46 : height >= 700 ? 42 : 38;
-  const weekStartsOn = settings.general.weekStartsOn;
   const scroller = useRef<MonthScrollerHandle>(null);
   const panel = useRef<ScrollView>(null);
   const [anchor] = useState(selected);
@@ -168,12 +167,11 @@ export function FamilyClassMonth({
   return (
     <View style={styles.fill}>
       <View style={[styles.months, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <WeekdayHeader weekStartsOn={weekStartsOn} />
+        <WeekdayHeader />
         <View style={{ height: MONTH_TITLE + 6 * rowHeight + MONTH_GAP }}>
           <MonthScroller
             ref={scroller}
             anchor={anchor}
-            weekStartsOn={weekStartsOn}
             rowHeight={rowHeight}
             variant="clean"
             monthsBefore={12}

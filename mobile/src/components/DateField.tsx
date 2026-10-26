@@ -1,4 +1,4 @@
-import { type DateKey, type Weekday, formatDateKey } from "@shared/time";
+import { type DateKey, formatDateKey } from "@shared/time";
 import { CalendarDays, X } from "lucide-react-native";
 import { useState } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
@@ -16,7 +16,6 @@ export function DateField({
   onChange,
   onClear,
   today,
-  weekStartsOn,
   min,
   max,
   yearJump = false,
@@ -31,7 +30,6 @@ export function DateField({
   onClear?: () => void;
   /** The academy's today (marked in the months). */
   today: DateKey;
-  weekStartsOn: Weekday;
   min?: DateKey | null;
   max?: DateKey | null;
   yearJump?: boolean;
@@ -84,7 +82,6 @@ export function DateField({
         title={pickerTitle ?? label}
         value={value}
         today={today}
-        weekStartsOn={weekStartsOn}
         min={min}
         max={max}
         yearJump={yearJump}

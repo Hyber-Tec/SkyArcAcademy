@@ -56,7 +56,7 @@ export default function ScanReviewScreen() {
   const fromCamera = params.from === "camera";
   const colors = useColors();
   const { width } = useWindowDimensions();
-  const { branchId, actor, settings } = useBranch();
+  const { branchId, actor } = useBranch();
   const { today } = useAcademyNow();
 
   const [index, setIndex] = useState(0);
@@ -347,7 +347,6 @@ export default function ScanReviewScreen() {
         title="The day it was shot"
         value={dateKey}
         today={today}
-        weekStartsOn={settings.general.weekStartsOn}
         max={today}
         onPick={(d) => {
           setDateKey(d);

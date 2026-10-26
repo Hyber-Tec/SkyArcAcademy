@@ -587,6 +587,10 @@ modern, professional", without changing much more.
   their rifle code; make-ups, extra practice and trials in the sheets' label colours; open seats hatched. Day: the same
   classes larger, to mark who's here. Drag a student to an open seat to move them; open a class to change it. Fridays
   and Saturdays fold into one "closed" marker. **No Month view**: the academy plans a week at a time.
+- **The week runs Monday to Sunday** (Goo, the same day: "i want Monday to be first and sunday to be last"), as the
+  sheets do: the schedule's week on the website and the phone, Duplicate a week, Copy last week and the week's totals
+  (Settings → Schedule, "Weeks start on", now Monday by default). **Month calendars start on Sunday** ("that's how
+  calendar works"): every month view, the schedule's mini calendar and the date pickers (`CALENDAR_WEEK_START`).
 - **Gentler colours:** the sheets' own colours, lighter (Goo: "same colour, just lighter"), and a dark wash of each in
   dark mode (`shared/src/schedule/seatColors.ts`, for the phone too).
 - **A floating panel on the right** that closes and opens again (Esc, or the button in the header), like the schedule's

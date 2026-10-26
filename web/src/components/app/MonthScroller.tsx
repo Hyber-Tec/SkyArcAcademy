@@ -1,12 +1,12 @@
 import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
-import { type DateKey, type Weekday, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from '@shared/time'
+import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from '@shared/time'
 import { cn } from '@/lib/utils'
 
 /**
  * Months stacked vertically and scrolled like the iOS Calendar app (owner rule:
  * every month calendar scrolls vertically, never ‹ › arrows). Months load as you
  * approach either end; adding months above keeps the view still. Each month shows
- * only its own days, starting on the branch's week start.
+ * only its own days, its weeks from Sunday as calendars have them (`CALENDAR_WEEK_START`).
  */
 
 export interface MonthScrollerHandle {
@@ -19,7 +19,6 @@ export interface MonthScrollerProps {
   anchor: DateKey
   /** Kept in view: when it changes, the calendar scrolls to it. */
   focusDate?: DateKey | null
-  weekStartsOn: Weekday
   /** Content of one day cell (the scroller owns the cell box and its borders). */
   renderDay: (date: DateKey) => ReactNode
   /** `compact`: small round days (mini calendars, date pickers). `full`: big bordered cells. */
@@ -55,7 +54,6 @@ const monthKey = (d: DateKey) => d.slice(0, 7)
 export function MonthScroller({
   anchor,
   focusDate,
-  weekStartsOn,
   renderDay,
   variant = 'full',
   dayClassName,
@@ -235,7 +233,7 @@ export function MonthScroller({
     }
   }, [ready, measure, win])
 
-  const weekdays = orderedWeekdays(weekStartsOn)
+  const weekdays = orderedWeekdays(CALENDAR_WEEK_START)
   const compact = variant === 'compact'
   const columns = weekSummary ? `repeat(7, minmax(0, 1fr)) ${weekSummary.width ?? '84px'}` : 'repeat(7, minmax(0, 1fr))'
 
@@ -260,7 +258,6 @@ export function MonthScroller({
         <MonthBlock
           key={m}
           month={m}
-          weekStartsOn={weekStartsOn}
           compact={compact}
           renderDay={renderDay}
           dayClassName={dayClassName}
@@ -276,7 +273,6 @@ export function MonthScroller({
 
 function MonthBlock({
   month,
-  weekStartsOn,
   compact,
   renderDay,
   dayClassName,
@@ -285,7 +281,6 @@ function MonthBlock({
   weekSummary,
 }: {
   month: DateKey
-  weekStartsOn: Weekday
   compact: boolean
   renderDay: (date: DateKey) => ReactNode
   dayClassName?: (date: DateKey) => string | undefined
@@ -294,7 +289,7 @@ function MonthBlock({
   weekSummary?: (days: DateKey[]) => ReactNode
 }) {
   // Blank cells before the 1st, so it lands under its weekday.
-  const lead = (weekdayIndex(month) - WEEKDAYS.indexOf(weekStartsOn) + 7) % 7
+  const lead = (weekdayIndex(month) - WEEKDAYS.indexOf(CALENDAR_WEEK_START) + 7) % 7
   const days = Number(endOfMonth(month).slice(8))
   const cells: (DateKey | null)[] = [...Array<null>(lead).fill(null), ...Array.from({ length: days }, (_, i) => addDays(month, i))]
   while (cells.length % 7) cells.push(null)

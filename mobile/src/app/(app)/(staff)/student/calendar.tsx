@@ -44,7 +44,6 @@ export default function StudentCalendarScreen() {
   // Smaller weeks on a smaller phone, so the chosen day's classes keep room under the months.
   const rowHeight = height >= 800 ? 46 : height >= 700 ? 42 : 38;
   const hour12 = settings.general.timeFormat !== "24h";
-  const weekStartsOn = settings.general.weekStartsOn;
   const { today } = useAcademyNow();
   // Fixed once open: a new day at midnight doesn't move the months under the person's finger.
   const [anchor] = useState(today);
@@ -161,12 +160,11 @@ export default function StudentCalendarScreen() {
         {s ? (isCoach ? `Your classes with ${first}` : `${first}’s classes, with every coach`) : " "}
       </T>
       <View style={[styles.months, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <WeekdayHeader weekStartsOn={weekStartsOn} />
+        <WeekdayHeader />
         <View style={{ height: MONTH_TITLE + 6 * rowHeight + MONTH_GAP }}>
           <MonthScroller
             ref={scroller}
             anchor={anchor}
-            weekStartsOn={weekStartsOn}
             rowHeight={rowHeight}
             variant="clean"
             renderDay={renderDay}

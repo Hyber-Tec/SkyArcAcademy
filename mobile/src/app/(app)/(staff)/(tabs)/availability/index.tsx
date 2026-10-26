@@ -271,11 +271,10 @@ export default function AvailabilityScreen() {
           ) : null}
         </View>
       </View>
-      <WeekdayHeader weekStartsOn={weekStartsOn} />
+      <WeekdayHeader />
       <MonthScroller
         ref={scroller}
         anchor={today}
-        weekStartsOn={weekStartsOn}
         rowHeight={ROW_HEIGHT}
         variant="clean"
         monthsBefore={24}
@@ -291,7 +290,6 @@ export default function AvailabilityScreen() {
         hint="Pick a day that’s set, to copy it to the same weekday in the following weeks."
         value={null}
         today={today}
-        weekStartsOn={weekStartsOn}
         min={addDays(lockedThrough, 1)}
         isDisabled={(d) => !answered(d)}
         onPick={repeatDay}

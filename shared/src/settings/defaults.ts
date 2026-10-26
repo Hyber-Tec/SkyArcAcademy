@@ -29,6 +29,10 @@ export type SessionStatus = 'pending' | 'confirmed' | 'present' | 'no_show' | 'c
 
 export interface BranchSettings {
   general: {
+    /**
+     * The academy's week: the schedule's week, Duplicate a week, Copy last week and the week's totals. Month calendars
+     * start on Sunday whatever it is (`CALENDAR_WEEK_START`).
+     */
     weekStartsOn: Weekday
     timeFormat: '12h' | '24h'
   }
@@ -103,7 +107,8 @@ const closed = (openMin = 840, closeMin = 1260): DayHours => ({ isOpen: false, o
 
 export const DEFAULT_SETTINGS: BranchSettings = {
   general: {
-    weekStartsOn: 'sunday',
+    // Monday to Sunday, as the academy's sheets run (the owner, 2026-10-26).
+    weekStartsOn: 'monday',
     timeFormat: '12h',
   },
   schedule: {

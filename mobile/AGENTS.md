@@ -120,7 +120,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   Academy (not branch or center), Position = Standing / Kneeling / Prone. Sentence case, plain words, English only for
   now (Korean and other languages come in one pass later).
 - **Month calendars scroll vertically through months**, like the iOS Calendar app (permanent rule): never a static
-  month with ‹ › arrows, including date pickers (`DatePickerDialog`, `MonthScroller`).
+  month with ‹ › arrows, including date pickers (`DatePickerDialog`, `MonthScroller`). Their weeks start on Sunday, as
+  calendars do; the academy's week (the schedule's week strip, "this week") runs Monday to Sunday
+  (`settings.general.weekStartsOn`).
 - **Never name the AI model or provider** (permanent rule): it is always "AI".
 - Every route loads its record by ID (links and the back gesture always work). Every interactive element gets an
   `accessibilityLabel` when it has no text, and screens and key controls a `testID` (the Maestro flows use them).

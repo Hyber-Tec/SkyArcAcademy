@@ -46,7 +46,6 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
         <MonthScroller
           ref={scroller}
           anchor={anchor}
-          weekStartsOn={settings.general.weekStartsOn}
           onVisibleRangeChange={onVisibleRangeChange}
           onTopMonthChange={setTopMonth}
           className="h-[min(72svh,760px)] px-2"

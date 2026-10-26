@@ -75,10 +75,9 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   2. **Who's in on Sundays:** the coach in turn isn't on the sheets, so Sundays show the every-Sunday coach and the
      manager only; the office adds that week's coach in "Who's in". The make-up Friday of October 23 has nobody in,
      and one student was in two classes at once that day.
-  3. **The week starting on Monday**, as the sheets do, if Goo likes it so (Settings → General).
-  4. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
+  3. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
      owner as an owner, A18).
-  5. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
+  4. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
      open a class. Once the phone's update reads classes (`docs/mobile-classes.md`) is out, run
      `npx tsx scripts/lead-coach.ts --clear`; until then, run `--apply` again after the office adds students.
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

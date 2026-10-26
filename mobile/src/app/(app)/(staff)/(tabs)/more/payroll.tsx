@@ -34,7 +34,6 @@ export default function PayrollScreen() {
   const colors = useColors();
   const { today } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
-  const weekStartsOn = settings.general.weekStartsOn;
   const { type, anchorDate } = settings.payroll.payPeriod;
   const periods = useMemo(() => recentPeriods(today, type, anchorDate, 12), [today, type, anchorDate]);
   const current = periods[0];
@@ -226,7 +225,6 @@ export default function PayrollScreen() {
         hint="The first day to show"
         value={from}
         today={today}
-        weekStartsOn={weekStartsOn}
         max={to}
         onPick={(d) => {
           setCustom({ from: d, to });
@@ -241,7 +239,6 @@ export default function PayrollScreen() {
         hint="The last day to show"
         value={to}
         today={today}
-        weekStartsOn={weekStartsOn}
         min={from}
         onPick={(d) => {
           setCustom({ from, to: d });

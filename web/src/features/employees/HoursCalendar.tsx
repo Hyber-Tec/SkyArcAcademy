@@ -43,7 +43,7 @@ export function HoursCalendar({
   onRange: (from: DateKey, to: DateKey) => void
   footnote: string
 }) {
-  const { settings, timezone } = useBranch()
+  const { timezone } = useBranch()
   const today = todayKey(timezone)
   const scroller = useRef<MonthScrollerHandle>(null)
   const [topMonth, setTopMonth] = useState(today)
@@ -63,7 +63,6 @@ export function HoursCalendar({
           <MonthScroller
             ref={scroller}
             anchor={today}
-            weekStartsOn={settings.general.weekStartsOn}
             onVisibleRangeChange={onVisibleRangeChange}
             onTopMonthChange={setTopMonth}
             className="h-[min(72svh,760px)] min-w-[760px] px-2"

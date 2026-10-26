@@ -119,7 +119,6 @@ export default function ScheduleScreen() {
         title="Go to a date"
         value={selected}
         today={today}
-        weekStartsOn={weekStartsOn}
         onPick={(d) => {
           setSelected(d);
           setPicking(false);

@@ -70,7 +70,6 @@ export function StudentMonthCalendar({
         ref={scroller}
         anchor={anchor}
         focusDate={selectedDate}
-        weekStartsOn={settings.general.weekStartsOn}
         onVisibleRangeChange={onVisibleRangeChange}
         onTopMonthChange={setTopMonth}
         className={cn('px-2', className ?? 'h-[min(70svh,720px)]')}
