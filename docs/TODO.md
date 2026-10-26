@@ -9,9 +9,10 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 1. **The App Store:** Sky Arc 1.0.0 (build 2, uploaded 2026-10-21) is waiting for Apple's review (still on 2026-10-26,
    submitted 2026-10-21). When Apple
    answers: release it (`docs/publishing/apple/app-store.md`, steps 25–26), or give Claude Code Apple's message. If
-   Apple asks for the academy's permission (guideline 5.2.1), attach the academy's email. Keep the sample data and the
-   reviewers' logins in production until then. No second submission while it's in review (Goo, 2026-10-26): the
-   phone's update for classes taught together goes up afterwards, when Goo says.
+   Apple asks for the academy's permission (guideline 5.2.1), attach the academy's email. Since 2026-10-26 the
+   reviewers' login is an admin with the academy's real data: paste the new notes (`docs/store/review-notes.md`) into
+   App Review Information if App Store Connect lets you while it waits. No second submission while it's in review
+   (Goo, 2026-10-26): the phone's update for classes taught together goes up afterwards, when Goo says.
 2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
    two-week closed test comes first (`docs/publishing/google-play/account.md`).
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
@@ -64,19 +65,20 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   too: any language, added late, even after the site is live (the owner, 2026-10-19). The owner reviews the Korean by
   hand, since machine-written Korean doesn't read naturally, so until then the site's Korean stays a draft: don't spend
   time polishing it.
-- **Moving the real data in** (`docs/DECISIONS.md` §20), once Apple has finished its review (the manager answered A16
-  and sent the spreadsheet on 2026-10-25):
-  1. Take away the reviewers' logins and the sample data: `npx tsx scripts/review-logins.ts --remove`, then
-     `npm run seed:sample -- --remove` (it also removes the logins made for testing with `--login`). Then merge the
-     pull request for classes taught together (`docs/DECISIONS.md` §21), and let it deploy.
-  2. Settings: the **Hourly** pay model from the start (Settings → Academy rules); Sunday's hours to cover classes until
-     7:30 PM (the default is 1–6 PM); the month's make-up Friday opened on its date; the week starting on Monday, as
-     the sheets do, if Goo likes it so (Settings → General).
-  3. The import (`scripts/import-academy.ts`; the sheets and the spreadsheet are read, in
-     `docs/internal/schedule-import/`): the staff with their rates and usual days; the students with their levels,
-     rifle codes, grades and parents; the classes from August 31 (past weeks as they happened, with absences and
-     make-ups) through November's standing week, and who's in each day. Download November's sheet and the spreadsheet
-     again just before: the manager is still editing both. Nobody gets access or email.
-  4. Access, from the website, when the office is ready: each sends that person's sign-in email.
-  5. The next App Store update needs review logins that see no real student (`docs/publishing/updates.md`).
+- **The real data moved in on 2026-10-26** (Goo's call, during Apple's review: `docs/DECISIONS.md` §21). The sample
+  data, the owner's test coach and the coach, parent and student review logins are gone; pay is Hourly from the start
+  and Sunday is open 1–7:30 PM; the import brought in the staff, the students and their parents' contacts, and the
+  classes from August 31 to November 30 with who's in each day (from the sheets and the spreadsheet of 2026-10-25).
+  Nobody got access or email. Still to do:
+  1. **The manager's later changes:** the sheets and the spreadsheet as they're edited; the import runs again and
+     updates the same records (`docs/internal/schedule-import/`), or the office changes them on the website.
+  2. **Who's in on Sundays:** the coach in turn isn't on the sheets, so Sundays show the every-Sunday coach and the
+     manager only; the office adds that week's coach in "Who's in". The make-up Friday of October 23 has nobody in,
+     and one student was in two classes at once that day.
+  3. **The week starting on Monday**, as the sheets do, if Goo likes it so (Settings → General).
+  4. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
+     owner as an owner, A18).
+  5. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
+     open a class. Once the phone's update reads classes (`docs/mobile-classes.md`) is out, run
+     `npx tsx scripts/lead-coach.ts --clear`; until then, run `--apply` again after the office adds students.
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

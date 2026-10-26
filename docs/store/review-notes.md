@@ -6,19 +6,21 @@ steps 15–17), the replies to send if Apple answers with guideline 4.8 (sign-in
 the notes say. Checked on 2026-10-20 against Apple's list of what a complete review needs (who the app is for, the
 devices tested, the outside services, a login for each kind of account, regional differences).
 
-## The review logins
+## The review login
 
-Four sample people in production, made by `npx tsx scripts/review-logins.ts`; they see only made-up students. Their
-passwords are only on this Mac: `open -e mobile/.publish/review-logins.json` (never in git or in a document). Don't
-change them while a version is in review, and keep the sample data in production meanwhile. If a reviewer deletes an
-account, run the script again: it comes back with the same password.
+Since 2026-10-26 production holds the academy's real data, and the reviewers sign in as an admin that sees it (Goo's
+call, `docs/DECISIONS.md` §21): the office login, with the same email and password as before, now an admin of its own
+named "Reviewer (App Store)". The coach, parent and student logins went with the sample people. The password is only
+on this Mac: `open -e mobile/.publish/review-logins.json` (never in git or in a document). Don't change it while a
+version is in review. If a reviewer deletes the account, `npx tsx scripts/review-logins.ts --real-data` brings it back
+with the same password.
 
 | Login | Email | Who |
 | --- | --- | --- |
-| Office | `paige.sutton@skyarc-sample.test` | the sample manager, an admin: goes in Apple's sign-in fields |
-| Coach | `daniel.reed@skyarc-sample.test` | a sample coach |
-| Parent | `jiyeon.hwang@skyarc-sample.test` | a sample parent of two students |
-| Student | `seoyeon.lim@skyarc-sample.test` | a sample student, for trying Delete my account |
+| Office | `paige.sutton@skyarc-sample.test` | an admin of the academy, with its real data: goes in Apple's sign-in fields |
+
+Until 2026-10-26 there were four sample people (an office, a coach, a parent and a student, made by
+`npx tsx scripts/review-logins.ts`); their passwords stay in the same file, for if they're made again.
 
 ## Apple: App Review Information
 
@@ -26,33 +28,26 @@ account, run the script again: it comes back with the same password.
 - **Contact:** your name, phone (`+1 …`) and email.
 - **Attachment:** the academy's written permission ([apple/app-store.md](../publishing/apple/app-store.md), step 1).
 - **Notes** (the box takes 4,000 characters; this text is about 3,850 with the passwords in, so keep additions short).
-  Paste it, then put the four passwords in place of the capitals, and the phones you tried the app on in place of the
-  last capitals:
+  Paste it, then put the password in place of the capitals, and the phones you tried the app on in place of the last
+  capitals:
 
 ```
-Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy, for its families and staff. The academy runs its classes, coaches, students and results on our website; the app brings them to phones. Parents and students see their classes, every score and the progress reports the academy shares. Coaches see their classes and the students, set their availability and score paper targets from a photo. The office (owners and admins) sees the day, the schedule by coach and every student.
+Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy, for its families and staff. The academy runs its classes, coaches, students and results on our website; the app brings them to phones. Parents and students see their classes, every score and the progress reports the academy shares. Coaches see their classes and the students, set their availability and score paper targets from a photo. The office (owners and admins) sees the day, the schedule and every student.
 
 WHO PUBLISHES IT
 HyberTec LLC designed, built and runs the Sky Arc platform (this app, its website and its server) for Sky Arc Sports Academy, which has given us permission to publish it under its name and logo: its written permission is attached. Sky Arc is not made from a template or an app generation service; it is its own product for one sport.
 
-DEMO ACCOUNTS
-On "Sign in to Sky Arc Sports Academy", sign in with the email and password (no Google needed). Every account sees sample data only: made-up students, families, coaches and classes, in the academy's time zone (New York).
-- Office (an admin), also in the sign-in fields: paige.sutton@skyarc-sample.test / OFFICE PASSWORD
-- Coach: daniel.reed@skyarc-sample.test / COACH PASSWORD
-- Parent of two students: jiyeon.hwang@skyarc-sample.test / PARENT PASSWORD
-- Student, for trying account deletion: seoyeon.lim@skyarc-sample.test / STUDENT PASSWORD
+DEMO ACCOUNT
+On "Sign in to Sky Arc Sports Academy", sign in with the email and password in the sign-in fields (no Google needed): paige.sutton@skyarc-sample.test / OFFICE PASSWORD. It is an admin of the academy (the office) and shows the academy's real schedule and students, in its time zone (New York): please look around without changing or deleting anything. Coaches, parents and students see a part of the same app (their own classes, scores and reports).
 
 WHAT TO TRY
-- Office: Home (today's classes; tap one), Schedule (another day), Scan (photograph a paper target or choose a photo; check the shots, choose a student, save), Students (open one: classes, scores, files, family contacts), More (coaches, News, Drive, Reports).
-- Coach: Home (classes, hours, to-do), Schedule, Availability (tap a day), Scan, More (students, News, Drive, Reports, Payroll).
-- Parent: Home, Classes (a list or the months), Scores (open one: its shots on the target), Reports (open one), More (switch between the two children; contact the academy).
-- Student: More → Delete my account.
+Home (today's classes; tap one), Schedule (another day; tap a class), Scan (photograph a paper target or choose a photo; check the shots, choose a student; you can leave without saving), Students (open one: classes, scores, files), More (coaches, News, Drive, Reports).
 
 SIGN-IN (guideline 4.8)
 Sky Arc requires an account the academy has created: the academy adds a person's email address on its website, and only that address can open the app. There is no sign-up in the app. Google sign-in and email-and-password sign-in are two ways of proving it is that address; an account the academy hasn't added sees "No access yet" and nothing else. We believe the app falls under 4.8's exception for "an education, enterprise, or business app that requires the user to sign in with an existing education or enterprise account".
 
 ACCOUNT DELETION (guideline 5.1.1(v))
-More → Delete my account, for every account (also on the "No access yet" screen); please try it with the student account. It removes the sign-in and the person's profile at once; the academy's own records stay with the academy, as the screen and the privacy policy explain: https://skyarcacademy.web.app/privacy
+More → Delete my account, for every account (also on the "No access yet" screen). It removes the sign-in and the person's profile at once; the academy's own records stay with the academy, as the screen and the privacy policy explain: https://skyarcacademy.web.app/privacy. If you try it with the demo account, we will restore the account for the next review.
 
 COMMENTS (guideline 1.2)
 The only user-generated content is comments on the academy's announcements, written and read by its staff only (owners, admins, coaches); families never see them. Whoever posts chooses whether a post takes comments, owners and admins can delete any comment, and the academy can pause or remove anyone's access. Contact details: More → Help.

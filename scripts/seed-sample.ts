@@ -39,6 +39,7 @@ import type { SettingsOverrides } from '../shared/src/settings/resolve'
 import { drawSyntheticCard } from '../shared/src/targets/synthetic'
 import { todayKey } from '../shared/src/time'
 import { PROJECT_ID, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
+import { isReviewAdmin } from './lib/review-admin'
 import { encodePng } from './lib/png'
 import { siusPdf } from './lib/sius-pdf'
 import { deleteObject, uploadObject } from './lib/storage-rest'
@@ -61,7 +62,9 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.kioskPins]: (_, d) => isSample(d.staffId),
   kioskPinOwners: (id) => isSample(id),
   // A sample person's own sign-in, and an email given a sample person's access (--login).
-  [COL.members]: (id, d) => isSampleEmail(id) || isSample(d.staffId) || isSample(d.studentId) || (Array.isArray(d.studentIds) && d.studentIds.some(isSample)),
+  // (Not the App Store's review account once it's an admin of its own: scripts/lib/review-admin.ts.)
+  [COL.members]: (id, d) =>
+    !isReviewAdmin(d) && (isSampleEmail(id) || isSample(d.staffId) || isSample(d.studentId) || (Array.isArray(d.studentIds) && d.studentIds.some(isSample))),
   [COL.signupRequests]: (id) => isSampleEmail(id),
   [COL.notifications]: (_, d) => isSampleEmail(d.recipientKey),
   [COL.announcements]: (id) => isSample(id),

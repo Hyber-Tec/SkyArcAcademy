@@ -182,8 +182,8 @@ left alone. (Done on 2026-10-15.)
 
 ## Sample data
 
-Until the academy's real data arrives (A1–A4 in `docs/QUESTIONS.md`), production runs on sample data, so the app can be
-tried with real-looking weeks. `npm run seed:sample` adds:
+Production has held the academy's real data since 2026-10-26 (`docs/DECISIONS.md` §21), so the sample data lives on the
+practice copy (the emulators) only: never run `npm run seed:sample` on production. On the emulators it adds:
 
 - a manager and four coaches with pay rates, who's in each day (their hours: Monday three coaches from 4 PM, one leaving
   at 6; the other days two; Sunday two, one of them in turn; the manager every day without teaching), their days off
@@ -208,14 +208,11 @@ it), give an email you read a sample person's access: `npm run seed:sample -- --
 delivers `you+anything@gmail.com` to `you@gmail.com`. The academy's sign-in email goes to it; sign in there with a
 password made for it (Create an account, with that email). `--remove` takes these logins away with the sample data.
 
-**Before the real data is imported, remove it all**, once no App Store or Google Play review is under way (their
-reviewers sign in as sample people): first `npx tsx scripts/review-logins.ts --remove`, then
-`npm run seed:sample -- --remove`. It also deletes what the app
-made for the sample people afterwards (their classes, time entries, kiosk PINs, notifications and audit entries) and
-never touches anyone else; the Drive files' bytes go with their records. Running `npm run seed:sample` again
-refreshes the classes around the new date, and replaces the sample's earlier schedule. **Don't run it on production
-while a store review is under way:** since classes are taught together the sample's classes have no coach of their
-own, and the phone app in review (1.0) still finds a coach's classes by their coach.
+**`npm run seed:sample -- --remove`** takes it all away, with what the app made for the sample people afterwards (their
+classes, time entries, kiosk PINs, notifications and audit entries); it never touches anyone else, and the Drive files'
+bytes go with their records. Running `npm run seed:sample` again refreshes the classes around the new date and
+replaces the sample's earlier schedule. Production's sample data was removed this way on 2026-10-26, before the
+academy's real data came in; the App Store's review account stayed, as an admin (`docs/store/review-notes.md`).
 
 ## Moving to skyarcacademy.com (launch)
 
