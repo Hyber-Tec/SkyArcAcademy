@@ -237,8 +237,41 @@ export interface StudentPrivateProfile {
 
 // --------------------------------------------------------------- scheduling
 
-/** `branches/{b}/sessions/{id}`: one student in one class (called a Class everywhere people see it). */
+/**
+ * `branches/{b}/classes/{id}`: a class, one time on one day with its seats (the sheets' six), taught together by every
+ * coach in at that time (their availability that day). Its students are its sessions (`Session.classId`).
+ */
+export interface AcademyClass extends AuditStamp {
+  dateKey: DateKey
+  weekday: Weekday
+  startMin: number
+  endMin: number
+  startAt: TimestampLike
+  endAt: TimestampLike
+  /** Start of the next local day; rules refuse client edits once it has passed. */
+  dayEndAt: TimestampLike
+  /** Students it takes (`businessRules.seatsPerClass` when it was made). */
+  seats: number
+  /** For the coaches: what to work on, equipment, anything to pass on. */
+  note: string
+  source: 'manual' | 'duplicate_week' | 'import' | 'seed'
+  isDeleted: boolean
+  deletedAt: TimestampLike | null
+  deletedBy: string | null
+}
+
+/**
+ * `branches/{b}/sessions/{id}`: one student in one class, their seat (called a Class everywhere families see it). Its
+ * time is the class's, or part of it (a half-hour trial). `note` is its label in the sheets' own words ("MU for 10/13",
+ * "Practice", "Trial 1").
+ */
 export interface Session extends AuditStamp {
+  /** The class it's a seat in (`classes/{id}`); missing on sessions from before classes were taught together. */
+  classId: string
+  /**
+   * The one coach a session had before classes were taught together (the sample data, and the phone app until its
+   * update reads `classId`). Empty on every seat since: a class's coaches are the ones in at its time.
+   */
   coachId: string
   coachName: string
   studentId: string
@@ -257,7 +290,7 @@ export interface Session extends AuditStamp {
   visualOrder: number
   confirmedAt: TimestampLike | null
   confirmedBy: string | null
-  source: 'manual' | 'paste' | 'duplicate_week' | 'master' | 'student_calendar' | 'seed'
+  source: 'manual' | 'paste' | 'duplicate_week' | 'master' | 'student_calendar' | 'seed' | 'import'
   isDeleted: boolean
   deletedAt: TimestampLike | null
   deletedBy: string | null
@@ -268,9 +301,16 @@ export interface AvailabilityRange {
   endMin: number
 }
 
-/** `availability/{staffId}_{dateKey}`. */
+/**
+ * `availability/{staffId}_{dateKey}`: a coach's hours that day, which are also who's in: every coach in at a class's time
+ * teaches it.
+ */
 export interface Availability extends AuditStamp {
   staffId: string
+  /** Their name, so other coaches see who's in with them (they can't read each other's staff records). */
+  staffName?: string
+  /** Their role: the manager or the owner can be in without teaching (only coaches teach). */
+  staffRole?: StaffRole
   dateKey: DateKey
   weekday: Weekday
   ranges: AvailabilityRange[]

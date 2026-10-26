@@ -3,6 +3,7 @@ import { STUDENT_STATUS_LABELS } from '../people'
 import type { DayHours, SessionStatus } from '../settings/defaults'
 import { type DateKey, formatMinutes } from '../time'
 import type { AvailabilityRange, StaffStatus, StudentStatus } from '../types'
+import { type ClassCoach, uncovered } from './classes'
 import { fitsCapacity } from './lanes'
 
 /**
@@ -11,15 +12,17 @@ import { fitsCapacity } from './lanes'
  *
  * - `center_closed`: the date is closed (weekly hours or that date's hours).
  * - `outside_hours`: it runs outside that date's opening hours.
- * - `coach_inactive`: the coach is on hold, has left, or their access is paused or removed.
- * - `coach_unavailable`: the coach's availability doesn't cover it (none that day, or only part).
- * - `over_capacity`: the coach has more students at once than the branch allows.
+ * - `no_coach`: no coach is in for all or part of its class.
+ * - `over_capacity`: its class has more students than seats.
+ * - `coach_inactive`, `coach_unavailable`: the one coach a session had before classes were taught together is
+ *   inactive, or their availability doesn't cover it (`sessionConflicts`, still read by the phone app).
  * - `student_double_booked`: the student has another session at the same time.
  * - `student_inactive`: the student is paused or no longer coming.
  */
 export type ConflictKind =
   | 'center_closed'
   | 'outside_hours'
+  | 'no_coach'
   | 'coach_inactive'
   | 'coach_unavailable'
   | 'over_capacity'
@@ -90,7 +93,74 @@ export function staffCoachState(staffStatus: StaffStatus | null | undefined, mem
   return 'active'
 }
 
-/** Every reason this session may not happen as booked (empty: none). Order: most fundamental first. */
+/** A seat in a class, as the checks read it. */
+export interface ConflictSeat {
+  id: string
+  studentId: string
+  studentName: string
+  dateKey: DateKey
+  startMin: number
+  endMin: number
+  status: SessionStatus
+  isDeleted?: boolean | null
+}
+
+export interface SeatContext {
+  /** That date's opening hours. */
+  hours: DayHours
+  /** The seat's class: its time and seats, the coaches in at its time, and its seats in use (may include this one). */
+  class: { startMin: number; endMin: number; seats: number }
+  coaches: readonly ClassCoach[]
+  classSeats: readonly Pick<ConflictSeat, 'id' | 'status' | 'isDeleted'>[]
+  /** The student's status; null when unknown. */
+  studentStatus: StudentStatus | null
+  /** The student's live seats that day (may include this one). */
+  studentSeats: readonly ConflictSeat[]
+}
+
+/**
+ * Every reason a seat may not happen as booked (empty: none), most fundamental first: the academy closed or the class
+ * outside opening hours, no coach in for the class, more students than seats, the student in another class at the
+ * same time or not attending.
+ */
+export function seatConflicts(s: ConflictSeat, ctx: SeatContext): Conflict[] {
+  if (!isCheckable(s)) return []
+  const out: Conflict[] = []
+  const { hours } = ctx
+  const c = ctx.class
+  if (!hours.isOpen) out.push({ kind: 'center_closed', message: 'The academy is closed that day.' })
+  else if (c.startMin < hours.openMin || c.endMin > hours.closeMin) {
+    out.push({ kind: 'outside_hours', message: `The class runs outside opening hours (${formatMinutes(hours.openMin)} to ${formatMinutes(hours.closeMin)}).` })
+  }
+  if (hours.isOpen) {
+    const gaps = uncovered(c, ctx.coaches.flatMap((k) => k.ranges))
+    if (gaps.length && gaps[0].startMin === c.startMin && gaps[0].endMin === c.endMin) {
+      out.push({ kind: 'no_coach', message: 'No coach is in for this class.' })
+    } else if (gaps.length) {
+      out.push({ kind: 'no_coach', message: `No coach is in ${gaps.map((g) => `${formatMinutes(g.startMin)} to ${formatMinutes(g.endMin)}`).join(' or ')}.` })
+    }
+  }
+  const taken = ctx.classSeats.filter(inSeat).length
+  if (taken > c.seats) out.push({ kind: 'over_capacity', message: `The class has ${taken} students for ${c.seats} seats.` })
+  const clash = ctx.studentSeats.find(
+    (o) => o.id !== s.id && isCheckable(o) && o.studentId === s.studentId && o.dateKey === s.dateKey && o.startMin < s.endMin && s.startMin < o.endMin,
+  )
+  if (clash) out.push({ kind: 'student_double_booked', message: `${s.studentName || 'The student'} is also in the class at ${formatMinutes(clash.startMin)}.` })
+  if (ctx.studentStatus && STUDENT_AWAY.has(ctx.studentStatus)) {
+    out.push({ kind: 'student_inactive', message: `${s.studentName || 'The student'} is marked ${STUDENT_STATUS_LABELS[ctx.studentStatus]}.` })
+  }
+  return out
+}
+
+/** A seat that takes its place in the class: any status but canceled (here and no-show still sat in it). */
+function inSeat(s: Pick<ConflictSeat, 'status' | 'isDeleted'>): boolean {
+  return !s.isDeleted && s.status !== 'canceled'
+}
+
+/**
+ * Every reason a session with its own coach (from before classes were taught together) may not happen as booked
+ * (empty: none). Order: most fundamental first. The phone app reads it until its update.
+ */
 export function sessionConflicts(s: ConflictSession, ctx: ConflictContext): Conflict[] {
   if (!isCheckable(s)) return []
   const out: Conflict[] = []
@@ -151,7 +221,9 @@ export function coachConflictText(conflicts: readonly Conflict[]): string | null
     ? 'The academy is closed that day.'
     : kinds.has('outside_hours')
       ? 'It’s outside the academy’s opening hours.'
-      : kinds.has('coach_unavailable')
+      : kinds.has('no_coach')
+        ? 'No coach is in for all of it.'
+        : kinds.has('coach_unavailable')
         ? 'You’re not available at this time.'
         : kinds.has('over_capacity')
           ? 'You have more students at once than allowed.'
@@ -160,13 +232,14 @@ export function coachConflictText(conflicts: readonly Conflict[]): string | null
             : kinds.has('student_inactive')
               ? 'The student isn’t attending right now.'
               : 'Something changed since it was booked.'
-  return `${why} Waiting for the admin to move, reassign or cancel it.`
+  return `${why} Waiting for the admin to move or cancel it.`
 }
 
 /** Short label for a conflict on cards and lists. */
 export const CONFLICT_LABELS: Record<ConflictKind, string> = {
   center_closed: 'Academy closed',
   outside_hours: 'Outside hours',
+  no_coach: 'No coach in',
   coach_inactive: 'Coach inactive',
   coach_unavailable: 'Coach unavailable',
   over_capacity: 'Too many students',

@@ -47,6 +47,21 @@ describe('priceShifts', () => {
     expect(totals(p.segments).total).toEqual({ hours: 3, pay: 60 })
   })
 
+  it('counts a class taught together as teaching for whoever is clocked in', () => {
+    const [p] = priceShifts({
+      shifts: [shift('16:00', '18:00', { staffId: 'theo' })],
+      sessions: [session('16:30', '17:30', 'present', { coachId: '' }), session('17:30', '18:00', 'present', { coachId: 'maya' })],
+      settings,
+      rules: { payModels: [{ model: 'teaching_admin', from: '2000-01-01' }] },
+      ratesFor,
+    })
+    expect(p.segments.map((s) => [s.type, s.hours])).toEqual([
+      ['admin', 0.5],
+      ['teaching', 1],
+      ['admin', 0.5],
+    ])
+  })
+
   it('leaves admin time unpaid under Teaching only, from the date the model applies', () => {
     const rules = { payModels: [{ model: 'teaching_admin' as const, from: '2000-01-01' }, { model: 'teaching_only' as const, from: '2026-09-30' }] }
     const [p] = priceShifts({ shifts: [shift('16:00', '18:00')], sessions: [session('16:00', '17:00')], settings, rules, ratesFor })

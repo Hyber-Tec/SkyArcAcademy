@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { buildDayRows, orderCoaches, slotAt } from './dayModel'
 import { occursOn, layoutEventLanes, type ScheduleEvent } from './events'
 import { layoutLanes, peakConcurrency, visibleLaneCount } from './lanes'
 
@@ -26,64 +25,6 @@ describe('lanes', () => {
     const items = [s('a', 960, 1070), s('b', 1070, 1180), s('c', 1000, 1100)]
     expect(peakConcurrency(items, 960, 1180)).toBe(2)
     expect(peakConcurrency(items, 960, 1180, 'c')).toBe(1)
-  })
-})
-
-describe('slots', () => {
-  const segs = [{ startMin: 840, endMin: 1260 }]
-  it('defaults to the session length, capped at availability', () => {
-    expect(slotAt(segs, [], 960, 110, 3)).toEqual({ ok: true, startMin: 960, endMin: 1070 })
-    expect(slotAt(segs, [], 1200, 110, 3)).toEqual({ ok: true, startMin: 1200, endMin: 1260 })
-    expect(slotAt(segs, [], 800, 110, 3)).toEqual({ ok: false, reason: 'unavailable' })
-  })
-  it('shrinks until a seat is free, or reports full', () => {
-    const busy = [s('a', 1000, 1100), s('b', 1000, 1100), s('c', 1000, 1100)]
-    expect(slotAt(segs, busy, 960, 110, 3)).toEqual({ ok: true, startMin: 960, endMin: 1000 })
-    expect(slotAt(segs, busy, 1000, 110, 3)).toEqual({ ok: false, reason: 'full' })
-  })
-})
-
-describe('day rows', () => {
-  const base = {
-    dateKey: '2026-10-07',
-    today: '2026-10-01',
-    hours: { isOpen: true, openMin: 840, closeMin: 1260 },
-    maxLanes: 3,
-    addEmptyLane: true,
-  }
-  const coaches = [
-    { id: 't1', name: 'A' },
-    { id: 't2', name: 'B' },
-    { id: 't3', name: 'C' },
-  ]
-  it('shows coaches with availability or sessions; flags ghosts', () => {
-    const rows = buildDayRows({
-      ...base,
-      coaches,
-      availability: (id) => (id === 't1' ? { ranges: [{ startMin: 840, endMin: 1260 }], unavailable: false, hidden: false } : null),
-      sessions: [s('x', 960, 1070, { coachId: 't2' })],
-    })
-    expect(rows.map((r) => [r.coach.id, r.isGhost])).toEqual([
-      ['t1', false],
-      ['t2', true],
-    ])
-  })
-  it('on past days shows only coaches with real sessions', () => {
-    const rows = buildDayRows({
-      ...base,
-      dateKey: '2026-09-28',
-      coaches,
-      availability: () => ({ ranges: [{ startMin: 840, endMin: 1260 }], unavailable: false, hidden: false }),
-      sessions: [s('x', 960, 1070, { coachId: 't2' }), s('y', 960, 1070, { coachId: 't3', status: 'canceled' })],
-    })
-    expect(rows.map((r) => r.coach.id)).toEqual(['t2'])
-  })
-  it('keeps sessions of unknown coaches visible', () => {
-    const rows = buildDayRows({ ...base, coaches: [], availability: () => null, sessions: [s('x', 960, 1070, { coachId: 'gone' })] })
-    expect(rows[0].coach.name).toBe('Former coach')
-  })
-  it('orders coaches by display order then name', () => {
-    expect(orderCoaches(coaches, ['t3']).map((t) => t.id)).toEqual(['t3', 't1', 't2'])
   })
 })
 

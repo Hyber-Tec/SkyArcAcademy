@@ -114,7 +114,7 @@ describe('class conflicts', () => {
   it('tells the coach the class is waiting for the admin', () => {
     expect(coachConflictText([])).toBeNull()
     expect(coachConflictText(sessionConflicts(session(), ctx({ availability: null })))).toBe(
-      'You’re not available at this time. Waiting for the admin to move, reassign or cancel it.',
+      'You’re not available at this time. Waiting for the admin to move or cancel it.',
     )
   })
 })

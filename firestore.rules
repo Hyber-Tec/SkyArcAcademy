@@ -270,8 +270,9 @@ service cloud.firestore {
           && data.dayStartAt < utcMidnight + duration.value(15, 'h');
       }
 
+      // Staff read every coach's days: the coaches in at a class's time teach it together, and see who's in with them.
       match /availability/{docId} {
-        allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
+        allow read: if isStaff(b);
         allow create: if validAvailability(docId, request.resource.data)
           && (isAdmin(b)
               || (isCoach(b) && request.resource.data.staffId == myStaffId(b) && coachMayEdit(request.resource.data)));
@@ -289,16 +290,36 @@ service cloud.firestore {
 
       // ------------------------------------------------------ schedule
 
-      // Nobody edits a session once its day is over (dayEndAt = next local midnight).
-      match /sessions/{sessionId} {
-        function dayOpen(data) {
-          return data.dayEndAt is timestamp && data.dayEndAt > request.time
-            && data.dayEndAt <= data.startAt + duration.value(25, 'h')
-            && data.dayEndAt > data.startAt;
+      // Nobody edits a class or a session once its day is over (dayEndAt = next local midnight).
+      function dayOpen(data) {
+        return data.dayEndAt is timestamp && data.dayEndAt > request.time
+          && data.dayEndAt <= data.startAt + duration.value(25, 'h')
+          && data.dayEndAt > data.startAt;
+      }
+
+      // A class: a time on a day and its seats (shared/src/types.ts, AcademyClass), taught by every coach in at that
+      // time. Staff read it (its note is for the coaches) and admins write it; families see their children's sessions,
+      // never the class.
+      match /classes/{classId} {
+        function validClass(d) {
+          return d.dateKey is string && d.dateKey.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            && d.startMin is int && d.endMin is int && d.startMin < d.endMin
+            && d.seats is int && d.seats >= 1 && d.seats <= 12
+            && d.note is string
+            && d.isDeleted is bool;
         }
 
-        allow read: if isAdmin(b)
-          || (isCoach(b) && resource.data.coachId == myStaffId(b))
+        allow read: if isStaff(b);
+        allow create: if isAdmin(b) && dayOpen(request.resource.data) && validClass(request.resource.data);
+        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data)
+          && validClass(request.resource.data);
+        // Trashed classes can be purged even after their day.
+        allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
+      }
+
+      // A session is one student's seat in a class. Staff read every one; families read their own children's.
+      match /sessions/{sessionId} {
+        allow read: if isStaff(b)
           || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
           || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
         allow create: if isAdmin(b) && dayOpen(request.resource.data);

@@ -25,10 +25,11 @@ type PricedShiftInput = Pick<ClockShift, 'staffId' | 'dateKey' | 'inMin' | 'cloc
 type TeachingSession = Pick<Session, 'coachId' | 'isDeleted' | 'status' | 'startAt' | 'endAt'>
 
 /**
- * Prices shifts with the shared engine, oldest first (the website's payroll pages): teaching is time inside the
- * person's sessions whose status counts as teaching (`payroll.teachingSessionStatuses`, by default attended sessions
- * only), the rest of the shift is admin time, and each shift follows the academy's pay model on its date. Open shifts
- * are listed without pay.
+ * Prices shifts with the shared engine, oldest first (the website's payroll pages): teaching is time inside classes
+ * with a student whose status counts as teaching (`payroll.teachingSessionStatuses`, by default attended ones), the
+ * rest of the shift is admin time, and each shift follows the academy's pay model on its date. Classes are taught by
+ * everyone in, so any class counts for whoever is clocked in; a session with its own coach (from before) counts for
+ * that coach only. Open shifts are listed without pay.
  */
 export function priceShifts<S extends PricedShiftInput>(opts: {
   shifts: readonly S[]
@@ -44,7 +45,7 @@ export function priceShifts<S extends PricedShiftInput>(opts: {
     .map((shift) => {
       if (!shift.clockOutAt) return { shift, segments: [], open: true }
       const windows = opts.sessions
-        .filter((s) => s.coachId === shift.staffId && !s.isDeleted && counted.has(s.status))
+        .filter((s) => (!s.coachId || s.coachId === shift.staffId) && !s.isDeleted && counted.has(s.status))
         .map((s) => ({ startMs: s.startAt.toMillis(), endMs: s.endAt.toMillis() }))
       const { rates, role } = opts.ratesFor(shift.staffId)
       const model = payModelFor({ role, branchModel: payModelOn(opts.rules, shift.dateKey) })

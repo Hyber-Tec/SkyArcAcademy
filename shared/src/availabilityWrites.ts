@@ -2,7 +2,7 @@ import { dayStartInstant, effectiveRanges, normalizeRanges, rangesContain } from
 import { isAhead, isCheckable } from './schedule/conflicts'
 import type { DayHours } from './settings/defaults'
 import { type DateKey, formatDateKey, formatTimeRange, weekdayOf } from './time'
-import type { Availability, AvailabilityRange, Session, WithId } from './types'
+import type { Availability, AvailabilityRange, Session, StaffRole, WithId } from './types'
 
 /**
  * One day of a change to a coach's availability, as the website and the phone app save it: times, "not available",
@@ -17,14 +17,28 @@ export interface DayWrite {
 }
 
 /** A day's record as a change stores it, before the time stamps (each platform adds its own). */
-export type AvailabilityFields = Pick<Availability, 'staffId' | 'dateKey' | 'weekday' | 'ranges' | 'unavailable' | 'hidden' | 'updatedVia'> & { dayStartAt: Date }
+export type AvailabilityFields = Pick<Availability, 'staffId' | 'staffName' | 'staffRole' | 'dateKey' | 'weekday' | 'ranges' | 'unavailable' | 'hidden' | 'updatedVia'> & {
+  dayStartAt: Date
+}
 
-/** What a day of a change stores; null when the day's record is removed. */
-export function availabilityRecord(staffId: string, day: DayWrite, timeZone: string, via: Availability['updatedVia']): AvailabilityFields | null {
+/**
+ * What a day of a change stores; null when the day's record is removed. `staffName` and `staffRole` let the other coaches
+ * see who's in with them, and who teaches.
+ */
+export function availabilityRecord(
+  staffId: string,
+  day: DayWrite,
+  timeZone: string,
+  via: Availability['updatedVia'],
+  staffName?: string,
+  staffRole?: StaffRole,
+): AvailabilityFields | null {
   const ranges = day.unavailable ? [] : normalizeRanges(day.ranges)
   if (!day.unavailable && ranges.length === 0) return null
   return {
     staffId,
+    ...(staffName ? { staffName } : {}),
+    ...(staffRole ? { staffRole } : {}),
     dateKey: day.dateKey,
     weekday: weekdayOf(day.dateKey),
     ranges,

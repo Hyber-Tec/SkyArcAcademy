@@ -10,10 +10,13 @@ const at = (hhmm: string): TimestampLike => {
   const ms = Date.UTC(2026, 8, 30, h, m)
   return { seconds: ms / 1000, nanoseconds: 0, toDate: () => new Date(ms), toMillis: () => ms }
 }
+const min = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3))
 const cls = (studentId: string, start: string, end: string, extra: Partial<{ coachId: string; dateKey: string; status: SessionStatus; isDeleted: boolean }> = {}) => ({
   coachId: 'maya',
   studentId,
   dateKey: '2026-09-30',
+  startMin: min(start),
+  endMin: min(end),
   status: 'present' as SessionStatus,
   isDeleted: false,
   startAt: at(start),
@@ -25,6 +28,27 @@ const rules = { payModels: [{ model: 'classes' as const, from: '2000-01-01' }] }
 const coach = () => ({ rates: { teaching: 30, admin: 15 }, role: 'coach' as const })
 
 describe('priceClassBlocks', () => {
+  it('pays a class taught together to every coach in at its time, once each', () => {
+    const together = { coachId: '' }
+    const availability = [
+      { staffId: 'maya', dateKey: '2026-09-30', ranges: [{ startMin: min('16:00'), endMin: min('20:00') }], unavailable: false },
+      { staffId: 'theo', dateKey: '2026-09-30', ranges: [{ startMin: min('16:00'), endMin: min('18:00') }], unavailable: false },
+      { staffId: 'iris', dateKey: '2026-09-30', ranges: [], unavailable: true },
+    ]
+    const out = priceClassBlocks({
+      sessions: [cls('a', '16:30', '18:00', together), cls('b', '16:30', '18:00', together), cls('c', '18:00', '19:00', together)],
+      availability,
+      settings,
+      rules,
+      ratesFor: coach,
+    })
+    expect(out.map((b) => [b.staffId, b.students, b.segment.hours])).toEqual([
+      ['maya', 2, 1.5],
+      ['theo', 2, 1.5],
+      ['maya', 1, 1],
+    ])
+  })
+
   it('pays each block once, however many students, and keeps blocks back to back apart', () => {
     const out = priceClassBlocks({
       sessions: [
