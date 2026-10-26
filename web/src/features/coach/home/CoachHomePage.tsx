@@ -33,25 +33,25 @@ function useWide() {
   return wide
 }
 
-/** "3 sessions today, the next at 4:00 PM." and the like. */
+/** "3 classes today, the next at 4:00 PM." and the like. */
 function summary(t: CoachDay): string {
-  const { active, current, later } = t.day
-  if (!active.length) {
+  const { classes, current, later } = t.day
+  if (!classes.length) {
     const next = t.day.next
     if (next.kind !== 'day') return 'No classes today.'
     const when = next.dateKey === addDays(t.today, 1) ? 'tomorrow' : `on ${formatDateKey(next.dateKey, 'weekdayMedium')}`
-    return `No classes today. Your next is ${when} at ${formatMinutes(next.sessions[0].startMin)}.`
+    return `No classes today. Your next is ${when} at ${formatMinutes(next.classes[0].c.startMin)}.`
   }
-  const count = `${plural(active.length, 'class')} today`
+  const count = `${plural(classes.length, 'class')} today`
   if (current.length) return `${count}, ${current.length > 1 ? `${current.length} on now` : 'one on now'}.`
-  if (later.length) return later.length === active.length ? `${count}, the first at ${formatMinutes(later[0].startMin)}.` : `${count}, the next at ${formatMinutes(later[0].startMin)}.`
+  if (later.length) return later.length === classes.length ? `${count}, the first at ${formatMinutes(later[0].c.startMin)}.` : `${count}, the next at ${formatMinutes(later[0].c.startMin)}.`
   return `${count}, all done.`
 }
 
 /**
- * Coach → Home (the portal's first page): a greeting, the session that's on
- * now or next, today's sessions, what's left to do, the time clock and the
- * week. Two columns on computers, one on phones.
+ * Coach → Home (the portal's first page): a greeting, the class that's on now or next, today's classes (every class in
+ * the coach's hours, taught with the other coaches in), what's left to do, the time clock and the week. Two columns on
+ * computers, one on phones.
  */
 export function CoachHomePage() {
   const { staffId } = useBranch()

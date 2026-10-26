@@ -25,7 +25,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useStaffList } from '@/features/data/hooks'
 import { useConfirm } from '@/components/app/useConfirm'
-import { countUpcomingSessions, createEmployee, setEmployeeStatus, stopTeachingQuestion } from './api'
+import { classesOnlyThem, createEmployee, setEmployeeStatus, stopTeachingQuestion } from './api'
 import { PayRateFields } from './PayRateFields'
 import { EMPTY_RATES, type RateDraft, readRates } from './rateDraft'
 
@@ -38,12 +38,12 @@ export function EmployeeDirectoryPage() {
   const { confirm, dialog: confirmDialog } = useConfirm()
   const pathOf = (id: string) => `/admin/employees/directory/${id}`
 
-  /** Asks first when a coach with upcoming sessions stops teaching (they'd become conflicts). */
+  /** Asks first when a coach stops teaching while they're the only coach in for classes ahead. */
   async function changeStatus(s: WithId<Staff>, next: StaffStatus) {
     if (next === s.status) return
     try {
       if (next !== 'active' && s.role === 'coach') {
-        const q = stopTeachingQuestion(s.name, await countUpcomingSessions(branchId, s.id, timezone), `set ${s.firstName || s.name} to ${STAFF_STATUS_LABELS[next]}`)
+        const q = stopTeachingQuestion(s.name, await classesOnlyThem(branchId, s.id, timezone), `set ${s.firstName || s.name} to ${STAFF_STATUS_LABELS[next]}`)
         if (q && !(await confirm(q))) return
       }
       await setEmployeeStatus(branchId, actor, s, next)

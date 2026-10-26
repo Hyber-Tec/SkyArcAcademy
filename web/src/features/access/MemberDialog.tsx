@@ -11,7 +11,7 @@ import { gradeLabel } from '@shared/people'
 import { useBranch } from '@/branch/BranchProvider'
 import { MultiOptionPicker, OptionPicker } from '@/components/app/OptionPicker'
 import { useConfirm } from '@/components/app/useConfirm'
-import { countUpcomingSessions, stopTeachingQuestion } from '@/features/employees/api'
+import { classesOnlyThem, stopTeachingQuestion } from '@/features/employees/api'
 import { PayRateFields } from '@/features/employees/PayRateFields'
 import { EMPTY_RATES, type RateDraft, readRates } from '@/features/employees/rateDraft'
 import { Button } from '@/components/ui/button'
@@ -145,11 +145,11 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     setError(null)
     setBusy(true)
     try {
-      // Pausing a coach's access, or making them something else, leaves their upcoming sessions as conflicts: ask first.
+      // Pausing a coach's access, or making them something else, may leave classes ahead with no coach in: ask first.
       const coachStaffId = member?.role === 'coach' && member.status === 'active' ? member.staffId : null
       if (coachStaffId && (!active || role !== 'coach')) {
         const name = member?.displayName || `${firstName} ${lastName}`.trim() || key
-        const q = stopTeachingQuestion(name, await countUpcomingSessions(branchId, coachStaffId, timezone), !active ? 'pause their access' : 'change their role')
+        const q = stopTeachingQuestion(name, await classesOnlyThem(branchId, coachStaffId, timezone), !active ? 'pause their access' : 'change their role')
         if (q && !(await confirm(q))) return
       }
       await saveMember({

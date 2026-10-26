@@ -112,7 +112,7 @@ export function ClassList({
   )
 }
 
-/** One class in a list: its time, whose it is, the coach, the note and the status; opens the details. */
+/** One class in a list: its time, whose it is, how long, the note and the status; opens the details. */
 export function ClassRow({
   session: s,
   family,
@@ -139,7 +139,7 @@ export function ClassRow({
     >
       <div className={cn('hidden w-40 shrink-0 text-sm font-medium tabular-nums sm:block', canceled && 'text-muted-foreground line-through')}>{time}</div>
       <div className="min-w-0 flex-1">
-        {/* Phones: the time and the status on the first line, so whose class it is gets the whole width below. */}
+        {/* Phones: the time and the status on the first line, then whose class it is and how long. */}
         <div className="mb-1 flex items-center justify-between gap-2 sm:hidden">
           <span className={cn('text-sm font-medium tabular-nums', canceled && 'text-muted-foreground line-through')}>{time}</span>
           <FamilyStatus session={s} now={now} />
@@ -151,13 +151,10 @@ export function ClassRow({
                 <KidMark name={family.firstName(s.studentId)} tint={family.tint(s.studentId)} className="size-5 text-[10px]" />
                 <span className="font-medium">{family.firstName(s.studentId)}</span>
               </span>
-              <span className="min-w-0 text-muted-foreground sm:truncate">with {s.coachName}</span>
+              <span className="min-w-0 text-muted-foreground sm:truncate">{formatDuration(s.endMin - s.startMin)}</span>
             </>
           ) : (
-            <span className="min-w-0 sm:truncate">
-              with {s.coachName}
-              <span className="text-muted-foreground"> · {formatDuration(s.endMin - s.startMin)}</span>
-            </span>
+            <span className="min-w-0 text-muted-foreground sm:truncate">{formatDuration(s.endMin - s.startMin)}</span>
           )}
         </div>
         {s.note ? <NoteChip note={s.note} className="mt-1.5" /> : null}
@@ -201,8 +198,6 @@ export function ClassDetails({ session: s, family, now, onClose }: { session: Wi
             <dd className="tabular-nums">
               {formatTimeRange(s.startMin, s.endMin)} <span className="text-muted-foreground">· {formatDuration(s.endMin - s.startMin)}</span>
             </dd>
-            <dt className="text-muted-foreground">Coach</dt>
-            <dd>{s.coachName || '—'}</dd>
             <dt className="text-muted-foreground">Status</dt>
             <dd>
               <FamilyStatus session={s} now={now} />

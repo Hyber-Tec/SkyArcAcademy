@@ -12,7 +12,7 @@ import { effectiveRates } from '@shared/pay/shifts'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import { payModelOn } from '@shared/settings/businessRules'
 import { type DateKey, addDays, diffDays, formatDateKey, formatInstantTime, isDateKey, todayKey } from '@shared/time'
-import type { Compensation, Session, Staff } from '@shared/types'
+import type { Availability, Compensation, Session, Staff } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { PageHeader } from '@/components/app/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ import { RateMissingNotice } from '@/features/employees/PayGapNotice'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { type ClockShift, useSessionsRange, useShifts } from './api'
+import { type ClockShift, useAvailabilityRange, useSessionsRange, useShifts } from './api'
 import { usePayPeriods } from './hooks'
 import { DateSortHead, GenerateClear, PayFilters, PayPager, PayRangeFields, PayRates, PayRecordsHeading, PayTiles, PayTypeBadge } from './PayParts'
 import { BROWSE_DAYS, BROWSE_PAGE, REPORT_PAGE, downloadCsv, payDateLabel, shadeByDate } from './payTable'
@@ -36,7 +36,8 @@ const money = formatMoney
  * A coach's own pay in the office's Payroll layout, read-only: a pay period (or dates) to choose, the chosen dates'
  * summary (their rates and pay), and the records: the most recent 25 at a time, or the chosen dates'. The records are
  * the shared pay lines (`payLines`), exactly as the office's Payroll and the phone list them, and asked for as the rules
- * let a coach read them (their own time entries and classes). The chosen dates live in the URL.
+ * let a coach read them (their own time entries; every class and who was in, as classes are taught together). The
+ * chosen dates live in the URL.
  */
 export function CoachPayrollPage() {
   const { branchId, staffId, settings, rules, timezone } = useBranch()
@@ -83,10 +84,13 @@ export function CoachPayrollPage() {
   const qFrom = report ? report.from : browseFrom
   const qTo = report ? report.to : today
   const { data: shifts, loading: loadingShifts } = useShifts(qFrom, qTo, staffId, !!staffId, { keepPrevious: true })
-  const { data: sessions, loading: loadingSessions } = useSessionsRange(addDays(qFrom, -1), addDays(qTo, 1), staffId, !!staffId, { keepPrevious: true })
-  // How far back the recent records can go: the coach's first time entry, and their first class while classes taught
-  // are paid (with the indexes the website already has: the coach's own, oldest first).
+  const { data: sessions, loading: loadingSessions } = useSessionsRange(addDays(qFrom, -1), addDays(qTo, 1), !!staffId, { keepPrevious: true })
   const paysClasses = rules.payModels.some((p) => p.model === 'classes')
+  // Their days in: a class counts for every coach in at its time.
+  const { data: availability, loading: loadingAvailability } = useAvailabilityRange(qFrom, qTo, staffId, !!staffId && paysClasses, { keepPrevious: true })
+  // How far back the recent records can go: the coach's first time entry, and while classes taught are paid, their first
+  // day in (or a class of their own, from before classes were taught together), with the indexes the website already
+  // has: the coach's own, oldest first.
   const firstShiftQuery = useMemo(
     () => (isReport || !staffId ? null : query(branchCol(branchId, COL.clockShifts), where('staffId', '==', staffId), orderBy('dateKey'), limit(1))),
     [branchId, staffId, isReport],
@@ -97,15 +101,23 @@ export function CoachPayrollPage() {
     [branchId, staffId, isReport, paysClasses],
   )
   const { data: firstClass, loading: loadingFirstClass } = useQuery<Session>(firstClassQuery, `pay-first-classes-${branchId}-${staffId}`)
-  const loading = loadingShifts || loadingSessions || loadingFirstShift || loadingFirstClass
-  const first = [firstShift[0]?.dateKey, firstClass[0]?.dateKey].filter((d): d is DateKey => !!d).sort()[0] ?? null
+  const firstDayQuery = useMemo(
+    () => (isReport || !staffId || !paysClasses ? null : query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), orderBy('dateKey'), limit(1))),
+    [branchId, staffId, isReport, paysClasses],
+  )
+  const { data: firstDay, loading: loadingFirstDay } = useQuery<Availability>(firstDayQuery, `pay-first-day-${branchId}-${staffId}`)
+  const loading = loadingShifts || loadingSessions || loadingAvailability || loadingFirstShift || loadingFirstClass || loadingFirstDay
+  const first = [firstShift[0]?.dateKey, firstClass[0]?.dateKey, firstDay[0]?.dateKey].filter((d): d is DateKey => !!d).sort()[0] ?? null
   const olderExists = !isReport && !!first && first < browseFrom
 
-  // A coach's few weeks of records: worked out on each render.
+  // A coach's few weeks of records: worked out on each render. Only their own lines: `ratesFor` knows only this coach's
+  // rates, and another coach's session from before would make lines for them.
   const ratesFor = () => effectiveRates(me, comp)
   const dir = sortAsc ? 1 : -1
   // Newest dates first, unless chosen dates are sorted oldest first; each day in time order.
-  const lines = payLines({ shifts, sessions, settings, rules, ratesFor, from: qFrom, to: qTo }).sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.startMs - b.startMs)
+  const lines = payLines({ shifts, sessions, availability, settings, rules, ratesFor, from: qFrom, to: qTo })
+    .filter((l) => l.staffId === staffId)
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.startMs - b.startMs)
 
   const size = report ? REPORT_PAGE : BROWSE_PAGE
   const pageCount = Math.max(1, Math.ceil(lines.length / size))

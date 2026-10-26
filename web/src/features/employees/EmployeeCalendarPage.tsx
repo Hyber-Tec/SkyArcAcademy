@@ -1,19 +1,20 @@
 import { query, where } from 'firebase/firestore'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { dayHours, effectiveRanges } from '@shared/availability'
 import { COL } from '@shared/paths'
 import { priceClassBlocks } from '@shared/pay/classes'
 import { unionMinutes } from '@shared/schedule/lanes'
-import type { Session } from '@shared/types'
+import type { AcademyClass, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { boxRange, timeRange } from '@/lib/calendar'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { type DayCell, HoursCalendar } from './HoursCalendar'
 import { addDays, formatInstantTime } from '@shared/time'
 import { effectiveRates, priceShifts } from '@shared/pay/shifts'
-import { useSessionsRange, useShifts } from '@/features/timeclock/api'
+import { useAvailabilityRange, useSessionsRange, useShifts } from '@/features/timeclock/api'
 import { useCompensationMap } from '@/features/timeclock/hooks'
-import { useStaffList as useStaffListForPay } from '@/features/data/hooks'
+import { useAvailability, useDayConfigs, useStaffList as useStaffListForPay } from '@/features/data/hooks'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import type { StaffStatus } from '@shared/types'
 import { OptionPicker } from '@/components/app/OptionPicker'
@@ -22,6 +23,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AvailabilityCalendar } from '@/features/availability/AvailabilityCalendar'
 import { useStaffList } from '@/features/data/hooks'
+import { plural } from '@/features/home/parts'
 
 type CalendarMode = 'availability' | 'scheduled' | 'clock' | 'teaching' | 'admin'
 
@@ -107,11 +109,11 @@ export function EmployeeCalendarPage() {
         </Select>
       </div>
       {selected && mode === 'scheduled' ? (
-        <ScheduledHours key={selected.id} staffId={selected.id} />
+        <ScheduledHours key={selected.id} staffId={selected.id} teaches={selected.role === 'coach'} />
       ) : selected && (mode === 'clock' || mode === 'teaching' || mode === 'admin') ? (
         <WorkedHours key={`${selected.id}-${mode}`} staffId={selected.id} mode={mode} />
       ) : selected ? (
-        <AvailabilityCalendar key={selected.id} staffId={selected.id} staffName={selected.name} mode="admin" />
+        <AvailabilityCalendar key={selected.id} staffId={selected.id} staffName={selected.name} staffRole={selected.role} mode="admin" />
       ) : (
         <Empty className="border border-dashed">
           <EmptyHeader>
@@ -124,26 +126,53 @@ export function EmployeeCalendarPage() {
   )
 }
 
-function ScheduledHours({ staffId }: { staffId: string }) {
-  const { branchId } = useBranch()
+/**
+ * Their hours each day (their availability: who's in, inside opening hours), with the classes in them: a coach teaches
+ * every class in their hours, with the other coaches in.
+ */
+function ScheduledHours({ staffId, teaches }: { staffId: string; teaches: boolean }) {
+  const { branchId, settings } = useBranch()
   const [range, setRange] = useState<{ from: string; to: string } | null>(null)
   const onRange = useCallback((from: string, to: string) => setRange({ from, to }), [])
+  const from = range?.from ?? '0000-00-00'
+  const to = range?.to ?? '0000-00-00'
+  const { map: days } = useAvailability(range ? staffId : null, from, to, { keepPrevious: true })
+  const { map: dayConfigs } = useDayConfigs(from, to, { keepPrevious: true, enabled: !!range })
   const q = useMemo(
-    () => (range ? query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', range.from), where('dateKey', '<=', range.to)) : null),
-    [branchId, staffId, range],
+    () => (range && teaches ? query(branchCol(branchId, COL.classes), where('dateKey', '>=', range.from), where('dateKey', '<=', range.to)) : null),
+    [branchId, range, teaches],
   )
-  const { data } = useQuery<Session>(q, `emp-sched-${staffId}-${range?.from}-${range?.to}`, { keepPrevious: true })
+  const { data: classes } = useQuery<AcademyClass>(q, `emp-classes-${branchId}-${range?.from}-${range?.to}-${teaches}`, { keepPrevious: true })
   const cells = useMemo(() => {
-    const byDay = new Map<string, Session[]>()
-    for (const s of data) if (!s.isDeleted && s.status !== 'canceled') byDay.set(s.dateKey, [...(byDay.get(s.dateKey) ?? []), s])
+    const byDay = new Map<string, WithId<AcademyClass>[]>()
+    for (const c of classes) if (!c.isDeleted) byDay.set(c.dateKey, [...(byDay.get(c.dateKey) ?? []), c])
     const m = new Map<string, DayCell>()
-    for (const [d, list] of byDay) {
-      list.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName))
-      m.set(d, { minutes: unionMinutes(list), lines: list.map((s) => ({ label: timeRange(s.startMin, s.endMin), detail: s.studentName, tone: 'scheduled' as const })) })
+    for (const [d, a] of days) {
+      const ranges = a.unavailable ? [] : effectiveRanges(a.ranges ?? [], dayHours(d, settings, dayConfigs))
+      if (!ranges.length) continue
+      const list = byDay.get(d) ?? []
+      m.set(d, {
+        minutes: unionMinutes(ranges),
+        lines: ranges.map((r) => {
+          const n = list.filter((c) => c.startMin < r.endMin && c.endMin > r.startMin).length
+          return { label: timeRange(r.startMin, r.endMin), detail: teaches ? (n ? plural(n, 'class') : 'No classes') : undefined, tone: 'scheduled' as const }
+        }),
+      })
     }
     return m
-  }, [data])
-  return <HoursCalendar cells={cells} tone="scheduled" onRange={onRange} footnote="Scheduled hours from assigned classes. Canceled classes are excluded; overlapping students count once." />
+  }, [days, classes, settings, dayConfigs, teaches])
+  return (
+    <HoursCalendar
+      cells={cells}
+      tone="scheduled"
+      onRange={onRange}
+      footnote={
+        teaches
+          ? 'Their hours each day, from their availability (who’s in), with the classes in those hours: a coach teaches every class in their hours. Closed days don’t count.'
+          : 'Their hours each day, from their availability (who’s in). Closed days don’t count.'
+      }
+    />
+  )
 }
 
 function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teaching' | 'admin' }) {
@@ -153,7 +182,9 @@ function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teac
   const from = range?.from ?? '0000-00-00'
   const to = range?.to ?? '0000-00-00'
   const { data: shifts } = useShifts(from, to, staffId, !!range, { keepPrevious: true })
-  const { data: sessions } = useSessionsRange(addDays(from, -1), addDays(to, 1), staffId, !!range && mode !== 'clock', { keepPrevious: true })
+  // Every class (they're taught together), and the days they were in: a class counts for every coach in at its time.
+  const { data: sessions } = useSessionsRange(addDays(from, -1), addDays(to, 1), !!range && mode !== 'clock', { keepPrevious: true })
+  const { data: availability } = useAvailabilityRange(from, to, staffId, !!range && mode === 'teaching', { keepPrevious: true })
   const { data: staff } = useStaffListForPay()
   const comps = useCompensationMap([staffId])
   const cells = useMemo(() => {
@@ -171,10 +202,12 @@ function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teac
       else for (const seg of p.segments.filter((x) => x.type === mode && !x.unpaid)) add(p.shift.dateKey, seg.startMs, seg.endMs, mode)
     }
     if (mode === 'teaching') {
-      for (const b of priceClassBlocks({ sessions, settings, rules, ratesFor })) if (b.dateKey >= from && b.dateKey <= to) add(b.dateKey, b.segment.startMs, b.segment.endMs, 'teaching')
+      for (const b of priceClassBlocks({ sessions, availability, settings, rules, ratesFor })) {
+        if (b.staffId === staffId && b.dateKey >= from && b.dateKey <= to) add(b.dateKey, b.segment.startMs, b.segment.endMs, 'teaching')
+      }
     }
     return m
-  }, [shifts, sessions, settings, rules, timezone, staff, comps, staffId, mode, from, to])
+  }, [shifts, sessions, availability, settings, rules, timezone, staff, comps, staffId, mode, from, to])
   const notes = {
     clock: 'Worked time from clock-ins and time entries.',
     teaching: 'Time paid as teaching under the academy’s pay model: classes taught under Classes taught, otherwise clocked time.',

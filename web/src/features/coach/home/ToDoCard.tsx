@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowUpRight, LuCalendarClock, LuCalendarX2, LuCircleCheck, LuMegaphone } from 'react-icons/lu'
+import { LuArrowUpRight, LuCalendarClock, LuCircleCheck, LuMegaphone } from 'react-icons/lu'
 import { Link, useNavigate } from 'react-router'
-import { coachConflictText } from '@shared/schedule/conflicts'
 import { addDays, dateKeyOf, formatDateKey, formatMinutes } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
@@ -29,14 +28,14 @@ interface Item {
 }
 
 /**
- * What the coach still has to do: classes waiting for the admin, open days that still need availability, and posts not
- * read yet. Each line opens the place to do it.
+ * What the coach still has to do: open days that still need availability, and posts not read yet. Each line opens the
+ * place to do it.
  */
 export function ToDoCard({ t }: { t: CoachDay }) {
   const { settings, timezone } = useBranch()
   const navigate = useNavigate()
   const coach = `/coach`
-  const { waiting, gaps, unread, total } = t.todo
+  const { gaps, unread, total } = t.todo
   const day = (d: string) => (d === t.today ? 'Today' : d === addDays(t.today, -1) ? 'Yesterday' : d === addDays(t.today, 1) ? 'Tomorrow' : formatDateKey(d, 'weekdayMedium'))
 
   return (
@@ -57,20 +56,6 @@ export function ToDoCard({ t }: { t: CoachDay }) {
         </div>
       ) : (
         <div className="divide-y border-t">
-          {waiting.length ? (
-            <Group
-              icon={LuCalendarX2}
-              tone="red"
-              title={`${plural(waiting.length, 'class')} waiting for the admin`}
-              subtitle="Something changed since booking. Don’t count on them until the admin moves, reassigns or cancels them."
-              items={waiting.map((s) => ({
-                key: s.id,
-                title: s.studentName,
-                detail: `${day(s.dateKey)}, ${formatMinutes(s.startMin)} · ${(coachConflictText(t.conflictsOf(s.id)) ?? '').replace(/ Waiting for the admin.*$/, '')}`,
-                onOpen: () => navigate(`${coach}/schedule?date=${s.dateKey}`),
-              }))}
-            />
-          ) : null}
           {gaps.length ? (
             <Group
               icon={LuCalendarClock}

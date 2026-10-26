@@ -1,62 +1,61 @@
 import { query, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
-import { LuCalendarDays, LuChevronDown, LuGraduationCap, LuPencil } from 'react-icons/lu'
+import { LuCalendarDays, LuChevronDown, LuSquareArrowOutUpRight } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
-import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
-import type { Conflict } from '@shared/schedule/conflicts'
+import { takesSeat } from '@shared/schedule/classes'
+import { CONFLICT_LABELS, type Conflict } from '@shared/schedule/conflicts'
 import { occursOn } from '@shared/schedule/events'
-import { type DateKey, formatMinutes } from '@shared/time'
-import type { Session, WithId } from '@shared/types'
-import { gradeLabel } from '@shared/people'
+import type { DayHours } from '@shared/settings/defaults'
+import { type DateKey, formatMinutes, formatTimeRange } from '@shared/time'
+import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDayConfigs } from '@/features/data/hooks'
-import type { EventDoc } from '@/features/schedule/useScheduleData'
+import { CoachBadge, SeatCount, shortName } from '@/features/schedule/seatParts'
+import type { ClassView, EventDoc } from '@/features/schedule/useClassData'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { PersonDot, StatePill, type Tone, plural } from './parts'
+import { StatePill, type Tone, nameList, plural } from './parts'
 
-/** Sessions shown before "Show N more". */
+/** Classes shown before "Show N more". */
 const FIRST_ROWS = 12
 
 type Filter = 'all' | 'now' | 'later'
 
 type Row =
-  | { kind: 'session'; key: string; startMin: number; endMin: number; session: WithId<Session> }
+  | { kind: 'class'; key: string; startMin: number; endMin: number; v: ClassView }
   | { kind: 'event'; key: string; startMin: number; endMin: number; event: WithId<EventDoc> }
 
-const ms = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? 0
-
-/** Today's sessions in order, with a red "now" line (Home option 1). */
+/** Today's classes in order, with a red "now" line: each with its students, its seats and the coaches in (Home option 1). */
 export function TodayCard({
-  sessions,
+  classes,
   loading,
   today,
-  now,
   nowMin,
+  hours,
   conflictsOf,
-  colorOf,
-  onEdit,
+  staffName,
+  staffColor,
+  onOpen,
 }: {
-  sessions: WithId<Session>[]
+  classes: readonly ClassView[]
   loading: boolean
   today: DateKey
-  now: number
   nowMin: number
-  conflictsOf: (id: string) => Conflict[] | undefined
-  colorOf: (staffId: string) => string | null
-  onEdit: (s: WithId<Session>) => void
+  hours: DayHours
+  conflictsOf: (classId: string) => Conflict[] | undefined
+  staffName: (staffId: string, fallback: string) => string
+  staffColor: (staffId: string) => string
+  /** Opens a class (on the schedule). */
+  onOpen: (classId: string) => void
 }) {
-  const { branchId, settings } = useBranch()
-  const { map: dayConfigs } = useDayConfigs(today, today)
+  const { branchId } = useBranch()
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [showEarlier, setShowEarlier] = useState(false)
   const [showAll, setShowAll] = useState(false)
-  const [showCanceled, setShowCanceled] = useState(false)
 
   const oneOffQ = useMemo(() => query(branchCol(branchId, COL.events), where('isRecurring', '==', false), where('dateKey', '==', today)), [branchId, today])
   const recurringQ = useMemo(() => query(branchCol(branchId, COL.events), where('isRecurring', '==', true)), [branchId])
@@ -64,20 +63,16 @@ export function TodayCard({
   const recurring = useQuery<EventDoc>(recurringQ, `sched-revents-${branchId}`)
 
   const day = useMemo(() => {
-    const live = sessions.filter((s) => !s.isDeleted).sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin || a.studentName.localeCompare(b.studentName))
-    const canceled = live.filter((s) => s.status === 'canceled')
-    const active = live.filter((s) => s.status !== 'canceled')
-    const earlier = active.filter((s) => ms(s.endAt) <= now)
-    const current = active.filter((s) => ms(s.startAt) <= now && ms(s.endAt) > now && s.status !== 'no_show')
-    const later = active.filter((s) => ms(s.startAt) > now)
+    const earlier = classes.filter((v) => v.c.endMin <= nowMin)
+    const current = classes.filter((v) => v.c.startMin <= nowMin && v.c.endMin > nowMin)
+    const later = classes.filter((v) => v.c.startMin > nowMin)
     const events = [...oneOff.data, ...recurring.data]
       .filter((e) => occursOn(e, today))
       .map((event): Row => ({ kind: 'event', key: `event-${event.id}`, startMin: event.startMin, endMin: event.endMin, event }))
-    const coaches = new Set(active.map((s) => s.coachId))
-    return { active, canceled, earlier, current, later, events, coaches: coaches.size }
-  }, [sessions, oneOff.data, recurring.data, today, now])
+    return { earlier, current, later, events }
+  }, [classes, oneOff.data, recurring.data, today, nowMin])
 
-  const toRow = (s: WithId<Session>): Row => ({ kind: 'session', key: s.id, startMin: s.startMin, endMin: s.endMin, session: s })
+  const toRow = (v: ClassView): Row => ({ kind: 'class', key: v.c.id, startMin: v.c.startMin, endMin: v.c.endMin, v })
   const byTime = (a: Row, b: Row) => a.startMin - b.startMin || a.endMin - b.endMin
   // All: what's on now, the red line, then what's later (events ride along; ended ones drop off).
   const currentRows =
@@ -86,53 +81,62 @@ export function TodayCard({
   const list = [...currentRows, ...laterRows]
   const visible = showAll ? list : list.slice(0, FIRST_ROWS)
   const hidden = list.length - visible.length
-  const lineIndex = filter === 'all' && day.active.length > 0 ? currentRows.length : -1
-  const hours = dayHours(today, settings, dayConfigs)
+  const lineIndex = filter === 'all' && classes.length > 0 ? currentRows.length : -1
 
-  const stateOf = (s: WithId<Session>): { label: string; tone: Tone; pulse?: boolean; title?: string } => {
-    if (s.status === 'canceled') return { label: 'Canceled', tone: 'muted' }
-    if (s.status === 'no_show') return { label: 'No show', tone: 'danger' }
-    const ended = ms(s.endAt) <= now
-    if (ended) return s.status === 'present' ? { label: 'Present', tone: 'done' } : { label: 'Done', tone: 'muted' }
-    const conflicts = conflictsOf(s.id)
-    if (conflicts?.length) return { label: 'In conflict', tone: 'danger', title: conflicts[0].message }
-    if (ms(s.startAt) <= now) return { label: 'In progress', tone: 'live', pulse: true }
-    if (s.status === 'pending') return { label: 'Unconfirmed', tone: 'warn' }
-    if (s.status === 'present') return { label: 'Present', tone: 'muted' }
-    return { label: 'Confirmed', tone: 'muted' }
+  const stateOf = (v: ClassView): { label: string; tone: Tone; pulse?: boolean; title?: string } => {
+    const { c } = v
+    if (c.endMin <= nowMin) return { label: 'Done', tone: 'muted' }
+    const conflicts = conflictsOf(c.id)
+    if (conflicts?.length) return { label: CONFLICT_LABELS[conflicts[0].kind], tone: 'danger', title: conflicts.map((k) => k.message).join(' ') }
+    if (c.startMin <= nowMin) return { label: 'In progress', tone: 'live', pulse: true }
+    if (!v.taken) return { label: 'No students', tone: 'muted' }
+    return v.taken >= c.seats ? { label: 'Full', tone: 'muted' } : { label: `${plural(c.seats - v.taken, 'seat')} open`, tone: 'muted' }
   }
 
-  const sessionRow = (s: WithId<Session>, muted = false) => {
-    const st = stateOf(s)
+  const classRow = (v: ClassView, muted = false) => {
+    const { c } = v
+    const st = stateOf(v)
+    const names = v.seats.filter(takesSeat).map((s) => shortName(s.studentName))
     return (
       <ContextMenuFor
-        key={s.id}
+        key={c.id}
         entries={menu(
-          { kind: 'label', label: `${s.studentName} · ${formatMinutes(s.startMin)}` },
-          { label: 'Edit class…', icon: LuPencil, onSelect: () => onEdit(s) },
-          { label: 'Open in schedule', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`/admin/schedule/day/${today}`) },
-          { label: 'Open student profile', icon: LuGraduationCap, onSelect: () => navigate(`/admin/students/${s.studentId}`) },
+          { kind: 'label', label: `${formatTimeRange(c.startMin, c.endMin)} class` },
+          { label: 'Open the class', icon: LuSquareArrowOutUpRight, onSelect: () => onOpen(c.id) },
+          { label: 'Open the schedule on this day', icon: LuCalendarDays, separatorBefore: true, onSelect: () => navigate(`/admin/schedule/day/${today}`) },
         )}
       >
         <li>
           <button
             type="button"
-            onClick={() => onEdit(s)}
-            data-testid="home-session"
+            onClick={() => onOpen(c.id)}
+            data-testid="home-class"
             className={cn('grid w-full grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/50', muted && 'opacity-70')}
           >
             <div className="text-sm leading-tight tabular-nums">
-              <div className="font-medium">{formatMinutes(s.startMin)}</div>
-              <div className="text-xs text-muted-foreground">{formatMinutes(s.endMin)}</div>
+              <div className="font-medium">{formatMinutes(c.startMin)}</div>
+              <div className="text-xs text-muted-foreground">{formatMinutes(c.endMin)}</div>
             </div>
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-medium">
-                {s.studentName}
-                {s.studentGrade ? <span className="font-normal text-muted-foreground"> · {gradeLabel(s.studentGrade)}</span> : null}
-              </div>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <PersonDot name={s.coachName} color={colorOf(s.coachId)} size="xs" />
-                <span className="truncate">{s.coachName}</span>
+              <div className={cn('truncate text-sm', names.length ? 'font-medium' : 'text-muted-foreground')}>{names.length ? nameList(names, 3) : 'No students yet'}</div>
+              <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                <SeatCount used={v.taken} of={c.seats} className="shrink-0" />
+                <span aria-hidden className="text-muted-foreground/50">
+                  ·
+                </span>
+                {v.coaches.length ? (
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="flex shrink-0 -space-x-1">
+                      {v.coaches.map((k) => (
+                        <CoachBadge key={k.staffId} name={staffName(k.staffId, k.name)} color={staffColor(k.staffId)} size="xs" className="ring-2 ring-card" />
+                      ))}
+                    </span>
+                    {/* Phones: the initials only. */}
+                    <span className="hidden truncate sm:inline">{v.coaches.map((k) => staffName(k.staffId, k.name).split(' ')[0]).join(', ')}</span>
+                  </span>
+                ) : (
+                  <span className="font-medium text-amber-700 dark:text-amber-400">No coach in</span>
+                )}
               </div>
             </div>
             <StatePill tone={st.tone} pulse={st.pulse} title={st.title}>
@@ -175,7 +179,7 @@ export function TodayCard({
     <section className="overflow-hidden rounded-xl border bg-card" data-testid="home-today">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <h2 className="text-sm font-semibold">
-          Today’s classes <span className="ml-1 font-normal text-muted-foreground">{loading ? '' : day.active.length}</span>
+          Today’s classes <span className="ml-1 font-normal text-muted-foreground">{loading ? '' : classes.length}</span>
         </h2>
         <div role="tablist" aria-label="Show" className="flex rounded-lg bg-muted p-0.5 text-xs font-medium">
           {segments.map(([key, label]) => (
@@ -207,7 +211,7 @@ export function TodayCard({
             </div>
           ))}
         </div>
-      ) : day.active.length === 0 && day.canceled.length === 0 ? (
+      ) : classes.length === 0 ? (
         <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
           <LuCalendarDays className="size-6 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{hours.isOpen ? 'No classes today.' : 'The academy is closed today.'}</p>
@@ -230,31 +234,20 @@ export function TodayCard({
               </button>
             </li>
           ) : null}
-          {filter === 'all' && showEarlier ? day.earlier.map((s) => sessionRow(s, true)) : null}
-          {visible.map((r, i) => [
-            i === lineIndex ? nowLine : null,
-            r.kind === 'session' ? sessionRow(r.session) : eventRow(r.event, r.key),
-          ])}
+          {filter === 'all' && showEarlier ? day.earlier.map((v) => classRow(v, true)) : null}
+          {visible.map((r, i) => [i === lineIndex ? nowLine : null, r.kind === 'class' ? classRow(r.v) : eventRow(r.event, r.key)])}
           {lineIndex >= 0 && lineIndex >= visible.length ? nowLine : null}
           {list.length === 0 && filter === 'all' ? (
             <li className="px-4 py-6 text-center text-sm text-muted-foreground">Nothing else on the schedule today.</li>
           ) : null}
-          {showCanceled ? day.canceled.map((s) => sessionRow(s, true)) : null}
         </ul>
       )}
 
-      {!loading && (hidden > 0 || day.canceled.length > 0) ? (
-        <div className="flex flex-wrap items-center gap-1 border-t p-2">
-          {hidden > 0 ? (
-            <Button variant="ghost" className="flex-1 text-muted-foreground" onClick={() => setShowAll(true)}>
-              Show {plural(hidden, 'more class')}
-            </Button>
-          ) : null}
-          {day.canceled.length > 0 && filter === 'all' ? (
-            <Button variant="ghost" size="sm" className={cn('text-muted-foreground', hidden === 0 && 'flex-1')} onClick={() => setShowCanceled(!showCanceled)}>
-              {showCanceled ? 'Hide canceled' : `${day.canceled.length} canceled`}
-            </Button>
-          ) : null}
+      {!loading && hidden > 0 ? (
+        <div className="border-t p-2">
+          <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setShowAll(true)}>
+            Show {plural(hidden, 'more class')}
+          </Button>
         </div>
       ) : null}
     </section>

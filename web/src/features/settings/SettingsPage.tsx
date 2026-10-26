@@ -127,7 +127,7 @@ function BusinessRulesCard() {
       value: PAY_MODEL_LABELS[now],
       help: next ? `Changes to ${PAY_MODEL_LABELS[next.model]} on ${formatDateKey(next.from, 'medium')}. ${PAY_MODEL_HELP[now]}` : PAY_MODEL_HELP[now],
     },
-    { label: 'Students per coach at once', value: String(rules.maxStudentsPerCoach), help: rules.maxStudentsPerCoach === 1 ? 'One-to-one classes.' : undefined },
+    { label: 'Seats per class', value: String(rules.seatsPerClass), help: 'A new class has this many seats; each class can have its own.' },
   ]
   return (
     <Card>

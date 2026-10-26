@@ -39,12 +39,12 @@ export function StatePill({ tone, children, pulse, title }: { tone: Tone; childr
   )
 }
 
-/** "A", "A and B", "A, B and 3 more". */
+/** "A", "A and B", "A, B and C", "A, B and 3 more". */
 export function nameList(names: string[], max = 2): string {
   const shown = names.slice(0, max)
   const rest = names.length - shown.length
   if (rest > 0) return `${shown.join(', ')} and ${rest} more`
-  if (shown.length === 2) return `${shown[0]} and ${shown[1]}`
+  if (shown.length > 1) return `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
   return shown[0] ?? ''
 }
 

@@ -1,9 +1,11 @@
 import { doc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore'
 import { COL, DOC } from '@shared/paths'
 import { STAFF_STATUS_LABELS } from '@shared/people'
-import { isAhead, isCheckable } from '@shared/schedule/conflicts'
+import { type ClassCoach, coachesIn, takesSeat, uncovered } from '@shared/schedule/classes'
+import { isAhead } from '@shared/schedule/conflicts'
+import type { DayHours } from '@shared/settings/defaults'
 import { nowMinutes, todayKey } from '@shared/time'
-import type { Compensation, Staff, StaffStatus, WithId } from '@shared/types'
+import type { AcademyClass, Availability, Compensation, Session, Staff, StaffStatus, WithId } from '@shared/types'
 import { type Actor, addAudit, diffChanges } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
@@ -12,23 +14,46 @@ import { compensationRef, writeCompensation } from './compensation'
 
 export { compensationRef, writeCompensation }
 
-/** How many pending or confirmed sessions the coach still has ahead (they'd become conflicts if the coach stops teaching). */
-export async function countUpcomingSessions(branchId: string, staffId: string, timezone: string): Promise<number> {
+/** Whole days: a class's time is checked against everyone's hours as saved. */
+const ALL_DAY: DayHours = { isOpen: true, openMin: 0, closeMin: 24 * 60 }
+
+/**
+ * Upcoming classes with students that only this coach covers, for all or part of them: if they stopped teaching, no
+ * coach would be in then. Who's in is each day's availability (a record saved for someone who doesn't teach says so).
+ */
+export async function classesOnlyThem(branchId: string, staffId: string, timezone: string): Promise<number> {
   const today = todayKey(timezone)
   const nowMin = nowMinutes(timezone)
-  const snap = await getDocs(query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), where('dateKey', '>=', today)))
-  return snap.docs.filter((d) => {
-    const s = d.data() as Parameters<typeof isCheckable>[0] & { dateKey: string; endMin: number }
-    return isCheckable(s) && isAhead(s, today, nowMin)
-  }).length
+  const mine = await getDocs(query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), where('dateKey', '>=', today)))
+  const dates = [...new Set(mine.docs.map((d) => d.data() as Availability).filter((a) => !a.unavailable && (a.ranges ?? []).length > 0).map((a) => a.dateKey))]
+  const gap = (c: AcademyClass, coaches: readonly ClassCoach[]) => uncovered(c, coaches.flatMap((k) => k.ranges)).reduce((m, g) => m + g.endMin - g.startMin, 0)
+  let count = 0
+  for (let i = 0; i < dates.length; i += 30) {
+    const chunk = dates.slice(i, i + 30)
+    const [classes, seats, days] = await Promise.all([
+      getDocs(query(branchCol(branchId, COL.classes), where('dateKey', 'in', chunk))),
+      getDocs(query(branchCol(branchId, COL.sessions), where('dateKey', 'in', chunk))),
+      getDocs(query(branchCol(branchId, COL.availability), where('dateKey', 'in', chunk))),
+    ])
+    const withStudents = new Set(seats.docs.map((d) => d.data() as Session).filter((s) => s.classId && takesSeat(s)).map((s) => s.classId))
+    const records = days.docs.map((d) => d.data() as Availability)
+    for (const d of classes.docs) {
+      const c = d.data() as AcademyClass
+      if (c.isDeleted || !withStudents.has(d.id) || !isAhead(c, today, nowMin)) continue
+      const all = coachesIn(c, records, ALL_DAY)
+      if (!all.some((k) => k.staffId === staffId)) continue
+      if (gap(c, all.filter((k) => k.staffId !== staffId)) > gap(c, all)) count++
+    }
+  }
+  return count
 }
 
-/** The question to ask before a coach with upcoming sessions stops teaching; null when there is nothing to ask. */
+/** The question to ask before a coach stops teaching while classes ahead need them; null when there is nothing to ask. */
 export function stopTeachingQuestion(name: string, count: number, what: string) {
   if (count === 0) return null
   return {
-    title: `${name} has ${count} upcoming class${count > 1 ? 'es' : ''}`,
-    description: `If you ${what}, ${count > 1 ? 'they stay' : 'it stays'} booked and ${count > 1 ? 'show' : 'shows'} as ${count > 1 ? 'conflicts' : 'a conflict'} on the schedule (and on Home) until ${count > 1 ? 'they’re' : 'it’s'} reassigned or canceled.`,
+    title: `${name} is the only coach in for ${count} upcoming class${count > 1 ? 'es' : ''}`,
+    description: `If you ${what}, make sure another coach is in at ${count > 1 ? 'those times' : 'that time'}: until then, the class${count > 1 ? 'es have' : ' has'} no coach for all or part of ${count > 1 ? 'them' : 'it'}.`,
     confirmLabel: 'Continue',
   }
 }

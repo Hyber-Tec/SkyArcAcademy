@@ -68,10 +68,10 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
   const navigate = useNavigate()
   const { branchId, settings } = useBranch()
   const isAdmin = mode === 'admin'
-  const activity = useStudentActivity(student, mode)
+  const activity = useStudentActivity(student)
   const privRef = useMemo(() => (isAdmin ? studentPrivateRef(branchId, student.id) : null), [isAdmin, branchId, student.id])
   const { data: priv, loading: privLoading } = useDoc<StudentPrivateProfile>(privRef)
-  // Coaches can't read the staff list; their page has no session dialog either.
+  // Coaches can't read the staff list, and only admins book (opening a class goes to it on the schedule, for both).
   const { data: staff } = useStaffList(isAdmin)
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
   const sessionDialog = useSessionDialog({ enabled: isAdmin })
@@ -81,7 +81,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
   const active = (tabs.some((t) => t.key === tab) ? tab : 'sessions') as ProfileTab
   const go = (t: ProfileTab) => navigate(`${base}/${student.id}/${t}`, { replace: true })
 
-  /** A new session for this student: on a picked day, or the next open day. */
+  /** Books this student into a class: on a picked day, or the next open day. */
   const newSession = (dateKey?: DateKey) => {
     let d = dateKey ?? activity.today
     if (sessionDialog.isLocked(d)) return
@@ -134,7 +134,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
           </div>
           <div className="mt-5">
             {active === 'sessions' ? (
-              <SessionsTab mode={mode} activity={activity} onOpenSession={openSession} />
+              <SessionsTab activity={activity} onOpenSession={openSession} />
             ) : null}
             {active === 'scores' ? <ScoresTab student={student} mode={mode} /> : null}
             {active === 'info' ? <InfoTab key={student.id} student={student} readOnly={!isAdmin} priv={priv ?? null} privLoading={privLoading} /> : null}

@@ -3,7 +3,7 @@ import { WEEKDAY_SHORT, formatDateKey, formatDuration, weekdayOf } from '@shared
 import { cn } from '@/lib/utils'
 import type { CoachDay } from './useCoachDay'
 
-/** The week at a glance: booked time per day (each day opens the schedule there), then the week's numbers. */
+/** The week at a glance: the coach's time in classes per day (each day opens the schedule there), then the week's numbers. */
 export function WeekCard({ t }: { t: CoachDay }) {
   const { week, today } = t
   const most = Math.max(240, ...week.days.map((d) => d.minutes))
@@ -27,8 +27,8 @@ export function WeekCard({ t }: { t: CoachDay }) {
             return (
               <li key={d.dateKey}>
                 <Link
-                  to={`/coach/schedule?date=${d.dateKey}`}
-                  aria-label={`${formatDateKey(d.dateKey, 'weekdayLong')}: ${d.sessions ? `${d.sessions} classes, ${formatDuration(d.minutes)}` : d.isOpen ? 'nothing booked' : 'closed'}`}
+                  to={`/coach/schedule/day/${d.dateKey}`}
+                  aria-label={`${formatDateKey(d.dateKey, 'weekdayLong')}: ${d.classes ? `${d.classes} classes, ${formatDuration(d.minutes)}` : d.isOpen ? 'no classes' : 'closed'}`}
                   className="group flex flex-col items-center gap-1 rounded-lg py-1 hover:bg-muted/60"
                 >
                   <span className={cn('text-[11px] font-medium', isToday ? 'text-foreground' : 'text-muted-foreground')}>{WEEKDAY_SHORT[weekdayOf(d.dateKey)].slice(0, 2)}</span>
@@ -50,15 +50,15 @@ export function WeekCard({ t }: { t: CoachDay }) {
                       <span className={cn('mb-0.5 h-0.5 w-3 rounded-full', d.isOpen ? 'bg-border' : 'bg-transparent')} />
                     )}
                   </span>
-                  <span className={cn('text-[11px] tabular-nums', d.sessions ? 'text-foreground' : 'text-muted-foreground/60')}>{d.isOpen || d.sessions ? d.sessions : '–'}</span>
+                  <span className={cn('text-[11px] tabular-nums', d.classes ? 'text-foreground' : 'text-muted-foreground/60')}>{d.isOpen || d.classes ? d.classes : '–'}</span>
                 </Link>
               </li>
             )
           })}
         </ol>
         <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-center @xl:grid-cols-1 @xl:gap-3 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-6 @xl:text-left">
-          <Stat label="Classes" value={String(week.sessions)} hint={week.sessions ? `${week.done} done` : null} />
-          <Stat label="Booked" value={formatDuration(week.minutes)} />
+          <Stat label="Classes" value={String(week.classes)} hint={week.classes ? `${week.done} done` : null} />
+          <Stat label="In class" value={formatDuration(week.minutes)} />
         </dl>
       </div>
     </section>

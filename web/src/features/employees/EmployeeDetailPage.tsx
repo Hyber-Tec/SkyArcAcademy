@@ -31,7 +31,7 @@ import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { KioskPinCard } from '@/features/timeclock/KioskPinCard'
 import { RateMissingNotice } from './PayGapNotice'
-import { compensationRef, countUpcomingSessions, saveCompensation, saveEmployeeProfile, saveStaffNotes, staffNotesRef, stopTeachingQuestion } from './api'
+import { classesOnlyThem, compensationRef, saveCompensation, saveEmployeeProfile, saveStaffNotes, staffNotesRef, stopTeachingQuestion } from './api'
 
 export function EmployeeDetailPage() {
   const { staffId = '' } = useParams()
@@ -96,11 +96,11 @@ function ProfileCard({ staff, member }: { staff: Staff & { id: string }; member:
     if (!form.firstName.trim()) return toast.error('Enter a first name.')
     setBusy(true)
     try {
-      // A coach who stops teaching leaves their upcoming sessions as conflicts: ask first.
+      // A coach who stops teaching may leave classes ahead with no coach in: ask first.
       const stopsTeaching = staff.role === 'coach' && staff.status === 'active' && (form.status !== 'active' || form.role !== 'coach')
       if (stopsTeaching) {
         const what = form.status !== 'active' ? `set ${staff.firstName || staff.name} to ${STAFF_STATUS_LABELS[form.status]}` : 'change the role'
-        const q = stopTeachingQuestion(staff.name, await countUpcomingSessions(branchId, staff.id, timezone), what)
+        const q = stopTeachingQuestion(staff.name, await classesOnlyThem(branchId, staff.id, timezone), what)
         if (q && !(await confirm(q))) return
       }
       await saveEmployeeProfile(branchId, actor, staff, pick(form))

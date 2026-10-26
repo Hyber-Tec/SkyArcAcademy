@@ -146,7 +146,7 @@ export function CoachAvailabilityPage() {
           </span>
         ) : null}
       </section>
-      <AvailabilityCalendar ref={calendar} staffId={staffId} staffName={staff?.name ?? 'Me'} mode="coach" />
+      <AvailabilityCalendar ref={calendar} staffId={staffId} staffName={staff?.name ?? ''} staffRole="coach" mode="coach" />
     </div>
   )
 }
