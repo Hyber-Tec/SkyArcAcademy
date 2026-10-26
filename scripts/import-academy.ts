@@ -26,6 +26,7 @@ import { resolveSettings, type SettingsOverrides } from '../shared/src/settings/
 import { formatDateKey, todayKey } from '../shared/src/time'
 import { type IdMap, IMPORT_AUTHOR, type ImportFile, classesDocs, peopleDocs } from './lib/academy-import'
 import { PROJECT_ID, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
+import { isReviewAdmin } from './lib/review-admin'
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -50,7 +51,8 @@ async function sampleLeft(): Promise<string[]> {
   const found: string[] = []
   if ((await listDocuments(`${base}/${COL.staff}`)).some((d) => d.id.startsWith(SAMPLE_PREFIX))) found.push('sample staff')
   if ((await listDocuments(`${base}/${COL.students}`)).some((d) => d.id.startsWith(SAMPLE_PREFIX))) found.push('sample students')
-  if ((await listDocuments(`${base}/${COL.members}`)).some((d) => d.id.endsWith(`@${SAMPLE_EMAIL_DOMAIN}`) || String(d.data.staffId ?? '').startsWith(SAMPLE_PREFIX))) found.push('sample sign-ins (the review logins)')
+  const members = (await listDocuments(`${base}/${COL.members}`)).filter((d) => !isReviewAdmin(d.data))
+  if (members.some((d) => d.id.endsWith(`@${SAMPLE_EMAIL_DOMAIN}`) || String(d.data.staffId ?? '').startsWith(SAMPLE_PREFIX))) found.push('sample sign-ins (the review logins)')
   return found
 }
 

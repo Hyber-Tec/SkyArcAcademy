@@ -9,10 +9,13 @@
  * password, as Apple asks ("Credentials that expire or change before your review starts may result in the submission
  * being rejected").
  *
- *   npx tsx scripts/review-logins.ts            # make the logins, or bring them back
- *   npx tsx scripts/review-logins.ts --remove   # delete them (before removing the sample data, for instance)
+ *   npx tsx scripts/review-logins.ts              # make the logins, or bring them back
+ *   npx tsx scripts/review-logins.ts --remove     # delete them (before removing the sample data, for instance)
+ *   npx tsx scripts/review-logins.ts --real-data  # the academy's real data is in: the office login only, as an
+ *                                                 # admin of its own (same email and password); the others deleted
  *
- * The sample data must be in production first (npm run seed:sample). Uses the developer's gcloud login.
+ * The sample data must be in production first (npm run seed:sample), except with --real-data (Goo's call, 2026-10-26:
+ * the reviewers see the academy's real data). Uses the developer's gcloud login.
  */
 import { randomInt } from 'node:crypto'
 import fs from 'node:fs'
@@ -23,9 +26,10 @@ import { ACADEMY_ID } from '../shared/src/academy'
 import { COL, ROOT } from '../shared/src/paths'
 import { SAMPLE_EMAIL_DOMAIN } from '../shared/src/sample/data'
 import { deleteUserByEmail, upsertPasswordUser } from './lib/auth-rest'
-import { PROJECT_ID, getDocument } from './lib/firestore-rest'
+import { PROJECT_ID, commit, getDocument } from './lib/firestore-rest'
+import { REVIEW_ADMIN_AUTHOR, isReviewAdmin } from './lib/review-admin'
 
-const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false } } })
+const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, 'real-data': { type: 'boolean', default: false } } })
 
 const FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mobile', '.publish', 'review-logins.json')
 
@@ -83,12 +87,87 @@ async function make() {
   console.log(`\nThe passwords are in ${path.relative(process.cwd(), FILE)} (the same ones as before, if there were any).`)
 }
 
+/**
+ * Once the academy's real data is in production (no sample people any more): the office login stays, with its email
+ * and password, as an admin of its own named "Reviewer (App Store)", so a reviewer signs in as Apple has it; the coach,
+ * parent and student logins, whose sample people are gone, are deleted.
+ */
+async function realData() {
+  const saved = readSaved()
+  const office = LOGINS.find((l) => l.kind === 'office')!
+  const memberPath = `${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${office.email}`
+  const member = await getDocument(memberPath)
+  if (member && !isReviewAdmin(member)) throw new Error(`${office.email} still has a sample person's access in ${PROJECT_ID}: remove the sample data first (npm run seed:sample -- --remove).`)
+  const password = saved?.logins.find((l) => l.email === office.email)?.password ?? newPassword()
+  const name = 'Reviewer (App Store)'
+  const { created } = await upsertPasswordUser({ email: office.email, password, displayName: name })
+  const now = new Date()
+  const audit = {
+    path: `${ROOT.branches}/${ACADEMY_ID}/${COL.auditLog}/${REVIEW_ADMIN_AUTHOR}-${now.getTime()}`,
+    data: {
+      at: now,
+      actorUid: REVIEW_ADMIN_AUTHOR,
+      actorEmail: REVIEW_ADMIN_AUTHOR,
+      actorName: 'Reviewer (App Store)',
+      actorRole: 'system',
+      action: 'member.add',
+      category: 'access',
+      entityType: 'member',
+      entityId: office.email,
+      summary: 'Gave the App Store’s review account an admin’s access (it sees the academy’s data)',
+      context: '',
+      dateKey: null,
+      studentId: null,
+      studentName: null,
+      coachId: null,
+      coachName: null,
+      changes: [],
+      via: 'function',
+    },
+  }
+  await commit([
+    {
+      path: memberPath,
+      data: {
+        email: office.email,
+        displayName: name,
+        role: 'admin',
+        status: 'active',
+        staffId: null,
+        studentId: null,
+        studentIds: [],
+        restrictions: [],
+        uid: member?.uid ?? null,
+        photoURL: null,
+        firstLoginAt: member?.firstLoginAt ?? null,
+        lastLoginAt: member?.lastLoginAt ?? null,
+        createdAt: member?.createdAt ?? now,
+        createdBy: REVIEW_ADMIN_AUTHOR,
+        updatedAt: now,
+        updatedBy: REVIEW_ADMIN_AUTHOR,
+      },
+    },
+    ...(member ? [] : [audit]),
+  ])
+  console.log(`${created ? '+' : '='} ${office.kind.padEnd(11)} ${office.email} (an admin, "${name}")`)
+  for (const login of LOGINS.filter((l) => l.kind !== 'office')) console.log(`${(await deleteUserByEmail(login.email)) ? '-' : '='} ${login.kind.padEnd(11)} ${login.email}`)
+  const note = 'The App Store review account in production (scripts/review-logins.ts --real-data): an admin, with the academy’s real data. Never in git.'
+  // The deleted logins keep their passwords here, for if they're made again.
+  const logins = [
+    { kind: office.kind, email: office.email, password, sees: 'The office: every tab of the staff app, with the academy’s real data.' },
+    ...(saved?.logins ?? []).filter((l) => l.email !== office.email).map((l) => ({ ...l, sees: 'Deleted with the sample data (--real-data); kept for if it’s made again.' })),
+  ]
+  fs.mkdirSync(path.dirname(FILE), { recursive: true })
+  fs.writeFileSync(FILE, `${JSON.stringify({ note, logins }, null, 2)}\n`, { mode: 0o600 })
+  console.log(`\nThe password is unchanged, in ${path.relative(process.cwd(), FILE)}.`)
+}
+
 async function remove() {
   for (const login of LOGINS) console.log(`${(await deleteUserByEmail(login.email)) ? '-' : '='} ${login.kind.padEnd(11)} ${login.email}`)
   console.log(`\nThe sign-ins are deleted; ${path.relative(process.cwd(), FILE)} keeps the passwords for when they're made again.`)
 }
 
-;(values.remove ? remove() : make()).catch((e) => {
+;(values.remove ? remove() : values['real-data'] ? realData() : make()).catch((e) => {
   console.error(e instanceof Error ? e.message : e)
   process.exit(1)
 })
