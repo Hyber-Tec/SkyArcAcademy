@@ -1,7 +1,10 @@
 # Opens the newest progress report the academy shared, for the stores' screenshots (npm run publish:screenshots,
-# scripts/phone.mjs): Reports, then the first report, at its top. Starts from the family's signed-in app.
+# scripts/phone.mjs): Reports, then the first report, at its top. Starts from the family's signed-in app (the last
+# picture's report may still be open over the tabs).
 appId: com.skyarcacademy.app
 ---
+- runFlow:
+    file: ../steps/to-tabs.yaml
 - runFlow:
     file: ../steps/family-tab.yaml
     env:

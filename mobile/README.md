@@ -136,6 +136,7 @@ each Mac (kept in `mobile/.expo/practice-login.json`, never in git; the commands
 | Login | Who | What the app shows |
 | --- | --- | --- |
 | `owner@example.test` | The academy's owner (made by `npm run seed`) | The staff's tabs, everything |
+| `paige.sutton@skyarc-sample.test` | The sample admin, the academy's manager (the stores' office pictures) | The staff's tabs, the office's view |
 | `daniel.reed@skyarc-sample.test` | A sample coach | The staff's tabs, a coach's view |
 | `jiyeon.hwang@skyarc-sample.test` | A sample parent | The family's tabs, with her two children |
 | `seoyeon.lim@skyarc-sample.test` | A sample student (her parent has a login too; a shared report) | The family's tabs, her own |
@@ -222,7 +223,8 @@ emulator, against the practice copy:
   receipt of the post opened.
 - `screenshots/tab.yaml`: opens the tab `TAB` for the stores' screenshots (`npm run publish:screenshots`).
 - `steps/`: steps the flows run, not tests of their own: `tab.yaml` opens a tab (`TAB` and its name `LABEL`),
-  `family-tab.yaml` one of the family's, `back.yaml` goes back a page.
+  `family-tab.yaml` one of the family's, `back.yaml` goes back a page, `to-tabs.yaml` back to the tabs from the
+  screens opened over them.
 
 With `npm run iphone:sim` (or `android:sim`) running in one window, run `npm run phone:test` in another. It signs the
 app out, runs `dev-connect.yaml` and `sign-in.yaml`, then every other flow in `maestro/` (or those named:

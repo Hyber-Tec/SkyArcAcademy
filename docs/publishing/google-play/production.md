@@ -45,9 +45,10 @@ same forms). Each takes a few minutes.
      at most twice the short one);
    - **Video:** optional (a YouTube link): leave it empty. Tablet screenshots: optional, none.
 
-   The Android screenshots don't exist yet: when the app is ready for Android, take the same eight screens on an
-   Android phone (as on the iPhone) and give them to Claude Code, which frames them to Google's shape and makes the icon
-   and the feature graphic. Google's rules for the images:
+   `npm run publish:screenshots -- --android` made them on 2026-10-26, on a Pixel 9 emulator with the practice copy's
+   made-up people: the screenshots are JPEGs of 1368 × 2432 (the phone's screen with white margins to exactly 9:16,
+   what Google's recommendations ask for), the icon a 32-bit PNG with an alpha channel, the feature graphic a JPEG. The
+   same command makes them again when the app's screens change. Google's rules for the images:
    https://support.google.com/googleplay/android-developer/answer/9866151
 
 ## Part 3: The release to everyone
