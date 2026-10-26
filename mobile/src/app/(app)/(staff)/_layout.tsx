@@ -38,7 +38,7 @@ export default function AdminLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="class/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
-      <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
+      <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
       <Stack.Screen name="student/[id]" options={page} />
       <Stack.Screen name="score/[id]" options={page} />
       <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />

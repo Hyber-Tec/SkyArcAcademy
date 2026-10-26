@@ -1,6 +1,9 @@
+import { effectiveRanges } from "@shared/availability";
+import { takesSeat } from "@shared/schedule/classes";
+import { type DateKey, addDays } from "@shared/time";
 import { router } from "expo-router";
 import { CalendarCheck, Camera, ChevronRight, Coffee } from "lucide-react-native";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
@@ -9,14 +12,15 @@ import { SkeletonCards } from "@/components/Skeleton";
 import { StatusBarScrim } from "@/components/TabHeader";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
-import { useAcademyNow, useHoursOf, useRecentEvaluations, useSessionsBetween, useStaffList } from "@/features/data/hooks";
+import { useAcademyNow, useClassesBetween, useRecentEvaluations } from "@/features/data/hooks";
 import { ScoreRow } from "@/features/family/ScoreRow";
 import { ClockCard } from "@/features/home/ClockCard";
 import { ToDoCard } from "@/features/home/ToDoCard";
 import { InboxBell } from "@/features/notifications/InboxBell";
 import { ClassRow } from "@/features/schedule/ClassRow";
-import { groupClasses } from "@/features/schedule/classes";
-import { longDay, plural, timeRange } from "@/features/schedule/format";
+import { teaches } from "@/features/schedule/classes";
+import { clock, longDay, plural, shortDay, timeRange } from "@/features/schedule/format";
+import { useStaffLook } from "@/features/schedule/parts";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
@@ -26,11 +30,15 @@ function greeting(nowMin: number): string {
   return "Good evening";
 }
 
+/** How far ahead a coach's Home looks for their next class, on a day without one (two weeks, as the website's). */
+const AHEAD_DAYS = 14;
+
 /**
  * The day at a glance (the app opens here): the lockup with the bell (the person's notifications) beside it, a greeting
- * with the date, a coach's time clock, today's numbers, a coach's to-do (classes waiting for the admin, availability to
- * set, posts to read), the way to scan targets, today's classes in time order (a coach's own, for a coach), and the
- * latest scores. Everything is live and in the academy's time zone.
+ * with the date, a coach's time clock, today's numbers, a coach's to-do (availability to set, posts to read), the way to
+ * scan targets, today's classes in time order with the coaches in (for a coach, the classes in their hours, with the
+ * other coaches in with them, and their hours), and the latest scores. Everything is live and in the academy's time
+ * zone.
  */
 export default function TodayScreen() {
   const { actor, staff, settings, isCoach, staffId } = useBranch();
@@ -38,18 +46,24 @@ export default function TodayScreen() {
   const insets = useSafeAreaInsets();
   const hour12 = settings.general.timeFormat !== "24h";
   const { today, nowMin } = useAcademyNow();
-  const sessions = useSessionsBetween(today, today);
-  const staffList = useStaffList();
-  const { hoursOf } = useHoursOf(today, today);
-  const hours = hoursOf(today);
+  // A coach's Home also looks ahead, for their next class on a day without one.
+  const data = useClassesBetween(today, isCoach ? addDays(today, AHEAD_DAYS) : today);
+  const look = useStaffLook();
+  const hours = data.hoursOf(today);
+  const me = isCoach ? staffId : null;
 
-  const classes = useMemo(() => groupClasses(sessions.data), [sessions.data]);
-  const colorOf = useMemo(() => new Map(staffList.data.map((s) => [s.id, s.color ?? null])), [staffList.data]);
-  const active = classes.filter((c) => c.active.length > 0);
-  const students = new Set(active.flatMap((c) => c.active.map((s) => s.studentId))).size;
-  const coaches = new Set(active.map((c) => c.coachId)).size;
-  // A coach's own day: how long they teach (an hour and a half reads 1.5).
-  const teaching = Math.round(active.reduce((m, c) => m + (c.endMin - c.startMin), 0) / 6) / 10;
+  const todays = data.byDate.get(today) ?? [];
+  // A coach's day is the classes in their hours: every coach in at a class's time teaches it.
+  const classes = me ? todays.filter((v) => teaches(v, me)) : todays;
+  const students = new Set(classes.flatMap((v) => v.seats.filter(takesSeat).map((s) => s.studentId))).size;
+  const coaches = new Set(classes.flatMap((v) => v.coaches.map((k) => k.staffId))).size;
+  // A coach's hours in today (inside its opening hours; an hour and a half reads 1.5).
+  const mine = me ? data.availability.find((a) => a.staffId === me && a.dateKey === today) : undefined;
+  const myRanges = mine && !mine.unavailable ? effectiveRanges(mine.ranges ?? [], hours) : [];
+  const myHours = Math.round(myRanges.reduce((m, r) => m + r.endMin - r.startMin, 0) / 6) / 10;
+  // On a day without a class in their hours, when the next one is.
+  const nextDay: DateKey | null = me && !classes.length ? ([...data.byDate.keys()].sort().find((d) => d > today && (data.byDate.get(d) ?? []).some((v) => teaches(v, me))) ?? null) : null;
+  const nextClass = nextDay ? (data.byDate.get(nextDay) ?? []).find((v) => teaches(v, me)) : undefined;
   const first = (staff?.firstName || actor.name.split(/\s+/)[0] || "").trim();
 
   const contentStyle = Platform.OS === "android" ? { paddingTop: insets.top + space.lg } : undefined;
@@ -75,14 +89,14 @@ export default function TodayScreen() {
         </T>
       </View>
 
-      {coach ? <ClockCard todays={sessions.data} loading={sessions.loading} today={today} nowMin={nowMin} hour12={hour12} /> : null}
+      {coach ? <ClockCard todays={classes} loading={data.loading} today={today} nowMin={nowMin} hour12={hour12} /> : null}
 
       <Card style={styles.stats} testID="today-stats">
-        <Stat value={active.length} label={active.length === 1 ? "class" : "classes"} />
+        <Stat value={classes.length} label={classes.length === 1 ? "class" : "classes"} />
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
         <Stat value={students} label={students === 1 ? "student" : "students"} />
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
-        {isCoach ? <Stat value={teaching} label={teaching === 1 ? "hour" : "hours"} /> : <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />}
+        {isCoach ? <Stat value={myHours} label={myHours === 1 ? "hour" : "hours"} /> : <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />}
       </Card>
 
       {coach ? <ToDoCard /> : null}
@@ -111,17 +125,21 @@ export default function TodayScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <T variant="small" tone="muted" style={styles.sectionTitle}>
-            TODAY&apos;S CLASSES
+            {me ? "YOUR CLASSES TODAY" : "TODAY’S CLASSES"}
           </T>
-          {active.length ? (
+          {me && myRanges.length ? (
+            <T variant="small" tone="muted" style={styles.sectionDetail} testID="today-my-hours">
+              {`You’re in ${myRanges.map((r) => timeRange(r.startMin, r.endMin, hour12)).join(", ")}`}
+            </T>
+          ) : classes.length ? (
             <T variant="small" tone="muted" style={styles.sectionDetail}>
-              {plural(active.length, "class", "classes")}
+              {plural(classes.length, "class", "classes")}
             </T>
           ) : null}
         </View>
-        {sessions.loading ? (
-          <SkeletonCards count={3} height={92} />
-        ) : sessions.error ? (
+        {data.loading ? (
+          <SkeletonCards count={3} height={64} />
+        ) : data.error ? (
           <Card>
             <T variant="label">Couldn’t load today’s classes</T>
             <T variant="small" tone="muted">
@@ -129,28 +147,38 @@ export default function TodayScreen() {
             </T>
           </Card>
         ) : classes.length ? (
-          <View style={styles.list} testID="today-classes">
-            {classes.map((c) => (
+          <ListSection testID="today-classes">
+            {classes.map((v) => (
               <ClassRow
-                key={c.id}
-                group={c}
-                color={colorOf.get(c.coachId) ?? null}
+                key={v.c.id}
+                v={v}
+                today={today}
+                nowMin={nowMin}
                 hour12={hour12}
-                live={c.active.length > 0 && c.startMin <= nowMin && nowMin < c.endMin}
-                onPress={() => router.push({ pathname: "/class/[id]", params: { id: c.id } })}
-                testID={`today-class-${c.id}`}
+                me={me}
+                look={look}
+                onPress={() => router.push({ pathname: "/class/[id]", params: { id: v.c.id } })}
+                testID={`today-class-${v.c.id}`}
               />
             ))}
-          </View>
+          </ListSection>
         ) : (
           <Card style={styles.free} testID="today-free">
             <View style={[styles.freeIcon, { backgroundColor: colors.secondary }]}>
               {hours.isOpen ? <CalendarCheck size={20} color={colors.mutedForeground} /> : <Coffee size={20} color={colors.mutedForeground} />}
             </View>
             <View style={styles.grow}>
-              <T variant="label">{hours.isOpen ? "No classes today" : "Closed today"}</T>
+              <T variant="label">{!hours.isOpen ? "Closed today" : me ? "No classes in your hours today" : "No classes today"}</T>
               <T variant="small" tone="muted">
-                {hours.isOpen ? "Nothing is booked for today." : "The academy is closed today."}
+                {!hours.isOpen
+                  ? "The academy is closed today."
+                  : me
+                    ? nextDay && nextClass
+                      ? `Your next class is ${nextDay === addDays(today, 1) ? "tomorrow" : shortDay(nextDay)} at ${clock(nextClass.c.startMin, hour12)}.${todays.length ? ` The academy’s ${plural(todays.length, "class", "classes")} today are on the Schedule.` : ""}`
+                      : todays.length
+                        ? `The academy’s ${plural(todays.length, "class", "classes")} today are on the Schedule.`
+                        : "Nothing is on the schedule today."
+                    : "Nothing is on the schedule today."}
               </T>
             </View>
           </Card>
@@ -243,7 +271,6 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: "row", alignItems: "baseline", paddingHorizontal: space.xs },
   sectionTitle: { flex: 1, fontWeight: "600", letterSpacing: 0.5 },
   sectionDetail: { fontWeight: "600", fontVariant: ["tabular-nums"] },
-  list: { gap: space.md },
   free: { flexDirection: "row", alignItems: "center", gap: space.md },
   freeIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
 });

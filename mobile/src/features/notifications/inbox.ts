@@ -5,7 +5,6 @@ import { appTargetOf } from "@shared/push";
 import type { Session } from "@shared/types";
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { classIdOf } from "@/features/schedule/classes";
 import { db } from "@/lib/firebase";
 import { useQuery } from "@/lib/firestore";
 import { toast } from "@/lib/toast";
@@ -71,8 +70,8 @@ export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">):
 }
 
 /**
- * Opens what a notification is about, and marks it read: a post opens on its own page; a class opens its sheet, as the
- * session is now (its time or day may have changed since); a class no longer there, or no longer this coach's, says so.
+ * Opens what a notification is about, and marks it read: a post opens on its own page; a class opens its sheet, the
+ * class the student's seat is in now (its time or day may have changed since); a seat no longer there says so.
  */
 export async function openInboxItem(branchId: string, n: InboxItem): Promise<void> {
   markInboxRead(branchId, n);
@@ -84,13 +83,11 @@ export async function openInboxItem(branchId: string, n: InboxItem): Promise<voi
   try {
     const snap = await getDoc(doc(db, ROOT.branches, branchId, COL.sessions, target.sessionId));
     const s = snap.exists() ? (snap.data() as Session) : null;
-    if (s && !s.isDeleted) router.push({ pathname: "/class/[id]", params: { id: classIdOf(s) } });
+    if (s && !s.isDeleted && s.classId) router.push({ pathname: "/class/[id]", params: { id: s.classId } });
+    else if (s && !s.isDeleted) router.navigate("/schedule");
     else toast("This class was taken off the schedule");
-  } catch (e) {
-    const code = String((e as { code?: string } | null)?.code ?? "");
-    // The rules let a coach read only their own classes: one given to another coach is refused.
-    if (/permission-denied/.test(code)) toast("This class is no longer on your schedule");
-    else toast.error("Couldn’t open the class", { description: "Check your connection, then try again." });
+  } catch {
+    toast.error("Couldn’t open the class", { description: "Check your connection, then try again." });
   }
 }
 

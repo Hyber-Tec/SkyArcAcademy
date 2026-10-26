@@ -12,11 +12,11 @@ import { MonthScroller, type MonthScrollerHandle, WeekdayHeader } from "@/compon
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { type SessionDoc, useDayConfigs } from "@/features/data/hooks";
-import { groupClasses } from "@/features/schedule/classes";
 import { clock, plural, shortDay, timeRange } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useIsDark } from "@/theme";
 import { FamilyClassRow } from "./ClassCards";
+import { familyClasses } from "./classes";
 import { useFamilySessions } from "./data";
 import { useFamily } from "./FamilyProvider";
 import { dayHeading, hasEnded } from "./format";
@@ -151,7 +151,7 @@ export function FamilyClassMonth({
   );
 
   const daySessions = away ? chosenDay.data.filter((s) => shown.has(s.studentId)) : (byDay.get(selected) ?? []);
-  const groups = groupClasses(daySessions);
+  const groups = familyClasses(daySessions);
   const loading = away ? chosenDay.loading : sessions.loading && !sessions.data.length;
   const failed = away ? !!chosenDay.error && !chosenDay.data.length : !!sessions.error && !sessions.data.length;
   const isClosed = closed(selected);
@@ -160,7 +160,7 @@ export function FamilyClassMonth({
     if (away) return null;
     return [...byDay.entries()].filter(([d, list]) => d > selected && list.some((s) => s.status !== "canceled")).sort(([a], [b]) => a.localeCompare(b))[0] ?? null;
   }, [byDay, selected, away]);
-  const nextClass = next ? groupClasses(next[1].filter((s) => s.status !== "canceled"))[0] : null;
+  const nextClass = next ? familyClasses(next[1].filter((s) => s.status !== "canceled"))[0] : null;
   const active = groups.filter((g) => g.active.length > 0).length;
   const todayAway = selected !== today || (!!onScreen && (today < onScreen.from || today > onScreen.to));
 

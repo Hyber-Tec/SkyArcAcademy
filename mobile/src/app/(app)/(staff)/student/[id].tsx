@@ -21,7 +21,6 @@ import { Skeleton } from "@/components/Skeleton";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
 import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useStudentEvaluations, useStudentFiles, useStudentPrivate } from "@/features/data/hooks";
-import { classIdOf } from "@/features/schedule/classes";
 import { timeRange } from "@/features/schedule/format";
 import { deleteEvaluation } from "@/features/scores/api";
 import { deleteScoreMessage, scorePer10, scoreTitle, scoreTotal } from "@/features/scores/format";
@@ -36,7 +35,7 @@ const FILES_SHOWN = 8;
 
 /**
  * A student at a glance (loaded by ID, so it opens from anywhere): who they are, their parents a call, a text or an
- * email away (the office's only, as on the website), their next and last classes (a coach's own with them) and every
+ * email away (the office's only, as on the website), their next and last classes (each opens its class) and every
  * class month by month (student/calendar), their latest scores (each opens its own screen, and swipes away to be
  * deleted), the files in their Drive folder, and the website's Info tab as a coach sees it (the student's own record,
  * never the office's private one). Other changes are made on the website.
@@ -131,17 +130,19 @@ export default function StudentScreen() {
             <ListRow
               key={c.id}
               title={`${formatDateKey(c.dateKey, c.dateKey === today ? "monthDay" : "weekdayMedium")}${c.dateKey === today ? " (today)" : ""} · ${timeRange(c.startMin, c.endMin, hour12)}`}
-              subtitle={[c.coachName, SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
-              onPress={() => router.push({ pathname: "/class/[id]", params: { id: classIdOf(c) } })}
+              subtitle={[SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
+              onPress={c.classId ? () => router.push({ pathname: "/class/[id]", params: { id: c.classId } }) : undefined}
+              testID={`student-class-${c.id}`}
             />
           ))}
-          {!classes.loading && !next.length ? <ListRow title="No classes ahead" subtitle={isAdmin ? "Nothing is booked from today on." : "None with you from today on."} /> : null}
+          {!classes.loading && !next.length ? <ListRow title="No classes ahead" subtitle="Nothing is booked from today on." /> : null}
           {last.map((c) => (
             <ListRow
               key={c.id}
               title={`${formatDateKey(c.dateKey, "weekdayMedium")} · ${timeRange(c.startMin, c.endMin, hour12)}`}
-              subtitle={["Last time", c.coachName, SESSION_STATUS_LABELS[c.status]].filter(Boolean).join(" · ")}
-              onPress={() => router.push({ pathname: "/class/[id]", params: { id: classIdOf(c) } })}
+              subtitle={["Last time", SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
+              onPress={c.classId ? () => router.push({ pathname: "/class/[id]", params: { id: c.classId } }) : undefined}
+              testID={`student-class-${c.id}`}
             />
           ))}
           <ListRow
@@ -151,7 +152,7 @@ export default function StudentScreen() {
               </RowIcon>
             }
             title="Calendar"
-            subtitle={isAdmin ? "Every class, month by month" : "Your classes with them, month by month"}
+            subtitle="Every class, month by month"
             onPress={() => router.push({ pathname: "/student/calendar", params: { id: s.id } })}
             testID="student-calendar-open"
           />

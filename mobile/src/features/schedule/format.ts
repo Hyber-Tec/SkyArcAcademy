@@ -54,6 +54,18 @@ export function timeRange(startMin: number, endMin: number, hour12 = true): stri
   return samePeriod ? `${a.slice(0, -3)} – ${b}` : `${a} – ${b}`;
 }
 
+/** "4:30–6 PM", "11:30 AM–1 PM" or "16:30–18:00": a class's time as the sheets write it, where room is short. */
+export function shortRange(startMin: number, endMin: number, hour12 = true): string {
+  if (!hour12) return `${formatMinutes(startMin, false)}–${formatMinutes(endMin, false)}`;
+  const part = (m: number) => {
+    const h = Math.floor(m / 60) % 24;
+    return `${((h + 11) % 12) + 1}${m % 60 ? `:${String(m % 60).padStart(2, "0")}` : ""}`;
+  };
+  const pa = Math.floor(startMin / 60) % 24 >= 12 ? "PM" : "AM";
+  const pb = Math.floor(endMin / 60) % 24 >= 12 ? "PM" : "AM";
+  return pa === pb ? `${part(startMin)}–${part(endMin)} ${pb}` : `${part(startMin)} ${pa}–${part(endMin)} ${pb}`;
+}
+
 /** 110 → "1h 50m", 45 → "45 min", 120 → "2h". */
 export function duration(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));
@@ -98,4 +110,17 @@ export function plural(n: number, word: string, many = `${word}s`): string {
 export function listWords(words: readonly string[]): string {
   if (words.length <= 1) return words[0] ?? "";
   return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+}
+
+/** "A", "A and B", "A, B and C", "A, B, C and 3 more": at most `max` names. */
+export function nameList(names: readonly string[], max = 3): string {
+  const shown = names.slice(0, max);
+  const rest = names.length - shown.length;
+  return rest > 0 ? `${shown.join(", ")} and ${rest} more` : listWords(shown);
+}
+
+/** "Mia C.": a first name and the last initial, where room is short. */
+export function shortName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : name;
 }

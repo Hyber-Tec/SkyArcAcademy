@@ -1,10 +1,10 @@
 import { collection, getDocs, query, serverTimestamp, where, writeBatch } from "@react-native-firebase/firestore";
 import { fitRangesToDay, type DayMark } from "@shared/availability";
-import { type DayWrite, availabilityRecord, availabilitySummary, sessionsLeftUncovered, shrinkingDays, uncoveredWarning } from "@shared/availabilityWrites";
+import { type DayWrite, type UncoveredClass, availabilityRecord, availabilitySummary, classesLeftUncovered, noCoachWarning, shrinkingDays } from "@shared/availabilityWrites";
 import { COL, ROOT, availabilityDocId } from "@shared/paths";
 import type { BranchSettings, DayHours } from "@shared/settings/defaults";
 import type { DateKey } from "@shared/time";
-import type { AvailabilityRange, Session } from "@shared/types";
+import type { AcademyClass, Availability, AvailabilityRange, Session } from "@shared/types";
 import { confirmAsync } from "@/components/Confirm";
 import { branchDoc } from "@/features/data/hooks";
 import { errorMessage } from "@/lib/api";
@@ -18,8 +18,9 @@ export type { DayWrite } from "@shared/availabilityWrites";
 /**
  * A coach's availability writes, exactly as the website makes them (web/src/features/availability/api.ts, with the
  * shared `@shared/availabilityWrites`): one record per day (`availability/{staffId}_{dateKey}`) holding times or "not
- * available", removed when the day is cleared; several days in one batch with one audit entry; and a warning first when
- * booked classes would be left outside the new times. The rules refuse days inside the lock window.
+ * available", removed when the day is cleared, with the coach's name and role so the other coaches see who's in with
+ * them; several days in one batch with one audit entry; and a warning first when classes would be left with no coach
+ * in. The rules refuse days inside the lock window.
  */
 
 export interface SaveContext {
@@ -35,32 +36,41 @@ export interface SaveContext {
   nowMin: number;
 }
 
-type SessionDoc = Session & { id: string };
-
-/** The coach's booked classes a change would leave outside the times they were inside. */
-async function uncoveredBy(ctx: SaveContext, days: DayWrite[]): Promise<SessionDoc[]> {
-  // Days that only gain time can't leave anything uncovered.
+/**
+ * Classes still ahead, with students, that a change would leave with no coach in for all or part of them (classes are
+ * taught by everyone in, so only when no other coach is): the shared `classesLeftUncovered`, from the classes, their
+ * students and everyone's hours on the days that lose time (days that only gain time can't leave anything uncovered).
+ */
+async function uncoveredBy(ctx: SaveContext, days: DayWrite[]): Promise<UncoveredClass[]> {
   const shrinking = shrinkingDays(days, ctx.currentRanges, ctx.hoursOf);
-  const sessions: SessionDoc[] = [];
+  const classes: (AcademyClass & { id: string })[] = [];
+  const seats: Session[] = [];
+  const records: Availability[] = [];
+  const col = (name: string) => collection(db, ROOT.branches, ctx.branchId, name);
   for (let i = 0; i < shrinking.length; i += 30) {
     const chunk = shrinking.slice(i, i + 30);
-    const snap = await getDocs(query(collection(db, ROOT.branches, ctx.branchId, COL.sessions), where("coachId", "==", ctx.staffId), where("dateKey", "in", chunk)));
-    for (const d of snap.docs) sessions.push({ id: d.id, ...(d.data() as Session) });
+    const [c, s, r] = await Promise.all([
+      getDocs(query(col(COL.classes), where("dateKey", "in", chunk))),
+      getDocs(query(col(COL.sessions), where("dateKey", "in", chunk))),
+      getDocs(query(col(COL.availability), where("dateKey", "in", chunk))),
+    ]);
+    classes.push(...c.docs.map((d) => ({ ...(d.data() as AcademyClass), id: d.id })));
+    seats.push(...s.docs.map((d) => d.data() as Session));
+    records.push(...r.docs.map((d) => d.data() as Availability));
   }
-  return sessionsLeftUncovered({ days, currentRanges: ctx.currentRanges, hoursOf: ctx.hoursOf, sessions, today: ctx.today, nowMin: ctx.nowMin });
+  return classesLeftUncovered({ staffId: ctx.staffId, staffRole: "coach", days, classes, seats, records, hoursOf: ctx.hoursOf, today: ctx.today, nowMin: ctx.nowMin });
 }
 
 /**
- * Saves days of availability. It asks first when booked classes would end up outside it (they stay booked, as
- * conflicts, as on the website), then returns as soon as the phone has the change: the server confirms it in the
- * background, and a refusal says so in a message (the calendar then shows the day as it was). False when the person
- * backs out.
+ * Saves days of availability. It asks first when classes would be left with no coach in (they stay on the schedule, as
+ * on the website), then returns as soon as the phone has the change: the server confirms it in the background, and a
+ * refusal says so in a message (the calendar then shows the day as it was). False when the person backs out.
  */
 export async function saveDays(ctx: SaveContext, days: DayWrite[], summary?: string): Promise<boolean> {
   if (days.length === 0) return true;
   const uncovered = await uncoveredBy(ctx, days);
   if (uncovered.length) {
-    const warning = uncoveredWarning(uncovered, "coach");
+    const warning = noCoachWarning(uncovered, "coach");
     if (!(await confirmAsync({ title: warning.title, message: warning.description, confirmLabel: "Save anyway" }))) return false;
     // The alert's fade finishes first: the phone presents one screen at a time, and a sheet closed while an alert is
     // still leaving stays on screen.
@@ -70,7 +80,7 @@ export async function saveDays(ctx: SaveContext, days: DayWrite[], summary?: str
     const batch = writeBatch(db);
     for (const d of days.slice(i, i + 300)) {
       const ref = branchDoc(ctx.branchId, COL.availability, availabilityDocId(ctx.staffId, d.dateKey));
-      const record = availabilityRecord(ctx.staffId, d, ctx.timezone, "coach");
+      const record = availabilityRecord(ctx.staffId, d, ctx.timezone, "coach", ctx.staffName, "coach");
       if (!record) batch.delete(ref);
       else batch.set(ref, { ...record, updatedAt: serverTimestamp(), updatedBy: ctx.actor.email });
     }

@@ -11,20 +11,20 @@ import { ListRow, ListSection } from "@/components/List";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { useAcademyNow } from "@/features/data/hooks";
+import { familyClassId, familyClasses } from "@/features/family/classes";
 import { useAcademyContact, useFamilySession, useFamilySessions } from "@/features/family/data";
 import { AcademyContact } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { FamilyStatus } from "@/features/family/FamilyStatus";
 import { hasEnded, isOnNow, relativeDay } from "@/features/family/format";
-import { classIdOf, groupClasses } from "@/features/schedule/classes";
 import { duration, longDay, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
 /**
- * A class, over the screen it was opened from (a sheet; loaded from its id, so a link opens it too): when, the coach,
- * and each of the family's students in it with their status and the class's note, then how to reach the academy for a
- * change (families don't change classes in the app).
+ * A class, over the screen it was opened from (a sheet; loaded from its id, so a link opens it too): when, and each of
+ * the family's students in it with their status and the class's note, then how to reach the academy for a change
+ * (families don't change classes in the app). No coach: every coach in at its time teaches it.
  */
 export default function FamilyClassSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,8 +40,8 @@ export default function FamilyClassSheet() {
   const day = useFamilySessions(s ? family.ids : [], s?.dateKey ?? today, s?.dateKey ?? today);
   const group = useMemo(() => {
     if (!s) return null;
-    const same = day.data.filter((x) => classIdOf(x) === classIdOf(s));
-    return groupClasses(same.length ? same : [s])[0] ?? null;
+    const same = day.data.filter((x) => familyClassId(x) === familyClassId(s));
+    return familyClasses(same.length ? same : [s])[0] ?? null;
   }, [s, day.data]);
   const contact = useAcademyContact();
   const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -100,10 +100,6 @@ export default function FamilyClassSheet() {
         </View>
         <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} filled testID="family-session-close" />
       </View>
-
-      <ListSection title="Coach">
-        <ListRow icon={<Avatar name={group.coachName} size={38} />} title={<T variant="label">{group.coachName}</T>} testID="family-session-coach" />
-      </ListSection>
 
       <ListSection title={family.who === "parent" ? (shown.length > 1 ? "Your children" : "Your child") : "You"} testID="family-session-students">
         {shown.map((x) => {

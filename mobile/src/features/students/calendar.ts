@@ -37,19 +37,14 @@ function useKept<T>(data: T, loading: boolean): T {
 }
 
 /**
- * The student's classes between two dates (inclusive), deleted ones (Trash) left out, by date and time: every class for
- * the office, a coach's own with the student for a coach (the rules give a coach no one else's, and a query asking for
- * more would fail whole). The website's indexes on `studentId` (+ `coachId`) + `dateKey`.
+ * The student's classes between two dates (inclusive), deleted ones (Trash) left out, by date and time: every one, for
+ * the office and coaches alike (classes are taught together). The website's index on `studentId` + `dateKey`.
  */
 export function useStudentClassesBetween(studentId: string | null, from: DateKey, to: DateKey) {
-  const { branchId, isCoach, staffId } = useBranch();
-  const ok = !!studentId && (!isCoach || !!staffId);
-  const state = useQuery<Session>(ok ? `student-calendar-${branchId}-${isCoach ? `${staffId}-` : ""}${studentId}-${from}-${to}` : null, () => {
-    const sessions = collection(db, ROOT.branches, branchId, COL.sessions);
-    return isCoach
-      ? query(sessions, where("studentId", "==", studentId), where("coachId", "==", staffId), where("dateKey", ">=", from), where("dateKey", "<=", to))
-      : query(sessions, where("studentId", "==", studentId), where("dateKey", ">=", from), where("dateKey", "<=", to));
-  });
+  const { branchId } = useBranch();
+  const state = useQuery<Session>(studentId ? `student-calendar-${branchId}-${studentId}-${from}-${to}` : null, () =>
+    query(collection(db, ROOT.branches, branchId, COL.sessions), where("studentId", "==", studentId), where("dateKey", ">=", from), where("dateKey", "<=", to)),
+  );
   const live = useMemo(
     () => state.data.filter((s) => !s.isDeleted).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startMin - b.startMin || a.endMin - b.endMin),
     [state.data],

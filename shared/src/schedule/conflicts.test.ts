@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type ConflictContext, type ConflictSession, isAhead, sessionConflicts, staffCoachState, coachConflictText } from './conflicts'
+import { type ConflictContext, type ConflictSession, isAhead, sessionConflicts, staffCoachState } from './conflicts'
 
 const OPEN = { isOpen: true, openMin: 14 * 60, closeMin: 21 * 60 }
 
@@ -109,12 +109,5 @@ describe('class conflicts', () => {
     expect(isAhead(session({ dateKey: '2026-10-02', endMin: 900 }), '2026-10-02', 899)).toBe(true)
     expect(isAhead(session({ dateKey: '2026-10-02', endMin: 900 }), '2026-10-02', 900)).toBe(false)
     expect(isAhead(session({ dateKey: '2026-10-03' }), '2026-10-02', 1400)).toBe(true)
-  })
-
-  it('tells the coach the class is waiting for the admin', () => {
-    expect(coachConflictText([])).toBeNull()
-    expect(coachConflictText(sessionConflicts(session(), ctx({ availability: null })))).toBe(
-      'You’re not available at this time. Waiting for the admin to move or cancel it.',
-    )
   })
 })

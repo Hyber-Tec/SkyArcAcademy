@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DayHours } from '../settings/defaults'
-import { coachesIn, makeupLabel, makeupsOwed, openSeats, seatKind, uncovered } from './classes'
+import type { AcademyClass, Session, WithId } from '../types'
+import { cellsOf, classViews, coachesIn, makeupLabel, makeupsOwed, openSeats, seatKind, uncovered } from './classes'
 import { type ConflictSeat, seatConflicts } from './conflicts'
 
 const open: DayHours = { isOpen: true, openMin: 16 * 60, closeMin: 21 * 60 }
@@ -49,6 +50,44 @@ describe('classes taught together', () => {
       { startMin: t(16, 30), endMin: t(17) },
       { startMin: t(17, 30), endMin: t(18) },
     ])
+  })
+
+  it('puts each class’s students in it, in the order booked, with the coaches in', () => {
+    const at = (ms: number) => ({ toMillis: () => ms })
+    const c = (id: string, startMin: number, endMin: number, p: Partial<AcademyClass> = {}) => ({ id, dateKey: cls.dateKey, startMin, endMin, seats: 6, isDeleted: false, ...p }) as WithId<AcademyClass>
+    const s = (id: string, classId: string, p: Partial<Session> = {}) => ({ id, classId, status: 'confirmed', isDeleted: false, visualOrder: 0, ...p }) as WithId<Session>
+    const views = classViews(
+      [c('late', t(18), t(19)), c('early', t(16, 30), t(18)), c('trash', t(19), t(20), { isDeleted: true })],
+      [
+        s('b', 'early', { visualOrder: 1 }),
+        s('a', 'early', { visualOrder: 0 }),
+        s('c', 'early', { visualOrder: 1, status: 'canceled', createdAt: at(2) as never }),
+        s('gone', 'early', { isDeleted: true }),
+        s('old', ''),
+        s('x', 'trash'),
+      ],
+      [{ staffId: 'pat', staffName: 'Pat Rivera', dateKey: cls.dateKey, ranges: [{ startMin: t(16), endMin: t(18) }], unavailable: false }],
+      () => open,
+    )
+    const day = views.get(cls.dateKey) ?? []
+    expect(day.map((v) => v.c.id)).toEqual(['early', 'late'])
+    expect(day[0].seats.map((x) => x.id)).toEqual(['a', 'b', 'c'])
+    expect(day[0].taken).toBe(2)
+    expect(day[0].coaches.map((k) => k.name)).toEqual(['Pat Rivera'])
+    expect(day[1]).toMatchObject({ seats: [], taken: 0, coaches: [] })
+  })
+
+  it('keeps each seat in its place, a canceled one too, until the class is refilled past it', () => {
+    const seat = (id: string, status: 'confirmed' | 'canceled' = 'confirmed') => ({ id, status })
+    const four = [seat('a'), seat('b', 'canceled'), seat('c'), seat('d')]
+    expect(cellsOf(four, 6)).toEqual({ cells: four, open: 2, overflow: [] })
+    // Refilled: six coming and two canceled in six seats, so both canceled ones go below the grid.
+    const full = [seat('a'), seat('x', 'canceled'), seat('b'), seat('c'), seat('y', 'canceled'), seat('d'), seat('e'), seat('f')]
+    const { cells, open, overflow } = cellsOf(full, 6)
+    expect(overflow.map((s) => s.id)).toEqual(['x', 'y'])
+    expect(cells.map((s) => s.id)).toEqual(['a', 'b', 'c', 'd', 'e', 'f'])
+    expect(open).toBe(0)
+    expect(cellsOf([seat('a'), seat('x', 'canceled'), seat('b')], 2).overflow.map((s) => s.id)).toEqual(['x'])
   })
 
   it('lists make-ups still owed: a canceled seat without a later "MU for" its date', () => {

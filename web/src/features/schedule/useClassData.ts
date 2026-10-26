@@ -2,7 +2,7 @@ import { query, where } from 'firebase/firestore'
 import { useCallback, useMemo } from 'react'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
-import { type ClassCoach, coachesIn, takesSeat } from '@shared/schedule/classes'
+import { classViews } from '@shared/schedule/classes'
 import { type ScheduleEvent, occursOn } from '@shared/schedule/events'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, dateRange } from '@shared/time'
@@ -14,13 +14,7 @@ import { branchCol, useQuery } from '@/lib/firestore'
 export type EventDoc = ScheduleEvent & { isRecurring: boolean; createdBy?: string; updatedAt?: unknown }
 
 /** A class as the schedule shows it: its seats (canceled ones too, in the order booked), and who teaches it. */
-export interface ClassView {
-  c: WithId<AcademyClass>
-  seats: WithId<Session>[]
-  /** Seats in use (a canceled student frees theirs). */
-  taken: number
-  coaches: ClassCoach[]
-}
+export type { ClassView } from '@shared/schedule/classes'
 
 /**
  * The schedule's data for a range of dates, live: the classes and their students, who's in each day (the coaches'
@@ -48,24 +42,7 @@ export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staff
   const hoursOf = useCallback((d: DateKey): DayHours => dayHours(d, settings, dayConfigs.map), [settings, dayConfigs.map])
 
   const { isCoach } = opts
-  const byDate = useMemo(() => {
-    const seatsOf = new Map<string, WithId<Session>[]>()
-    for (const s of seats.data) {
-      if (s.isDeleted || !s.classId) continue
-      seatsOf.set(s.classId, [...(seatsOf.get(s.classId) ?? []), s])
-    }
-    const dayOf = new Map<DateKey, WithId<Availability>[]>()
-    for (const a of availability.data) dayOf.set(a.dateKey, [...(dayOf.get(a.dateKey) ?? []), a])
-    const out = new Map<DateKey, ClassView[]>()
-    for (const c of classes.data) {
-      if (c.isDeleted) continue
-      const list = (seatsOf.get(c.id) ?? []).sort((a, b) => (a.visualOrder ?? 0) - (b.visualOrder ?? 0) || stamp(a.createdAt) - stamp(b.createdAt))
-      const view: ClassView = { c, seats: list, taken: list.filter(takesSeat).length, coaches: coachesIn(c, dayOf.get(c.dateKey) ?? [], hoursOf(c.dateKey), isCoach) }
-      out.set(c.dateKey, [...(out.get(c.dateKey) ?? []), view])
-    }
-    for (const list of out.values()) list.sort((a, b) => a.c.startMin - b.c.startMin || a.c.endMin - b.c.endMin)
-    return out
-  }, [classes.data, seats.data, availability.data, hoursOf, isCoach])
+  const byDate = useMemo(() => classViews(classes.data, seats.data, availability.data, hoursOf, isCoach), [classes.data, seats.data, availability.data, hoursOf, isCoach])
 
   /** Everyone with hours that day (coaches and the manager), earliest first. */
   const inOn = useCallback(
@@ -100,5 +77,3 @@ export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staff
     error: classes.error ?? seats.error ?? availability.error ?? oneOff.error ?? recurring.error,
   }
 }
-
-const stamp = (t: unknown) => (t && typeof t === 'object' && 'toMillis' in t ? (t as { toMillis: () => number }).toMillis() : 0)
