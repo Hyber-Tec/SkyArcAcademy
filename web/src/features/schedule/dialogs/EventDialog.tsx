@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { ScheduleCtx } from '../api'
 import { deleteEvent, saveEvent } from '../eventsApi'
-import type { EventDoc } from '../useScheduleData'
+import type { EventDoc } from '../useClassData'
 
 export type EventDialogState =
   | { mode: 'create'; dateKey: DateKey; startMin: number; endMin: number }

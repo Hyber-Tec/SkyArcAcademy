@@ -7,7 +7,7 @@ import { addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
 import type { ScheduleCtx } from './api'
-import type { EventDoc } from './useScheduleData'
+import type { EventDoc } from './useClassData'
 
 function context(e: ScheduleEvent) {
   return `${formatDateKey(e.dateKey, 'weekdayLong').split(',')[0]}, ${formatDateKey(e.dateKey, 'short')} (${formatTimeRange(e.startMin, e.endMin)})`

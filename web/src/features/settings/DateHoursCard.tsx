@@ -93,7 +93,7 @@ export function DateHoursCard() {
     const d0 = week[weekdayOf(dates[0])]
     await setDateHours({ branchId, actor, dates, value, closedTimes: { openMin: d0.openMin, closeMin: d0.closeMin }, summaryRange, trashSessionIds })
     const what = dates.length === 1 ? `${formatDateKey(dates[0], 'weekdayMedium')}: ${describeHoursValue(value)}` : `${dates.length} dates set to ${describeHoursValue(value)}`
-    toast.success(what, trashSessionIds.length ? { description: `${trashSessionIds.length} class${trashSessionIds.length > 1 ? 'es' : ''} moved to Trash.` } : undefined)
+    toast.success(what, trashSessionIds.length ? { description: 'Their classes moved to Trash.' } : undefined)
   }
 
   return (
@@ -337,8 +337,8 @@ function HoursForm({
         <Alert>
           <LuTriangleAlert />
           <AlertDescription>
-            {trash.length} class{trash.length > 1 ? 'es are' : ' is'} booked on {many ? 'these dates' : 'this date'}. Closing moves {trash.length > 1 ? 'them' : 'it'} to Trash; you can
-            restore classes from Trash on the schedule.
+            {trash.length} student{trash.length > 1 ? 's are' : ' is'} booked on {many ? 'these dates' : 'this date'}. Closing moves the classes to Trash with them; you
+            can restore classes from Trash on the schedule.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -356,7 +356,7 @@ function HoursForm({
 }
 
 function saveLabel(v: FormValue, trash: string[] | null, verb: string) {
-  if (v.mode === 'closed' && trash?.length) return `Close and move ${trash.length} class${trash.length > 1 ? 'es' : ''} to Trash`
+  if (v.mode === 'closed' && trash?.length) return 'Close and move the classes to Trash'
   return verb
 }
 

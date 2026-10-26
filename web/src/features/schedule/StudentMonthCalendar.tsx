@@ -15,8 +15,8 @@ import { useLoadWindow } from '@/lib/useLoadWindow'
 import { cn } from '@/lib/utils'
 
 /**
- * A student's sessions on a vertically scrolling month calendar. Clicking a day
- * picks it; clicking a chip opens the session.
+ * A student's classes on a vertically scrolling month calendar, each with its time and label (make-up, trial…).
+ * Clicking a day picks it; clicking a chip opens the class.
  */
 export function StudentMonthCalendar({
   studentId,
@@ -25,7 +25,6 @@ export function StudentMonthCalendar({
   onPickSession,
   highlightSessionId,
   compact = false,
-  coachId,
   className,
   frameless = false,
 }: {
@@ -35,8 +34,6 @@ export function StudentMonthCalendar({
   onPickSession?: (s: WithId<Session>) => void
   highlightSessionId?: string | null
   compact?: boolean
-  /** Coaches may only read their own sessions. */
-  coachId?: string | null
   /** Sets the scroll area's height (default: most of the screen). */
   className?: string
   /** No border of its own (inside a card that has one). */
@@ -49,15 +46,10 @@ export function StudentMonthCalendar({
   const [topMonth, setTopMonth] = useState(anchor)
   const { from, to, onVisibleRangeChange } = useLoadWindow(anchor)
   const q = useMemo(
-    () =>
-      studentId
-        ? coachId
-          ? query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('coachId', '==', coachId), where('dateKey', '>=', from), where('dateKey', '<=', to))
-          : query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('dateKey', '>=', from), where('dateKey', '<=', to))
-        : null,
-    [branchId, studentId, from, to, coachId],
+    () => (studentId ? query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('dateKey', '>=', from), where('dateKey', '<=', to)) : null),
+    [branchId, studentId, from, to],
   )
-  const { data } = useQuery<Session>(q, `student-cal-${studentId}-${coachId ?? 'all'}-${from}-${to}`, { keepPrevious: true })
+  const { data } = useQuery<Session>(q, `student-cal-${studentId}-${from}-${to}`, { keepPrevious: true })
   const { map: dayConfigs } = useDayConfigs(from, to, { keepPrevious: true })
   const byDate = useMemo(() => {
     const m = new Map<DateKey, WithId<Session>[]>()
@@ -129,18 +121,18 @@ export function StudentMonthCalendar({
                     )}
                     // Longhands only: a `borderLeft` shorthand next to `borderColor` leaves the wrong colour after a status change.
                     style={{ backgroundColor: st.bg, borderColor: st.border, color: st.text, ...(s.note ? { borderLeftWidth: 3, borderLeftColor: '#335586' } : null) }}
-                    title={`${s.coachName}${s.note ? `\nNote: ${s.note}` : ''}`}
+                    title={`${timeRange(s.startMin, s.endMin)}${s.note ? ` · ${s.note}` : ''}`}
                   >
                     {compact ? (
                       <>
-                        <span className="w-full truncate font-bold">{s.coachName.split(' ')[0]}</span>
-                        <span className="w-full truncate tabular-nums">{formatMinutesShort(s.startMin)}</span>
+                        <span className="w-full truncate font-bold tabular-nums">{formatMinutesShort(s.startMin)}</span>
+                        {s.note ? <span className="w-full truncate">{s.note}</span> : null}
                       </>
                     ) : (
                       <>
                         <span className="text-[10.5px] font-semibold tabular-nums sm:hidden">{formatMinutesShort(s.startMin)}</span>
                         <span className="hidden text-xs font-semibold text-balance tabular-nums sm:block xl:text-[13px]">{timeRange(s.startMin, s.endMin)}</span>
-                        <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{s.coachName.split(' ')[0]}</span>
+                        {s.note ? <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{s.note}</span> : null}
                       </>
                     )}
                   </button>
