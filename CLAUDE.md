@@ -133,12 +133,17 @@ Carried over from HyberCRM, adapted to one academy:
 
 - **Identity:** one person, exactly **one role**: `owner` | `admin` | `coach` | `parent` | `student`. People sign in with **Google** or an **email and password**; access follows the **verified** email only. People records are referenced by ID only.
 - **One academy in the code:** its data lives under `branches/skyarc` (`ACADEMY_ID` in `shared/src/academy.ts`). HyberCRM's internal names stay (`branchId`, `useBranch()`, `BranchSettings`); people never see "branch".
-- **Words in code:** stored values and code say `coach` (`coachId`, `/coach`). A class is a `session` in code and data (`class` is reserved in JavaScript) and **Class** on screen.
+- **Words in code:** stored values and code say `coach` (`/coach`). A class is an `AcademyClass` in `classes` (a time on
+  a day with its seats; **Class** on screen), and each student in it is a `session` with its `classId` (`class` is
+  reserved in JavaScript). Every coach in at a class's time teaches it (their availability, "who's in"); a session's
+  `coachId` is empty since 2026-10 (`docs/DECISIONS.md` §21).
 - **Rules:** every collection gets explicit security rules; never a catch-all allow. Rules tests run in the emulator.
 - **Settings:** defaults live in code (`shared/src/settings/defaults.ts`); the academy stores only its overrides; always read settings through the resolver. Never hard-code values the academy hasn't confirmed.
 - **Time:** the academy's IANA time zone only, never the browser's. Wall-clock `dateKey` (`YYYY-MM-DD`) + `startMin`/`endMin`, plus absolute `startAt`/`endAt`.
 - **Audit:** every schedule, availability, people, pay and settings change writes an append-only `auditLog` entry in the same batch.
-- **Schedule UI:** keep HyberCRM's structure (coaches as rows, time across, Day / Week / Month, the side rail).
+- **Schedule UI:** like the academy's sheets (Goo's pick, `docs/DECISIONS.md` §21): Week and Day, each class with its
+  seats coloured by level (`shared/src/schedule/seatColors.ts`), and the floating panel on the right (calendar, who's
+  in, legend).
 - **Availability:** a coach's day holds times, or "not available" (an answer), or nothing (still to set). Only open days
   with nothing set count as days to set (the reminders, Home's to-do); write through `shared/src/availabilityWrites.ts`.
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say

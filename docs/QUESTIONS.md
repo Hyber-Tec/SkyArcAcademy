@@ -18,14 +18,8 @@ setting it can change later. Numbered as in the email Goo sends the academy, so 
 
 The manager answered A2–A9 and sent the schedule sheets (A4), then the students' spreadsheet (A1) and how classes are
 taught (A16); the answers are in [`DECISIONS.md`](DECISIONS.md) §20, with names, contacts and pay rates in
-`docs/internal/academy-answers-2026-10.md`.
-
-### Follow-up (a text)
-
-| | Question | Needed for | Until answered |
-|---|---|---|---|
-| **A17** | **Four students on November's sheet aren't on the spreadsheet** (named in `docs/internal/`): their parents' emails and phones, and their grades. | Importing the real data | Imported without parents; the office adds them |
-| **A18** | **The academy owner's sign-in email:** the academy's owner runs payroll, so they get the owner's access. | Access at launch | Goo's owner access only |
+`docs/internal/academy-answers-2026-10.md`. A17 and A18 (four students' parents, the academy owner's email) aren't
+asked: the office fills them in from the website ([`DECISIONS.md`](DECISIONS.md) §21).
 
 ### Later: before launch (a second email)
 
