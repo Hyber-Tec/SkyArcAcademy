@@ -514,8 +514,8 @@ homepage now … I'll actually test and verify from the live website".
   first. The owner uploads and submits; Claude Code prepares everything else, and runs the upload only when asked.
 - **The guides**: `docs/publishing.md` is the map ("should be just a summary to navigate which one to follow"), with
   step-by-step guides and their links in `docs/publishing/`: `apple/` (`app-store.md`, `testflight.md`, and
-  `rules.md`, the reasons behind the answers), `google-play/` (`account.md`, `testing.md`, `production.md`) and
-  `updates.md`. The texts to paste stay in `docs/store/`.
+  `rules.md`, the reasons behind the answers), `google-play/` (`testing.md`, `production.md`) and `updates.md`. The
+  texts to paste stay in `docs/store/`.
 - **Screenshots from the owner's iPhone** ("can't i just take screenshot from my iphone and just use that?"): eight of
   them, the families' first (a progress report, its target, Scores, Home), then the office's (Home, Schedule, Scan,
   Students). At 1179 × 2556 they are the 6.3-inch size Apple now requires; a 6.9-inch copy waits in case App Store
@@ -528,8 +528,9 @@ homepage now … I'll actually test and verify from the live website".
   Chat" Yes (neither changes the 9+ rating); the privacy answers add what coaches enter (their phone, address, birth
   date and availability), comments and what people opened. On Google Play the target audience includes the academy's
   youngest students, which puts the app under Google's Families policy (no ads or advertising ID, as already).
-- **Google Play account**: an organization account for HyberTec LLC is the recommendation (no two-week closed test);
-  the owner checks which kind HyberTec has (`docs/TODO.md`).
+- **Google Play account**: an organization account for HyberTec LLC was the recommendation (no two-week closed test).
+  **It is one** (the owner, 2026-10-26): HyberTec LLC's developer account is verified as an organization, so the
+  Android app goes from internal testing to the release with no closed test (`docs/publishing/google-play/`).
 
 ## 20. The academy's answers to the first email (2026-10-24)
 

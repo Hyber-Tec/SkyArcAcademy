@@ -2,7 +2,8 @@
 
 What to paste into App Store Connect ([apple/app-store.md](../publishing/apple/app-store.md), steps 11–20) and the Play
 Console ([google-play/production.md](../publishing/google-play/production.md)). Both stores count characters; each
-limit is given, and every text fits. Written on 2026-10-20 for the app as it is (families, coaches and the office).
+limit is given, and every text fits. Written on 2026-10-20 for the app as it is (families, coaches and the office),
+and brought up to date on 2026-10-26 for the update with classes taught together.
 Before pasting a later version, read each paragraph against the app that day: the stores reject a description that
 promises something the app doesn't do.
 
@@ -33,14 +34,14 @@ FOR FAMILIES
 A parent with more than one child sees them together or one at a time.
 
 FOR COACHES
-• Home: today's classes, your hours this week and what's left to do.
-• Schedule: your classes, day by day.
+• Home: the classes in your hours today with the coaches in with you, your hours this week and what's left to do.
+• Schedule: every class, day by day, laid out like the academy's sheets, with yours marked and who's in.
 • Availability: the days and times you can teach.
 • Scan: photograph a paper target, or choose a photo of one. The app reads and scores the shots, you check them, and it files the card with its scores in the student's folder.
 • The students, with their classes, scores and files; the academy's news; your pay, by pay period.
 
 FOR THE OFFICE
-• Today's classes, and the schedule by coach.
+• Today's classes with the coaches in, the schedule laid out like the academy's sheets, and marking who's here.
 • Every student, with their classes, scores, files and family contacts.
 • Scan, the academy's Drive, progress reports, the coaches and the academy's news.
 
@@ -60,7 +61,17 @@ email and phone from the website's Settings → Academy; guideline 1.5).
 moves there, `docs/DEPLOY.md`).
 **Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app).
 **Category:** Sports; secondary Education.
-**What's New:** App Store Connect doesn't ask for it on the first version.
+**What's New:** App Store Connect doesn't ask for it on the first version. For the update with classes taught together
+(4000; Apple refuses vague notes, guideline 2.3.12):
+
+```
+Classes now work as they do at the academy: every coach in at a class's time teaches it together.
+• Schedule: each class laid out like the academy's sheets, with its seats, every student in their level's colour with their rifle, make-ups, practice and trials in their own colours, and the coaches in.
+• Coaches see every class, with theirs marked, and who's in with them.
+• The office marks students here, a no-show or canceled from a class.
+• Home: today's classes with the coaches in; for a coach, the classes in their hours.
+• The week runs Monday to Sunday; calendars start on Sunday.
+```
 
 The words "for kids" or "for children" stay out of every text: Apple keeps them for its Kids category (guideline
 2.3.8).

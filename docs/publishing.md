@@ -40,8 +40,9 @@ For the **App Store**, in this order (each is a step in [apple/app-store.md](pub
 5. Fill in App Store Connect from the prepared texts and screenshots, then submit (steps 11–23).
 6. Answer Apple if it asks anything, then release (steps 24–26).
 
-For **Google Play**, now: check whether HyberTec's developer account is personal or an organization, and tell Claude
-Code ([google-play/account.md](publishing/google-play/account.md)). The rest waits until Android has been tried.
+For **Google Play**: HyberTec's developer account is an **organization** account (HyberTec LLC), verified (the owner,
+2026-10-26), so no closed test comes first. When Android is ready: [google-play/testing.md](publishing/google-play/testing.md)
+(the app, the first upload, the internal testers), then [google-play/production.md](publishing/google-play/production.md).
 
 ## The guides
 
@@ -50,9 +51,8 @@ Code ([google-play/account.md](publishing/google-play/account.md)). The rest wai
 | [apple/app-store.md](publishing/apple/app-store.md) | The App Store, from Apple's account to the release | Now |
 | [apple/testflight.md](publishing/apple/testflight.md) | Trying the store build on phones first | Optional |
 | [apple/rules.md](publishing/apple/rules.md) | Apple's rules and how Sky Arc meets them; the decisions behind the answers | When Apple asks something |
-| [google-play/account.md](publishing/google-play/account.md) | Which kind of developer account HyberTec has, and what it changes | Now |
-| [google-play/testing.md](publishing/google-play/testing.md) | Creating the app, the first upload, testers, the 14-day test if needed | Later |
-| [google-play/production.md](publishing/google-play/production.md) | Google's forms, the store page, the release | Later |
+| [google-play/testing.md](publishing/google-play/testing.md) | The developer account, creating the app, the first upload, testers | When Android is ready |
+| [google-play/production.md](publishing/google-play/production.md) | Google's forms, the store page, the release | After the internal test |
 | [updates.md](publishing/updates.md) | Every update after the first release, both stores | After the first release |
 | [store/](store/) | The texts to paste: the store pages, the age rating, the review notes and logins, the privacy answers, TestFlight's notes | While following the guides |
 
@@ -63,9 +63,8 @@ Code ([google-play/account.md](publishing/google-play/account.md)). The rest wai
 | Apple Developer Program (HyberTec LLC) | $99 a year, already paid for HyberTec's apps | – | – |
 | App Store: account steps, key, record, upload, the pages, submit | – | About 1½ hours | Apple's review: 24–48 hours is Apple's aim; new apps have waited longer since October 2026, sometimes weeks |
 | TestFlight, if wanted | – | 15 minutes | Internal: minutes. External: about a day |
-| Google Play developer account, if a new one is needed | $25 once | 30 minutes | Google's checks: days; a D-U-N-S number, if HyberTec has none: up to 30 days |
+| Google Play developer account | Paid; HyberTec LLC's organization account, verified (2026-10-26) | – | – |
 | Google Play: the app, the forms, the first upload | – | About 2 hours | Each review: hours to 7 days |
-| Google Play's closed test, on a personal account only | – | Finding 12 testers | 14 days, then about a week |
 | Every update | – | 5 minutes plus a few in each store | Apple about a day and a half; Google hours to days |
 
 Nothing costs money per release.

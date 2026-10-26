@@ -13,12 +13,16 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    reviewers' login is an admin with the academy's real data: paste the new notes (`docs/store/review-notes.md`) into
    App Review Information if App Store Connect lets you while it waits. No second submission while it's in review
    (Goo, 2026-10-26): the phone's update for classes taught together goes up afterwards, when Goo says.
-2. **Google Play:** which kind of developer account HyberTec has (personal or organization): it decides whether a
-   two-week closed test comes first (`docs/publishing/google-play/account.md`).
+2. **Google Play:** HyberTec's developer account is verified as an organization (HyberTec LLC; 2026-10-26), so no
+   closed test comes first. Publish the Android app once the phone's update below is merged: try it on Android (the
+   emulator, `npm run android:sim`, or internal testing), then `docs/publishing/google-play/testing.md` and
+   `production.md`.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
-4. **The phone app, on the MacBook Pro:** start a Claude Code session there with the prompt in `docs/mobile-classes.md`;
-   it brings the phone app to classes taught together, on top of the website's branch.
+4. **The phone app's update for classes taught together** (`feat/mobile-classes`, `docs/mobile-classes.md`): look at it
+   on the simulator (`npm run iphone:sim`, from a copy of the repository whose folder path has no spaces: the iPhone
+   build fails in `Sky Arc Academy`, `docs/running-the-apps.md`), merge it, and upload it once Apple's review of 1.0 is
+   over (`docs/publishing/updates.md`; its What's New is in `docs/store/listing.md`). Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 

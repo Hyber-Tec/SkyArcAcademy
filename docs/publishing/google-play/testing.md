@@ -1,8 +1,12 @@
 # Google Play: the first upload and testing
 
-From the developer account to Sky Arc on testers' Android phones. **Later:** Android follows the iPhone, once the app
-has been tried on Android phones (the owner, 2026-10-20). Start with [account.md](account.md). Checked against Google's
-help on 2026-10-20.
+From the developer account to Sky Arc on testers' Android phones. Android follows the iPhone, once the app has been
+tried on Android phones (the owner, 2026-10-20). Checked against Google's help on 2026-10-20.
+
+**The developer account** is HyberTec LLC's **organization** account, verified (the owner, 2026-10-26): Google
+publishes the app once it has reviewed it, with no closed test first (a personal account would have needed 12 testers
+for 14 days: https://support.google.com/googleplay/android-developer/answer/14151465). Sign in at
+https://play.google.com/console with the Google account that holds it.
 
 Google reviews testing releases too: "a few hours or up to seven days (or longer in exceptional cases)", longer for new
 accounts (https://support.google.com/googleplay/android-developer/answer/9859654).
@@ -14,6 +18,12 @@ accounts (https://support.google.com/googleplay/android-developer/answer/9859654
    - Default language: **English (United States)**
    - App or game: **App**; Free or paid: **Free**
    - tick the declarations (Developer Program Policies, US export laws) → **Create app**.
+
+   Do it early, even before Android is ready: since September 30, 2026 Android apps in Brazil, Indonesia, Singapore and
+   Thailand must come from verified developers, worldwide in 2027. Google Play developers need no new step: Play Console
+   registers the app's package name (`com.skyarcacademy.app`) when the app is created and uploaded, and keeping
+   **Google Play App Signing** claims it
+   (https://developer.android.com/developer-verification/guides/google-play-console).
 
 ## Part 2: The first upload, by hand (once)
 
@@ -64,23 +74,15 @@ Google takes the very first build only from the Play Console's page; after that,
 9. **From now on, one command:** `npm run publish:android` (internal testing), `-- --track closed` (closed testing),
    `-- --track production`. Each asks you to commit the release number afterwards.
 
-## Part 5: Closed testing (required on a personal account)
+## Part 5: Closed testing (optional)
 
-Optional on an organization account. On a personal account made after November 13, 2023, Google lets the app reach
-production only after at least 12 testers have stayed opted in to a closed test "continuously for the preceding 14
-days" (https://support.google.com/googleplay/android-developer/answer/14151465).
+HyberTec's organization account needs no closed test: once the internal testers have tried the app, go on to the store
+page and the release ([production.md](production.md)). A closed test is still a way to give the app to more people
+first (some families, say), with no minimum and no waiting period:
 
-10. **Find 12 or more testers** with Android phones who'll keep the app for two weeks: the academy's staff, and some
-    families. Each signs in with the email the academy has for them.
-11. **Start the closed test.** **Test and release** → **Testing** → **Closed testing** → **Manage track** (or **Create
-    track**) → **Testers**: an email list with their Google account emails → **Countries / regions**: **United States**
-    → **Create new release** → **Add from library** (the build from internal testing) → **Next** → **Save and
-    publish**. Send the testers the join link from the **Testers** tab.
-12. **Wait 14 days.** The Dashboard counts the testers who joined and the days. A tester who leaves the test breaks the
-    count, so ask them to keep the app until the end.
-13. **Apply for production.** Dashboard → **Apply for production**. Google asks how hard testers were to recruit, how
-    they used the app and what they said; who the app is for, its value and the installs expected in its first year (the
-    academy's families and staff); and what changed after the test and how you decided it was ready. Google answers
-    within about a week.
+10. **Test and release** → **Testing** → **Closed testing** → **Manage track** (or **Create track**) → **Testers**: an
+    email list with their Google account emails → **Countries / regions**: **United States** → **Create new release** →
+    **Add from library** (the build from internal testing) → **Next** → **Save and publish**. Send the testers the join
+    link from the **Testers** tab.
 
 Then the store page and the release: [production.md](production.md).

@@ -1,8 +1,8 @@
 # Google Play: the store page and the release
 
-The forms Google asks every app to fill in, the store page, and the release to everyone. **Later**, after
-[testing.md](testing.md). The texts to paste are in [docs/store/](../../store/). Checked against Google's help on
-2026-10-20.
+The forms Google asks every app to fill in, the store page, and the release to everyone, after
+[testing.md](testing.md) (HyberTec's organization account needs no closed test before it). The texts to paste are in
+[docs/store/](../../store/). Checked against Google's help on 2026-10-20.
 
 ## Part 1: App content (once)
 
@@ -12,9 +12,10 @@ same forms). Each takes a few minutes.
 1. **Privacy policy:** `https://skyarcacademy.web.app/privacy`.
 2. **Ads:** **No, my app does not contain ads.**
 3. **Sign-in details** (Google's newer name for **App access**): **All or some functionality is restricted** → **Add
-   instructions** four times, one per login from `open -e mobile/.publish/review-logins.json` (office, coach, parent,
-   delete-test), each with its text from [review-notes.md](../../store/review-notes.md), "Google Play". Google wants
-   logins that work at all times, from anywhere, with no one-time codes: these do.
+   instructions** once, for the review login (the office's, an admin; since 2026-10-26 the only one), its email and
+   password from `open -e mobile/.publish/review-logins.json` and its text from
+   [review-notes.md](../../store/review-notes.md), "Google Play". Google wants logins that work at all times, from
+   anywhere, with no one-time codes: it does.
 4. **Content rating:** **Start questionnaire** → your email → category **All other app types** → the answers in
    [listing.md](../../store/listing.md), "Google Play: content rating" → **Save** → **Submit**. Since July 15, 2026
    Google doesn't allow unrated apps.

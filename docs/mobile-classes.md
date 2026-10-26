@@ -5,6 +5,13 @@ has to change to match, for the Claude Code session that does it on Goo's MacBoo
 `docs/DECISIONS.md` §21; the website's side is merged (pull request #31) and live, and production has held the
 academy's real data since 2026-10-26.
 
+**Built on 2026-10-26** (the branch `feat/mobile-classes`, on top of #33, the week from Monday), screen by screen as
+listed below, with two differences: the coach's to-do drops "classes waiting for the admin", as the website's did (a
+class with no coach in is the office's to sort out), and the website's `classViews`, `cellsOf`, `coachColor` and its
+check for classes left with no coach in moved to `shared/` (`classesLeftUncovered`, `noCoachWarning`), so the phone and
+the website use the same code. Still to do: the App Store update, when Goo says (its What's New is in
+`docs/store/listing.md`), then `npx tsx scripts/lead-coach.ts --clear`.
+
 ## What changed
 
 - **A class is its own record:** `branches/{b}/classes/{classId}`, the type `AcademyClass` in `shared/src/types.ts`
