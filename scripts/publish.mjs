@@ -452,6 +452,11 @@ async function play(token, method, url, { body, contentType = "application/json"
   }
   if (!r.ok) {
     const message = json.error?.message ?? json.raw ?? `HTTP ${r.status}`;
+    // Google won't send an edit for review by itself while the Play Console holds other changes not sent yet: the edit
+    // is kept, unsent, for the Publishing overview to send with them.
+    if (/changesNotSentForReview/.test(message) && url.endsWith(":commit")) {
+      return { ...(await play(token, method, `${url}?changesNotSentForReview=true`, { body, contentType })), notSentForReview: true };
+    }
     const hint = /not found|does not exist|Package not found/i.test(message)
       ? `Google Play doesn't know ${APP_ID} under this account yet: the app's very first bundle has to be uploaded by hand in the Play Console (docs/publishing/google-play/testing.md, part 2). After that, this command does every upload.`
       : /Only releases with status draft/i.test(message)
@@ -515,14 +520,16 @@ async function android() {
   await play(token, "PUT", `${base}/edits/${edit.id}/tracks/${encodeURIComponent(trackName)}`, {
     body: JSON.stringify({ track: trackName, releases: [{ name: `${release.version} (${release.build})`, versionCodes: [String(uploaded.versionCode ?? release.build)], status: draft ? "draft" : "completed" }] }),
   });
-  await play(token, "POST", `${base}/edits/${edit.id}:commit`);
+  const committed = await play(token, "POST", `${base}/edits/${edit.id}:commit`);
   console.log(`\n✓ Uploaded ${APP_NAME} ${release.version} (build ${release.build}) to Google Play's ${track} track${draft ? ", as a draft" : ""}.`);
   console.log(
     draft
       ? `  Finish the release in the Play Console: ${TRACK_PAGE[track]} → the new release → Next → Save → (Publishing overview) Send for review.`
-      : track === "internal"
-        ? `  The internal testers get it within minutes, without a review: Play Store → Sky Arc → Update. The Play Console: ${TRACK_PAGE[track]}.`
-        : `  Google reviews it (hours to a few days; the first time up to a week), then the people on that track get it. The Play Console: ${TRACK_PAGE[track]}.`,
+      : committed.notSentForReview
+        ? "  The Play Console holds other changes not sent for review yet, so Google kept this one with them: Publishing overview → Send changes for review."
+        : track === "internal"
+          ? `  The internal testers get it within minutes, without a review: Play Store → Sky Arc → Update. The Play Console: ${TRACK_PAGE[track]}.`
+          : `  Google reviews it (hours to a few days; the first time up to a week), then the people on that track get it. The Play Console: ${TRACK_PAGE[track]}.`,
   );
   console.log(`  ${bumpReminder(release)}\n`);
 }
