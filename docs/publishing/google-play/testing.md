@@ -54,9 +54,11 @@ Google takes the very first build only from the Play Console's page; after that,
 5. **Add the fingerprints to Firebase.** Google Play signs the app with its own key, so Firebase must know it:
    https://console.firebase.google.com/project/skyarcacademy/settings/general → **Your apps** → the Android app → **Add
    fingerprint**, four times: the upload key's SHA-1 and SHA-256 (step 2), and the **App signing key certificate**'s
-   SHA-1 and SHA-256 (Play Console → **Test and release** → **Setup** → **App signing**). Then ask Claude Code to run
-   `npm run phone:setup`, which downloads the updated Firebase file for the next build. Until then Google sign-in fails
-   in copies from Google Play; email and password work.
+   SHA-1 and SHA-256 (Play Console → **Test and release** → **Setup** → **App signing**). Until the App signing key's are
+   in, Google sign-in fails in copies from Google Play (email and password work); once they are, it works in the builds
+   already uploaded, within minutes, with no new build: Google checks the phone's copy against the fingerprints Firebase
+   holds, not against the app's Firebase file. Then ask Claude Code to run `npm run phone:setup`, which keeps this Mac's
+   copy of that file up to date for the next build.
 
 ## Part 4: Uploads by command (once)
 

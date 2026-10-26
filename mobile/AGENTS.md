@@ -172,5 +172,7 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
   text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
   the phone's browser (or its mail and phone apps).
-- **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). A new
-  permission means new questions from both stores (docs/publishing.md).
+- **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). On Android the
+  photo library is the system's photo picker, which needs no permission, and the storage and draw-over-other-apps
+  permissions Expo's template and libraries add are blocked (`android.blockedPermissions`). A new permission means new
+  questions from both stores (docs/publishing.md).

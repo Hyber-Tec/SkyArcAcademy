@@ -241,6 +241,10 @@ export default ({ config }: ConfigContext): ExpoConfig =>
         monochromeImage: "./assets/images/android-icon-monochrome.png",
       },
       predictiveBackGestureEnabled: false,
+      // Expo's template and the image picker's own manifest ask for the phone's shared storage and for drawing over
+      // other apps. The app uses neither (photos come through Android's photo picker, files stay in the app's own
+      // folders), so the only permission it asks people for is the camera.
+      blockedPermissions: ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.SYSTEM_ALERT_WINDOW"],
     },
     plugins: [
       "expo-router",
