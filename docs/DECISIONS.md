@@ -612,5 +612,9 @@ modern, professional", without changing much more.
   in from the website.
 - **The phone app changes in its own session** (Goo's MacBook Pro), from `docs/mobile-classes.md`. No second App Store
   submission while 1.0 is in review: the change ships as an update afterwards.
-- **When it goes live:** the website's change is merged at the move (`docs/TODO.md`), not before: production's sample
-  data still has one coach per class, and the reviewers' phone app reads it that way.
+- **When it goes live:** Goo merged it on 2026-10-26 and moved the real data in the same day, during Apple's review
+  of 1.0: Apple doesn't check whether data is real, and Goo chose to let the review account, an admin, see the
+  academy's real data rather than wait (the trade-off, the reviewers seeing real children and their parents' contacts,
+  was laid out first). The office login keeps its email and password as an admin of its own; the coach, parent and
+  student logins went with the sample people. So the 1.0 build can still open a class (it finds one by a single coach),
+  each seat carries its class's lead coach until the phone's update (`scripts/lead-coach.ts`, `docs/TODO.md`).

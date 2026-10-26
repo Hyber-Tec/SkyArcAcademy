@@ -33,10 +33,9 @@ How a change reaches people once Sky Arc is in the stores. Most changes need no 
 
 ## Keep in mind
 
-- **The review logins** must keep working for every review: don't remove the sample data from production while a
-  version is in review. If a reviewer deleted the student login, `npx tsx scripts/review-logins.ts` brings it back.
-- **Once the academy's real students are in production**, the office and coach review logins would see them. Before
-  the first submission after that, ask Claude Code for review logins that see sample people only.
+- **The review login** must keep working for every review. Since 2026-10-26 it's one admin with the academy's real
+  data (Goo's call, `docs/DECISIONS.md` §21; `docs/store/review-notes.md`). If a reviewer deleted it,
+  `npx tsx scripts/review-logins.ts --real-data` brings it back with the same password.
 - **A new permission or a new kind of data** (location, notifications, a new form) changes Apple's App Privacy and
   Google's Data safety answers ([privacy-answers.md](../store/privacy-answers.md)), and the privacy policy. Claude Code
   says so when a change adds one.

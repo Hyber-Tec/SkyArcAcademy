@@ -2,8 +2,8 @@
 
 The website and the data changed: a class is no longer one coach's. This page says what the phone app (`mobile/`)
 has to change to match, for the Claude Code session that does it on Goo's MacBook Pro. The decision is
-`docs/DECISIONS.md` §21; the website's side is on the branch `feat/classes-together` (its pull request says what it
-does).
+`docs/DECISIONS.md` §21; the website's side is merged (pull request #31) and live, and production has held the
+academy's real data since 2026-10-26.
 
 ## What changed
 
@@ -14,8 +14,10 @@ does).
   label in the sheets' own words: "MU for 10/13" (a make-up), "Practice", "Trial 1". `seatKind(note)` in
   `shared/src/schedule/classes.ts` reads it. A seat can cover part of the class (a half-hour trial): its
   `startMin`/`endMin` then differ from the class's.
-- **New sessions have `coachId: ''` and `coachName: ''`.** Older ones (production's sample data until the move) keep
-  their one coach. Don't build anything from `coachId` any more, and never build a Firestore path from it.
+- **A seat's `coachId` is the past.** Seats the website adds have `coachId: ''`. Production's imported seats carry their
+  class's lead coach for now, only so the phone app 1.0 can open a class (`scripts/lead-coach.ts`); it's cleared once
+  the update is out. So the update must not read `coachId` at all (and never build a Firestore path from it): a class
+  is `classId`, and its coaches are the ones in.
 - **Who's in is each person's availability that day** (`availability/{staffId}_{dateKey}`), which now also carries
   `staffName` and `staffRole`. **Every coach in at a class's time teaches it**; the manager (an admin) can be in
   without teaching. `coachesIn(class, thatDaysAvailability, dayHours, isCoach)` in `shared/src/schedule/classes.ts`
@@ -93,7 +95,8 @@ Everything the phone groups by coach today. These are the places that read `coac
 
 - The practice copy (the emulators) has sample data in the new shape: classes like the academy's week (Monday 4:30,
   6 and 7 PM, and so on), six seats each, make-ups, practice and trials, and who's in each day (Monday three coaches
-  from 4 PM, one leaving at 6). `npm run iphone:sim` seeds it (`docs/running-the-apps.md`).
+  from 4 PM, one leaving at 6). `npm run iphone:sim` seeds it (`docs/running-the-apps.md`). Try things there:
+  production holds real people now, and its only extra account is the App Store's review login (an admin).
 - The website on the same emulators shows the same week: `npm run dev:emulators`, then the Schedule page.
 - Checks, as CI runs them: `npm --prefix mobile run typecheck` and `npm --prefix mobile run lint`. Also run
   `npm test` when shared code changes.
@@ -101,21 +104,24 @@ Everything the phone groups by coach today. These are the places that read `coac
 ## Rules for that session
 
 - CLAUDE.md and `mobile/AGENTS.md` apply.
-- Branch from `feat/classes-together`, or from `main` once its pull request is merged. Open a pull request.
+- Branch from `main` (the website's side is merged). Open a pull request.
+- When the update is out, the website's last step is `npx tsx scripts/lead-coach.ts --clear` (`docs/TODO.md`).
+- The update's App Store review: the review login is now an admin with the academy's real data, the only account
+  (`docs/store/review-notes.md`); say in the notes what changed.
 - Don't upload a build to App Store Connect or Google Play: 1.0 is in Apple's review. The update goes up later, when
   Goo says.
 
 ## The prompt to paste (MacBook Pro, Claude Code, in the repository)
 
 ```text
-Pull the latest and check out the branch feat/classes-together (git fetch; git checkout feat/classes-together;
-git pull). Then make a new branch from it, feat/mobile-classes. Read CLAUDE.md, mobile/AGENTS.md,
-docs/DECISIONS.md §21 and docs/mobile-classes.md: the website now has classes taught together (a class is its own
-record, every coach in at its time teaches it, coaches see every class), and the phone app (mobile/) still groups
-classes by one coach. Bring the phone app to the new model, screen by screen, as docs/mobile-classes.md lists: the
-staff tabs (Home, Schedule, a class, a coach, a student, Scan, Pay), the coach's to-do and Availability, and the
-family tabs. Use the shared helpers it names, and the level colours in shared/src/schedule/seatColors.ts. Try every
-changed screen on the iPhone simulator with the practice copy (npm run iphone:sim), in light and dark mode, and run
-npm --prefix mobile run typecheck and lint. Don't upload anything to App Store Connect or Google Play. Open a pull
-request when it works, and tell me what you changed and what I should look at.
+Pull the latest main (git checkout main; git pull) and make a new branch from it, feat/mobile-classes. Read
+CLAUDE.md, mobile/AGENTS.md, docs/DECISIONS.md §21 and docs/mobile-classes.md: the website now has classes taught
+together (a class is its own record, every coach in at its time teaches it, coaches see every class), it's live with
+the academy's real data, and the phone app (mobile/) still groups classes by one coach. Bring the phone app to the
+new model, screen by screen, as docs/mobile-classes.md lists: the staff tabs (Home, Schedule, a class, a coach, a
+student, Scan, Pay), the coach's to-do and Availability, and the family tabs. Never read a seat's coachId. Use the
+shared helpers it names, and the level colours in shared/src/schedule/seatColors.ts. Try every changed screen on the
+iPhone simulator with the practice copy (npm run iphone:sim), in light and dark mode, and run npm --prefix mobile run
+typecheck and lint. Don't upload anything to App Store Connect or Google Play. Open a pull request when it works,
+and tell me what you changed and what I should look at.
 ```
