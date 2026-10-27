@@ -23,8 +23,9 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
    moves its classes around the day).
 5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
-   together; both get the demo academy for the demo logins (#41) and the marks' words. The steps, and which Mac
-   uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
+   together; both get the demo academy for the demo logins, the schedule by Day or Week with its events (#41), and the
+   marks' words. The steps, and which Mac uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0".
+   Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 

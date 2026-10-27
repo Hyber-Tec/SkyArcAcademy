@@ -36,6 +36,9 @@ const light = {
   /** The demo academy's mark (docs/DECISIONS.md §22), the website's amber: its text and its fill. */
   demo: "#7b3306",
   demoTint: "#fef3c6",
+  /** An event on the schedule (a meeting, an open practice), the website's sky blue. */
+  event: "#00598a",
+  eventTint: "#f0f9ff",
   overlay: "#00000066",
   /** Sky Arc's red (the logo's dot, #FB0202), its solid fill and its text shade, as the website's brand tokens. */
   brand: "#FB0202",
@@ -71,6 +74,8 @@ const dark: typeof light = {
   infoTint: "#3b82f62e",
   demo: "#ffd230",
   demoTint: "#ffb90026",
+  event: "#74d4ff",
+  eventTint: "#052f4a66",
   overlay: "#000000a6",
   brand: "#FB0202",
   brandSolid: "#E00000",

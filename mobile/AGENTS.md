@@ -55,11 +55,13 @@ src/state/             AuthProvider (Google, email + password, verification), Br
                        one (`isDemo`): settings, rules, time zone, member, staff record, the actor for the audit log),
                        AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
-                       may read; useClassesBetween, a range's classes with their students and the coaches in), schedule
-                       (classes.ts; the week strip; ClassCard, a class laid out like the academy's sheets; ClassRow, a
-                       class in a list; parts.tsx, the level and label colours, the seats taken, the coaches in, who's
-                       in; api.ts, the office's marks), students, drive (downloading a Drive
-                       file through the Storage rules; FileView, a file full screen, the staff's and the family's), scan
+                       may read; useClassesBetween, a range's classes with their students and the coaches in;
+                       useEventsBetween, the academy's events; useClockedIn, who's clocked in for the office), schedule
+                       (classes.ts; the week strip; ClassCard, a class laid out like the academy's sheets; WeekList, the
+                       Week view; ClassRow, a class in a list; parts.tsx, the level and label colours, the seats taken,
+                       the coaches in, who's in, a day's events; api.ts, the office's marks), students, drive
+                       (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
+                       and the family's), scan
                        (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
@@ -134,8 +136,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   person's availability that day). The shared `classViews` and `coachesIn` (`@shared/schedule/classes`) put them
   together, as on the website. **Never read a seat's `coachId`** (production's seats keep their class's lead coach only
   for the 1.0 build, until `scripts/lead-coach.ts --clear`). A student's level and a seat's label take the shared
-  colours (`@shared/schedule/seatColors`), light and dark. The office marks students (Coming, Here and No-show on the
-  day, Canceled) as the website does (`src/features/schedule/api.ts`); every other change is the website's.
+  colours (`@shared/schedule/seatColors`), light and dark. The schedule shows a Day or the Week (the academy's default
+  view first), with each day's events and who's in, as the website's. The office marks students (Coming, Here and
+  No-show on the day, Canceled; the words are the shared `SESSION_STATUS_LABELS`) as the website does
+  (`src/features/schedule/api.ts`); every other change is the website's.
 - **Month calendars scroll vertically through months**, like the iOS Calendar app (permanent rule): never a static
   month with ‹ › arrows, including date pickers (`DatePickerDialog`, `MonthScroller`). Their weeks start on Sunday, as
   calendars do; the academy's week (the schedule's week strip, "this week") runs Monday to Sunday

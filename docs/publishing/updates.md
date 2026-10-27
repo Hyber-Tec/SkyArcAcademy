@@ -51,9 +51,10 @@ Waiting on `main` until each store has answered on 1.0.0 (no second submission d
 2026-10-26). Release 1.0.0 first when it's approved, then send this one straight away.
 
 - **What it brings to the iPhone** (1.0.0 is build 2): classes taught together (#34) and the week from Monday (#33),
-  the marks' words Here and No-show (#39), and the demo academy for the demo logins (`feat/mobile-demo-academy`).
+  the marks' words Here and No-show (#39), and the demo academy for the demo logins and the schedule by Day or Week
+  with its events (#41).
 - **What it brings to Android** (1.0.0 is build 3, which already has classes taught together): the marks' words, the
-  demo academy, and three permissions it never used, gone (#37).
+  demo academy, the schedule by Day or Week (#41), and three permissions it never used, gone (#37).
 - **The steps,** after `git switch main && git pull`:
   1. Mac mini: `npm run publish:iphone -- --version 1.1.0` (the version becomes 1.1.0 and the build goes up). App Store
      Connect → Sky Arc → **+** next to **iOS App** → `1.1.0` → **What's New** from
