@@ -73,7 +73,10 @@ export function ReportPage() {
           <Button variant="ghost" size="sm" onClick={back} className="text-[#0b0b0b] hover:bg-black/5">
             <LuArrowLeft /> Back
           </Button>
-          <div className="min-w-0 flex-1 truncate text-center text-sm font-medium text-[#52514e]">{reportName(r)}</div>
+          {/* On a phone the bar has no room for the title; the report's own header right below names the period. */}
+          <div className="min-w-0 flex-1 truncate text-center text-sm font-medium text-[#52514e]">
+            <span className="hidden sm:inline">{reportName(r)}</span>
+          </div>
           {staffPortal ? (
             <Button variant="ghost" size="sm" className="text-[#0b0b0b] hover:bg-black/5" onClick={() => navigate(`/${staffPortal}/reports/${reportId}`)}>
               <LuPencil /> {staffPortal === 'admin' ? 'Edit' : 'Open'}

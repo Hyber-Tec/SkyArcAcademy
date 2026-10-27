@@ -203,7 +203,7 @@ function Dashboard({ mode }: { mode: Mode }) {
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Announcements"
-        description={admin ? 'Manage and publish announcements for your team' : 'Stay up to date with the latest updates'}
+        description={admin ? 'Write and publish news for the coaches and families.' : 'News and updates from the academy.'}
         actions={
           <>
             <InputGroup className="w-full sm:w-60">

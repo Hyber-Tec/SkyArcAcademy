@@ -141,7 +141,7 @@ function ClassBody({ v, onClose }: { v: ClassView; onClose: () => void }) {
                     ))}
                   </div>
                 ) : s.status !== 'confirmed' ? (
-                  <div className="mt-1.5 text-xs text-muted-foreground">{SESSION_STATUS_LABELS[s.status]}</div>
+                  <div className="mt-1.5 text-xs text-muted-foreground">{MARK[s.status] ?? SESSION_STATUS_LABELS[s.status]}</div>
                 ) : null}
               </li>
             )
