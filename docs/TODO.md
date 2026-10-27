@@ -6,30 +6,29 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 
 ## The owner's to-do (left for later on purpose)
 
-1. **The App Store:** Sky Arc 1.0.0 (build 2, uploaded 2026-10-21) is waiting for Apple's review (still on 2026-10-26,
-   submitted 2026-10-21). When Apple
-   answers: release it (`docs/publishing/apple/app-store.md`, steps 25–26), or give Claude Code Apple's message. If
-   Apple asks for the academy's permission (guideline 5.2.1), attach the academy's email. Since 2026-10-26 the
-   reviewers' login is an admin with the academy's real data: paste the new notes (`docs/store/review-notes.md`) into
-   App Review Information if App Store Connect lets you while it waits. No second submission while it's in review
-   (Goo, 2026-10-26): the phone's update for classes taught together goes up afterwards, when Goo says.
-2. **Google Play:** HyberTec's developer account is verified as an organization (HyberTec LLC; 2026-10-26), so no
-   closed test comes first. Sky Arc 1.0.0 (build 3, with the update for classes taught together) is in internal
-   testing since 2026-10-26, uploaded by hand. Next: `docs/publishing/google-play/testing.md` from step 4 (the testers,
-   Google sign-in's fingerprints, uploads by command), then `production.md` once the testers have tried it.
+1. **The App Store:** Sky Arc 1.0.0 (build 2) has been waiting for Apple's review since 2026-10-21 (still on
+   2026-10-27). When Apple answers, tell Claude Code: `docs/publishing.md`, "When a store answers", says what each answer
+   means (release it, or the reply to a rejection). If Apple asks for the academy's permission (guideline 5.2.1),
+   attach the academy's email. Since 2026-10-26 the reviewers' login is an admin with the academy's real data: paste
+   the new notes (`docs/store/review-notes.md`) into App Review Information if App Store Connect lets you while it
+   waits. No second submission while it's in review (Goo, 2026-10-26).
+2. **Google Play:** Sky Arc 1.0.0 (build 3, with classes taught together) has been in Google's review since 2026-10-26.
+   When Google answers, tell Claude Code (`docs/publishing.md`, "When a store answers"): an approved first release
+   goes live by itself.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
 4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
    bottom of the sidebar) to show the made-up academy, and turn it off for the real one. Before a showing, ask Claude
    Code to refresh the demo (`npm run seed:sample` on production moves its classes around the day).
-5. **The iPhone's update for classes taught together** (merged on 2026-10-26, #34; Android's build 3 already has it):
-   upload it once Apple's review of 1.0 is over (`docs/publishing/updates.md`; its What's New is in
-   `docs/store/listing.md`). Then clear the lead coach (below).
+5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
+   together; both get the demo academy for the demo logins (being built on the MacBook Pro,
+   `feat/mobile-demo-academy`) and the marks' words. The steps, and which Mac uploads which store:
+   `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 
-- **The demo academy on the phone:** the phone app shows only the real academy (`docs/DECISIONS.md` §22). A Demo
-  data switch there would come with a phone update, if wanted.
+- **The demo academy on the phone:** being built on the MacBook Pro (2026-10-27): a demo login opens the demo there
+  too. Owners in both academies could also get the website's Demo data switch on the phone, if wanted.
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
@@ -86,6 +85,6 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   3. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
      owner as an owner, A18).
   4. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
-     open a class. Once the phone's update reads classes (`docs/mobile-classes.md`) is out, run
-     `npx tsx scripts/lead-coach.ts --clear`; until then, run `--apply` again after the office adds students.
+     open a class. Android's build 3 already reads classes; once the iPhone's 1.1.0 is out, run
+     `npx tsx scripts/lead-coach.ts --clear`. Until then, run `--apply` again after the office adds students.
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".

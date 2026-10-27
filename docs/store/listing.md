@@ -73,6 +73,14 @@ Classes now work as they do at the academy: every coach in at a class's time tea
 • The week runs Monday to Sunday; calendars start on Sunday.
 ```
 
+**Google Play's release notes** for 1.1.0 (500 characters; Android's 1.0.0 already had classes taught together):
+
+```
+• Attendance reads Here and No-show, as on the website.
+• Sky Arc asks for the camera only: three permissions it never used are gone.
+• Smaller fixes.
+```
+
 The words "for kids" or "for children" stay out of every text: Apple keeps them for its Kids category (guideline
 2.3.8).
 
