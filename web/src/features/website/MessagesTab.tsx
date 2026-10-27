@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { IconType } from 'react-icons'
 import { LuCalendarDays, LuCheck, LuInbox, LuLanguages, LuMail, LuPhone, LuReply, LuRotateCcw, LuTag, LuTrash2, LuUserRound } from 'react-icons/lu'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
-import { addDays, dateKeyOf, formatInstant, formatInstantTime, todayKey } from '@shared/time'
-import type { TimestampLike, WithId } from '@shared/types'
+import type { WithId } from '@shared/types'
 import { CONTACT_TOPIC_LABELS, type ContactTopic, TRIAL_EXPERIENCE_LABELS, type TrialExperience } from '@shared/website/messages'
 import type { WebsiteMessage } from '@shared/website/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -17,33 +17,28 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useMembers } from '@/features/data/hooks'
 import { cn } from '@/lib/utils'
 import { deleteMessage, setMessageStatus } from './api'
+import { kindLabel, when } from './messageText'
 import { IconAction } from './parts'
 
 const LANGUAGES: Record<string, string> = { en: 'English', ko: 'Korean' }
 
 const isDone = (m: WebsiteMessage) => m.status === 'done'
 
-function kindLabel(m: WebsiteMessage): string {
-  return m.kind === 'trial' ? 'Trial request' : 'Question'
-}
-
-/** "Today, 4:02 PM", "Yesterday, 9:15 AM", or the date and time, in the academy's time zone. */
-function when(t: TimestampLike | null | undefined, timezone: string): string {
-  if (!t) return 'Just now'
-  const d = t.toDate()
-  const day = dateKeyOf(d, timezone)
-  const today = todayKey(timezone)
-  if (day === today) return `Today, ${formatInstantTime(d, timezone)}`
-  if (day === addDays(today, -1)) return `Yesterday, ${formatInstantTime(d, timezone)}`
-  return formatInstant(d, timezone, { dateStyle: 'medium', timeStyle: 'short' })
-}
-
 /**
  * Trial requests and questions sent from the website, newest first. The office replies by email (in the language the
- * family wrote in), then marks each one done.
+ * family wrote in), then marks each one done. `?m=<id>` (from Home's Messages) shows that one, marked.
  */
 export function MessagesTab({ messages, loading }: { messages: WithId<WebsiteMessage>[]; loading: boolean }) {
-  const [show, setShow] = useState<'new' | 'done'>('new')
+  const [params] = useSearchParams()
+  const focus = params.get('m')
+  const focused = messages.find((m) => m.id === focus)
+  // The list a focused message is in, until someone picks one.
+  const [picked, setShow] = useState<'new' | 'done' | null>(null)
+  const show = picked ?? (focused && isDone(focused) ? 'done' : 'new')
+  const found = !!focused
+  useEffect(() => {
+    if (found) requestAnimationFrame(() => document.getElementById(`message-${focus}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+  }, [focus, found])
   const { data: members } = useMembers()
   const names = useMemo(() => new Map(members.map((m) => [m.email, m.displayName || m.email])), [members])
   const counts = { new: messages.filter((m) => !isDone(m)).length, done: messages.filter(isDone).length }
@@ -82,7 +77,7 @@ export function MessagesTab({ messages, loading }: { messages: WithId<WebsiteMes
       ) : (
         <div className="space-y-3">
           {rows.map((m) => (
-            <MessageCard key={m.id} m={m} doneByName={m.doneBy ? (names.get(m.doneBy) ?? m.doneBy) : null} />
+            <MessageCard key={m.id} m={m} focused={m.id === focus} doneByName={m.doneBy ? (names.get(m.doneBy) ?? m.doneBy) : null} />
           ))}
         </div>
       )}
@@ -102,7 +97,7 @@ function Detail({ icon: Icon, label, children, className }: { icon: IconType; la
   )
 }
 
-function MessageCard({ m, doneByName }: { m: WithId<WebsiteMessage>; doneByName: string | null }) {
+function MessageCard({ m, focused, doneByName }: { m: WithId<WebsiteMessage>; focused: boolean; doneByName: string | null }) {
   const { branchId, actor, branch, timezone } = useBranch()
   const { confirm, dialog } = useConfirm()
   const [busy, setBusy] = useState(false)
@@ -142,7 +137,11 @@ function MessageCard({ m, doneByName }: { m: WithId<WebsiteMessage>; doneByName:
   }
 
   return (
-    <Card className={cn('gap-0 py-0', !done && 'border-l-[3px] border-l-brand')} data-testid="website-message">
+    <Card
+      id={`message-${m.id}`}
+      className={cn('scroll-mt-20 gap-0 py-0', !done && 'border-l-[3px] border-l-brand', focused && 'ring-2 ring-brand/40')}
+      data-testid="website-message"
+    >
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 pt-4 pb-3">
         <div className="min-w-0 flex-1 basis-48">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

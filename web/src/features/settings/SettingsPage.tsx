@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { SignupShareCard } from '@/features/access/SignupShare'
 import { AuditLogSection } from '@/features/audit/AuditLogSection'
+import { WebsiteSettings } from '@/features/website/WebsiteSettings'
 import { type AuditInput, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,8 @@ import { SETTINGS_SECTIONS, type FieldDef } from './schema'
 
 const SECTIONS = [
   { key: 'academy', title: 'Academy' },
+  // The public website (docs/DECISIONS.md §18): its own page until 2026-10-27; its messages show on Home too.
+  { key: 'website', title: 'Website' },
   ...SETTINGS_SECTIONS.map((s) => ({ key: s.key, title: s.title })),
   { key: 'audit-log', title: 'Audit Log' },
 ]
@@ -76,8 +79,10 @@ export function SettingsPage() {
             ))}
           </ul>
         </nav>
-        <div className={cn('min-w-0 flex-1', active === 'audit-log' ? 'lg:max-w-5xl' : 'lg:max-w-3xl')}>
-          {active === 'academy' ? (
+        <div className={cn('min-w-0 flex-1', active === 'website' ? 'lg:max-w-6xl' : active === 'audit-log' ? 'lg:max-w-5xl' : 'lg:max-w-3xl')}>
+          {active === 'website' ? (
+            <WebsiteSettings />
+          ) : active === 'academy' ? (
             <div className="space-y-4">
               <BranchProfileCard />
               {isOwner ? <AcademyRulesCard /> : <BusinessRulesCard />}

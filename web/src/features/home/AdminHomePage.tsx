@@ -9,9 +9,11 @@ import { useStaffList } from '@/features/data/hooks'
 import { coachColor } from '@/features/schedule/seatParts'
 import { useSessionDialog } from '@/features/schedule/useSessionDialog'
 import type { ClockShift } from '@/features/timeclock/api'
+import { useWebsiteMessages } from '@/features/website/api'
 import { ClockOutDialog } from './ClockOutDialog'
 import { InBuildingCard } from './InBuildingCard'
 import { LatestScoresCard } from './LatestScoresCard'
+import { MessagesCard } from './MessagesCard'
 import { NeedsYouCard } from './NeedsYouCard'
 import { TodayCard } from './TodayCard'
 import { useAttention } from './attention'
@@ -25,7 +27,7 @@ function greeting(minutes: number) {
 
 /**
  * Admin → Home (Round 3, option 1 "Today"): a calm agenda of today's classes with a red "now" line, the latest scores,
- * and a side rail with what needs the admin and who is in the building.
+ * and a side rail with what needs the admin, the messages from the website, and who is in the building.
  */
 export function AdminHomePage() {
   const { timezone, actor } = useBranch()
@@ -38,6 +40,8 @@ export function AdminHomePage() {
   const { data: staff } = useStaffList()
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
   const nameOf = useCallback((id: string, fallback?: string) => staffById.get(id)?.name ?? (fallback || 'Former staff'), [staffById])
+  const messages = useWebsiteMessages()
+  const newMessages = messages.data.filter((m) => m.status !== 'done').length
   const conflictMap = useMemo(() => new Map(attention.conflicts.map((k) => [k.v.c.id, k.conflicts])), [attention.conflicts])
 
   const classes = attention.byDate.get(today) ?? []
@@ -72,7 +76,12 @@ export function AdminHomePage() {
               </span>
             ) : attention.loading ? null : (
               'Nothing needs you right now.'
-            )}
+            )}{' '}
+            {newMessages ? (
+              <Link to="/admin/settings/website/messages" className="font-medium text-foreground underline-offset-2 hover:underline">
+                {plural(newMessages, 'new message')} from the website.
+              </Link>
+            ) : null}
           </p>
         </div>
         <div className="flex gap-2">
@@ -104,6 +113,7 @@ export function AdminHomePage() {
         </div>
         <div className="order-1 space-y-6 lg:order-2">
           <NeedsYouCard attention={attention} onFixClock={setFixing} />
+          <MessagesCard messages={messages.data} loading={messages.loading} />
           <InBuildingCard
             shifts={attention.shifts}
             people={peopleToday}

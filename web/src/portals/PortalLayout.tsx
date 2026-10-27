@@ -47,8 +47,8 @@ import { cn } from '@/lib/utils'
 import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLeaves } from './nav'
 
 /**
- * Live counts shown next to nav entries, by nav key (Home: needs attention; coach Announcements and families' News:
- * unread; Website: messages from the website not yet marked done).
+ * Live counts shown next to nav entries, by nav key (Home: what needs attention and the messages from the website not
+ * yet marked done; coach Announcements and families' News: unread).
  */
 const NavBadges = createContext<Record<string, number>>({})
 
@@ -57,8 +57,8 @@ function NavBadgesProvider({ portal, children }: { portal: Portal; children: Rea
   const unread = useUnreadAnnouncementCount(portal === 'coach')
   const news = useUnreadNewsCount(portal === 'parent' || portal === 'student')
   const website = useNewWebsiteMessageCount(portal === 'admin')
-  const total = portal === 'admin' ? attention.total : 0
-  const value = useMemo(() => ({ home: total, announcements: unread, news, website }), [total, unread, news, website])
+  const total = portal === 'admin' ? attention.total + website : 0
+  const value = useMemo(() => ({ home: total, announcements: unread, news }), [total, unread, news])
   // Installed app icon: unread announcements in the coach portal (TE's News count).
   useEffect(() => {
     if (portal !== 'coach') return

@@ -1,7 +1,6 @@
 import type { IconType } from 'react-icons'
 import { LuExternalLink, LuImages, LuInbox, LuPanelsTopLeft, LuQuote, LuUsers } from 'react-icons/lu'
 import { useNavigate, useParams } from 'react-router'
-import { PageHeader } from '@/components/app/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,11 +23,12 @@ const TABS: { key: Tab; label: string; icon: IconType }[] = [
 ]
 
 /**
- * Admin → Website (docs/DECISIONS.md §18): the academy's public website, filled from here. Messages sent from it
- * (trial requests and questions), its photo library, what its pages show, the coach cards and the families' quotes.
- * The address keeps the tab (`/admin/website/photos`), so links and the notifications open the right one.
+ * Settings → Website (docs/DECISIONS.md §18; under Settings since 2026-10-27): the academy's public website, filled from
+ * here. Messages sent from it (trial requests and questions, also on Home), its photo library, what its pages show, the
+ * coach cards and the families' quotes. The address keeps the tab (`/admin/settings/website/photos`), so links and the
+ * notifications open the right one.
  */
-export function WebsitePage() {
+export function WebsiteSettings() {
   const { tab } = useParams()
   const navigate = useNavigate()
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : 'messages'
@@ -39,19 +39,19 @@ export function WebsitePage() {
   const newCount = messages.data.filter((m) => m.status !== 'done').length
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader
-        title="Website"
-        description="What the academy’s public website shows, and the messages people send from it."
-        actions={
-          <Button variant="outline" asChild>
-            <a href="/" target="_blank" rel="noreferrer">
-              <LuExternalLink /> View website
-            </a>
-          </Button>
-        }
-      />
-      <Tabs value={active} onValueChange={(v) => navigate(`/admin/website/${v}`, { replace: true })}>
+    <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight">Website</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">What the academy’s public website shows, and the messages people send from it.</p>
+        </div>
+        <Button variant="outline" asChild>
+          <a href="/" target="_blank" rel="noreferrer">
+            <LuExternalLink /> View website
+          </a>
+        </Button>
+      </div>
+      <Tabs value={active} onValueChange={(v) => navigate(`/admin/settings/website/${v}`, { replace: true })}>
         {/* Phones: the tabs share the width on two rows, rather than run off the screen. */}
         <TabsList className="grid w-full grid-cols-3 group-data-horizontal/tabs:h-auto sm:inline-flex sm:w-fit">
           {TABS.map((t) => (
