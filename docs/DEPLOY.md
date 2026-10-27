@@ -182,8 +182,12 @@ left alone. (Done on 2026-10-15.)
 
 ## Sample data
 
-Production has held the academy's real data since 2026-10-26 (`docs/DECISIONS.md` §21), so the sample data lives on the
-practice copy (the emulators) only: never run `npm run seed:sample` on production. On the emulators it adds:
+Production has held the academy's real data since 2026-10-26 (`docs/DECISIONS.md` §21), so on production the sample
+data lives only in the **demo academy** (`branches/demo`, §22), which owners switch to from the account menu ("Demo
+data") to show the app. `npm run seed:sample` on production fills the demo academy (its first run makes it from the real
+one: settings, website and owners) and refuses the real one; run it again before showing the app to bring its classes
+around the day. On the emulators (the practice copy) it goes into the academy itself, or into a demo academy there with
+`--academy demo`. It adds:
 
 - a manager and four coaches with pay rates, who's in each day (their hours: Monday three coaches from 4 PM, one leaving
   at 6; the other days two; Sunday two, one of them in turn; the manager every day without teaching), their days off
@@ -196,7 +200,8 @@ practice copy (the emulators) only: never run `npm run seed:sample` on productio
 - ten weeks of classes as on the academy's sheets (`docs/DECISIONS.md` §21): each class with six seats and four or five
   students grouped by level, make-ups ("MU for 10/13"), extra practice and trials (Trial 1 for the last half hour),
   absences, Thanksgiving, and one class ahead with no coach in (Tuesday 7 PM, to show the warning);
-- announcements and events.
+- announcements and events;
+- five trial requests and questions from the website, three of them new (Home's Messages).
 
 Everything is fictional (`shared/src/sample/data.ts`): document IDs start with `sample-`, and emails end in
 `@skyarc-sample.test`, a reserved domain that never gets mail. Preview a coach's or a parent's view with View as (the
