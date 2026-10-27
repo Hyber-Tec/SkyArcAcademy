@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut } from 'react-icons/lu'
+import { LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut, LuPresentation } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { useOptionalBranch } from '@/branch/BranchProvider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuButton } from '@/components/ui/sidebar'
+import { Switch } from '@/components/ui/switch'
 import { initials } from '@shared/people'
 import { SignInSecurityDialog } from './SignInSecurity'
 import { ThemeSubmenu } from './ThemeToggle'
@@ -68,6 +70,21 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
             <DropdownMenuItem onSelect={() => navigate('/kiosk')}>
               <LuLayoutGrid />
               Open kiosk mode
+            </DropdownMenuItem>
+          ) : null}
+          {branch?.canSwitchDemo ? (
+            <DropdownMenuItem
+              data-testid="demo-switch"
+              onSelect={() => {
+                const on = !branch.isDemo
+                branch.setDemo(on)
+                navigate('/app')
+                toast.success(on ? 'Demo data: made-up students and classes' : 'The academy’s real data')
+              }}
+            >
+              <LuPresentation />
+              Demo data
+              <Switch checked={branch.isDemo} tabIndex={-1} aria-hidden className="pointer-events-none ml-auto" />
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onSelect={() => setSecurity(true)}>

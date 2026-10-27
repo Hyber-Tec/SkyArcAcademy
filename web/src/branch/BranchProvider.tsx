@@ -1,6 +1,6 @@
 import { doc } from 'firebase/firestore'
-import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
-import { ACADEMY_ID } from '@shared/academy'
+import { Fragment, createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { ACADEMY_ID, DEMO_ACADEMY_ID } from '@shared/academy'
 import { ACADEMY_NAME } from '@shared/brand'
 import { COL, ROOT } from '@shared/paths'
 import { type Portal, type RestrictablePage, type Role, isAdminRole, portalOf } from '@shared/roles'
@@ -26,8 +26,13 @@ export type ViewAs =
   | { role: 'student'; studentId: string; name: string }
 
 export interface BranchContextValue {
-  /** Always the academy (`ACADEMY_ID`): the internal ID its data lives under. */
+  /** The academy (`ACADEMY_ID`), or the demo academy while it's switched on: the internal ID its data lives under. */
   branchId: string
+  /** The demo academy is shown (docs/DECISIONS.md §22): made-up people, no email or phone notification. */
+  isDemo: boolean
+  /** The person is a member of both the academy and the demo academy, so they may switch between them. */
+  canSwitchDemo: boolean
+  setDemo: (on: boolean) => void
   branch: WithId<Branch>
   settings: BranchSettings
   /** Core rules the owner sets (pay model, seats per class). */
@@ -56,6 +61,16 @@ export interface BranchContextValue {
 const BranchContext = createContext<BranchContextValue | null>(null)
 
 const VIEW_AS_KEY = 'skyarc:view-as'
+/** Which academy this browser shows: the demo one, or (by default) the real one. */
+const ACADEMY_KEY = 'skyarc:academy'
+
+function loadDemo(): boolean {
+  try {
+    return window.localStorage.getItem(ACADEMY_KEY) === DEMO_ACADEMY_ID
+  } catch {
+    return false
+  }
+}
 
 function loadViewAs(): ViewAs | null {
   try {
@@ -67,12 +82,21 @@ function loadViewAs(): ViewAs | null {
 }
 
 export function BranchProvider({ children }: { children: ReactNode }) {
-  const branchId = ACADEMY_ID
   const { user, email, ready, signOut } = useAuth()
 
-  // The person's own member doc (theirs to read even while paused), then the academy's, read anew whenever their access
-  // changes: restored, or just given, the portal opens by itself.
-  const memberState = useDoc<Member>(email ? doc(db, ROOT.branches, branchId, COL.members, email) : null)
+  // The person's own member docs (theirs to read even while paused) in the academy and the demo academy. A member of
+  // both picks one in the account menu; a member of the demo academy alone sees it.
+  const realMember = useDoc<Member>(email ? doc(db, ROOT.branches, ACADEMY_ID, COL.members, email) : null)
+  const demoMember = useDoc<Member>(email ? doc(db, ROOT.branches, DEMO_ACADEMY_ID, COL.members, email) : null)
+  const [demoChosen, setDemoChosen] = useState(loadDemo)
+  const inDemo = demoMember.data?.status === 'active'
+  const canSwitchDemo = inDemo && realMember.data?.status === 'active'
+  const isDemo = inDemo && (demoChosen || (!realMember.loading && !realMember.data))
+  const branchId = isDemo ? DEMO_ACADEMY_ID : ACADEMY_ID
+
+  // Then the academy's own document, read anew whenever the person's access changes: restored, or just given, the
+  // portal opens by itself.
+  const memberState = isDemo ? demoMember : realMember
   const access = memberState.loading ? 'loading' : (memberState.data?.status ?? 'none')
   const branchState = useDoc<Branch>(doc(db, ROOT.branches, branchId), access)
 
@@ -87,6 +111,19 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       // Storage can be unavailable; the preview still applies until the page reloads.
     }
   }, [])
+  const setDemo = useCallback(
+    (on: boolean) => {
+      setViewAs(null)
+      setDemoChosen(on)
+      try {
+        if (on) window.localStorage.setItem(ACADEMY_KEY, DEMO_ACADEMY_ID)
+        else window.localStorage.removeItem(ACADEMY_KEY)
+      } catch {
+        // Storage can be unavailable; the choice still applies until the page reloads.
+      }
+    },
+    [setViewAs],
+  )
 
   // `blocked`: no role to show here. `paused`: the member's access was turned off; `none`: not a member.
   const { value, blocked } = useMemo<{ value: BranchContextValue | null; blocked: 'paused' | 'none' | null }>(() => {
@@ -106,6 +143,9 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     }
     const ctx: BranchContextValue = {
       branchId,
+      isDemo,
+      canSwitchDemo,
+      setDemo,
       branch,
       settings: resolveSettings(branch.settings),
       rules: resolveBusinessRules(branch.businessRules),
@@ -125,10 +165,10 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       setViewAs,
     }
     return { value: ctx, blocked: role !== null ? null : memberState.data ? 'paused' : 'none' }
-  }, [branchState.data, memberState.data, user, email, branchId, preview, setViewAs])
+  }, [branchState.data, memberState.data, user, email, branchId, isDemo, canSwitchDemo, setDemo, preview, setViewAs])
 
   // Until the account check is done, nothing here is known: never guess.
-  if (!ready || branchState.loading || memberState.loading) return <FullPageSpinner />
+  if (!ready || branchState.loading || realMember.loading || demoMember.loading) return <FullPageSpinner />
   // A paused member can't read the academy's document, so this comes first.
   if (memberState.data && memberState.data.status !== 'active') return paused(email, branchState.data?.name ?? ACADEMY_NAME, signOut)
   if (!value) {
@@ -139,7 +179,12 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   if (blocked === 'paused') {
     return paused(email, value.branch.name, signOut)
   }
-  return <BranchContext value={value}>{children}</BranchContext>
+  // Switching academies starts every page afresh, so nothing from the other one stays on screen.
+  return (
+    <BranchContext value={value}>
+      <Fragment key={branchId}>{children}</Fragment>
+    </BranchContext>
+  )
 }
 
 /** The page a paused member sees (their access turned off by the academy). */

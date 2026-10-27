@@ -5,11 +5,15 @@
  * announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic PDFs in the
  * students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the card in the
  * Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
- * Running it again rewrites the same documents, and the sample's schedule (classes, seats, who's in, time entries)
- * becomes the ten weeks around the new today: the sample's earlier ones are replaced, those from before classes were
- * taught together too.
+ * It also has a few trial requests and questions sent from the website. Running it again rewrites the same documents,
+ * and the sample's schedule (classes, seats, who's in, time entries) becomes the ten weeks around the new today: the
+ * sample's earlier ones are replaced, those from before classes were taught together too.
  *
- *   npm run seed:sample                # add it to production (skyarcacademy)
+ * Where it goes: production holds the academy's real people (docs/DECISIONS.md §21), so there the sample goes only into
+ * the demo academy (`demo`, §22), which the first run makes from the real one (its settings, its website and its
+ * owners). In the emulators it goes into the academy itself (the practice copy), or the demo one with --academy demo.
+ *
+ *   npm run seed:sample                # add it (production: to the demo academy)
  *   npm run seed:sample -- --remove    # delete it, with everything the app made for the sample people
  *   npm run seed:sample -- --login coach=you+coach@example.com
  *                                      # gives that email a sample person's access, to see the website and the phone app
@@ -23,29 +27,37 @@
  * the emulators when FIRESTORE_EMULATOR_HOST is set. The academy must exist first (npm run seed).
  */
 import { parseArgs } from 'node:util'
-import { ACADEMY_ID } from '../shared/src/academy'
+import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
 import { driveObjectPath, studentFolderId } from '../shared/src/drive/types'
-import { COL } from '../shared/src/paths'
+import { COL, DOC } from '../shared/src/paths'
 import { composeReport } from '../shared/src/reports/compose'
 import { presetPeriod } from '../shared/src/reports/period'
-import { newMemberData } from '../shared/src/branchFactory'
+import { newMemberData, publicProfileFor } from '../shared/src/branchFactory'
 import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData, sampleStaffId, sampleStudentId } from '../shared/src/sample/data'
+import { buildSampleMessages } from '../shared/src/sample/messages'
 import { buildSampleScores, sampleCardPicture } from '../shared/src/sample/scores'
 import { POSITION_LABELS } from '../shared/src/shooting/evaluation'
 import type { SessionStatus } from '../shared/src/settings/defaults'
 import { resolveBusinessRules } from '../shared/src/settings/businessRules'
 import { resolveSettings } from '../shared/src/settings/resolve'
 import type { SettingsOverrides } from '../shared/src/settings/resolve'
+import type { Branch } from '../shared/src/types'
 import { drawSyntheticCard } from '../shared/src/targets/synthetic'
 import { todayKey } from '../shared/src/time'
-import { PROJECT_ID, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
+import { PROJECT_ID, type Write, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
 import { isReviewAdmin } from './lib/review-admin'
 import { encodePng } from './lib/png'
 import { siusPdf } from './lib/sius-pdf'
 import { deleteObject, uploadObject } from './lib/storage-rest'
 
-const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, login: { type: 'string' } } })
-const base = `branches/${ACADEMY_ID}`
+const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, login: { type: 'string' }, academy: { type: 'string' } } })
+const EMULATOR = !!process.env.FIRESTORE_EMULATOR_HOST
+const academyId = values.academy ?? (EMULATOR ? ACADEMY_ID : DEMO_ACADEMY_ID)
+if (!EMULATOR && academyId !== DEMO_ACADEMY_ID) {
+  console.error(`${PROJECT_ID} holds the academy's real people: the sample goes only into the demo academy (--academy ${DEMO_ACADEMY_ID}).`)
+  process.exit(1)
+}
+const base = `branches/${academyId}`
 
 const isSample = (v: unknown) => typeof v === 'string' && v.startsWith(SAMPLE_PREFIX)
 const isSampleEmail = (v: unknown) => typeof v === 'string' && v.toLowerCase().endsWith(`@${SAMPLE_EMAIL_DOMAIN}`)
@@ -78,6 +90,7 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.driveFiles]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.evaluations]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.progressReports]: (id, d) => isSample(id) || isSample(d.studentId),
+  [COL.websiteMessages]: (id) => isSample(id),
 }
 
 /** The sample's schedule, which each run replaces with the weeks around its today. */
@@ -87,6 +100,7 @@ const SCHEDULE = [COL.classes, COL.sessions, COL.availability, COL.clockShifts] 
 const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }
 
 async function add() {
+  if (academyId === DEMO_ACADEMY_ID && !(await getDocument(base))) await createDemoAcademy()
   const academy = await getDocument(base)
   if (!academy) throw new Error(`No academy at ${base} in ${PROJECT_ID}. Run npm run seed first.`)
   const timezone = String(academy.timezone ?? 'America/New_York')
@@ -94,7 +108,7 @@ async function add() {
   const rules = resolveBusinessRules((academy.businessRules ?? null) as Parameters<typeof resolveBusinessRules>[0])
   const now = new Date()
   const { docs, summary } = buildSampleData({
-    academyId: ACADEMY_ID,
+    academyId,
     timezone,
     today: todayKey(timezone, now),
     now,
@@ -104,6 +118,7 @@ async function add() {
     seatsPerClass: rules.seatsPerClass,
   })
   const shooting = await sampleShooting(docs, academy, timezone, settings.students.levels, now)
+  const messages = buildSampleMessages({ academyId, now, manager: SAMPLE_MANAGER.email })
   // The sample's schedule from an earlier run that this one doesn't rewrite (other weeks, or from before classes were
   // taught together): this run's weeks replace it.
   const keep = new Set(docs.map((d) => d.path))
@@ -115,10 +130,11 @@ async function add() {
     await deleteDocuments(stale)
     console.log(`- ${stale.length} documents of the sample's earlier schedule, replaced`)
   }
-  await commit([...docs, ...shooting.docs], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
-  console.log(`\n+ Sample data in ${PROJECT_ID}: ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
+  await commit([...docs, ...shooting.docs, ...messages], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
+  console.log(`\n+ Sample data in ${PROJECT_ID} (${base}): ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
   console.log(`  ${summary.classes} classes with ${summary.seats} seats (${summary.makeups} make-ups, ${summary.practice} practice, ${summary.trials} trial visits)`)
   console.log(`  Who's in: ${summary.whosIn} days of the staff's hours; ${summary.shifts} time entries`)
+  console.log(`  ${messages.length} messages from the website (${messages.filter((m) => m.data.status === 'new').length} new)`)
   console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs and ${shooting.cards} scanned cards in the students' Drive folders), ${shooting.reports} progress reports`)
   console.log('  Remove it all with: npm run seed:sample -- --remove')
 }
@@ -130,7 +146,7 @@ async function add() {
  */
 async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown>, timezone: string, levels: readonly string[], now: Date) {
   const today = todayKey(timezone, now)
-  const scores = buildSampleScores(docs, { academyId: ACADEMY_ID, timezone, today, levels })
+  const scores = buildSampleScores(docs, { academyId, timezone, today, levels })
   const manager = { uid: SAMPLE_AUTHOR, email: SAMPLE_MANAGER.email, name: SAMPLE_MANAGER.name }
   const out: SampleDoc[] = []
   const folders = new Map<string, string>()
@@ -145,7 +161,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
     const pdf = file.kind === 'sius'
     const bytes = pdf ? await siusPdf(file.spec) : encodePng(drawSyntheticCard(sampleCardPicture(file.card)))
     const mime = pdf ? 'application/pdf' : 'image/png'
-    await uploadObject(driveObjectPath(ACADEMY_ID, file.fileId), bytes, mime)
+    await uploadObject(driveObjectPath(academyId, file.fileId), bytes, mime)
     if (pdf) pdfs++
     else cards++
     process.stdout.write(`\r  uploading sample files ${pdfs + cards}`)
@@ -228,7 +244,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
       action: 'sample.add',
       category: 'reports',
       entityType: 'academy',
-      entityId: ACADEMY_ID,
+      entityId: academyId,
       summary: `Added sample shooting: ${scores.length} evaluations (${pdfs} SIUS PDFs and ${cards} scanned cards in the Drive) and ${reports} progress reports`,
       context: '',
       dateKey: null,
@@ -248,7 +264,7 @@ async function remove() {
   for (const [col, isSampleDoc] of Object.entries(SAMPLE_RULES)) {
     const found = (await listDocuments(`${base}/${col}`)).filter((d) => isSampleDoc(d.id, d.data))
     // A Drive file's bytes go with it.
-    if (col === COL.driveFiles) for (const d of found) await deleteObject(driveObjectPath(ACADEMY_ID, d.id))
+    if (col === COL.driveFiles) for (const d of found) await deleteObject(driveObjectPath(academyId, d.id))
     for (const d of found) {
       for (const child of CHILDREN[col] ?? []) paths.push(...(await listDocuments(`${d.path}/${child}`)).map((c) => c.path))
       paths.push(d.path)
@@ -270,7 +286,7 @@ async function remove() {
           action: 'sample.remove',
           category: 'settings',
           entityType: 'academy',
-          entityId: ACADEMY_ID,
+          entityId: academyId,
           summary: `Removed the sample data (${paths.length} documents)`,
           context: '',
           dateKey: null,
@@ -285,6 +301,59 @@ async function remove() {
     ])
   }
   console.log(paths.length ? `  removed ${paths.length} documents from ${PROJECT_ID}` : `  no sample data in ${PROJECT_ID}`)
+}
+
+/**
+ * The demo academy (docs/DECISIONS.md §22), made from the real one on the first run: its name, contact, settings and
+ * rules; its website (the pages' content, and the photos' records, whose files stay where they are: the website's
+ * page deletes only its own academy's files); and its owners, as owners. Nothing in the real academy changes.
+ */
+async function createDemoAcademy() {
+  const real = await getDocument(`branches/${ACADEMY_ID}`)
+  if (!real) throw new Error(`No academy at branches/${ACADEMY_ID} in ${PROJECT_ID} to make the demo one from. Run npm run seed first.`)
+  const now = new Date()
+  const copied = ['name', 'shortName', 'timezone', 'locale', 'currency', 'branding', 'contact', 'settings', 'businessRules'].filter((k) => k in real)
+  const academy = { ...Object.fromEntries(copied.map((k) => [k, real[k]])), status: 'active', createdBy: SAMPLE_AUTHOR, updatedBy: SAMPLE_AUTHOR, createdAt: now, updatedAt: now }
+  const writes: Write[] = [
+    { path: base, data: academy },
+    { path: `${base}/${COL.public}/${DOC.publicProfile}`, data: { ...publicProfileFor(academy as unknown as Branch) } },
+  ]
+  const website = await getDocument(`branches/${ACADEMY_ID}/${COL.public}/${DOC.websiteContent}`)
+  if (website) writes.push({ path: `${base}/${COL.public}/${DOC.websiteContent}`, data: website })
+  const photos = await listDocuments(`branches/${ACADEMY_ID}/${COL.websitePhotos}`)
+  for (const p of photos) writes.push({ path: `${base}/${COL.websitePhotos}/${p.id}`, data: p.data })
+  const owners = (await listDocuments(`branches/${ACADEMY_ID}/${COL.members}`)).filter((m) => m.data.role === 'owner' && m.data.status === 'active')
+  for (const m of owners) {
+    writes.push({
+      path: `${base}/${COL.members}/${m.id}`,
+      data: { ...newMemberData({ email: m.id, displayName: String(m.data.displayName ?? ''), role: 'owner', createdBy: SAMPLE_AUTHOR }), createdAt: now, updatedAt: now },
+    })
+  }
+  writes.push({
+    path: `${base}/${COL.auditLog}/demo-academy-created`,
+    data: {
+      at: now,
+      actorUid: SAMPLE_AUTHOR,
+      actorEmail: SAMPLE_AUTHOR,
+      actorName: 'Sample data',
+      actorRole: 'system',
+      action: 'academy.create',
+      category: 'settings',
+      entityType: 'branch',
+      entityId: academyId,
+      summary: `Set up the demo academy from ${String(real.name ?? ACADEMY_ID)}, with its ${owners.length === 1 ? 'owner' : `${owners.length} owners`}`,
+      context: '',
+      dateKey: null,
+      studentId: null,
+      studentName: null,
+      coachId: null,
+      coachName: null,
+      changes: [],
+      via: 'function',
+    },
+  })
+  await commit(writes)
+  console.log(`+ The demo academy (${base}), made from ${String(real.name ?? ACADEMY_ID)}: its settings, its website (${photos.length} photos) and ${owners.length} owner(s): ${owners.map((m) => m.id).join(', ')}`)
 }
 
 /**

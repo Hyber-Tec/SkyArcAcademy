@@ -244,7 +244,10 @@ export async function movePhoto(branchId: string, actor: Actor, photos: WithId<W
   await batch.commit()
 }
 
-/** Deletes a photo: its record, its use in places and coach cards (one batch), then its files. */
+/**
+ * Deletes a photo: its record, its use in places and coach cards (one batch), then its files, when they're this
+ * academy's own (the demo academy's copies of the website's photos show the real academy's files: docs/DECISIONS.md §22).
+ */
 export async function deletePhoto(branchId: string, actor: Actor, photo: WithId<WebsitePhoto>, content: WebsiteContent) {
   const uses = photoUses(content, photo.id)
   const batch = writeBatch(db)
@@ -253,6 +256,7 @@ export async function deletePhoto(branchId: string, actor: Actor, photo: WithId<
   if (forget) setContent(batch, branchId, actor, forget)
   audit(batch, branchId, actor, 'photo.delete', 'websitePhoto', photo.id, `Deleted ${photoName(photo)} from the website${uses.length ? ` (it was used for ${uses.join(', ')})` : ''}`)
   await batch.commit()
+  if (!photo.folder.startsWith(`${ROOT.branches}/${branchId}/`)) return
   await deleteImageFiles(photo).catch((e) => console.warn('A website photo’s files weren’t all deleted', e))
 }
 
