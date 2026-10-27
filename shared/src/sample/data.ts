@@ -728,6 +728,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   })
 
   // Events -------------------------------------------------------------------------
+  // `isRecurring` as the website's event dialog saves it: the schedules find one-off and repeating events by it.
   const firstSunday = days.find((d) => weekdayOf(d) === 'sunday') ?? today
   add(`${COL.events}/${SAMPLE_PREFIX}e-range-practice`, {
     title: 'Range Practice',
@@ -736,6 +737,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     endMin: 1170,
     notes: 'Open practice for enrolled students.',
     recurrence: { frequency: 'weekly', interval: 1, weekdays: ['sunday'], monthDay: null, ends: { type: 'never', endDate: null, occurrences: null } },
+    isRecurring: true,
     ...stamp,
   })
   const meeting = days.find((d) => d >= addDays(today, 3) && weekdayOf(d) === 'sunday' && isOpen(d)) ?? addDays(today, 3)
@@ -746,6 +748,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     endMin: 840,
     notes: 'The fall season and the junior match.',
     recurrence: null,
+    isRecurring: false,
     ...stamp,
   })
 
