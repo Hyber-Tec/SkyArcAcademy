@@ -18,17 +18,18 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
 4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
-   bottom of the sidebar) to show the made-up academy, and turn it off for the real one. Before a showing, ask Claude
-   Code to refresh the demo (`npm run seed:sample` on production moves its classes around the day).
+   bottom of the sidebar) to show the made-up academy, and turn it off for the real one. On a phone (from the update
+   below), sign in with one of the demo's own logins to show it ("Demo" shows at the top), and with your own account
+   for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
+   moves its classes around the day).
 5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
-   together; both get the demo academy for the demo logins (being built on the MacBook Pro,
-   `feat/mobile-demo-academy`) and the marks' words. The steps, and which Mac uploads which store:
-   `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
+   together; both get the demo academy for the demo logins (#41) and the marks' words. The steps, and which Mac
+   uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 
-- **The demo academy on the phone:** being built on the MacBook Pro (2026-10-27): a demo login opens the demo there
-  too. Owners in both academies could also get the website's Demo data switch on the phone, if wanted.
+- **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0. Owners in both academies could
+  also get the website's Demo data switch on the phone, if wanted.
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already

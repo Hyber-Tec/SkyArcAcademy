@@ -35,6 +35,14 @@ academy hasn't added sees "No access yet".
 On the **real Sky Arc**, sign in as yourself: with **Google** (the account you use on the website), or the email and
 password you use there.
 
+The **demo academy** (made-up people for showing the app, `docs/DECISIONS.md` §22) opens with its own logins on the
+real Sky Arc, with **Demo** at the top of each tab: `office@skyarc-sample.test` (an admin),
+`daniel.reed@skyarc-sample.test` (a coach), `jiyeon.hwang@skyarc-sample.test` (a parent of two) and
+`seoyeon.lim@skyarc-sample.test` (a student). Their password is the owner's to share, never in git. An account of the
+real academy opens the real one, even if it's in the demo too (the owners): the phone has no switch. On the practice
+copy, `npm run seed:sample -- --academy demo` (with the emulators' variables, as in `mobile/README.md`) fills a demo
+academy there, and `--login coach=<email> --academy demo` gives a made-up email a demo person's access.
+
 On the **practice copy**, there's no Google: sign in with one of its four made-up logins. They share one password,
 made at random on this Mac the first time (in `mobile/.expo/practice-login.json`, never in git); the command prints it
 when the app opens.

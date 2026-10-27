@@ -1,5 +1,5 @@
 import { doc, serverTimestamp, setDoc, updateDoc } from "@react-native-firebase/firestore";
-import { ACADEMY_ID } from "@shared/academy";
+import { ACADEMY_ID, DEMO_ACADEMY_ID, showsDemo } from "@shared/academy";
 import { COL, ROOT } from "@shared/paths";
 import { type Portal, type Role, isAdminRole, portalOf } from "@shared/roles";
 import { type BusinessRules, resolveBusinessRules } from "@shared/settings/businessRules";
@@ -20,8 +20,10 @@ export interface Actor {
 }
 
 export interface BranchState {
-  /** Always the academy (`ACADEMY_ID`): the internal ID its data lives under. */
+  /** The academy (`ACADEMY_ID`), or the demo academy for a member of it alone: the internal ID its data lives under. */
   branchId: string;
+  /** The demo academy is shown (docs/DECISIONS.md §22): made-up people, no email or phone notification. */
+  isDemo: boolean;
   branch: Branch & { id: string };
   /** The academy's name as Settings → Academy has it. */
   name: string;
@@ -59,6 +61,10 @@ const SLOW_MS = 15_000;
  * verified email, as on the website; a paused access closes the app at once) and, for employees, their staff record.
  * Children render only once all of it is known. On the first sign-in the account is linked to the member doc (uid,
  * last sign-in), which the website's Account page shows; the rules let a member change only those fields.
+ *
+ * Which academy, as the website decides it (docs/DECISIONS.md §22): a member of the academy sees it; a member of the
+ * demo academy alone sees the demo. The phone has no switch: someone in both sees the academy here, and picks the demo
+ * in the website's account menu.
  */
 export function BranchProvider({
   children,
@@ -74,8 +80,17 @@ export function BranchProvider({
   paused: (why: "paused" | "unavailable") => ReactNode;
 }) {
   const { user, email } = useAuth();
-  const branchId = ACADEMY_ID;
-  const memberState = useDoc<Member>(email ? `${ROOT.branches}/${branchId}/${COL.members}/${email}` : null);
+  // The person's own member docs in the academy and the demo academy (theirs to read, paused too). The academy's decides
+  // as soon as it's there (from the phone's copy too, so the app opens offline); the demo's counts only once the server
+  // says there's none in the academy, so a moment's error never shows the demo to the academy's own people.
+  const realState = useDoc<Member>(email ? `${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${email}` : null);
+  const demoState = useDoc<Member>(email ? `${ROOT.branches}/${DEMO_ACADEMY_ID}/${COL.members}/${email}` : null);
+  const realKnown = !realState.loading && (!realState.error || refused(realState.error));
+  const isDemo = realKnown && showsDemo(realState.data, demoState.data);
+  const branchId = isDemo ? DEMO_ACADEMY_ID : ACADEMY_ID;
+  const memberState = isDemo ? demoState : realState;
+  // Not in the academy: wait for the demo's answer before saying there's no access.
+  const deciding = realState.loading || (realKnown && !realState.data && demoState.loading);
   const active = memberState.data?.status === "active";
   // The academy's own document is open to its members only: read once the member doc says so.
   const branchState = useDoc<Branch>(active ? `${ROOT.branches}/${branchId}` : null);
@@ -85,8 +100,8 @@ export function BranchProvider({
   const member = memberState.data;
   const linked = useRef<string | null>(null);
   useEffect(() => {
-    if (!user || !email || !member || linked.current === user.uid) return;
-    linked.current = user.uid;
+    if (!user || !email || !member || linked.current === `${branchId}/${user.uid}`) return;
+    linked.current = `${branchId}/${user.uid}`;
     // One profile per account, as the website keeps it.
     void setDoc(doc(db, ROOT.users, user.uid), { uid: user.uid, email, displayName: user.displayName ?? "", photoURL: user.photoURL ?? null, lastLoginAt: serverTimestamp() }, { merge: true }).catch(() => undefined);
     const lastLogin = (member.lastLoginAt as { toMillis?: () => number } | null)?.toMillis?.() ?? 0;
@@ -102,6 +117,7 @@ export function BranchProvider({
     const role = member.role;
     return {
       branchId,
+      isDemo,
       branch,
       name: branch.name || "Sky Arc",
       settings: resolveSettings(branch.settings),
@@ -119,10 +135,10 @@ export function BranchProvider({
       studentIds: member.studentIds ?? [],
       actor: { uid: user.uid, email, name: member.displayName || user.displayName || email, role },
     };
-  }, [branchState.data, member, staffState.data, user, email, branchId]);
+  }, [branchState.data, member, staffState.data, user, email, branchId, isDemo]);
 
   // Still opening after a while: say so, with a way to sign out (the screen opens the app by itself if it gets through).
-  const opening = memberState.loading || (member?.status === "active" && (!branchState.data || (!!staffId && staffState.loading)) && !branchState.error);
+  const opening = deciding || (member?.status === "active" && (!branchState.data || (!!staffId && staffState.loading)) && !branchState.error);
   const [slowFor, setSlowFor] = useState<string | null>(null);
   useEffect(() => {
     if (!opening) return;
@@ -131,17 +147,29 @@ export function BranchProvider({
   }, [opening, email]);
   const waiting = opening && slowFor === (email ?? "") ? paused("unavailable") : fallback;
 
-  if (memberState.loading) return waiting;
-  // The server says there's no member doc for this email (or the rules refused it): the academy hasn't added it.
-  if (!member) return memberState.error && !/permission-denied/.test(String((memberState.error as { code?: string }).code ?? "")) ? paused("unavailable") : noAccess;
+  if (deciding) return waiting;
+  // The server says there's no member doc for this email in either academy (or the rules refused it): the academy
+  // hasn't added it.
+  if (!member) {
+    const failed = [realState.error, realKnown ? demoState.error : null].some((e) => e && !refused(e));
+    return failed ? paused("unavailable") : noAccess;
+  }
   if (member.status !== "active") return paused("paused");
   if (branchState.error) return paused("unavailable");
   if (!value || (staffId && staffState.loading)) return waiting;
   return <BranchContext.Provider value={value}>{children}</BranchContext.Provider>;
 }
 
+/** The rules refused a read: for a person's own member doc, they aren't signed in with a confirmed email. */
+const refused = (e: Error) => /permission-denied/.test(String((e as { code?: string }).code ?? ""));
+
 export function useBranch(): BranchState {
   const ctx = useContext(BranchContext);
   if (!ctx) throw new Error("useBranch outside BranchProvider");
   return ctx;
+}
+
+/** The academy on the signed-in screens, otherwise null (the sign-in screens). */
+export function useOptionalBranch(): BranchState | null {
+  return useContext(BranchContext);
 }

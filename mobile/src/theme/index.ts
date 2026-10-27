@@ -33,6 +33,9 @@ const light = {
   warningTint: "#f59e0b1f",
   info: "#2563eb",
   infoTint: "#2563eb14",
+  /** The demo academy's mark (docs/DECISIONS.md §22), the website's amber: its text and its fill. */
+  demo: "#7b3306",
+  demoTint: "#fef3c6",
   overlay: "#00000066",
   /** Sky Arc's red (the logo's dot, #FB0202), its solid fill and its text shade, as the website's brand tokens. */
   brand: "#FB0202",
@@ -66,6 +69,8 @@ const dark: typeof light = {
   warningTint: "#f59e0b29",
   info: "#60a5fa",
   infoTint: "#3b82f62e",
+  demo: "#ffd230",
+  demoTint: "#ffb90026",
   overlay: "#000000a6",
   brand: "#FB0202",
   brandSolid: "#E00000",
