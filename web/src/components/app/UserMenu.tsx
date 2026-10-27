@@ -23,7 +23,8 @@ import { ThemeSubmenu } from './ThemeToggle'
 
 export function UserAvatar({ className }: { className?: string }) {
   const { user } = useAuth()
-  const name = user?.displayName || user?.email || '?'
+  // The name the academy knows the person by first (an email-and-password sign-in has none of its own).
+  const name = useOptionalBranch()?.member?.displayName || user?.displayName || user?.email || '?'
   return (
     <Avatar className={className}>
       {user?.photoURL ? <AvatarImage src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : null}

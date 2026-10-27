@@ -44,7 +44,8 @@ export function IdentityColumn({
   isAdmin: boolean
   /** The staff list (admins only): names, and who teaches. */
   staffById: Map<string, WithId<Staff>>
-  onTab: (tab: ProfileTab) => void
+  /** `search`: e.g. "?edit=family", which opens Info's form at the parents. */
+  onTab: (tab: ProfileTab, search?: string) => void
   onNewSession: () => void
   onOpenSession: (id: string) => void
 }) {
@@ -153,7 +154,7 @@ export function IdentityColumn({
         <div className="hidden rounded-xl border bg-card p-4 lg:block">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Family</h2>
-            <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => onTab('info')}>
+            <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => onTab('info', '?edit=family')}>
               Edit
             </button>
           </div>

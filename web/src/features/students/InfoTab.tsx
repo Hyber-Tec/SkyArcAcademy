@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LuLock, LuMail, LuPencil, LuPhone, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { formatPhone, gradeLabel, STUDENT_STATUS_LABELS, STUDENT_STATUSES } from '@shared/people'
 import { formatDateKey, todayKey } from '@shared/time'
@@ -51,6 +52,19 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
     setPform({ ...EMPTY_PRIVATE, ...(priv ?? {}) })
     setEditing(true)
   }
+  // The Family card's Edit (`?edit=family`) opens the form at the parents, once their details have loaded.
+  const [params, setParams] = useSearchParams()
+  const editFamily = !readOnly && !privLoading && params.get('edit') === 'family'
+  useEffect(() => {
+    if (!editFamily) return
+    setParams((p) => {
+      p.delete('edit')
+      return p
+    }, { replace: true })
+    startEdit()
+    requestAnimationFrame(() => document.getElementById('student-parents')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editFamily])
   const dirty = editing && (JSON.stringify(form) !== JSON.stringify(pickPublic(student)) || (!readOnly && JSON.stringify(pform) !== JSON.stringify(savedPrivate)))
   const set = <K extends keyof PublicForm>(k: K, v: PublicForm[K]) => setForm((f) => ({ ...f, [k]: v }))
   const setP = <K extends keyof StudentPrivateProfile>(k: K, v: StudentPrivateProfile[K]) => setPform((f) => ({ ...f, [k]: v }))
@@ -350,7 +364,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
               <Input id="sp-address" value={pform.address} onChange={(e) => setP('address', e.target.value)} />
             </Field>
           </div>
-          <div className="space-y-3">
+          <div id="student-parents" className="scroll-mt-20 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Parents and guardians</span>
               <Button size="xs" variant="outline" onClick={() => setP('parents', [...pform.parents, { name: '', email: '', phone: '', relation: '' }])}>

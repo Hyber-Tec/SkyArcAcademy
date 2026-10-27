@@ -34,8 +34,8 @@ export interface SettingsSection {
 const SESSION_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'present', label: 'Present (attended)' },
-  { value: 'no_show', label: 'No Show' },
+  { value: 'present', label: 'Here (attended)' },
+  { value: 'no_show', label: 'No-show' },
   { value: 'canceled', label: 'Canceled' },
 ]
 
@@ -77,7 +77,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         options: [
           { value: 'day', label: 'Day' },
           { value: 'week', label: 'Week' },
-          { value: 'month', label: 'Month' },
         ],
       },
       { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending classes automatically' },

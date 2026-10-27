@@ -155,7 +155,7 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   session_date_changed: { label: 'Date Changed', color: '#7C3AED' },
   session_reassigned_in: { label: 'You Were Assigned', color: '#16A34A' },
   session_reassigned_out: { label: 'Class Reassigned', color: '#D97706' },
-  session_no_show: { label: 'No Show', color: '#DC2626' },
+  session_no_show: { label: 'No-show', color: '#DC2626' },
   report_shared: { label: 'Progress Report', color: '#C80000' },
   website_message: { label: 'From the Website', color: '#0A0A0A' },
 }

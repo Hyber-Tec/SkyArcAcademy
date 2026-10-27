@@ -101,28 +101,33 @@ export function DayHoursDialog({
           ) : (
             <span />
           )}
-          <Button
-            disabled={busy || (isOpen && closeMin <= openMin)}
-            onClick={() =>
-              void run(
-                () =>
-                  closingClasses
-                    ? setDateHours({
-                        branchId: ctx.branchId,
-                        actor: ctx.actor,
-                        dates: [dateKey],
-                        value: { isOpen: false },
-                        closedTimes: { openMin: usual.openMin, closeMin: usual.closeMin },
-                        summaryRange: formatDateKey(dateKey, 'weekdayMedium'),
-                        trashSessionIds: seatsOn(dateKey),
-                      })
-                    : saveDayConfig(ctx, dateKey, { isOpen, openMin, closeMin }),
-                closingClasses ? 'Closed; its classes moved to Trash' : 'Opening hours saved',
-              )
-            }
-          >
-            {closingClasses ? 'Close and move the classes to Trash' : 'Save'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={busy} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy || (isOpen && closeMin <= openMin)}
+              onClick={() =>
+                void run(
+                  () =>
+                    closingClasses
+                      ? setDateHours({
+                          branchId: ctx.branchId,
+                          actor: ctx.actor,
+                          dates: [dateKey],
+                          value: { isOpen: false },
+                          closedTimes: { openMin: usual.openMin, closeMin: usual.closeMin },
+                          summaryRange: formatDateKey(dateKey, 'weekdayMedium'),
+                          trashSessionIds: seatsOn(dateKey),
+                        })
+                      : saveDayConfig(ctx, dateKey, { isOpen, openMin, closeMin }),
+                  closingClasses ? 'Closed; its classes moved to Trash' : 'Opening hours saved',
+                )
+              }
+            >
+              {closingClasses ? 'Close and move the classes to Trash' : 'Save'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

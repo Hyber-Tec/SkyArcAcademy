@@ -136,7 +136,7 @@ export function sessionChangeNotices(before: SessionSnapshot, after: SessionSnap
   const to = [before, after].filter((s) => inNoticeWindow(s, ctx)).flatMap(coachesOf)
   const changed = (n: Omit<SessionNotice, 'staffId' | 'dateKey' | 'pref'>) => add(to, { ...n, pref: 'sessionChanged' }, after)
   if (after.status === 'no_show' && before.status !== 'no_show') {
-    changed({ type: 'session_no_show', title: 'No Show', body: `${after.studentName}'s class on ${date(after.dateKey)} at ${time(after.startMin)} was marked No Show.` })
+    changed({ type: 'session_no_show', title: 'No-show', body: `${after.studentName}'s class on ${date(after.dateKey)} at ${time(after.startMin)} was marked a no-show.` })
   } else if (before.dateKey !== after.dateKey) {
     changed({ type: 'session_date_changed', title: 'Class Date Changed', body: `${after.studentName}'s class moved from ${date(before.dateKey)} to ${date(after.dateKey)} at ${range(after)}.` })
   } else if (before.startMin !== after.startMin || before.endMin !== after.endMin) {

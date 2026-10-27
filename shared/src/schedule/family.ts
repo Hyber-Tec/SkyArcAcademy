@@ -2,7 +2,7 @@ import type { SessionStatus } from '../settings/defaults'
 
 /**
  * A class as families read it, on the website and in the phone app: the status in plain words (never the staff's
- * "Pending" or "No Show"), and the note without the schedule sheets' shorthand.
+ * "Pending" or "No-show"), and the note without the schedule sheets' shorthand.
  */
 export const FAMILY_STATUS_LABELS: Record<SessionStatus, string> = {
   pending: 'Scheduled',

@@ -126,8 +126,9 @@ export function studentLabel(name: string, grade: string | null | undefined): st
 
 /** Up to `max` initials of a name, for avatars ("Jiwoo Hwang" → "JH"); "?" when there's no name. */
 export function initials(name: string, max = 2): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  return parts.slice(0, max).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?'
+  // Each word's first letter or digit, so "Reviewer (App Store)" is "RA", not "R(".
+  const letters = name.trim().split(/\s+/).map((p) => /[\p{L}\p{N}]/u.exec(p)?.[0] ?? '').filter(Boolean)
+  return letters.slice(0, max).map((c) => c.toUpperCase()).join('') || '?'
 }
 
 /** Next grade for grade advancement; null when the grade isn't numeric. */
