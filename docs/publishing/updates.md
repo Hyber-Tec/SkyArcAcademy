@@ -56,11 +56,12 @@ Waiting on `main` until each store has answered on 1.0.0 (no second submission d
 - **What it brings to Android** (1.0.0 is build 3, which already has classes taught together): the marks' words, the
   demo academy, the schedule by Day or Week (#41), and three permissions it never used, gone (#37).
 - **The steps,** after `git switch main && git pull`:
-  1. Mac mini: `npm run publish:iphone -- --version 1.1.0` (the version becomes 1.1.0 and the build goes up). App Store
-     Connect → Sky Arc → **+** next to **iOS App** → `1.1.0` → **What's New** from
-     [listing.md](../store/listing.md) → **Build**: the new one → **Add for Review** → **Submit for Review**. When
-     approved: **Release This Version**.
-  2. Commit the release number, and pull it on the MacBook Pro.
+  1. The iPhone's build is up: **1.1.0 (build 4)**, uploaded to App Store Connect from the MacBook Pro on 2026-10-27
+     and on TestFlight. If the phone app hasn't changed since, submit that one: App Store Connect → Sky Arc → **+**
+     next to **iOS App** → `1.1.0` → **What's New** from [listing.md](../store/listing.md) → **Build**: 4 → **Add for
+     Review** → **Submit for Review**. If it has, upload a new one first (`npm run publish:iphone`: the build goes up,
+     still 1.1.0) and commit the release number. When approved: **Release This Version**.
+  2. Pull the release number on the Mac that uploads next.
   3. MacBook Pro: `npm run publish:android -- --track production` (the build goes up again, still 1.1.0). Play
      Console → the release → notes from [listing.md](../store/listing.md) → **Send changes for review**.
   4. Commit the release number.

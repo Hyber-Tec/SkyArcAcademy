@@ -24,8 +24,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    moves its classes around the day).
 5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
    together; both get the demo academy for the demo logins, the schedule by Day or Week with its events (#41), and the
-   marks' words. The steps, and which Mac uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0".
-   Then clear the lead coach (below).
+   marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
+   uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 

@@ -13,7 +13,8 @@ updates. Android follows once it has been tried on Android phones.
 | --- | --- | --- |
 | In review | **1.0.0 (build 2)**, waiting for Apple's review since 2026-10-21 (checked on 2026-10-27) | **1.0.0 (build 3)**, in Google's review since 2026-10-26 (production) |
 | Classes taught together (§21) | No: built before them. It opens a class through each seat's lead coach (`scripts/lead-coach.ts`), kept until its update | Yes |
-| The demo academy on the phone (§22) | In the next build (the MacBook Pro's `feat/mobile-demo-academy`) | The same |
+| The demo academy on the phone (§22) | In 1.1.0 (#41) | In the next build, 1.1.0 |
+| TestFlight | **1.1.0 (build 4)**, uploaded 2026-10-27 from the MacBook Pro to show the app (not submitted); the App Store's 1.1.0 can be this build | — |
 | Review login | One admin with the academy's real data (`docs/store/review-notes.md`) | The same login, in Sign-in details |
 
 **No second submission while either is in review** (the owner, 2026-10-26). Changes to the phone app wait on `main`
