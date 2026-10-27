@@ -27,9 +27,47 @@ How a change reaches people once Sky Arc is in the stores. Most changes need no 
    **Build**: the new one → **Add for Review** → **Submit for Review**. Apple puts updates of existing apps first: about
    a day and a half on average. When approved: **Release This Version** (or choose **Phased release** to reach everyone
    over seven days).
-5. **Android** (once it's on Google Play): `npm run publish:android -- --track production`, then "commit the release
-   number". Release notes go in the Play Console's release; Google reviews it within hours to a few days.
+5. **Android:** `npm run publish:android -- --track production`, on the Mac that holds Google Play's upload key (below),
+   then "commit the release number". Release notes go in the Play Console's release; Google reviews it within hours to
+   a few days.
 6. **Phones update by themselves**, usually within a day. More → Version shows what a phone has.
+
+## Which Mac uploads which store
+
+The keys live in `mobile/.publish/` (never in git), and each store needs its own:
+
+- **The App Store:** the App Store Connect key (`AuthKey_….p8`, `appstore.json`) is on the **Mac mini**. Upload the
+  iPhone app there, or copy those two files to the other Mac.
+- **Google Play:** the upload key (`upload.keystore`, `keystore.json`) is on the Mac that built build 3 (the
+  **MacBook Pro**), with `play-service-account.json` if uploads by command are set up there
+  ([testing.md](google-play/testing.md), Part 4). **Never run `npm run publish:android` on a Mac without that
+  `upload.keystore`:** it would make a new key, and Google refuses a build signed with any other key than the one it
+  knows. Copy the folder (AirDrop or a USB stick, never git or email) if another Mac must upload.
+- Commit the release number after each upload ("commit the release number"), so the other Mac counts on from it.
+
+## The next update: 1.1.0 (both stores)
+
+Waiting on `main` until each store has answered on 1.0.0 (no second submission during a review: the owner,
+2026-10-26). Release 1.0.0 first when it's approved, then send this one straight away.
+
+- **What it brings to the iPhone** (1.0.0 is build 2): classes taught together (#34) and the week from Monday (#33),
+  the marks' words Here and No-show (#39), and the demo academy for the demo logins (`feat/mobile-demo-academy`).
+- **What it brings to Android** (1.0.0 is build 3, which already has classes taught together): the marks' words, the
+  demo academy, and three permissions it never used, gone (#37).
+- **The steps,** after `git switch main && git pull`:
+  1. Mac mini: `npm run publish:iphone -- --version 1.1.0` (the version becomes 1.1.0 and the build goes up). App Store
+     Connect → Sky Arc → **+** next to **iOS App** → `1.1.0` → **What's New** from
+     [listing.md](../store/listing.md) → **Build**: the new one → **Add for Review** → **Submit for Review**. When
+     approved: **Release This Version**.
+  2. Commit the release number, and pull it on the MacBook Pro.
+  3. MacBook Pro: `npm run publish:android -- --track production` (the build goes up again, still 1.1.0). Play
+     Console → the release → notes from [listing.md](../store/listing.md) → **Send changes for review**.
+  4. Commit the release number.
+  5. When the iPhone's 1.1.0 is out, take the lead coach off the seats: `npx tsx scripts/lead-coach.ts --clear`
+     (`docs/TODO.md`).
+- **The review notes:** the reviewers keep the admin login (the academy's real data). From 1.1.0 the phone also opens
+  the demo academy for the demo logins (made-up people; their password is on the Mac mini, `docs/internal/`), so the
+  reviewers could use those instead; that's the owner's call before submitting.
 
 ## Keep in mind
 

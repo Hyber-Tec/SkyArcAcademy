@@ -7,56 +7,57 @@ a step says "ask Claude Code".
 **The plan (the owner, 2026-10-20):** the iPhone app goes to the App Store as soon as possible and improves through
 updates. Android follows once it has been tried on Android phones.
 
-## Where things stand (2026-10-20)
+## Where things stand (2026-10-27)
 
-**2026-10-24: in Apple's review.** Sky Arc 1.0.0 (build 2) was uploaded on 2026-10-21 and submitted. Production keeps
-the sample data and the reviewers' logins until Apple answers.
+| | iPhone (App Store) | Android (Google Play) |
+| --- | --- | --- |
+| In review | **1.0.0 (build 2)**, waiting for Apple's review since 2026-10-21 (checked on 2026-10-27) | **1.0.0 (build 3)**, in Google's review since 2026-10-26 (production) |
+| Classes taught together (§21) | No: built before them. It opens a class through each seat's lead coach (`scripts/lead-coach.ts`), kept until its update | Yes |
+| The demo academy on the phone (§22) | In the next build (the MacBook Pro's `feat/mobile-demo-academy`) | The same |
+| Review login | One admin with the academy's real data (`docs/store/review-notes.md`) | The same login, in Sign-in details |
 
-**2026-10-26: Android in internal testing.** Sky Arc 1.0.0 (build 3) was uploaded by hand to Google Play's internal
-testing. The testers and the rest of [google-play/testing.md](publishing/google-play/testing.md) come next.
+**No second submission while either is in review** (the owner, 2026-10-26). Changes to the phone app wait on `main`
+and go up together as the next update, **1.1.0**, once each store has answered ([updates.md](publishing/updates.md)).
+Changes to the website and the server don't wait: they're live as soon as they're merged.
 
-Ready for the App Store:
+## When a store answers
 
-- **The app**, version 1.0.0: the office's, the coaches' and the families' tabs, with Delete my account, Help and the
-  privacy policy in More and before signing in.
-- **The App Store version** builds and signs on this Mac (tried on 2026-10-20 without uploading), with the privacy
-  file Apple requires in every library on its list.
-- **The privacy policy**, in effect since 2026-10-20 (https://skyarcacademy.web.app/privacy), and **Help**, the
-  stores' support page (https://skyarcacademy.web.app/help).
-- **The screenshots:** the eight you took on your iPhone, at the size Apple requires. On this Mac only:
-  `open mobile/.publish/screenshots`.
-- **The reviewers' logins:** four sample people in production (office, coach, parent, and a student for trying
-  account deletion). Their passwords are only on this Mac: `open -e mobile/.publish/review-logins.json`.
-- **Every text to paste:** [docs/store/](store/).
+Tell Claude Code what came, in a word ("Apple approved Sky Arc", or paste the message): it checks this page, does its
+part and says what's left. What each answer means:
 
-**TestFlight isn't needed.** Apple reviews a build as soon as it's uploaded and processed. TestFlight is only for
-trying that build on phones first, if you want to ([apple/testflight.md](publishing/apple/testflight.md)).
+**Apple** (an email, and the status in App Store Connect → Sky Arc → App Store):
 
-## What only you can do
+- **Pending Developer Release** (approved): 1.0 → **Release This Version**
+  ([apple/app-store.md](publishing/apple/app-store.md), step 26). Then the update, 1.1.0, as
+  [updates.md](publishing/updates.md) says: it brings classes taught together and the demo academy to the iPhone.
+- **Rejected:** the message names a guideline. Replies to the likeliest ones are ready in
+  [store/review-notes.md](store/review-notes.md); for anything else, give the message to Claude Code
+  ([apple/app-store.md](publishing/apple/app-store.md), step 25). A fix in the app needs a new build (Claude Code makes
+  it); a reply alone doesn't.
+- **A question** (in App Review): answer in the same thread. If Apple asks for the academy's permission (5.2.1),
+  attach the academy's email.
 
-For the **App Store**, in this order (each is a step in [apple/app-store.md](publishing/apple/app-store.md)):
+**Google** (an email, and the Play Console's Publishing overview and Inbox):
 
-1. Ask the academy's owner for a one-line email giving HyberTec permission to publish the app under its name (step 1).
-2. As HyberTec's Account Holder: accept Apple's updated agreement and check the EU question (steps 2–3).
-3. Make the App Store Connect key and the app's record (steps 4–7).
-4. Upload the app: one command (step 8), or ask Claude Code to run it.
-5. Fill in App Store Connect from the prepared texts and screenshots, then submit (steps 11–23).
-6. Answer Apple if it asks anything, then release (steps 24–26).
+- **Approved:** the first release goes live by itself, within hours (you can't hold it). Tell Claude Code the Google
+  Play link ([google-play/production.md](publishing/google-play/production.md), step 13). Then 1.1.0, as
+  [updates.md](publishing/updates.md) says.
+- **Rejected or a policy issue:** the Inbox names the policy. Give it to Claude Code; most need a form fixed in **App
+  content** (Part 1 of [production.md](publishing/google-play/production.md)), not a new build.
 
-For **Google Play**: HyberTec's developer account is an **organization** account (HyberTec LLC), verified (the owner,
-2026-10-26), so no closed test comes first. When Android is ready: [google-play/testing.md](publishing/google-play/testing.md)
-(the app, the first upload, the internal testers), then [google-play/production.md](publishing/google-play/production.md).
+**After both:** the lead coach comes off the seats once the iPhone's update is out
+(`npx tsx scripts/lead-coach.ts --clear`; `docs/TODO.md`).
 
 ## The guides
 
 | Guide | What | When |
 | --- | --- | --- |
-| [apple/app-store.md](publishing/apple/app-store.md) | The App Store, from Apple's account to the release | Now |
+| [apple/app-store.md](publishing/apple/app-store.md) | The App Store, from Apple's account to the release | Done up to the review; steps 24–27 when Apple answers |
 | [apple/testflight.md](publishing/apple/testflight.md) | Trying the store build on phones first | Optional |
 | [apple/rules.md](publishing/apple/rules.md) | Apple's rules and how Sky Arc meets them; the decisions behind the answers | When Apple asks something |
-| [google-play/testing.md](publishing/google-play/testing.md) | The developer account, creating the app, the first upload, testers | When Android is ready |
-| [google-play/production.md](publishing/google-play/production.md) | Google's forms, the store page, the release | After the internal test |
-| [updates.md](publishing/updates.md) | Every update after the first release, both stores | After the first release |
+| [google-play/testing.md](publishing/google-play/testing.md) | The developer account, creating the app, the first upload, testers, uploads by command | Done; Part 4 sets up uploads by command on a Mac |
+| [google-play/production.md](publishing/google-play/production.md) | Google's forms, the store page, the release | Done up to the review; step 13 when Google answers |
+| [updates.md](publishing/updates.md) | Every update after the first release, both stores; the next one is 1.1.0 | When the stores have answered |
 | [store/](store/) | The texts to paste: the store pages, the age rating, the review notes and logins, the privacy answers, TestFlight's notes | While following the guides |
 
 ## Cost and time
@@ -83,8 +84,9 @@ Nothing costs money per release.
 ## Where things are
 
 - **The guides:** `docs/publishing/`. **The texts:** `docs/store/`.
-- **On this Mac only, never in git** (`mobile/.publish/`; back the folder up): the App Store Connect key and
-  `appstore.json`, Google Play's upload key and service account, the reviewers' logins, the screenshots.
+- **On the Mac that publishes only, never in git** (`mobile/.publish/`; back the folder up): the App Store Connect key
+  and `appstore.json` (on the Mac mini), Google Play's upload key and service account (on the Mac that uploads Android),
+  the reviewers' login, the screenshots. A Mac without a store's keys can't upload to that store.
 - **The version and build number:** `mobile/release.json` (each upload raises the build; Claude Code commits it).
 - **The commands:** `npm run publish:iphone`, `npm run publish:android`, `npm run publish:screenshots`
   (`scripts/publish.mjs`, `scripts/phone.mjs`), and `npx tsx scripts/review-logins.ts` (the reviewers' logins).

@@ -165,8 +165,8 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
 23. **Submit.** Back on **1.0 Prepare for Submission** → **Add for Review** (top right) → check what it lists →
     **Submit for Review**. App Store Connect says what's missing if anything is; fix it and try again.
 24. **Wait.** The status goes **Waiting for Review** → **In Review** → **Pending Developer Release** (approved), with
-    an email at each step. Keep the review logins working meanwhile: don't remove the sample data from production while
-    Apple reviews.
+    an email at each step. Keep the review login working meanwhile (since 2026-10-26 one admin with the academy's real
+    data: [review-notes.md](../../store/review-notes.md)), and don't upload another build while Apple reviews.
 25. **If Apple rejects it,** the message names a guideline. Reply in the same thread (the app → **App Review** → the
     submission). Replies to the likeliest ones (4.8, 3.2, 5.2.1, 4.2.6 and 4.3) are ready in
     [review-notes.md](../../store/review-notes.md); for anything else, give the message to Claude Code to draft the
