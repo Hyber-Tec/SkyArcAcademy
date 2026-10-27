@@ -1,19 +1,24 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DemoBadge } from "@/components/DemoBadge";
 import { T } from "@/components/Text";
 import { space } from "@/theme";
 
 /**
  * A tab's title at the very top of its page, where the phone's large title would be but without the empty bar above it
- * (owner, 2026-10-17: use the space), as Home's greeting sits; an action (a button) on its right.
+ * (owner, 2026-10-17: use the space), as Home's greeting sits, with "Demo" beside it in the demo academy; an action (a
+ * button) on its right.
  */
 export function TabHeader({ title, right, testID }: { title: string; right?: ReactNode; testID?: string }) {
   return (
     <View style={styles.row} testID={testID}>
-      <T variant="title" accessibilityRole="header" numberOfLines={1} style={styles.title}>
-        {title}
-      </T>
+      <View style={styles.titleRow}>
+        <T variant="title" accessibilityRole="header" numberOfLines={1} style={styles.title}>
+          {title}
+        </T>
+        <DemoBadge />
+      </View>
       {right}
     </View>
   );
@@ -41,6 +46,7 @@ export function StatusBarScrim({ color }: { color: string }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 40 },
-  title: { flex: 1 },
+  titleRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm },
+  title: { flexShrink: 1 },
   scrim: { position: "absolute", top: 0, left: 0, right: 0 },
 });

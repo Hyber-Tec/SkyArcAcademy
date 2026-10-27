@@ -1,6 +1,6 @@
 import { doc } from 'firebase/firestore'
 import { Fragment, createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
-import { ACADEMY_ID, DEMO_ACADEMY_ID } from '@shared/academy'
+import { ACADEMY_ID, DEMO_ACADEMY_ID, showsDemo } from '@shared/academy'
 import { ACADEMY_NAME } from '@shared/brand'
 import { COL, ROOT } from '@shared/paths'
 import { type Portal, type RestrictablePage, type Role, isAdminRole, portalOf } from '@shared/roles'
@@ -91,7 +91,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   const [demoChosen, setDemoChosen] = useState(loadDemo)
   const inDemo = demoMember.data?.status === 'active'
   const canSwitchDemo = inDemo && realMember.data?.status === 'active'
-  const isDemo = inDemo && (demoChosen || (!realMember.loading && !realMember.data))
+  const isDemo = (demoChosen || !realMember.loading) && showsDemo(realMember.data, demoMember.data, demoChosen)
   const branchId = isDemo ? DEMO_ACADEMY_ID : ACADEMY_ID
 
   // Then the academy's own document, read anew whenever the person's access changes: restored, or just given, the

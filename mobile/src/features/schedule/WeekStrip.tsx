@@ -31,7 +31,8 @@ export function WeekStrip({
   onToday,
 }: {
   days: StripDay[];
-  selected: DateKey;
+  /** The day shown (null in the Week view: the whole week is). */
+  selected: DateKey | null;
   today: DateKey;
   label: string;
   caption: string;

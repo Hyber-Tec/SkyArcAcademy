@@ -31,8 +31,9 @@ Pure JavaScript packages are fine.
 ```
 app.config.ts          native configuration: ids, Firebase files, permissions, plugins (iOS 27 scene life cycle, signing)
 src/app/               screens (Expo Router). Root gates: signed out → sign-in screens; a password account with an
-                       unconfirmed email → verify-email; otherwise (app)/, which reads the academy's member doc for the
-                       person's email (BranchProvider) and opens the part of their one role.
+                       unconfirmed email → verify-email; otherwise (app)/, which reads the person's member doc for their
+                       email (BranchProvider: the academy's, or the demo academy's for a member of it alone) and opens
+                       the part of their one role.
   (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Home · Schedule ·
                        Scan · Students · More for the office, Home · Schedule · Availability · Scan · More for coaches
                        (their Students is More's first row); More's pages (more/: students, coaches, payroll, account,
@@ -50,14 +51,17 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        news: the list, news/[id] a post, news/attachment a post's file); FamilyProvider holds whose
                        they are and the child a parent chose
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
-src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy: settings,
-                       rules, time zone, member, staff record, the actor for the audit log), AppearanceProvider
+src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy, or the demo
+                       one (`isDemo`): settings, rules, time zone, member, staff record, the actor for the audit log),
+                       AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
-                       may read; useClassesBetween, a range's classes with their students and the coaches in), schedule
-                       (classes.ts; the week strip; ClassCard, a class laid out like the academy's sheets; ClassRow, a
-                       class in a list; parts.tsx, the level and label colours, the seats taken, the coaches in, who's
-                       in; api.ts, the office's marks), students, drive (downloading a Drive
-                       file through the Storage rules; FileView, a file full screen, the staff's and the family's), scan
+                       may read; useClassesBetween, a range's classes with their students and the coaches in;
+                       useEventsBetween, the academy's events; useClockedIn, who's clocked in for the office), schedule
+                       (classes.ts; the week strip; ClassCard, a class laid out like the academy's sheets; WeekList, the
+                       Week view; ClassRow, a class in a list; parts.tsx, the level and label colours, the seats taken,
+                       the coaches in, who's in, a day's events; api.ts, the office's marks), students, drive
+                       (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
+                       and the family's), scan
                        (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
@@ -81,6 +85,7 @@ src/components/        the shared building blocks (Text `T`, Button, Card, ListS
                        EmptyState, SegmentedControl, FilterChips, Skeleton, Screen, TabHeader, SectionTitle,
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, TimeWheel, FactRow, SwitchRow,
                        DateField, ContactButtons, SwipeToDelete, ActionSheet, ToastHost, Hatch (an open seat's lines),
+                       DemoBadge (the demo academy's mark, beside the lockup and each tab's title),
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
@@ -102,7 +107,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **The server is the authority.** Firestore and Storage rules enforce every rule; the app mirrors them so people
   aren't surprised. Callables are the website's own (`sendAccountEmail`, `deleteMyAccount`).
 - **One academy.** Its data lives under `branches/skyarc` (`ACADEMY_ID`); there is no branch chooser. People never see
-  "branch".
+  "branch". Beside it, production has the **demo academy** (`branches/demo`, `docs/DECISIONS.md` §22), made-up people
+  for showing the app: a member of it alone sees it (`showsDemo`, as the website decides), with "Demo" beside the
+  lockup and each tab's title (`DemoBadge`); someone in both sees the real academy (the phone has no switch). So
+  screens read `useBranch().branchId`, never `ACADEMY_ID`.
 - **Audit log:** every change the app makes adds an entry in the same batch (`src/lib/audit.ts`, `via: "app"`), as the
   website does.
 - **Files of minors:** Drive files are read through the Storage rules (`src/features/drive/download.ts`), never through
@@ -128,8 +136,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   person's availability that day). The shared `classViews` and `coachesIn` (`@shared/schedule/classes`) put them
   together, as on the website. **Never read a seat's `coachId`** (production's seats keep their class's lead coach only
   for the 1.0 build, until `scripts/lead-coach.ts --clear`). A student's level and a seat's label take the shared
-  colours (`@shared/schedule/seatColors`), light and dark. The office marks students (Coming, Here and No-show on the
-  day, Canceled) as the website does (`src/features/schedule/api.ts`); every other change is the website's.
+  colours (`@shared/schedule/seatColors`), light and dark. The schedule shows a Day or the Week (the academy's default
+  view first), with each day's events and who's in, as the website's. The office marks students (Coming, Here and
+  No-show on the day, Canceled; the words are the shared `SESSION_STATUS_LABELS`) as the website does
+  (`src/features/schedule/api.ts`); every other change is the website's.
 - **Month calendars scroll vertically through months**, like the iOS Calendar app (permanent rule): never a static
   month with ‹ › arrows, including date pickers (`DatePickerDialog`, `MonthScroller`). Their weeks start on Sunday, as
   calendars do; the academy's week (the schedule's week strip, "this week") runs Monday to Sunday

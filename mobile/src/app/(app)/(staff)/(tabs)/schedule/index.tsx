@@ -1,5 +1,6 @@
 import { effectiveRanges } from "@shared/availability";
 import { KIND_COLORS } from "@shared/schedule/seatColors";
+import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import { type DateKey, addDays, diffDays, startOfWeek, weekDays } from "@shared/time";
 import { router } from "expo-router";
 import { CalendarDays, CalendarX2 } from "lucide-react-native";
@@ -11,23 +12,27 @@ import { EmptyState } from "@/components/EmptyState";
 import { Hatch } from "@/components/Hatch";
 import { IconButton } from "@/components/IconButton";
 import { Screen } from "@/components/Screen";
+import { SegmentedControl } from "@/components/SegmentedControl";
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
+import { useAcademyNow, useClassesBetween, useClockedIn, useEventsBetween, useStudentList } from "@/features/data/hooks";
 import { ClassCard } from "@/features/schedule/ClassCard";
 import { teaches } from "@/features/schedule/classes";
 import { longDay, plural, timeRange, weekRange } from "@/features/schedule/format";
-import { WhosIn, useLevelFill, useSeatFill, useStaffLook } from "@/features/schedule/parts";
+import { EventChips, StatusMark, WhosIn, useLevelFill, useSeatFill, useStaffLook } from "@/features/schedule/parts";
 import { type StripDay, WeekStrip } from "@/features/schedule/WeekStrip";
+import { WeekList } from "@/features/schedule/WeekList";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
+
 /**
- * The schedule, a day at a time, as the website's (docs/DECISIONS.md §21): the week's days on top, then the chosen day's
- * opening hours and who's in, and its classes in time order, each laid out like the academy's sheets (ClassCard): the
- * coaches in, the seats two across with every student in their level's colour and rifle code, the labels in theirs.
- * Coaches see every class; theirs (in their hours) stand out. A class opens its sheet; the office marks who's here
- * there, and makes other changes on the website.
+ * The schedule, as the website's (docs/DECISIONS.md §21), by Day or by Week (the academy's default view first, as on
+ * the website): the week's days on top; then the chosen day's opening hours, events and who's in, and its classes in
+ * time order, or the whole week's days one after another. Each class is laid out like the academy's sheets
+ * (ClassCard): the coaches in, the seats two across with every student in their level's colour and rifle code, the
+ * labels in theirs. Coaches see every class; theirs (in their hours) stand out. A class opens its sheet; the office
+ * marks who's here there, and makes other changes on the website.
  */
 export default function ScheduleScreen() {
   const { settings, isCoach, staffId } = useBranch();
@@ -36,20 +41,26 @@ export default function ScheduleScreen() {
   const weekStartsOn = settings.general.weekStartsOn;
   const { today, nowMin } = useAcademyNow();
   const [selected, setSelected] = useState<DateKey>(today);
+  const [view, setView] = useState<"day" | "week">(settings.schedule.defaultView === "week" ? "week" : "day");
   const [picking, setPicking] = useState(false);
 
   const week = weekDays(selected, weekStartsOn);
   const data = useClassesBetween(week[0], week[6]);
+  const events = useEventsBetween(week[0], week[6]);
+  const clockedIn = useClockedIn(today);
   const look = useStaffLook();
   const students = useStudentList();
   const studentById = useMemo(() => new Map(students.data.map((s) => [s.id, s])), [students.data]);
   const studentOf = (id: string) => studentById.get(id);
   const me = isCoach ? staffId : null;
+  const openDay = (d: DateKey) => {
+    setSelected(d);
+    setView("day");
+  };
 
   const days: StripDay[] = week.map((d) => ({ dateKey: d, isOpen: data.hoursOf(d).isOpen, classes: (data.byDate.get(d) ?? []).length }));
   const day = data.byDate.get(selected) ?? [];
   const hours = data.hoursOf(selected);
-  const people = data.inOn(selected);
   const teachers = new Set(day.flatMap((v) => v.coaches.map((k) => k.staffId))).size;
   // A coach's own hours that day, inside its opening hours.
   const mine = me ? data.availability.find((a) => a.staffId === me && a.dateKey === selected) : undefined;
@@ -78,35 +89,51 @@ export default function ScheduleScreen() {
     <>
       <Screen
         title="Schedule"
-        titleRight={<IconButton testID="schedule-pick-date" icon={<CalendarDays size={21} color={colors.foreground} />} accessibilityLabel="Go to a date" onPress={() => setPicking(true)} size={40} filled />}
+        titleRight={
+          <View style={styles.actions}>
+            <View style={styles.views}>
+              <SegmentedControl
+                value={view}
+                options={[
+                  { value: "day", label: "Day" },
+                  { value: "week", label: "Week" },
+                ]}
+                onChange={setView}
+                testID="schedule-view"
+              />
+            </View>
+            <IconButton testID="schedule-pick-date" icon={<CalendarDays size={21} color={colors.foreground} />} accessibilityLabel="Go to a date" onPress={() => setPicking(true)} size={40} filled />
+          </View>
+        }
         testID="schedule-screen"
       >
         <WeekStrip
           days={days}
-          selected={selected}
+          selected={view === "day" ? selected : null}
           today={today}
           label={weekRange(week[0], week[6])}
           caption={caption}
-          showToday={!week.includes(today) || selected !== today}
-          onSelect={setSelected}
+          showToday={!week.includes(today) || (view === "day" && selected !== today)}
+          onSelect={openDay}
           onPrev={() => setSelected(addDays(selected, -7))}
           onNext={() => setSelected(addDays(selected, 7))}
           onToday={() => setSelected(today)}
         />
-        <View style={styles.dayHead}>
-          <T variant="heading" testID="schedule-day-title">
-            {longDay(selected)}
-          </T>
-          <T variant="small" tone="muted" testID="schedule-day-hours">
-            {summary}
-          </T>
-          {you && !data.loading ? (
-            <T variant="small" style={{ color: myHours.length ? colors.brandText : colors.mutedForeground, fontWeight: "600" }} testID="schedule-day-you">
-              {you}
+        {view === "day" ? (
+          <View style={styles.dayHead}>
+            <T variant="heading" testID="schedule-day-title">
+              {longDay(selected)}
             </T>
-          ) : null}
-        </View>
-        {!data.loading && people.length ? <WhosIn people={people} look={look} me={me} hour12={hour12} testID="schedule-whos-in" /> : null}
+            <T variant="small" tone="muted" testID="schedule-day-hours">
+              {summary}
+            </T>
+            {you && !data.loading ? (
+              <T variant="small" style={{ color: myHours.length ? colors.brandText : colors.mutedForeground, fontWeight: "600" }} testID="schedule-day-you">
+                {you}
+              </T>
+            ) : null}
+          </View>
+        ) : null}
         {data.loading ? (
           <SkeletonCards count={3} height={180} />
         ) : data.error ? (
@@ -116,33 +143,58 @@ export default function ScheduleScreen() {
               Check your connection and try again.
             </T>
           </Card>
-        ) : day.length ? (
+        ) : view === "week" ? (
           <>
-            <View style={styles.list} testID="schedule-classes">
-              {day.map((v) => (
-                <ClassCard
-                  key={v.c.id}
-                  v={v}
-                  today={today}
-                  nowMin={nowMin}
-                  hour12={hour12}
-                  me={me}
-                  look={look}
-                  studentOf={studentOf}
-                  onPress={() => router.push({ pathname: "/class/[id]", params: { id: v.c.id } })}
-                  testID={`schedule-class-${v.c.id}`}
-                />
-              ))}
-            </View>
+            <WeekList
+              days={week}
+              data={data}
+              eventsOn={events.eventsOn}
+              today={today}
+              nowMin={nowMin}
+              hour12={hour12}
+              me={me}
+              look={look}
+              studentOf={studentOf}
+              clockedIn={clockedIn}
+              onOpenDay={openDay}
+            />
             <Legend />
           </>
         ) : (
-          <EmptyState
-            testID="schedule-empty"
-            icon={<CalendarX2 size={26} color={colors.mutedForeground} />}
-            title={hours.isOpen ? "No classes" : "Closed"}
-            text={hours.isOpen ? "No classes on this day yet." : "The academy is closed on this day."}
-          />
+          <>
+            <EventChips events={events.eventsOn(selected)} hour12={hour12} testID="schedule-events" />
+            {hours.isOpen || day.length ? (
+              <WhosIn people={data.inOn(selected)} look={look} me={me} hour12={hour12} clockedIn={selected === today ? clockedIn : undefined} testID="schedule-whos-in" />
+            ) : null}
+            {day.length ? (
+              <>
+                <View style={styles.list} testID="schedule-classes">
+                  {day.map((v) => (
+                    <ClassCard
+                      key={v.c.id}
+                      v={v}
+                      today={today}
+                      nowMin={nowMin}
+                      hour12={hour12}
+                      me={me}
+                      look={look}
+                      studentOf={studentOf}
+                      onPress={() => router.push({ pathname: "/class/[id]", params: { id: v.c.id } })}
+                      testID={`schedule-class-${v.c.id}`}
+                    />
+                  ))}
+                </View>
+                <Legend />
+              </>
+            ) : (
+              <EmptyState
+                testID="schedule-empty"
+                icon={<CalendarX2 size={26} color={colors.mutedForeground} />}
+                title={hours.isOpen ? "No classes" : "Closed"}
+                text={hours.isOpen ? "No classes on this day yet." : "The academy is closed on this day."}
+              />
+            )}
+          </>
         )}
       </Screen>
       <DatePickerDialog
@@ -161,7 +213,7 @@ export default function ScheduleScreen() {
   );
 }
 
-/** What the colours mean: each level's (the academy's list), the labels', and an open seat. */
+/** What the colours and marks mean, as the website's legend: each level's (the academy's list), the labels', the marks and an open seat. */
 function Legend() {
   const { settings } = useBranch();
   const colors = useColors();
@@ -192,6 +244,16 @@ function Legend() {
             </View>
           );
         })}
+      </View>
+      <View style={styles.legendItems}>
+        {(["present", "no_show", "canceled"] as const).map((s) => (
+          <View key={s} style={styles.legendMark}>
+            <StatusMark status={s} size={15} />
+            <T variant="tiny" tone="muted" style={{ fontWeight: "600" }}>
+              {SESSION_STATUS_LABELS[s]}
+            </T>
+          </View>
+        ))}
         <View style={[styles.legendChip, styles.legendOpen, { borderColor: colors.border }]}>
           <Hatch />
           <T variant="tiny" tone="muted" style={{ fontWeight: "600" }}>
@@ -204,10 +266,13 @@ function Legend() {
 }
 
 const styles = StyleSheet.create({
+  actions: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  views: { width: 124 },
   dayHead: { gap: 2, marginTop: space.xs },
   list: { gap: space.md },
   legend: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space.md, gap: space.sm },
-  legendItems: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  legendItems: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   legendChip: { borderRadius: radius.sm, paddingHorizontal: 7, paddingVertical: 2, overflow: "hidden" },
+  legendMark: { flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 4 },
   legendOpen: { borderWidth: 1, borderStyle: "dashed" },
 });

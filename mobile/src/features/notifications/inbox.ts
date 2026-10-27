@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { useQuery } from "@/lib/firestore";
+import { openWebsite } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 
@@ -55,12 +56,17 @@ export function deleteInboxItem(branchId: string, id: string): void {
   deleteDoc(doc(items(branchId), id)).catch(() => toast.error("Couldn’t delete the notification"));
 }
 
-/** Where a notification leads in the app: a post, the news, a class (by its session), the schedule; null for nowhere. */
-export type InboxTarget = { kind: "post"; id: string } | { kind: "news" } | { kind: "class"; sessionId: string } | { kind: "schedule" } | null;
+/**
+ * Where a notification leads: in the app a post, the news, a class (by its session), the schedule; on the website a
+ * trial request or question sent from the public website (answered in Settings → Website → Messages); null for nowhere.
+ */
+export type InboxTarget = { kind: "post"; id: string } | { kind: "news" } | { kind: "class"; sessionId: string } | { kind: "schedule" } | { kind: "website"; path: string } | null;
 
 export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">): InboxTarget {
   // A class taken off the schedule, or now another coach's, has nothing left to open: its notice says it all.
   if (n.type === "session_deleted" || n.type === "session_reassigned_out") return null;
+  // The message itself, as the website's bell opens it (older notices name the page only).
+  if (n.type === "website_message") return n.link ? { kind: "website", path: n.link } : null;
   const t = appTargetOf(n.link ?? "", n.refs ?? undefined);
   if (t.screen === "announcement") return { kind: "post", id: t.announcementId };
   if (t.screen === "announcements") return { kind: "news" };
@@ -71,12 +77,14 @@ export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">):
 
 /**
  * Opens what a notification is about, and marks it read: a post opens on its own page; a class opens its sheet, the
- * class the student's seat is in now (its time or day may have changed since); a seat no longer there says so.
+ * class the student's seat is in now (its time or day may have changed since); a seat no longer there says so; a
+ * message from the public website opens on the website.
  */
 export async function openInboxItem(branchId: string, n: InboxItem): Promise<void> {
   markInboxRead(branchId, n);
   const target = inboxTarget(n);
   if (!target) return;
+  if (target.kind === "website") return openWebsite(target.path);
   if (target.kind === "post") return void router.push({ pathname: "/news/[id]", params: { id: target.id } });
   if (target.kind === "news") return void router.push("/news");
   if (target.kind === "schedule") return void router.navigate("/schedule");

@@ -8,6 +8,7 @@ import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } fro
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
 import { Card } from "@/components/Card";
+import { DemoBadge } from "@/components/DemoBadge";
 import { SkeletonCards } from "@/components/Skeleton";
 import { StatusBarScrim } from "@/components/TabHeader";
 import { ListRow, ListSection } from "@/components/List";
@@ -74,7 +75,10 @@ export default function TodayScreen() {
     <TodayScroll contentStyle={contentStyle}>
       <View style={styles.header}>
         <View style={styles.top}>
-          <SkyArcLockup size="sm" testID="today-lockup" />
+          <View style={styles.brand}>
+            <SkyArcLockup size="sm" testID="today-lockup" />
+            <DemoBadge />
+          </View>
           <View style={styles.bell}>
             <InboxBell />
           </View>
@@ -258,6 +262,7 @@ const styles = StyleSheet.create({
   content: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl * 2 },
   header: { gap: 2 },
   top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
+  brand: { flexDirection: "row", alignItems: "center", gap: space.sm },
   // The bell is a little taller than the lockup: it overhangs rather than pushing the greeting down.
   bell: { marginVertical: -4 },
   greeting: { marginTop: space.md },

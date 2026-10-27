@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
 import { Card } from "@/components/Card";
+import { DemoBadge } from "@/components/DemoBadge";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
@@ -105,7 +106,10 @@ export default function FamilyHomeScreen() {
   return (
     <Screen tab typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-home">
       <View style={styles.header}>
-        <SkyArcLockup size="sm" testID="family-home-lockup" />
+        <View style={styles.brand}>
+          <SkyArcLockup size="sm" testID="family-home-lockup" />
+          <DemoBadge />
+        </View>
         <T variant="title" accessibilityRole="header" style={styles.greeting} testID="family-home-greeting">
           {greeting(nowMin)}
           {first ? `, ${first}` : ""}
@@ -327,6 +331,7 @@ function Attendance({ name, sessions, from, today, nowMin, loading, divider }: {
 
 const styles = StyleSheet.create({
   header: { gap: 2 },
+  brand: { flexDirection: "row", alignItems: "center", gap: space.sm },
   greeting: { marginTop: space.md },
   section: { gap: space.sm },
   list: { gap: space.md },

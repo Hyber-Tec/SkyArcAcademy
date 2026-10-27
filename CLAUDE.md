@@ -134,8 +134,9 @@ Carried over from HyberCRM, adapted to one academy:
 - **Identity:** one person, exactly **one role**: `owner` | `admin` | `coach` | `parent` | `student`. People sign in with **Google** or an **email and password**; access follows the **verified** email only. People records are referenced by ID only.
 - **One academy in the code:** its data lives under `branches/skyarc` (`ACADEMY_ID` in `shared/src/academy.ts`). HyberCRM's internal names stay (`branchId`, `useBranch()`, `BranchSettings`); people never see "branch".
   Beside it, production has a **demo academy** (`DEMO_ACADEMY_ID`, `branches/demo`): the sample data, for showing the
-  app. Its members switch to it in the account menu (`useBranch().isDemo`), and it sends no email or push
-  (`docs/DECISIONS.md` §22). So code reads `useBranch().branchId`, never `ACADEMY_ID`, for the academy's data.
+  app. Its members switch to it in the account menu (`useBranch().isDemo`); on the phone, a member of it alone sees it
+  (`showsDemo`, shared by both). It sends no email or push (`docs/DECISIONS.md` §22). So code reads
+  `useBranch().branchId`, never `ACADEMY_ID`, for the academy's data.
 - **Words in code:** stored values and code say `coach` (`/coach`). A class is an `AcademyClass` in `classes` (a time on
   a day with its seats; **Class** on screen), and each student in it is a `session` with its `classId` (`class` is
   reserved in JavaScript). Every coach in at a class's time teaches it (their availability, "who's in"); a session's

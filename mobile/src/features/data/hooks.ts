@@ -3,10 +3,11 @@ import { dayHours } from "@shared/availability";
 import type { DriveFile } from "@shared/drive/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import { classViews } from "@shared/schedule/classes";
+import { type ScheduleEvent, occursOn } from "@shared/schedule/events";
 import type { Evaluation } from "@shared/shooting/evaluation";
 import type { DayHours } from "@shared/settings/defaults";
 import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
-import type { AcademyClass, Availability, DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
+import type { AcademyClass, Availability, ClockShift, DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
 import { db } from "@/lib/firebase";
@@ -27,6 +28,7 @@ export type StaffDoc = Staff & { id: string };
 export type StudentDoc = Student & { id: string };
 export type EvaluationDoc = Evaluation & { id: string };
 export type DriveFileDoc = DriveFile & { id: string };
+export type EventDoc = ScheduleEvent & { id: string; isRecurring: boolean };
 
 const col = (branchId: string, name: string) => collection(db, ROOT.branches, branchId, name);
 
@@ -85,6 +87,34 @@ export function useClassesBetween(from: DateKey | null, to: DateKey | null = fro
     loading: classes.loading || seats.loading || whosIn.loading || configs.loading || (isAdmin && staff.loading),
     error: classes.error ?? seats.error ?? whosIn.error,
   };
+}
+
+/**
+ * The academy's events between two dates (a parents' meeting, an open practice), as the website's schedule shows them
+ * (web/src/features/schedule/useClassData.ts): the one-off ones in the range and every repeating one, by the days they
+ * fall on, earliest first. Staff only (the rules); null dates pause it.
+ */
+export function useEventsBetween(from: DateKey | null, to: DateKey | null = from) {
+  const { branchId } = useBranch();
+  const range = from && to ? `${branchId}-${from}-${to}` : null;
+  const oneOff = useQuery<EventDoc>(range && `events-${range}`, () => query(col(branchId, COL.events), where("isRecurring", "==", false), where("dateKey", ">=", from), where("dateKey", "<=", to)));
+  const repeating = useQuery<EventDoc>(range && `repeating-events-${branchId}`, () => query(col(branchId, COL.events), where("isRecurring", "==", true)));
+  const eventsOn = useCallback(
+    (d: DateKey) => [...oneOff.data, ...repeating.data].filter((e) => occursOn(e, d)).sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin),
+    [oneOff.data, repeating.data],
+  );
+  return { eventsOn, loading: oneOff.loading || repeating.loading };
+}
+
+/**
+ * Who has clocked in now (the kiosk's open shifts today), for the office's who's in, as the website's schedule marks
+ * them: the minute each clocked in. Owners and admins only (a coach reads only their own shifts); null for everyone
+ * else.
+ */
+export function useClockedIn(today: DateKey) {
+  const { branchId, isAdmin } = useBranch();
+  const shifts = useQuery<ClockShift>(isAdmin ? `clocked-in-${branchId}-${today}` : null, () => query(col(branchId, COL.clockShifts), where("dateKey", ">=", today), where("dateKey", "<=", today)));
+  return useCallback((staffId: string) => shifts.data.find((s) => s.staffId === staffId && s.status === "open")?.inMin ?? null, [shifts.data]);
 }
 
 /** One class's record (its time, seats and note; its students are its sessions). */

@@ -1,17 +1,18 @@
 import { coachColor } from "@shared/colors";
 import { seatKind } from "@shared/schedule/classes";
 import { KIND_COLORS, type SeatColor, levelColor } from "@shared/schedule/seatColors";
+import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import type { SessionStatus } from "@shared/settings/defaults";
 import { Ban, Check, UserX } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { T } from "@/components/Text";
-import { type AvailabilityDoc, useStaffList } from "@/features/data/hooks";
+import { type AvailabilityDoc, type EventDoc, useStaffList } from "@/features/data/hooks";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useIsDark } from "@/theme";
 import { type ClassView, firstName, partOf } from "./classes";
-import { shortRange, timeRange } from "./format";
+import { clock, shortRange, timeRange } from "./format";
 
 /**
  * The schedule's small parts, as the website draws them (web/src/features/schedule/seatParts.tsx): a student's level in
@@ -131,7 +132,7 @@ export function StatusMark({ status, size = 15 }: { status: SessionStatus; size?
   const Icon = status === "present" ? Check : status === "no_show" ? UserX : Ban;
   const color = status === "present" ? colors.success : status === "no_show" ? colors.mutedForeground : colors.destructive;
   return (
-    <View style={[styles.mark, { width: size, height: size, backgroundColor: colors.card }]} accessibilityLabel={status === "present" ? "Here" : status === "no_show" ? "No-show" : "Canceled"}>
+    <View style={[styles.mark, { width: size, height: size, backgroundColor: colors.card }]} accessibilityLabel={SESSION_STATUS_LABELS[status]}>
       <Icon size={size - 5} color={color} strokeWidth={3} />
     </View>
   );
@@ -178,24 +179,51 @@ export function CoachesIn({ v, look, me, hour12, testID }: { v: ClassView; look:
 
 /**
  * Who's in on a day: everyone with hours that day (the coaches, and the manager, who's in without teaching), earliest
- * first, each with their hours, as the website's schedule lists them. `me` (a coach looking) reads "You".
+ * first, each with their hours, as the website's schedule lists them; "Nobody in yet" in amber when nobody is. `me` (a
+ * coach looking) reads "You". `clockedIn` (today, for the office): a green dot on whoever has clocked in.
  */
-export function WhosIn({ people, look, me, hour12, testID }: { people: readonly AvailabilityDoc[]; look: StaffLook; me?: string | null; hour12: boolean; testID?: string }) {
+export function WhosIn({
+  people,
+  look,
+  me,
+  hour12,
+  clockedIn,
+  testID,
+}: {
+  people: readonly AvailabilityDoc[];
+  look: StaffLook;
+  me?: string | null;
+  hour12: boolean;
+  clockedIn?: (staffId: string) => number | null;
+  testID?: string;
+}) {
   const colors = useColors();
+  if (!people.length) {
+    return (
+      <T variant="small" style={[styles.none, { color: colors.warning }]} testID={testID}>
+        Nobody in yet
+      </T>
+    );
+  }
   return (
     <View style={styles.people} testID={testID}>
       {people.map((a) => {
         const name = look.nameOf(a.staffId, a.staffName);
         const mine = a.staffId === me;
         const role = a.staffRole && a.staffRole !== "coach" ? (a.staffRole === "owner" ? "Owner" : "Admin") : null;
+        const since = clockedIn?.(a.staffId) ?? null;
         return (
           <View
             key={a.id}
             style={[styles.person, { backgroundColor: mine ? colors.brandTint : colors.card, borderColor: colors.border }]}
             accessible
-            accessibilityLabel={`${mine ? "You" : name}${role ? `, ${role}` : ""}, in ${a.ranges.map((r) => timeRange(r.startMin, r.endMin, hour12)).join(" and ")}`}
+            accessibilityLabel={`${mine ? "You" : name}${role ? `, ${role}` : ""}, in ${a.ranges.map((r) => timeRange(r.startMin, r.endMin, hour12)).join(" and ")}${since !== null ? `, clocked in at ${clock(since, hour12)}` : ""}`}
+            testID={testID ? `${testID}-${a.staffId}` : undefined}
           >
-            <Avatar name={name} size={18} color={look.colorOf(a.staffId)} />
+            <View>
+              <Avatar name={name} size={18} color={look.colorOf(a.staffId)} />
+              {since !== null ? <View style={[styles.clocked, { backgroundColor: colors.success, borderColor: colors.card }]} testID={testID ? `${testID}-${a.staffId}-clocked-in` : undefined} /> : null}
+            </View>
             <T variant="small" style={[styles.personName, mine && { color: colors.brandText }]} numberOfLines={1}>
               {mine ? "You" : firstName(name)}
             </T>
@@ -209,8 +237,36 @@ export function WhosIn({ people, look, me, hour12, testID }: { people: readonly 
   );
 }
 
+/**
+ * A day's events (a parents' meeting, an open practice) in the website's sky blue, with their times: the academy's,
+ * beside its classes.
+ */
+export function EventChips({ events, hour12, testID }: { events: readonly EventDoc[]; hour12: boolean; testID?: string }) {
+  const colors = useColors();
+  if (!events.length) return null;
+  return (
+    <View style={styles.events} testID={testID}>
+      {events.map((e) => (
+        <View key={e.id} style={[styles.event, { backgroundColor: colors.eventTint }]} accessible accessibilityLabel={`${e.title}, ${timeRange(e.startMin, e.endMin, hour12)}`}>
+          <T variant="small" style={[styles.eventTitle, { color: colors.event }]} numberOfLines={1}>
+            {e.title}
+          </T>
+          <T variant="small" style={[styles.eventTime, { color: colors.event }]} numberOfLines={1}>
+            {shortRange(e.startMin, e.endMin, hour12)}
+          </T>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   people: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  clocked: { position: "absolute", right: -2, bottom: -2, width: 9, height: 9, borderRadius: radius.full, borderWidth: 2 },
+  events: { gap: 4 },
+  event: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 5 },
+  eventTitle: { fontWeight: "600", flexShrink: 1 },
+  eventTime: { opacity: 0.85, fontVariant: ["tabular-nums"] },
   person: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radius.full, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 3, paddingRight: 9, paddingVertical: 3, maxWidth: "100%" },
   chip: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 1, maxWidth: "100%" },
   chipText: { fontWeight: "600" },

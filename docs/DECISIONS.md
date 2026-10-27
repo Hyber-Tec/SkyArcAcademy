@@ -641,18 +641,22 @@ first presentation.
   - On production the script fills only the demo academy and refuses the real one. Running it again moves the demo's
     weeks to the new today.
   - The same security rules and functions serve both (they were already written per academy). The demo sends no
-    email and no phone notification: its notices stay in the website's bell. The public website shows only the real
-    academy.
+    email and no phone notification: its notices stay in the website's bell and the phone's inbox. The public website
+    shows only the real academy.
   - **Demo logins** (2026-10-27, for showing the phone): an office admin, a coach, a parent of two and a student, on the
     reserved `@skyarc-sample.test` addresses, in the demo academy only. Their one password stays on the Mac mini
-    (`docs/internal/`). On the website they open the demo straight away; the phone app, fixed to the real academy until
-    then, opens it from its next build (made on the MacBook Pro), which goes to the stores as 1.1.0.
+    (`docs/internal/`). On the website they open the demo straight away; the phone app opens it from its next build
+    (1.1.0; "On the phone", below).
 - **The switch** is for people in both academies (the owners): **Demo data** in the account menu, remembered per
   browser. Switching opens the person's Home in the other academy and starts every page afresh. While the demo is on,
   "Demo data" shows under the logo (a dot when the sidebar is closed, "Demo" in a phone's top bar), so it's never taken
   for the real academy. Someone in the demo academy alone sees only the demo.
+- **On the phone** (the owner, 2026-10-27, to show the demo on phones too): the app picks the academy by account, as the
+  website does. A member of the real academy sees the real one; a member of the demo academy alone (the demo's own
+  logins, made-up people) sees the demo, with "Demo" in amber beside the logo and each tab's title. The phone has no
+  switch: someone in both sees the real academy there.
 - **The App Store's review login** has the sample manager's email, so it's also an admin of the demo academy. The
-  website offers it the switch; the phone app reads only the real academy.
+  website offers it the switch; the phone app shows it the real academy.
 - **Alternatives set aside:**
   - A separate Firebase project: a second set of services, billing and deploys, for the same result.
   - The emulators on a laptop: no live address to share, and a developer's sign-in.

@@ -1,6 +1,6 @@
 import { notificationMeta } from "@shared/comms";
 import { minutesOf } from "@shared/time";
-import { Bell, CalendarCheck, CalendarDays, CalendarMinus, CalendarPlus, CalendarX2, ChartLine, ChevronRight, Clock, type LucideIcon, Megaphone, UserMinus, UserPlus, UserX } from "lucide-react-native";
+import { Bell, CalendarCheck, CalendarDays, CalendarMinus, CalendarPlus, CalendarX2, ChartLine, ChevronRight, Clock, type LucideIcon, Mail, Megaphone, UserMinus, UserPlus, UserX } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
@@ -22,6 +22,7 @@ const ICONS: Record<string, LucideIcon> = {
   session_reassigned_out: UserMinus,
   session_no_show: UserX,
   report_shared: ChartLine,
+  website_message: Mail,
 };
 
 const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? null;

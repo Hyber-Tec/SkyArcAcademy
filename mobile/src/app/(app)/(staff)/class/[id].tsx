@@ -1,12 +1,12 @@
 import { gradeLabel } from "@shared/people";
+import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import type { SessionStatus } from "@shared/settings/defaults";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { CalendarDays, ChevronRight, ExternalLink, StickyNote, X } from "lucide-react-native";
+import { Ban, CalendarDays, Check, ChevronRight, ExternalLink, StickyNote, UserX, X } from "lucide-react-native";
 import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
-import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
@@ -22,10 +22,13 @@ import { duration, longDay, plural, startsIn, timeLeft, timeRange } from "@/feat
 import { KindTag, LevelChip, SeatCount, plainNote, useStaffLook } from "@/features/schedule/parts";
 import { openWebsite } from "@/lib/links";
 import { useBranch } from "@/state/BranchProvider";
-import { radius, space, useColors, useStatusColors } from "@/theme";
+import { radius, space, useColors } from "@/theme";
 
-/** The marks, in the sheets' words: here and no-show belong to the day of the class (a class next week has nothing to mark yet). */
-const MARK: Record<SessionStatus, string> = { pending: "Coming", confirmed: "Coming", present: "Here", no_show: "No-show", canceled: "Canceled" };
+/**
+ * The marks, in the sheets' words (the shared labels, with "Coming" for a student expected): here and no-show belong to
+ * the day of the class (a class next week has nothing to mark yet).
+ */
+const MARK: Record<SessionStatus, string> = { ...SESSION_STATUS_LABELS, pending: "Coming", confirmed: "Coming" };
 const ALL_MARKS: SessionStatus[] = ["confirmed", "present", "no_show", "canceled"];
 const AHEAD_MARKS: SessionStatus[] = ["confirmed", "canceled"];
 
@@ -209,7 +212,6 @@ function SeatRow({
   divider?: boolean;
 }) {
   const colors = useColors();
-  const status = useStatusColors();
   const canceled = seat.status === "canceled";
   const grade = student?.grade ?? seat.studentGrade;
   const note = plainNote(seat.note);
@@ -250,11 +252,7 @@ function SeatRow({
             ) : null}
           </View>
         </View>
-        {!marks && (seat.status === "present" || seat.status === "no_show" || seat.status === "canceled") ? (
-          <Badge bg={status[seat.status].bg} fg={status[seat.status].text}>
-            {MARK[seat.status]}
-          </Badge>
-        ) : null}
+        {!marks ? <MarkShown status={seat.status} /> : null}
         <ChevronRight size={16} color={colors.mutedForeground} />
       </Pressable>
       {marks ? (
@@ -284,6 +282,25 @@ function SeatRow({
           })}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * A mark already set, when it can't be changed here (a coach's view, a past day), as the website's day shows it: here in
+ * green, a no-show quiet, canceled in red; nothing while the student is coming.
+ */
+function MarkShown({ status }: { status: SessionStatus }) {
+  const colors = useColors();
+  if (status !== "present" && status !== "no_show" && status !== "canceled") return null;
+  const Icon = status === "present" ? Check : status === "no_show" ? UserX : Ban;
+  const color = status === "present" ? colors.success : status === "no_show" ? colors.mutedForeground : colors.destructive;
+  return (
+    <View style={styles.shown} testID={`class-mark-shown-${status}`}>
+      <Icon size={14} color={color} strokeWidth={2.5} />
+      <T variant="small" style={{ color, fontWeight: "600" }}>
+        {MARK[status]}
+      </T>
     </View>
   );
 }
@@ -321,6 +338,7 @@ const styles = StyleSheet.create({
   tags: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, marginTop: 3 },
   figure: { fontVariant: ["tabular-nums"] },
   marks: { flexDirection: "row", gap: 6 },
+  shown: { flexDirection: "row", alignItems: "center", gap: 4 },
   mark: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 34, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: 4 },
   openRow: { padding: space.md },
   openBox: { height: 40, borderRadius: radius.md, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", overflow: "hidden" },

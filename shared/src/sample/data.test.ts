@@ -253,4 +253,10 @@ describe('sample data', () => {
     expect(students.filter((s) => s.rifle).length).toBeGreaterThan(25)
     expect(students.filter((s) => s.level === 'Precision').every((s) => s.rifle === null)).toBe(true)
   })
+
+  it('has events the schedules find: one-off or repeating, as the website saves them', () => {
+    const events = of('events').map((d) => d.data)
+    expect(events.length).toBe(2)
+    for (const e of events) expect(e.isRecurring).toBe(e.recurrence !== null)
+  })
 })

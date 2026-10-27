@@ -15,3 +15,12 @@ export const DEMO_ACADEMY_ID = 'demo'
 export function isDemoAcademy(academyId: string | null | undefined): boolean {
   return academyId === DEMO_ACADEMY_ID
 }
+
+/**
+ * Whether someone sees the demo academy, from their own member docs in the two (null where they have none): an active
+ * member of the demo academy sees it when they aren't a member of the real one (whatever their access there), or when
+ * they're in both and chose it (`chosen`: the website's account menu; the phone app has no switch).
+ */
+export function showsDemo(real: { status: string } | null | undefined, demo: { status: string } | null | undefined, chosen = false): boolean {
+  return demo?.status === 'active' && (chosen || !real)
+}
