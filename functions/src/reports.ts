@@ -1,6 +1,7 @@
 import { FieldValue, type Timestamp } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions/v2'
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore'
+import { isDemoAcademy } from '@shared/academy'
 import { isReservedEmail } from '@shared/brand'
 import { reportEmail, reportSignInUrl } from '@shared/email/report'
 import { COL, ROOT } from '@shared/paths'
@@ -50,7 +51,8 @@ export const onProgressReportWritten = onDocumentUpdated({ document: REPORT, sec
   )
 
   let notify: NonNullable<ProgressReportDoc['notify']> = { status: 'skipped', at: FieldValue.serverTimestamp(), recipients: [], error: null }
-  const emailable = recipients.filter((r) => !isReservedEmail(r.key))
+  // Never from the demo academy, whose families are made up.
+  const emailable = isDemoAcademy(branchId) ? [] : recipients.filter((r) => !isReservedEmail(r.key))
   if (after.sharedBy?.emailFamily !== false && emailable.length && branch) {
     const results = []
     for (const r of emailable) {

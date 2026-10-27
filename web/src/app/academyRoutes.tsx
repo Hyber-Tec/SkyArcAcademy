@@ -1,4 +1,4 @@
-import { Navigate, Outlet, type RouteObject } from 'react-router'
+import { Navigate, Outlet, type RouteObject, redirect } from 'react-router'
 import { BranchProvider } from '@/branch/BranchProvider'
 import { PortalLayout } from '@/portals/PortalLayout'
 import { PortalHomeRedirect, RequireAuth, RequirePage, RequirePortal } from './guards'
@@ -18,7 +18,11 @@ const adminRoutes: RouteObject[] = [
     path: 'announcements/:announcementId/edit',
     lazy: page(() => import('@/features/announcements/AnnouncementEditorPage'), 'AnnouncementEditorPage'),
   },
-  { path: 'website/:tab?', lazy: page(() => import('@/features/website/WebsitePage'), 'WebsitePage') },
+  // The Website page's old address (until 2026-10-27), kept for links and notifications: it's under Settings now.
+  {
+    path: 'website/:tab?',
+    loader: ({ params, request }) => redirect(`/admin/settings/website${params.tab ? `/${params.tab}` : ''}${new URL(request.url).search}`),
+  },
   { path: 'schedule/*', lazy: page(() => import('@/features/schedule/SchedulePage'), 'SchedulePage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'StudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },
@@ -68,7 +72,7 @@ const adminRoutes: RouteObject[] = [
     ),
     children: [{ index: true, lazy: page(() => import('@/features/access/AccessControlPage'), 'AccessControlPage') }],
   },
-  { path: 'settings/:section?', lazy: page(() => import('@/features/settings/SettingsPage'), 'SettingsPage') },
+  { path: 'settings/:section?/:tab?', lazy: page(() => import('@/features/settings/SettingsPage'), 'SettingsPage') },
   { path: '*', element: <Navigate to="/admin/home" replace /> },
 ]
 

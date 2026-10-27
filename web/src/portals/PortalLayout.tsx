@@ -9,6 +9,7 @@ import { useAttention } from '@/features/home/attention'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useNewWebsiteMessageCount } from '@/features/website/api'
 import { useBranch } from '@/branch/BranchProvider'
+import { DemoBadge } from '@/components/app/DemoBadge'
 import { SkyArcLockup, SkyArcMark } from '@/components/app/SkyArcMark'
 import { UserMenu } from '@/components/app/UserMenu'
 import { ViewAsControl } from '@/components/app/ViewAs'
@@ -46,8 +47,8 @@ import { cn } from '@/lib/utils'
 import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLeaves } from './nav'
 
 /**
- * Live counts shown next to nav entries, by nav key (Home: needs attention; coach Announcements and families' News:
- * unread; Website: messages from the website not yet marked done).
+ * Live counts shown next to nav entries, by nav key (Home: what needs attention and the messages from the website not
+ * yet marked done; coach Announcements and families' News: unread).
  */
 const NavBadges = createContext<Record<string, number>>({})
 
@@ -56,8 +57,8 @@ function NavBadgesProvider({ portal, children }: { portal: Portal; children: Rea
   const unread = useUnreadAnnouncementCount(portal === 'coach')
   const news = useUnreadNewsCount(portal === 'parent' || portal === 'student')
   const website = useNewWebsiteMessageCount(portal === 'admin')
-  const total = portal === 'admin' ? attention.total : 0
-  const value = useMemo(() => ({ home: total, announcements: unread, news, website }), [total, unread, news, website])
+  const total = portal === 'admin' ? attention.total + website : 0
+  const value = useMemo(() => ({ home: total, announcements: unread, news }), [total, unread, news])
   // Installed app icon: unread announcements in the coach portal (TE's News count).
   useEffect(() => {
     if (portal !== 'coach') return
@@ -177,6 +178,7 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
               <span className="transition-opacity group-hover/brand:opacity-0">
                 <SkyArcMark />
               </span>
+              <DemoBadge variant="dot" className="absolute -top-0.5 -right-0.5" />
               <LuPanelLeftOpen className="absolute size-4! opacity-0 transition-opacity group-hover/brand:opacity-100" />
             </span>
           </SidebarMenuButton>
@@ -185,6 +187,7 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
     )
   }
   return (
+    <>
     <div className="flex items-center gap-1">
       <Link to={homeTo} className="flex min-w-0 flex-1 items-center rounded-lg p-1.5 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring">
         <SkyArcLockup />
@@ -204,6 +207,8 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
         </Tooltip>
       )}
     </div>
+    <DemoBadge variant="row" className="mx-1.5" />
+    </>
   )
 }
 
@@ -216,6 +221,7 @@ function MobileTopBar({ portal }: { portal: Portal }) {
         <LuMenu />
       </Button>
       <SkyArcLockup size="sm" />
+      <DemoBadge />
       <span className="flex-1" />
       {portal === 'coach' ? <NotificationBell /> : null}
       <UserMenu />

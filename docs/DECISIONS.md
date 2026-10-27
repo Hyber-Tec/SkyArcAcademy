@@ -466,7 +466,7 @@ homepage now … I'll actually test and verify from the live website".
   site never presents made-up quotes as real (the brief's rule, and the FTC's 2024 rule on fake reviews): until the
   academy adds real ones on the Website page (with the family's permission), it shows sample quotes, each marked
   "Sample". They must be real, or gone, before skyarcacademy.com points here (`docs/DEPLOY.md`).
-- **The Website page** (owners and admins, `/admin/website`): the trial requests and questions sent from the site
+- **The Website page** (owners and admins; Settings → Website since 2026-10-27, §22): the trial requests and questions sent from the site
   (newest first, New and Done), the photo library (several at a time, from a phone too, resized in the browser to a few
   widths; caption, album, focus point, hide, order, delete), which photo goes where on the site, the coaches' cards,
   families' quotes, the hours the site shows (not the schedule's own hours, which are wider) and the Instagram link.
@@ -624,3 +624,38 @@ modern, professional", without changing much more.
   was laid out first). The office login keeps its email and password as an admin of its own; the coach, parent and
   student logins went with the sample people. So the 1.0 build can still open a class (it finds one by a single coach),
   each seat carries its class's lead coach until the phone's update (`scripts/lead-coach.ts`, `docs/TODO.md`).
+
+## 22. A demo academy to show the app, and the website's messages on Home (2026-10-27)
+
+The owner shows the app to the academy with plenty of data, then switches to the real academy ("in fact, we've moved
+in all the data you sent, so you can start using it"). Production has held only the real academy since 2026-10-26
+(§21), which is still thin. The owner asked for a switch between demo and real data, and to tidy things before the
+first presentation.
+
+- **A second academy in production, `demo`** (`DEMO_ACADEMY_ID`, `shared/src/academy.ts`), beside the real one
+  (`skyarc`), holding the sample data (`shared/src/sample/`): made-up coaches, students, families, ten weeks of classes,
+  scores with their SIUS PDFs, reports, announcements, and a few trial requests and questions from the website.
+  - The first `npm run seed:sample` on production makes it from the real academy: its name, contact, settings and
+    rules, its website (the pages' content and the photos' records; the files stay the real academy's, and the demo
+    never deletes them), and its owners, as owners.
+  - On production the script fills only the demo academy and refuses the real one. Running it again moves the demo's
+    weeks to the new today.
+  - The same security rules and functions serve both (they were already written per academy). The demo sends no
+    email and no phone notification: its notices stay in the website's bell. The public website and the phone app show
+    only the real academy.
+- **The switch** is for people in both academies (the owners): **Demo data** in the account menu, remembered per
+  browser. Switching opens the person's Home in the other academy and starts every page afresh. While the demo is on,
+  "Demo data" shows under the logo (a dot when the sidebar is closed, "Demo" in a phone's top bar), so it's never taken
+  for the real academy. Someone in the demo academy alone sees only the demo.
+- **The App Store's review login** has the sample manager's email, so it's also an admin of the demo academy. The
+  website offers it the switch; the phone app reads only the real academy.
+- **Alternatives set aside:**
+  - A separate Firebase project: a second set of services, billing and deploys, for the same result.
+  - The emulators on a laptop: no live address to share, and a developer's sign-in.
+- **The Website page moved under Settings** (Settings → Website, `/admin/settings/website/…`; the old address
+  redirects): it's where the public website is set up.
+- **Its messages come to Home:**
+  - A **Messages** card on Home lists the trial requests and questions not yet marked done, newest first, with a red
+    count. Each opens in Settings → Website → Messages, marked.
+  - Home's sidebar badge adds them to what needs the admin.
+  - A message's notification opens the message itself.

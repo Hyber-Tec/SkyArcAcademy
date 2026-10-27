@@ -19,12 +19,17 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    Google sign-in's fingerprints, uploads by command), then `production.md` once the testers have tried it.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
-4. **The iPhone's update for classes taught together** (merged on 2026-10-26, #34; Android's build 3 already has it):
+4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
+   bottom of the sidebar) to show the made-up academy, and turn it off for the real one. Before a showing, ask Claude
+   Code to refresh the demo (`npm run seed:sample` on production moves its classes around the day).
+5. **The iPhone's update for classes taught together** (merged on 2026-10-26, #34; Android's build 3 already has it):
    upload it once Apple's review of 1.0 is over (`docs/publishing/updates.md`; its What's New is in
    `docs/store/listing.md`). Then clear the lead coach (below).
 
 ## Product questions waiting for the owner
 
+- **The demo academy on the phone:** the phone app shows only the real academy (`docs/DECISIONS.md` §22). A Demo
+  data switch there would come with a phone update, if wanted.
 - Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
   Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already

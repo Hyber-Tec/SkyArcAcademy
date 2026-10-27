@@ -91,7 +91,7 @@ export const websiteMessage = onCall({ secrets: [gmailAppPassword], timeoutSecon
         type: 'website_message' as const,
         title: websiteMessageTitle(m),
         body: summary,
-        link: 'admin/website/messages',
+        link: `admin/settings/website/messages?m=${ref.id}`,
         refs: { messageId: ref.id },
       })),
       `site-${ref.id}`,

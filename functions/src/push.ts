@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { type Message, getMessaging } from 'firebase-admin/messaging'
 import { logger } from 'firebase-functions/v2'
+import { isDemoAcademy } from '@shared/academy'
 import { APP_URL } from '@shared/brand'
 import { COL, ROOT, USER_COL } from '@shared/paths'
 import { PUSH_CHANNELS, type PushData, channelFor } from '@shared/push'
@@ -13,10 +14,11 @@ const DEAD_TOKEN = /registration-token-not-registered|invalid-registration-token
 /**
  * Pushes new inbox items to their recipients' phones (the app's installs, `users/{uid}/devices`, found by email).
  * The iPhone badge is the recipient's unread inbox count in that branch. Never throws: the inbox item is already
- * written, and a push that fails must not make the trigger retry.
+ * written, and a push that fails must not make the trigger retry. The demo academy's notices stay in the inbox: its
+ * owners' phones are real.
  */
 export async function pushItems(branchId: string, items: { id: string; n: Outgoing }[]): Promise<void> {
-  if (!items.length) return
+  if (!items.length || isDemoAcademy(branchId)) return
   try {
     const byRecipient = new Map<string, { id: string; n: Outgoing }[]>()
     for (const item of items) byRecipient.set(item.n.recipientKey, [...(byRecipient.get(item.n.recipientKey) ?? []), item])

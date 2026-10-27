@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { isDemoAcademy } from '@shared/academy'
 import { isReservedEmail, signInUrl } from '@shared/brand'
 import { type InviteKind, inviteEmail } from '@shared/email/invite'
 import { COL, DOC, ROOT } from '@shared/paths'
@@ -23,7 +24,8 @@ async function deliverInvite(opts: { branchId: string; email: string; member: Me
 
   const branchSnap = await db.doc(`${ROOT.branches}/${branchId}`).get()
   const branch = branchSnap.data() as Branch | undefined
-  if (!branch || branch.status !== 'active' || member.status !== 'active') {
+  // The demo academy emails nobody (its people are made up; its owners are already in).
+  if (!branch || branch.status !== 'active' || member.status !== 'active' || isDemoAcademy(branchId)) {
     await record('skipped')
     return 'skipped'
   }
@@ -56,7 +58,7 @@ async function deliverInvite(opts: { branchId: string; email: string; member: Me
 /**
  * A new member gets a sign-in email: an owner invite, "you've been added", or
  * "your request was approved". A member who becomes an owner gets one too.
- * Test and example addresses are never emailed.
+ * Test and example addresses are never emailed, nor anyone in the demo academy.
  */
 export const onMemberWritten = onDocumentWritten(
   { document: `${ROOT.branches}/{branchId}/${COL.members}/{email}`, secrets: [gmailAppPassword], ...LIGHT },
@@ -67,7 +69,7 @@ export const onMemberWritten = onDocumentWritten(
     const { branchId, email } = event.params
     const promoted = !!before && before.role !== 'owner' && after.role === 'owner'
     if (before && !promoted) return
-    if (isReservedEmail(email)) return
+    if (isReservedEmail(email) || isDemoAcademy(branchId)) return
 
     let kind: InviteKind = promoted ? 'promoted_owner' : after.role === 'owner' ? 'owner' : 'added'
     let by = (promoted ? after.updatedBy : after.createdBy) ?? null
