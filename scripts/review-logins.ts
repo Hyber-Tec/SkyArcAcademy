@@ -16,16 +16,20 @@
  *
  * The sample data must be in production first (npm run seed:sample), except with --real-data (Goo's call, 2026-10-26:
  * the reviewers see the academy's real data). Uses the developer's gcloud login.
+ *
+ * A store may be reviewing with a login at any time, so this never gives an existing account a password other than the
+ * saved one (run it on the Mac that keeps the file, the Mac mini), and --remove never deletes the review admin or the
+ * demo academy's logins, which since 2026-10-27 are the same sample people's sign-ins.
  */
 import { randomInt } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { ACADEMY_ID } from '../shared/src/academy'
+import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
 import { COL, ROOT } from '../shared/src/paths'
 import { SAMPLE_EMAIL_DOMAIN } from '../shared/src/sample/data'
-import { deleteUserByEmail, upsertPasswordUser } from './lib/auth-rest'
+import { deleteUserByEmail, findUserByEmail, upsertPasswordUser } from './lib/auth-rest'
 import { PROJECT_ID, commit, getDocument } from './lib/firestore-rest'
 import { REVIEW_ADMIN_AUTHOR, isReviewAdmin } from './lib/review-admin'
 
@@ -69,6 +73,19 @@ function newPassword(): string {
   }
 }
 
+/**
+ * A login's password: the one saved on this Mac, or a new one for an account that doesn't exist yet. Never a new one for
+ * an existing account: Apple or Google may be reviewing with it, and a Mac without the file would lock them out.
+ */
+async function passwordFor(email: string, saved: Saved | null): Promise<string> {
+  const kept = saved?.logins.find((l) => l.email === email)?.password
+  if (kept) return kept
+  if (await findUserByEmail(email)) {
+    throw new Error(`${email} already has a password, and it isn't in ${path.relative(process.cwd(), FILE)} on this Mac. A store may be reviewing with it, so it isn't changed: run this on the Mac that keeps the file (the Mac mini).`)
+  }
+  return newPassword()
+}
+
 async function make() {
   const saved = readSaved()
   const logins: Saved['logins'] = []
@@ -76,7 +93,7 @@ async function make() {
     const member = await getDocument(`${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${login.email}`)
     if (!member) throw new Error(`${login.email} has no access in ${PROJECT_ID}: the sample data isn't there. Run npm run seed:sample first.`)
     if (member.role !== login.role) throw new Error(`${login.email} is a ${String(member.role)} in ${PROJECT_ID}, not a ${login.role}; not touching it.`)
-    const password = saved?.logins.find((l) => l.email === login.email)?.password ?? newPassword()
+    const password = await passwordFor(login.email, saved)
     const { created } = await upsertPasswordUser({ email: login.email, password, displayName: login.name })
     logins.push({ kind: login.kind, email: login.email, password, sees: login.sees })
     console.log(`${created ? '+' : '='} ${login.kind.padEnd(11)} ${login.email}`)
@@ -98,7 +115,7 @@ async function realData() {
   const memberPath = `${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${office.email}`
   const member = await getDocument(memberPath)
   if (member && !isReviewAdmin(member)) throw new Error(`${office.email} still has a sample person's access in ${PROJECT_ID}: remove the sample data first (npm run seed:sample -- --remove).`)
-  const password = saved?.logins.find((l) => l.email === office.email)?.password ?? newPassword()
+  const password = await passwordFor(office.email, saved)
   const name = 'Reviewer (App Store)'
   const { created } = await upsertPasswordUser({ email: office.email, password, displayName: name })
   const now = new Date()
@@ -163,7 +180,20 @@ async function realData() {
 }
 
 async function remove() {
-  for (const login of LOGINS) console.log(`${(await deleteUserByEmail(login.email)) ? '-' : '='} ${login.kind.padEnd(11)} ${login.email}`)
+  for (const login of LOGINS) {
+    // The review admin stays: it's the login in App Store Connect and the Play Console (docs/store/review-notes.md).
+    const member = await getDocument(`${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${login.email}`)
+    if (member && isReviewAdmin(member)) {
+      console.log(`= ${login.kind.padEnd(11)} ${login.email}: kept, the stores' review login (remove its access on the website first if it must go)`)
+      continue
+    }
+    // Since 2026-10-27 the sample people's own sign-ins are the demo academy's logins (docs/DECISIONS.md §22).
+    if (await getDocument(`${ROOT.branches}/${DEMO_ACADEMY_ID}/${COL.members}/${login.email}`)) {
+      console.log(`= ${login.kind.padEnd(11)} ${login.email}: kept, a demo login`)
+      continue
+    }
+    console.log(`${(await deleteUserByEmail(login.email)) ? '-' : '='} ${login.kind.padEnd(11)} ${login.email}`)
+  }
   console.log(`\nThe sign-ins are deleted; ${path.relative(process.cwd(), FILE)} keeps the passwords for when they're made again.`)
 }
 

@@ -73,7 +73,9 @@ Waiting on `main` until each store has answered on 1.0.0 (no second submission d
 
 - **The review login** must keep working for every review. Since 2026-10-26 it's one admin with the academy's real
   data (Goo's call, `docs/DECISIONS.md` §21; `docs/store/review-notes.md`). If a reviewer deleted it,
-  `npx tsx scripts/review-logins.ts --real-data` brings it back with the same password.
+  `npx tsx scripts/review-logins.ts --real-data` brings it back with the same password, on the Mac mini, which keeps
+  it. On another Mac the script refuses to touch an account whose password it doesn't have, and `--remove` never
+  deletes the review login or the demo logins.
 - **A new permission or a new kind of data** (location, notifications, a new form) changes Apple's App Privacy and
   Google's Data safety answers ([privacy-answers.md](../store/privacy-answers.md)), and the privacy policy. Claude Code
   says so when a change adds one.

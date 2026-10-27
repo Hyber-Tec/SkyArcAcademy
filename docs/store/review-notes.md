@@ -12,8 +12,8 @@ Since 2026-10-26 production holds the academy's real data, and the reviewers sig
 call, `docs/DECISIONS.md` §21): the office login, with the same email and password as before, now an admin of its own
 named "Reviewer (App Store)". The coach, parent and student logins went with the sample people. The password is only
 on this Mac: `open -e mobile/.publish/review-logins.json` (never in git or in a document). Don't change it while a
-version is in review. If a reviewer deletes the account, `npx tsx scripts/review-logins.ts --real-data` brings it back
-with the same password.
+version is in review. If a reviewer deletes the account, `npx tsx scripts/review-logins.ts --real-data` on this Mac
+brings it back with the same password.
 
 | Login | Email | Who |
 | --- | --- | --- |
