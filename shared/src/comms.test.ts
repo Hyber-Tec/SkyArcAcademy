@@ -31,7 +31,7 @@ describe('announcements', () => {
 
 describe('notifications', () => {
   it('falls back for unknown types', () => {
-    expect(notificationMeta('session_no_show').label).toBe('No Show')
+    expect(notificationMeta('session_no_show').label).toBe('No-show')
     expect(notificationMeta('mystery')).toEqual({ label: 'Notification', color: '#9CA3AF' })
   })
 })

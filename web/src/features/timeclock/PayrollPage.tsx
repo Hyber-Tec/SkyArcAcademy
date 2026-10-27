@@ -310,7 +310,7 @@ export function PayrollPage() {
         </Card>
       ) : null}
 
-      <PayRecordsHeading title={report ? 'Generated Payroll Records' : 'Recent Payroll Records'} page={page} size={size} total={report ? rows.length : null} loading={loading} />
+      <PayRecordsHeading title={report ? 'Generated payroll records' : 'Recent payroll records'} page={page} size={size} total={report ? rows.length : null} loading={loading} />
 
       <Card className="gap-0 overflow-hidden py-0">
         <Table data-testid="payroll-table">
@@ -321,8 +321,8 @@ export function PayrollPage() {
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Start Time</TableHead>
-              <TableHead>End Time</TableHead>
+              <TableHead>Start time</TableHead>
+              <TableHead>End time</TableHead>
               <TableHead className="text-right">Hrs</TableHead>
               <TableHead className="text-right">Rate</TableHead>
               <TableHead className="text-right">Total</TableHead>

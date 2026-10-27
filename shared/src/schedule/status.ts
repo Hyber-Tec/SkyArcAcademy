@@ -5,8 +5,9 @@ export const SESSION_STATUSES: readonly SessionStatus[] = ['pending', 'confirmed
 export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
-  present: 'Present',
-  no_show: 'No Show',
+  // The marks' own words on the schedule and the phone (docs/DECISIONS.md §21).
+  present: 'Here',
+  no_show: 'No-show',
   canceled: 'Canceled',
 }
 

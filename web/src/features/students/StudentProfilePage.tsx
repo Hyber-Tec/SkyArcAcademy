@@ -79,7 +79,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
 
   const tabs = TABS.filter((t) => isAdmin || !t.adminOnly)
   const active = (tabs.some((t) => t.key === tab) ? tab : 'sessions') as ProfileTab
-  const go = (t: ProfileTab) => navigate(`${base}/${student.id}/${t}`, { replace: true })
+  const go = (t: ProfileTab, search = '') => navigate(`${base}/${student.id}/${t}${search}`, { replace: true })
 
   /** Books this student into a class: on a picked day, or the next open day. */
   const newSession = (dateKey?: DateKey) => {

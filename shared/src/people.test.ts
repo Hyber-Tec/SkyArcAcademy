@@ -32,5 +32,7 @@ describe('initials', () => {
     expect(initials('  Paige   Ann Sutton ')).toBe('PA')
     expect(initials('Paige Ann Sutton', 3)).toBe('PAS')
     expect(initials('')).toBe('?')
+    expect(initials('Reviewer (App Store)')).toBe('RA')
+    expect(initials('(…)')).toBe('?')
   })
 })
