@@ -13,6 +13,7 @@ import { untilText } from '@/features/coach/sessionUi'
 import { plural } from '@/features/home/parts'
 import { useFamilyReports } from '@/features/reports/data'
 import { type Report, one } from '@/features/reports/model'
+import { type AskPreset, AskForClassDialog } from '@/features/requests/AskForClassDialog'
 import { MiniTarget } from '@/features/scores/TargetPlot'
 import { BestBadge } from '@/features/students/scores/FeaturedResult'
 import { useNow } from '@/lib/useNow'
@@ -75,6 +76,7 @@ export function FamilyHomePage() {
   const scores = useFamilyEvaluations(family.ids)
   const isNew = useIsNewReport()
   const [open, setOpen] = useState<WithId<Session> | null>(null)
+  const [asking, setAsking] = useState<AskPreset | null>(null)
 
   const upcoming = useMemo(() => sessions.filter((s) => !hasEnded(s, now)), [sessions, now])
   // Each child's next class (one that isn't canceled), soonest first; children with none last.
@@ -118,7 +120,8 @@ export function FamilyHomePage() {
           <ContactCard />
         </div>
       </div>
-      <ClassDetails session={open} family={family} now={now} onClose={() => setOpen(null)} />
+      <ClassDetails session={open} family={family} now={now} onClose={() => setOpen(null)} onAsk={setAsking} />
+      <AskForClassDialog open={asking !== null} onOpenChange={(o) => !o && setAsking(null)} family={family} preset={asking ?? undefined} />
     </div>
   )
 }

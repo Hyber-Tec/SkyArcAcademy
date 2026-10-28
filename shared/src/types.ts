@@ -290,7 +290,9 @@ export interface Session extends AuditStamp {
   visualOrder: number
   confirmedAt: TimestampLike | null
   confirmedBy: string | null
-  source: 'manual' | 'paste' | 'duplicate_week' | 'master' | 'student_calendar' | 'seed' | 'import'
+  /** Who canceled it, when it's canceled from the family's side (`via: 'family'`) or by a request moved elsewhere. */
+  canceled?: { at: TimestampLike; by: string; via: 'family' | 'request' } | null
+  source: 'manual' | 'paste' | 'duplicate_week' | 'master' | 'student_calendar' | 'seed' | 'import' | 'request'
   isDeleted: boolean
   deletedAt: TimestampLike | null
   deletedBy: string | null

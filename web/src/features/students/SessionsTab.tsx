@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { LuChevronDown } from 'react-icons/lu'
+import { MAKEUP_LOOKBACK_DAYS, makeupsLost, makeupsOwed } from '@shared/schedule/classes'
 import { SESSION_STATUS_STYLE } from '@shared/schedule/status'
-import { formatDateKey } from '@shared/time'
+import { addDays, formatDateKey, formatMinutes } from '@shared/time'
 import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -17,8 +18,29 @@ export function SessionsTab({ activity, onOpenSession }: { activity: StudentActi
   const [schedShown, setSchedShown] = useState(SCHEDULE_STEP)
   const happened = (s: { dateKey: string; endMin: number }) => s.dateKey < today || (s.dateKey === today && s.endMin <= nowMin)
   const schedule = when === 'up' ? sessions.filter((s) => !happened(s)) : sessions.filter(happened).reverse()
+  // Makeups (docs/DECISIONS.md §23): a canceled or missed class is owed one; a makeup missed too is lost.
+  const since = addDays(today, -MAKEUP_LOOKBACK_DAYS)
+  const owed = useMemo(() => makeupsOwed(sessions, since), [sessions, since])
+  const lost = useMemo(() => makeupsLost(sessions, since), [sessions, since])
 
   return (
+    <div className="space-y-4">
+      {owed.length || lost.length ? (
+        <div className="rounded-xl border bg-card px-5 py-3.5 text-sm" data-testid="student-makeups">
+          <h2 className="text-base font-semibold">Makeups</h2>
+          {owed.length ? (
+            <p className="mt-1.5">
+              <span className="font-medium">Owed:</span>{' '}
+              {owed.map((m) => `${formatDateKey(m.dateKey, 'monthDay')} at ${formatMinutes(m.startMin)} (${m.status === 'no_show' ? 'no-show' : 'canceled'})`).join(', ')}
+            </p>
+          ) : null}
+          {lost.length ? (
+            <p className="mt-1 text-muted-foreground">
+              <span className="font-medium text-foreground">Lost:</span> {lost.map((m) => `${m.note} missed on ${formatDateKey(m.dateKey, 'monthDay')}`).join(', ')}. A missed makeup isn’t made up again.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="overflow-hidden rounded-xl border bg-card" data-testid="student-schedule">
         <div className="flex items-center justify-between border-b px-5 py-3.5">
           <h2 className="text-base font-semibold">Scheduled classes</h2>
@@ -89,5 +111,6 @@ export function SessionsTab({ activity, onOpenSession }: { activity: StudentActi
           </div>
         ) : null}
       </div>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut, LuPresentation } from 'react-icons/lu'
+import { LuBell, LuChevronsUpDown, LuKeyRound, LuLayoutGrid, LuLogOut, LuPresentation } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
@@ -18,6 +18,7 @@ import {
 import { SidebarMenuButton } from '@/components/ui/sidebar'
 import { Switch } from '@/components/ui/switch'
 import { initials } from '@shared/people'
+import { NoticeSwitchesDialog } from '@/features/notifications/NoticeSwitches'
 import { SignInSecurityDialog } from './SignInSecurity'
 import { ThemeSubmenu } from './ThemeToggle'
 
@@ -38,6 +39,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
   const branch = useOptionalBranch()
   const navigate = useNavigate()
   const [security, setSecurity] = useState(false)
+  const [notices, setNotices] = useState(false)
   const name = branch?.member?.displayName || user?.displayName || email || ''
 
   const trigger =
@@ -88,6 +90,12 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
               <Switch checked={branch.isDemo} tabIndex={-1} aria-hidden className="pointer-events-none ml-auto" />
             </DropdownMenuItem>
           ) : null}
+          {branch?.isAdmin ? (
+            <DropdownMenuItem onSelect={() => setNotices(true)}>
+              <LuBell />
+              Notifications
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onSelect={() => setSecurity(true)}>
             <LuKeyRound />
             Sign-in & security
@@ -107,6 +115,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
       </DropdownMenuContent>
     </DropdownMenu>
     <SignInSecurityDialog open={security} onOpenChange={setSecurity} />
+    {branch?.isAdmin ? <NoticeSwitchesDialog open={notices} onOpenChange={setNotices} /> : null}
     </>
   )
 }

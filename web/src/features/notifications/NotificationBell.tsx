@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 
-/** My newest inbox items in this branch (session changes, announcements). */
+/** My newest inbox items in this branch (class changes, requests and their answers, scores, news). */
 export function useInbox(enabled = true) {
   const { branchId, actor } = useBranch()
   const q = useMemo(
@@ -91,7 +91,7 @@ export function NotificationBell() {
               </Button>
             ) : null}
           </div>
-          <SheetDescription className="sr-only">Class changes and announcements for you.</SheetDescription>
+          <SheetDescription className="sr-only">What's new for you: classes, requests, scores and news.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
           {groups.map((g) => (
@@ -133,7 +133,7 @@ export function NotificationBell() {
             <div className="px-6 py-16 text-center">
               <LuBell className="mx-auto size-8 text-muted-foreground/40" />
               <p className="mt-3 text-sm font-medium">No notifications yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">Class and announcement alerts will appear here once they arrive.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Class changes, answers and news show here when they arrive.</p>
             </div>
           ) : null}
         </div>

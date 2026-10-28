@@ -2,6 +2,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { db, LIGHT } from './app'
+import { closeStaleRequests, syncUpcomingSeats } from './requests'
 import { COL, ROOT } from '@shared/paths'
 import { STUDENT_STATUS_LABELS, autoStudentStatus } from '@shared/people'
 import { resolveSettings } from '@shared/settings/resolve'
@@ -96,6 +97,15 @@ export const studentLifecycleDaily = onSchedule({ schedule: '0 8 * * *', timeZon
     }
     await writer.close()
     if (changed) logger.info('Student statuses updated', { branchId, changed })
+    // Families' side of the schedule (docs/DECISIONS.md §23): the coming weeks' seats taken, and requests whose class
+    // passed without an answer.
+    try {
+      await syncUpcomingSeats(branchId, today)
+      const closed = await closeStaleRequests(branchId, Date.now())
+      if (closed) logger.info('Requests closed: their class has passed', { branchId, closed })
+    } catch (e) {
+      logger.error('Could not refresh the seats taken or close past requests', { branchId, error: String(e) })
+    }
   }
 })
 

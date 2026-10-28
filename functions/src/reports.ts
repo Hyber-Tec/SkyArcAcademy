@@ -4,6 +4,7 @@ import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/fire
 import { isDemoAcademy } from '@shared/academy'
 import { isReservedEmail } from '@shared/brand'
 import { reportEmail, reportSignInUrl } from '@shared/email/report'
+import { type NoticePrefs, noticeOn } from '@shared/notices'
 import { COL, ROOT } from '@shared/paths'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import type { Branch, Member } from '@shared/types'
@@ -37,16 +38,21 @@ export const onProgressReportWritten = onDocumentUpdated({ document: REPORT, sec
   const first = after.student?.firstName || after.studentName
   const sharedMs = (after.sharedAt as Timestamp | null)?.toMillis?.() ?? Date.now()
 
+  // The inbox and the phone follow each person's "Progress reports" switch (shared/src/notices.ts); the email follows
+  // the choice made when sharing.
+  const prefs = await db.getAll(...(recipients.length ? recipients : [{ key: '_' }]).map((r) => db.doc(`${ROOT.branches}/${branchId}/${COL.notificationPrefs}/${r.key}`)))
   await sendNotifications(
     branchId,
-    recipients.map((r) => ({
-      recipientKey: r.key,
-      type: 'report_shared' as const,
-      title: r.member.role === 'student' ? 'Your progress report is ready' : `${first}’s progress report is ready`,
-      body: `${after.period.label} progress report${branch?.name ? ` from ${branch.name}` : ''}.`,
-      link: `report/${reportId}`,
-      refs: { reportId },
-    })),
+    recipients
+      .filter((r, i) => noticeOn(prefs[i]?.data() as NoticePrefs | undefined, 'reports'))
+      .map((r) => ({
+        recipientKey: r.key,
+        type: 'report_shared' as const,
+        title: r.member.role === 'student' ? 'Your progress report is ready' : `${first}’s progress report is ready`,
+        body: `${after.period.label} progress report${branch?.name ? ` from ${branch.name}` : ''}.`,
+        link: `report/${reportId}`,
+        refs: { reportId },
+      })),
     `report-${reportId}-${sharedMs}`,
   )
 

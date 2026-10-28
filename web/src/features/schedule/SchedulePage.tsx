@@ -4,7 +4,7 @@ import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, 
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
-import { makeupsOwed } from '@shared/schedule/classes'
+import { MAKEUP_LOOKBACK_DAYS, makeupsOwed } from '@shared/schedule/classes'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, addDays, formatDateKey, formatMinutesShort, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
 import type { Availability, Session, Student, WithId } from '@shared/types'
@@ -18,6 +18,7 @@ import { useShifts } from '@/features/timeclock/api'
 import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { branchCol, useQuery } from '@/lib/firestore'
+import { RequestsButton } from '@/features/requests/OfficeRequests'
 import { AddClassDialog } from './AddClassDialog'
 import { AddSeatDialog } from './AddSeatDialog'
 import type { ScheduleCtx } from './api'
@@ -258,7 +259,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
 
   // --------------------------------------------------------- make-ups owed
   // Absences of the last six weeks still without a make-up, for "Add a student".
-  const since = addDays(today, -42)
+  const since = addDays(today, -MAKEUP_LOOKBACK_DAYS)
   const owedQ = useMemo(
     () => (admin && seatFor ? query(branchCol(branchId, COL.sessions), where('dateKey', '>=', since), where('dateKey', '<=', addDays(today, 28))) : null),
     [admin, seatFor, branchId, since, today],
@@ -333,6 +334,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
               <LuPanelRightOpen />
             </Button>
           ) : null}
+          {admin ? <RequestsButton /> : null}
           {admin ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -1,6 +1,8 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { db, LIGHT } from './app'
+import { sendNotifications } from './notify'
 import { pinHash } from './pins'
+import { familyClassesLink, familyOf, noticesFor } from './recipients'
 import { dayStaffing, deliverSessionNotices, snapshotOf, teachingCoaches, withCoachesIn } from './sessionNotify'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
@@ -11,6 +13,7 @@ import { type PayClass, autoClockOutAt } from '@shared/pay/paidTime'
 import { coachesIn } from '@shared/schedule/classes'
 import { type ConflictSeat, type ConflictSession, seatConflicts, sessionConflicts, staffCoachState } from '@shared/schedule/conflicts'
 import { resolveBusinessRules } from '@shared/settings/businessRules'
+import { familyBookedNotice } from '@shared/schedule/familyNotices'
 import { type SessionSnapshot, inNoticeWindow, sessionCreatedNotices } from '@shared/schedule/notify'
 import { resolveSettings } from '@shared/settings/resolve'
 import type { BranchSettings } from '@shared/settings/defaults'
@@ -405,7 +408,17 @@ export const onSessionCreated = onDocumentCreated({ document: `${ROOT.branches}/
   const { branch, settings } = await loadBranch(branchId)
   const data = snap.data()
   const confirmed = (await confirmIfDue(branchId, snap.ref, data, settings, branch)) || data.status === 'confirmed'
-  if (!confirmed || branch.status !== 'active') return
+  if (branch.status !== 'active') return
+  // A makeup or an extra class the office booked by hand: the family hears of it (one they asked for is told by the
+  // request's answer instead, and copied weeks tell nobody).
+  if (data.source === 'manual') {
+    const booked = familyBookedNotice({ ...snapshotOf(data), note: String(data.note ?? '') }, Date.now())
+    if (booked) {
+      const family = await familyOf(branchId, String(data.studentId))
+      await sendNotifications(branchId, noticesFor(family, booked, (p) => familyClassesLink(p, String(data.dateKey)), { sessionId, dateKey: String(data.dateKey) }), `sess-${sessionId}-booked`)
+    }
+  }
+  if (!confirmed) return
   const notice = { now: Date.now(), today: todayKey(branch.timezone), windowHours: settings.notifications.sessionChangeWindowHours }
   const s: SessionSnapshot = { ...snapshotOf(data), status: 'confirmed' }
   // Most classes are added further ahead: who's in is read only for one that notifies.
@@ -422,3 +435,5 @@ export { deleteMyAccount, sendAccountEmail } from './account'
 export { purgeDriveTrash } from './drive'
 export { onProgressReportWritten, onReportViewed } from './reports'
 export { websiteMessage } from './website'
+export { cancelClass, decideClassRequest, onClassWritten, onSeatWritten, requestClass, withdrawClassRequest } from './requests'
+export { onScoreCreated } from './scores'

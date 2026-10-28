@@ -548,6 +548,34 @@ service cloud.firestore {
         allow create: if false;
       }
 
+      // A parent's, a student's or the office's notification switches (shared/src/notices.ts), by email: their own
+      // only. Coaches keep theirs on their staff record.
+      match /notificationPrefs/{key} {
+        function onOff(d, k) {
+          return !(k in d) || d[k] is bool;
+        }
+        allow read: if isMember(b) && key == emailKey();
+        allow create, update: if isMember(b) && key == emailKey()
+          && request.resource.data.keys().hasOnly(['classChanges', 'requests', 'scores', 'reports', 'announcements', 'websiteMessages', 'updatedAt'])
+          && onOff(request.resource.data, 'classChanges') && onOff(request.resource.data, 'requests')
+          && onOff(request.resource.data, 'scores') && onOff(request.resource.data, 'reports')
+          && onOff(request.resource.data, 'announcements') && onOff(request.resource.data, 'websiteMessages')
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      // Families' requests for a seat (shared/src/schedule/requests.ts): the office reads them all, a family its own
+      // child's. Only the server writes them (functions/src/requests.ts: cancelClass, requestClass, decideClassRequest).
+      match /classRequests/{requestId} {
+        allow read: if isAdmin(b) || isFamilyOf(b, resource.data.studentId);
+        allow write: if false;
+      }
+
+      // Each class's time and seats taken, without names, so families see where seats are open (the server keeps it).
+      match /classSeats/{classId} {
+        allow read: if isMember(b);
+        allow write: if false;
+      }
+
       // ------------------------------------------------------ drive
 
       // The Drive (shared/src/drive/types.ts): one folder per student at the top, plus any folders staff make.

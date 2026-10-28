@@ -45,7 +45,10 @@ export interface BranchSettings {
     /** Ordered staff IDs; staff not listed follow alphabetically. */
     coachOrder: string[]
     pasteStatus: SessionStatus
+    /** Classes are confirmed this many hours before they start; until then, families can cancel them (§23). */
     autoConfirm: { enabled: boolean; hoursBefore: number }
+    /** Families ask for open seats up to this many days ahead (docs/DECISIONS.md §23). */
+    requests: { daysAhead: number }
     duplicate: { overwriteTargetDays: boolean }
     events: { titlePresets: string[]; defaultMinutes: number; monthDefaultStartMin: number }
     alerts: { firstSession: boolean }
@@ -149,6 +152,7 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     coachOrder: [],
     pasteStatus: 'pending',
     autoConfirm: { enabled: true, hoursBefore: 24 },
+    requests: { daysAhead: 14 },
     duplicate: { overwriteTargetDays: true },
     events: {
       titlePresets: ['Tournament', 'Closed', 'Range Practice', 'Private Coaching', 'Parent Meeting'],

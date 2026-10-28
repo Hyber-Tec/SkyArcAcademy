@@ -13,6 +13,9 @@ export const COL = {
   /** Classes: a time on a day with its seats (`AcademyClass`); `sessions` are the students in them. */
   classes: 'classes',
   sessions: 'sessions',
+  /** Families' requests for a seat (shared/src/schedule/requests.ts), and each class's seats taken, without names. */
+  classRequests: 'classRequests',
+  classSeats: 'classSeats',
   availability: 'availability',
   dayConfigs: 'dayConfigs',
   events: 'events',
@@ -24,6 +27,8 @@ export const COL = {
   payPeriods: 'payPeriods',
   announcements: 'announcements',
   notifications: 'notifications',
+  /** Families' and the office's notification switches, by email (shared/src/notices.ts; coaches keep theirs on `staff`). */
+  notificationPrefs: 'notificationPrefs',
   /** The Drive's folders and files (shared/src/drive/types.ts). */
   driveFolders: 'driveFolders',
   driveFiles: 'driveFiles',

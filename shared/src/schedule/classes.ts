@@ -145,14 +145,35 @@ export function uncovered(c: Pick<AcademyClass, 'startMin' | 'endMin'>, ranges: 
   return gaps
 }
 
+/** How far back makeups still owed are looked for: six weeks (the office's "Add a student", and families' requests). */
+export const MAKEUP_LOOKBACK_DAYS = 42
+
 /**
- * Make-ups still owed: canceled seats (from `since` on) with no make-up booked for them yet, i.e. no later seat of the
- * same student labelled "MU for" the missed date. Oldest first.
+ * A missed class that earns a makeup: a class canceled or missed (a no-show still gets one, the manager's rule of
+ * 2026-10-27). A makeup doesn't earn another: missing it loses the credit. Nor do a trial or extra practice.
+ */
+export function earnsMakeup(s: Pick<Session, 'status' | 'note' | 'isDeleted'>): boolean {
+  if (s.isDeleted || (s.status !== 'canceled' && s.status !== 'no_show')) return false
+  const kind = seatKind(s.note)
+  return kind !== 'makeup' && kind !== 'trial' && kind !== 'practice'
+}
+
+/**
+ * Make-ups still owed: missed classes (from `since` on, see `earnsMakeup`) with no make-up booked for them yet, i.e. no
+ * seat of the same student labelled "MU for" the missed date that's still on (a make-up marked a no-show counts as
+ * used). Oldest first.
  */
 export function makeupsOwed<S extends Pick<Session, 'studentId' | 'dateKey' | 'status' | 'note' | 'isDeleted'>>(seats: readonly S[], since: DateKey): S[] {
   const booked = new Set(seats.filter(takesSeat).map((s) => `${s.studentId}|${(s.note ?? '').trim().toLowerCase()}`))
   return seats
-    .filter((s) => !s.isDeleted && s.status === 'canceled' && s.dateKey >= since && seatKind(s.note) !== 'trial')
+    .filter((s) => earnsMakeup(s) && s.dateKey >= since)
     .filter((s) => !booked.has(`${s.studentId}|${makeupLabel(s.dateKey).toLowerCase()}`))
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+}
+
+/** Make-ups missed (from `since` on): a make-up marked a no-show, whose credit is lost. Oldest first. */
+export function makeupsLost<S extends Pick<Session, 'dateKey' | 'status' | 'note' | 'isDeleted'>>(seats: readonly S[], since: DateKey): S[] {
+  return seats
+    .filter((s) => !s.isDeleted && s.status === 'no_show' && seatKind(s.note) === 'makeup' && s.dateKey >= since)
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
 }

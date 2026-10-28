@@ -1,16 +1,22 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { LuCalendarClock, LuChevronRight, LuExternalLink, LuMail, LuMapPin, LuPhone, LuStickyNote } from 'react-icons/lu'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { LuCalendarClock, LuCalendarX, LuChevronRight, LuExternalLink, LuMail, LuMapPin, LuPhone, LuStickyNote } from 'react-icons/lu'
+import { toast } from 'sonner'
 import { type TrendLevel, trendLabel } from '@shared/reports/types'
 import { familyNote, familyStatusLabel } from '@shared/schedule/family'
+import { familyCancelCheck } from '@shared/schedule/requests'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, formatDateKey, formatDuration, formatTimeRange } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { type Tone, StatePill } from '@/features/home/parts'
 import { TREND_STYLE } from '@/features/reports/model'
+import { cancelClass, requestError } from '@/features/requests/api'
+import type { AskPreset } from '@/features/requests/AskForClassDialog'
+import { useFamilyRequests } from '@/features/requests/hooks'
 import { cn } from '@/lib/utils'
 import { type Family, dayTitle, hasEnded, useAcademyContactDetails } from './data'
 
@@ -167,10 +173,30 @@ export function ClassRow({
   )
 }
 
-/** A class's details, from any list or the month calendar. Families can't change classes: the academy does. */
-export function ClassDetails({ session: s, family, now, onClose }: { session: WithId<Session> | null; family: Family; now: number; onClose: () => void }) {
-  const { branch } = useBranch()
+/**
+ * A class's details, from any list or the month calendar. Families cancel an upcoming class until it's confirmed, and
+ * ask to move it to another time (`onAsk`, which opens "Ask for a class"); the academy changes everything else
+ * (docs/DECISIONS.md §23).
+ */
+export function ClassDetails({
+  session: s,
+  family,
+  now,
+  onClose,
+  onAsk,
+}: {
+  session: WithId<Session> | null
+  family: Family
+  now: number
+  onClose: () => void
+  onAsk?: (p: AskPreset) => void
+}) {
+  const { branch, branchId, settings } = useBranch()
   const contact = useAcademyContactDetails()
+  const { confirm, dialog } = useConfirm()
+  const [canceling, setCanceling] = useState(false)
+  const ids = useMemo(() => (s ? [s.studentId] : []), [s])
+  const requests = useFamilyRequests(ids)
   // Closing goes back to the class it was opened from (the dialog has no trigger of its own), for keyboards.
   const opener = useRef<HTMLElement | null>(null)
   const open = s !== null
@@ -209,8 +235,61 @@ export function ClassDetails({ session: s, family, now, onClose }: { session: Wi
               </>
             ) : null}
           </dl>
+          {(() => {
+            const upcoming = !hasEnded(s, now) && (s.status === 'pending' || s.status === 'confirmed')
+            if (!upcoming) return null
+            const check = familyCancelCheck({ status: s.status, isDeleted: s.isDeleted, startMs: s.startAt?.toMillis?.() ?? 0 }, now, settings)
+            const moving = requests.data.find((r) => r.status === 'pending' && r.kind === 'reschedule' && r.forSessionId === s.id)
+            async function cancelIt() {
+              if (!s) return
+              const whose = family.who === 'parent' ? `${family.firstName(s.studentId)}’s class` : 'Your class'
+              const ok = await confirm({
+                title: 'Cancel this class?',
+                description: `${whose} on ${formatDateKey(s.dateKey, 'weekdayMedium')} at ${formatTimeRange(s.startMin, s.endMin)}. The academy is told, and a makeup can be asked for afterwards.`,
+                confirmLabel: 'Cancel class',
+                destructive: true,
+              })
+              if (!ok) return
+              setCanceling(true)
+              try {
+                await cancelClass(branchId, s.id)
+                toast.success('Class canceled', { description: 'The academy has been told. Ask for a makeup from Classes when you’re ready.' })
+              } catch (e) {
+                toast.error('The class wasn’t canceled', { description: requestError(e, 'Please try again.') })
+              } finally {
+                setCanceling(false)
+              }
+            }
+            return (
+              <div className="space-y-2.5">
+                {moving ? (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
+                    Moving to {formatDateKey(moving.dateKey, 'weekdayMedium')}, {formatTimeRange(moving.startMin, moving.endMin)}: waiting for the academy.
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  {onAsk && !moving ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onClose()
+                        onAsk({ studentId: s.studentId, kind: 'reschedule', forSessionId: s.id })
+                      }}
+                      data-testid="class-move"
+                    >
+                      <LuCalendarClock /> Move to another time
+                    </Button>
+                  ) : null}
+                  <Button variant="outline" className="text-destructive hover:text-destructive" disabled={!check.ok || canceling} onClick={() => void cancelIt()} data-testid="class-cancel">
+                    <LuCalendarX /> {canceling ? 'Canceling…' : 'Cancel class'}
+                  </Button>
+                </div>
+                {!check.ok ? <p className="text-sm text-muted-foreground">{check.message}</p> : null}
+              </div>
+            )
+          })()}
           <div className="rounded-lg bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
-            {hasEnded(s, now) || s.status === 'canceled' ? 'A question about this class? Contact' : 'To change or cancel this class, contact'} {branch.name}
+            {hasEnded(s, now) || s.status === 'canceled' ? 'A question about this class? Contact' : 'To change it some other way, contact'} {branch.name}
             {contact.phone || contact.email ? ':' : '.'}
             {contact.phone || contact.email ? (
               <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -229,6 +308,7 @@ export function ClassDetails({ session: s, family, now, onClose }: { session: Wi
           </div>
         </DialogContent>
       ) : null}
+      {dialog}
     </Dialog>
   )
 }

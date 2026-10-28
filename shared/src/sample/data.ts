@@ -545,6 +545,22 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   for (const seat of [...made].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || String(a.data.classId).localeCompare(String(b.data.classId)) || Number(a.data.visualOrder) - Number(b.data.visualOrder))) {
     add(`${COL.sessions}/${seat.id}`, seat.data)
   }
+  // Each class's seats taken, as the server keeps them (functions/src/requests.ts), so families see open seats at once.
+  for (const d of days) {
+    if (!isOpen(d)) continue
+    for (const slot of slotsOn(d)) {
+      const id = classIdOf(d, slot)
+      add(`${COL.classSeats}/${id}`, {
+        dateKey: d,
+        startMin: slot.block.startMin,
+        endMin: slot.block.endMin,
+        startAt: toInstant(d, slot.block.startMin, timezone),
+        seats,
+        taken: taken(d, slot),
+        isDeleted: false,
+      })
+    }
+  }
 
   // Students, with dates the app keeps up to date ------------------------------
   let parents = 0

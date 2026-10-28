@@ -130,6 +130,13 @@ export type NotificationType =
   | 'session_no_show'
   | 'report_shared'
   | 'website_message'
+  // Families' cancellations and requests (docs/DECISIONS.md §23): the office hears of them, the family of the answer.
+  | 'class_canceled_by_family'
+  | 'class_requested'
+  | 'request_approved'
+  | 'request_rejected'
+  // A new score for a student, to their family.
+  | 'score_added'
 
 /** `branches/{b}/notifications/{id}`: the in-app inbox (written by Cloud Functions). */
 export interface AppNotification {
@@ -139,7 +146,15 @@ export interface AppNotification {
   body: string
   /** In-app path below the branch, e.g. "coach/announcements/abc". */
   link: string
-  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; reportId?: string | null; messageId?: string | null }
+  refs: {
+    sessionId?: string | null
+    announcementId?: string | null
+    dateKey?: string | null
+    reportId?: string | null
+    messageId?: string | null
+    requestId?: string | null
+    evaluationId?: string | null
+  }
   createdAt: TimestampLike
   readAt: TimestampLike | null
 }
@@ -158,6 +173,11 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   session_no_show: { label: 'No-show', color: '#DC2626' },
   report_shared: { label: 'Progress Report', color: '#C80000' },
   website_message: { label: 'From the Website', color: '#0A0A0A' },
+  class_canceled_by_family: { label: 'Canceled by the Family', color: '#DC2626' },
+  class_requested: { label: 'Class Request', color: '#D97706' },
+  request_approved: { label: 'Request Approved', color: '#16A34A' },
+  request_rejected: { label: 'Request Declined', color: '#6B7280' },
+  score_added: { label: 'New Score', color: '#2563EB' },
 }
 
 export function notificationMeta(type: string): { label: string; color: string } {

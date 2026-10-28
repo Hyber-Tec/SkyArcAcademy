@@ -8,6 +8,7 @@ import { useUnreadNewsCount } from '@/features/family/news'
 import { useAttention } from '@/features/home/attention'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useNewWebsiteMessageCount } from '@/features/website/api'
+import { usePendingRequests } from '@/features/requests/hooks'
 import { useBranch } from '@/branch/BranchProvider'
 import { DemoBadge } from '@/components/app/DemoBadge'
 import { SkyArcLockup, SkyArcMark } from '@/components/app/SkyArcMark'
@@ -57,7 +58,9 @@ function NavBadgesProvider({ portal, children }: { portal: Portal; children: Rea
   const unread = useUnreadAnnouncementCount(portal === 'coach')
   const news = useUnreadNewsCount(portal === 'parent' || portal === 'student')
   const website = useNewWebsiteMessageCount(portal === 'admin')
-  const total = portal === 'admin' ? attention.total + website : 0
+  // Families' requests waiting for an answer (docs/DECISIONS.md §23).
+  const requests = usePendingRequests(portal === 'admin').data.length
+  const total = portal === 'admin' ? attention.total + website + requests : 0
   const value = useMemo(() => ({ home: total, announcements: unread, news }), [total, unread, news])
   // Installed app icon: unread announcements in the coach portal (TE's News count).
   useEffect(() => {
@@ -102,7 +105,7 @@ export function PortalLayout({ portal }: { portal: Portal }) {
     <SidebarProvider>
       <PortalSidebar portal={portal} />
       <SidebarInset className="min-w-0">
-        <MobileTopBar portal={portal} />
+        <MobileTopBar />
         <div className={cn('min-w-0 flex-1 p-4 sm:p-6', nav.mobileTabs && 'pb-24 md:pb-6')}>
           <Outlet />
         </div>
@@ -152,7 +155,8 @@ function PortalSidebar({ portal }: { portal: Portal }) {
             <div className="min-w-0 flex-1">
               <UserMenu variant="sidebar" />
             </div>
-            {portal === 'coach' && !isMobile ? <NotificationBell /> : null}
+            {/* Everyone's notices: coaches' classes and news, families' classes, requests and scores, the office's requests. */}
+            {!isMobile ? <NotificationBell /> : null}
             <ViewAsControl />
           </SidebarMenuItem>
         </SidebarMenu>
@@ -213,7 +217,7 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
 }
 
 /** Phones only: the sidebar is off-screen, so a slim bar opens it. */
-function MobileTopBar({ portal }: { portal: Portal }) {
+function MobileTopBar() {
   const { toggleSidebar } = useSidebar()
   return (
     <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
@@ -223,7 +227,7 @@ function MobileTopBar({ portal }: { portal: Portal }) {
       <SkyArcLockup size="sm" />
       <DemoBadge />
       <span className="flex-1" />
-      {portal === 'coach' ? <NotificationBell /> : null}
+      <NotificationBell />
       <UserMenu />
     </header>
   )

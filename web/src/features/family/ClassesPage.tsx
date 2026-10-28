@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { LuCalendarDays, LuChevronDown, LuList } from 'react-icons/lu'
+import { LuCalendarDays, LuCalendarPlus, LuChevronDown, LuList } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
 import { addDays, todayKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
@@ -8,6 +8,8 @@ import { PageHeader } from '@/components/app/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { type AskPreset, AskForClassDialog } from '@/features/requests/AskForClassDialog'
+import { FamilyRequestsPanel } from '@/features/requests/FamilyRequestsPanel'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { type Family, andList, hasEnded, useFamily, useFamilySessions } from './data'
@@ -39,6 +41,8 @@ export function FamilyClassesPage() {
   const ids = useMemo(() => (kid === 'all' ? family.ids : [kid]), [kid, family.ids])
   const now = useNow(30_000)
   const [open, setOpen] = useState<WithId<Session> | null>(null)
+  // "Ask for a class": a makeup, a class moved, or an extra class (docs/DECISIONS.md §23).
+  const [asking, setAsking] = useState<AskPreset | null>(null)
 
   const set = (patch: Record<string, string | null>) =>
     setParams(
@@ -69,16 +73,22 @@ export function FamilyClassesPage() {
         description={family.loading ? '\u00a0' : whose(family, kid)}
         className="mb-4"
         actions={
-          <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && set({ view: v === 'month' ? 'month' : null })} aria-label="View">
-            <ToggleGroupItem value="list" aria-label="List">
-              <LuList /> List
-            </ToggleGroupItem>
-            <ToggleGroupItem value="month" aria-label="Month">
-              <LuCalendarDays /> Month
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => setAsking({ studentId: kid === 'all' ? undefined : kid })} disabled={family.loading} data-testid="ask-for-class-open">
+              <LuCalendarPlus /> Ask for a class
+            </Button>
+            <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && set({ view: v === 'month' ? 'month' : null })} aria-label="View">
+              <ToggleGroupItem value="list" aria-label="List">
+                <LuList /> List
+              </ToggleGroupItem>
+              <ToggleGroupItem value="month" aria-label="Month">
+                <LuCalendarDays /> Month
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         }
       />
+      <FamilyRequestsPanel family={family} ids={ids} onAsk={setAsking} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <KidFilter family={family} value={kid} onChange={(id) => set({ child: id === 'all' ? null : id })} />
         {view === 'list' ? (
@@ -111,7 +121,8 @@ export function FamilyClassesPage() {
       <div className="mt-6">
         <ContactCard />
       </div>
-      <ClassDetails session={open} family={family} now={now} onClose={() => setOpen(null)} />
+      <ClassDetails session={open} family={family} now={now} onClose={() => setOpen(null)} onAsk={setAsking} />
+      <AskForClassDialog open={asking !== null} onOpenChange={(o) => !o && setAsking(null)} family={family} preset={asking ?? undefined} />
     </div>
   )
 }

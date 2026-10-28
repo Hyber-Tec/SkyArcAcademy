@@ -57,18 +57,32 @@ export type AppTarget =
   | { screen: 'schedule'; dateKey: string | null; sessionId: string | null }
   | { screen: 'announcement'; announcementId: string }
   | { screen: 'announcements' }
+  /** A family's classes on a day (a class changed, a request answered). */
+  | { screen: 'classes'; dateKey: string | null; sessionId: string | null }
+  /** A family's scores (a new score). */
+  | { screen: 'scores'; evaluationId: string | null }
+  /** A shared progress report. */
+  | { screen: 'report'; reportId: string }
   | { screen: 'today' }
 
-export function appTargetOf(link: string, refs?: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null }): AppTarget {
+export function appTargetOf(
+  link: string,
+  refs?: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; evaluationId?: string | null; reportId?: string | null },
+): AppTarget {
   const [path, search = ''] = (link ?? '').split('?')
   const params = queryParams(search)
   const parts = path.split('/').filter(Boolean)
-  if (parts.includes('announcements')) {
-    const id = parts[parts.indexOf('announcements') + 1] ?? refs?.announcementId ?? null
+  // The staff's announcements, or a family's News (the same posts).
+  const posts = parts.findIndex((p) => p === 'announcements' || p === 'news')
+  if (posts >= 0) {
+    const id = parts[posts + 1] ?? refs?.announcementId ?? null
     return id ? { screen: 'announcement', announcementId: id } : { screen: 'announcements' }
   }
   if (parts.includes('schedule')) {
     return { screen: 'schedule', dateKey: params.get('date') ?? refs?.dateKey ?? null, sessionId: refs?.sessionId ?? null }
   }
+  if (parts.includes('classes')) return { screen: 'classes', dateKey: params.get('date') ?? refs?.dateKey ?? null, sessionId: refs?.sessionId ?? null }
+  if (parts.includes('scores')) return { screen: 'scores', evaluationId: params.get('score') ?? refs?.evaluationId ?? null }
+  if (parts[0] === 'report' && (parts[1] ?? refs?.reportId)) return { screen: 'report', reportId: parts[1] ?? refs?.reportId ?? '' }
   return { screen: 'today' }
 }
