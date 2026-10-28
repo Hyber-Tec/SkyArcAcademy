@@ -12,8 +12,9 @@ This file is **both the meeting's notes and the task tracker.** Every task has a
 their decisions are included. The full notes, with names and pay, stay on Goo's Mac mini (`SkyArc_Meeting2_Feedback.md`
 in the project folder, git-ignored): this repository is public, so here people are named by role (CLAUDE.md, "Secrets").
 
-**How it's ticked:** a box is ticked (`- [x]`) when its pull request is merged, with the pull request's number. Each
-item also says what the code had when the work started: *already done*, *small change* or *new work*.
+**How it's ticked:** an item is marked done with ✅ in place of its box (`- ✅ **…**`, never `- [x]`, which is hard to
+see) when its pull request is merged, with the pull request's number. Each item also says what the code had when the
+work started: *already done*, *small change* or *new work*.
 
 ---
 
@@ -26,8 +27,8 @@ item also says what the code had when the work started: *already done*, *small c
 3. **Know the codebase** (public website, web portal, phone app, Firebase rules and functions, settings) before
    changing it: many items were partly built. Change only what's needed.
 4. **Find your phase** in Section 4 and do only that phase's items.
-5. **Keep this tracker up to date:** tick an item when its pull request is merged, with the number, in this file and in
-   the full copy on the Mac mini.
+5. **Keep this tracker up to date:** mark an item ✅ (in place of its box) when its pull request is merged, with the
+   number, in this file and in the full copy on the Mac mini.
 6. **Follow every rule in `CLAUDE.md`:** a branch and a pull request, Conventional Commits, few commits, no
    attribution lines, no secrets and no real student data.
 7. **Don't break what the manager liked** (Section 2).
@@ -131,7 +132,7 @@ To start a phase, paste this into Claude Code on the right computer:
 ### Phase 1: Mac mini · Foundation (backend + web admin)
 
 #### V: Schedule view options (first)
-- [x] **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; waits for Goo's pick)
+- ✅ **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; waits for Goo's pick)
   - *Plan:* **New work**, under way: `schedule-options.html` in the project folder, built from the current schedule's
     code.
   - **Why:** the manager likes the current view (Option 1) because it looks like their Google Sheet. Now that coaches
@@ -157,7 +158,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* Waits for Goo's pick (`V1`).
 
 #### ST: Settings
-- [x] **ST1. A much simpler Settings page.** (#49)
+- ✅ **ST1. A much simpler Settings page.** (#49)
   - *Plan:* **Small change:** the sections regrouped with the most-used first, plain labels, a search box, and the
     strays moved (the Trash's days, the clock-out lookback, the first-class bell, seats per class).
   - When the manager asked a question during the meeting, even Goo had to scroll around to find the right setting. That
@@ -165,23 +166,23 @@ To start a phase, paste this into Claude Code on the right computer:
   - Group settings clearly, use plain words, put the most-used settings first, and put each rule where people would
     look for it.
   - **Suggested:** a search box at the top of Settings.
-- [x] **ST2. Move the class confirmation and cancellation policy into Schedule settings.** It was under Students. (#49)
+- ✅ **ST2. Move the class confirmation and cancellation policy into Schedule settings.** It was under Students. (#49)
   - *Plan:* **Small change:** the confirmation already sits under Schedule; the new cancel rule (`S1`) joins it there as
     "Confirmation and cancellation".
-- [x] **ST3. The new default values** (Section 5): the 7-day coach availability lock, the 24-hour family cancel cutoff,
+- ✅ **ST3. The new default values** (Section 5): the 7-day coach availability lock, the 24-hour family cancel cutoff,
   the 24-hour confirmation, 30 minutes' early arrival, automatic clock-out at class end, and so on. All stay editable. (#49)
   - *Plan:* **Small change:** the lock is already 7 days; the 14 the manager saw is the coaches' notice period, which
     becomes 7 too. New: the cancel cutoff (24 hours, the same as the confirmation), the arrival window (30 minutes) and
     the clock-out at the end of the last class.
 
 #### S: Scheduling, cancellations, makeups (backend + web)
-- [x] **S1. Families can cancel a class.** Cutoff: **24 hours before class** (editable). After the cutoff, the cancel
+- ✅ **S1. Families can cancel a class.** Cutoff: **24 hours before class** (editable). After the cutoff, the cancel
   button is disabled with a short note explaining why. (#46)
   - *Plan:* **New work:** families can't cancel today (the class says to contact the academy). A Cancel button until the
     class is confirmed, then disabled with the reason; the office and the coaches in are told.
-- [x] **S2. Parents and students can both cancel**, with **no age or level limits**: any linked parent, or the student. (#46)
+- ✅ **S2. Parents and students can both cancel**, with **no age or level limits**: any linked parent, or the student. (#46)
   - *Plan:* **New work**, with `S1`: any linked parent, or the student.
-- [x] **S3. Families can request a class, a makeup or a reschedule.** (#46)
+- ✅ **S3. Families can request a class, a makeup or a reschedule.** (#46)
   - *Plan:* **New work:** requests for a class, a makeup or a reschedule. Families see how many seats are open in each
     class, never who's in them; the admin approves or rejects.
   - Parents or students see the **open seats** for the week and **request** one. They don't change the schedule
@@ -189,30 +190,30 @@ To start a phase, paste this into Claude Code on the right computer:
   - The **admin approves or rejects**. If rejected, the family can request another slot.
   - The admin can still book anything directly.
   - Example: a student cancels today's 4 PM class and requests tomorrow's open 4:30 PM seat; the manager approves.
-- [x] **S4. Everyone is notified.** Cancellations, changes, new requests, and approvals or rejections notify the right
+- ✅ **S4. Everyone is notified.** Cancellations, changes, new requests, and approvals or rejections notify the right
   people: **parents, students, coaches and admins**. Build the notification **events** here; the phone's push and
   notification settings come in Phase 3 (`M3`, `M4`). (#46)
   - *Plan:* **New work:** coaches' notices exist (announcements, class changes). New: notices for families and the
     office (cancellations, requests, decisions, class changes, new scores), a bell for them on the website, and each
     person's switches. The phone's push is `M3`, started early on the MacBook Pro (`docs/mobile-push.md`).
-- [x] **S5. No-show (ghosting) policy.** A student who doesn't show up without telling anyone **still gets a makeup**. If
+- ✅ **S5. No-show (ghosting) policy.** A student who doesn't show up without telling anyone **still gets a makeup**. If
   they **also miss that makeup**, they **lose the credit**. Track it and show it clearly to the admin. (#46)
   - *Plan:* **Small change:** makeups owed count canceled seats only; no-shows join them, and a missed makeup loses its
     credit. Shown on the student's page and when adding a student.
-- [x] **S6. 24-hour confirmation.** Classes become **Confirmed** 24 hours before they start, so coaches see who's
+- ✅ **S6. 24-hour confirmation.** Classes become **Confirmed** 24 hours before they start, so coaches see who's
   confirmed. Consistent with the cancel cutoff. (#46)
   - *Plan:* **Already done:** classes confirm themselves 24 hours before (Settings → Schedule); a seat shows Confirmed.
     The cancel cutoff follows the same setting.
 
 #### C: Coaches and availability
-- [x] **C1. Availability lock: 7 days** (was 14; editable). (#44)
+- ✅ **C1. Availability lock: 7 days** (was 14; editable). (#44)
   - *Plan:* **Already done:** the lock is 7 days (`availability.lockWindowDays`). See `ST3` for the 14.
-- [x] **C2. Inside the lock, coaches can ADD availability but not REMOVE it.** The lock exists so coaches don't bail at
+- ✅ **C2. Inside the lock, coaches can ADD availability but not REMOVE it.** The lock exists so coaches don't bail at
   the last minute; picking up extra time is fine. A short **undo** after adding (about 10 seconds, or until they leave
   the screen) in case of a mis-tap. After that, removing it means asking the admin. (#44)
   - *Plan:* **New work:** a locked day is read-only for coaches today. Adding inside the lock, with Undo; the rules
     allow adding only (the phone's side is `M7`).
-- [x] **C3. The admin can always change any coach's availability**, inside the lock too: open a day for a coach who's
+- ✅ **C3. The admin can always change any coach's availability**, inside the lock too: open a day for a coach who's
   covering, or turn off a coach who can't come. This is how coach emergencies are handled; no separate "cover another
   coach" feature. (#44)
   - *Plan:* **Already done** on the website: Employees → Calendar, and "Who's in" on the schedule.
@@ -222,23 +223,23 @@ To start a phase, paste this into Claude Code on the right computer:
     change:** carry them further before launch.
 
 #### K: Kiosk, time clock, payroll
-- [x] **K1. One pay rate only. Remove the "admin rate"** and everything related to it (website, app, settings,
+- ✅ **K1. One pay rate only. Remove the "admin rate"** and everything related to it (website, app, settings,
   payroll, data). Coaches come **30 minutes early** to set up and get their **normal rate** for that time. (#44)
   - *Plan:* **Small change:** two rates and four pay models exist (from HyberCRM). One rate stays; the admin rate goes,
     with the pay models that need it or pay from the schedule (`K5`). Hourly from the kiosk, the academy's model, stays.
-- [x] **K2. Early clock-in doesn't count.** A class at 6:00 with a 30-minute window means paid time starts at **5:30**,
+- ✅ **K2. Early clock-in doesn't count.** A class at 6:00 with a 30-minute window means paid time starts at **5:30**,
   even if the coach clocks in at 5:20. (#44)
   - *Plan:* **New work:** paid time starts at the clock-in today. It will start at the arrival window (30 minutes before
     the coach's first class), never earlier.
-- [x] **K3. Automatic clock-out at the end of the last class** (for example 8:00 PM). A setting. (#44)
+- ✅ **K3. Automatic clock-out at the end of the last class** (for example 8:00 PM). A setting. (#44)
   - *Plan:* **Small change:** automatic clock-out exists at a fixed time (midnight); it moves to the end of the day's
     last class.
-- [x] **K4. Arrival minutes are editable** (30 now; might become 15). (#44)
+- ✅ **K4. Arrival minutes are editable** (30 now; might become 15). (#44)
   - *Plan:* **New work**, with `K2`: the arrival minutes setting.
-- [x] **K5. Paid time comes only from the kiosk.** A coach who was scheduled but never clocked in (no-show) **isn't paid**
+- ✅ **K5. Paid time comes only from the kiosk.** A coach who was scheduled but never clocked in (no-show) **isn't paid**
   for that shift. Payroll is never based on scheduled hours alone. (#44)
   - *Plan:* **Already done** under Hourly (no clock-in, no pay); with `K1`, Hourly is the only model.
-- [x] **K6. Manual time adjustments are quick and clear, with a note.** The manager adds an extra hour by hand to one
+- ✅ **K6. Manual time adjustments are quick and clear, with a note.** The manager adds an extra hour by hand to one
   coach's weekly entry (travel compensation). No automation. (#44)
   - *Plan:* **Already done:** Time Entries adds and edits shifts with a note, audited. **Small change:** an "extra time"
     field (+1 hour), so the clock times stay true.
@@ -252,7 +253,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - It is **not** "touching a higher ring = the higher score", which the app did, and why it scored a card **70** that
     the coach had scored **64**.
   - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**.
-- [x] **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule waits for the manager, `P1`)
+- ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule waits for the manager, `P1`)
   - *Plan:* **New work:** a local test on the manager's cards (38 paper cards, 8 competition sheets), never imported or
     committed; the results go to Goo.
   - Goo has photos of the real paper cards and competition sheets the manager gave us (on the Mac mini). Use them **on
@@ -265,52 +266,52 @@ To start a phase, paste this into Claude Code on the right computer:
   lighter background if possible.
   - *Plan:* **Small change:** holes in the black show only when light is behind them, so a dark surface hides them. The
     tip "a light surface under the card" (the phone's scan tips, `M6`).
-- [x] **P4. Official score override.** When entering a card that was already scored by hand (past data), the admin can
+- ✅ **P4. Official score override.** When entering a card that was already scored by hand (past data), the admin can
   type the **written score as the official score**. The app's own score is kept for reference only: parents shouldn't
   see their 74 turn into a 70. (#48)
   - *Plan:* **New work:** the official score, typed by the admin; the app's own score kept for reference. Families,
     charts and reports use the official one.
-- [x] **P5. Any number of shots.** Sessions can be **20, 30 or 60 shots** (any number). The maximum is shots × 10 for
+- ✅ **P5. Any number of shots.** Sessions can be **20, 30 or 60 shots** (any number). The maximum is shots × 10 for
   whole-number scoring. With electronic decimal scoring a shot can be up to **10.9**, so **60 shots can total more than
   600**. Never assume a fixed shot count or maximum. (#48)
   - *Plan:* **Already done** for SIUS, charts and reports (they count per 10 shots). **Small change:** a paper result of
     several cards (20, 30, 60 shots).
-- [x] **P6. Inner-ten ("X") count.** Results show the **number of inner tens** (for example "491-11"). It's the
+- ✅ **P6. Inner-ten ("X") count.** Results show the **number of inner tens** (for example "491-11"). It's the
   **tiebreaker**: same total, more inner tens wins. Store it and show it next to totals (from SIUS PDFs and competition
   sheets). (#48)
   - *Plan:* **Already done** for SIUS (stored and shown). **Small change:** "491-11" next to totals; competition results
     carry it too.
-- [x] **P7. Competition results from a photo.** After a match, the match director gives a results sheet (paper or
+- ✅ **P7. Competition results from a photo.** After a match, the match director gives a results sheet (paper or
   digital). The admin **takes a photo of it and gets it into the student's record** as a **Competition** result,
   separate from practice. Read the total and inner-ten count automatically if possible; otherwise the admin types them.
   Show competitions apart from practice in graphs and reports. Students see their whole competition history, bad days
   included, to see their growth. (#48)
   - *Plan:* **New work:** a Competition result from a photo of the results sheet. The total and inner tens are read with
     Google's text reader (Goo's pick, 2026-10-28), and the admin checks them before saving.
-- [x] **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
+- ✅ **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
   (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history. (#48)
   - *Plan:* **New work**, with `P9`: the Evaluation label.
-- [x] **P9. Practice / Competition / Evaluation labels** on every result, used in filters, graphs, compare and reports. (#48)
+- ✅ **P9. Practice / Competition / Evaluation labels** on every result, used in filters, graphs, compare and reports. (#48)
   - *Plan:* **New work:** results have no kind today. Practice, Competition or Evaluation on every result, in filters,
     graphs, compare and reports.
-- [x] **P10. One position for a while.** Some students shoot only one position for weeks (for example, standing only
+- ✅ **P10. One position for a while.** Some students shoot only one position for weeks (for example, standing only
   for a school tryout). Reports and compare handle periods with just one or two positions. (#48)
   - *Plan:* **Already done:** reports and compare keep only the positions a period has. **Small change:** a report's
     change since the last one, compared per position.
-- [x] **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
+- ✅ **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
   reshoots, so a "20 shot" PDF may show 24 shots. **No feature to remove zeros**; the PDF reader handles these files
   without breaking or mislabelling them. (#48)
   - *Plan:* **Already done:** a 0.0 without an arrow isn't a shot. **Small change:** a test for reshoots, and the
     reader's note kept.
-- [x] **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
+- ✅ **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
   aliases, so name matching (PDFs, scans) and display both work. (#48)
   - *Plan:* **New work:** a preferred name and other names, used by the PDF matching and in searches.
-- [x] **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
+- ✅ **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
   been a new file." Build the event here; push comes in Phase 3. (#46)
   - *Plan:* **Already done** for reports (a shared report notifies the family). **New work** for scores.
 
 #### N: Announcements and website news
-- [x] **N1. One composer for announcements and website news.** (#47)
+- ✅ **N1. One composer for announcements and website news.** (#47)
   - *Plan:* **Already done:** one editor writes to coaches, families and/or the website (its News page, linked in the
     site's menu). **Small change:** one clear "Where it goes: Internal / Public / Both", and "Write news" in Settings →
     Website.
@@ -321,18 +322,18 @@ To start a phase, paste this into Claude Code on the right computer:
   - Fun activity posts belong here too, for example "here's the air rifle bingo game your kids played today" with a
     photo and no scores.
   - Make the website's news page easy to find.
-- [x] **N2. A rich text editor** for posts: formatting (headings, bold, lists, links) and **images inside the post**.
+- ✅ **N2. A rich text editor** for posts: formatting (headings, bold, lists, links) and **images inside the post**.
   Posts look good on the website, the portal and the app. (#47)
   - *Plan:* **Already done:** rich text with pictures, shown on the website, in the portal and in the phone app.
 
 #### F: Families, contracts, Drive
-- [x] **F1. Two parents per student.** Each parent has their own login and sees the same child. Some kids have one
+- ✅ **F1. Two parents per student.** Each parent has their own login and sees the same child. Some kids have one
   involved parent, some have both. (#50)
   - *Plan:* **Already done:** two parents' logins can share a child. **Small change:** the student's page shows which
     parents can sign in, and gives a parent access in one click.
-- [x] **F2. Siblings.** One parent account with several kids (for example, two brothers) keeps working with `F1`. (#50)
+- ✅ **F2. Siblings.** One parent account with several kids (for example, two brothers) keeps working with `F1`. (#50)
   - *Plan:* **Already done.**
-- [x] **F3. Parent names are optional.** Without a name, show something like "Alex's parent." (#50)
+- ✅ **F3. Parent names are optional.** Without a name, show something like "Alex's parent." (#50)
   - *Plan:* **Small change:** a parent's name becomes optional ("Alex's parent").
 - [ ] **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
   without printing. A Google form tried before failed (parents couldn't sign), so it must be simple and reliable. The
@@ -352,10 +353,10 @@ To start a phase, paste this into Claude Code on the right computer:
 
 ### Phase 2: Mac mini · Family web portal + real data
 
-- [x] **S7. The family side of `S1`–`S3` on the web portal:** parents and students cancel, see open seats, request a
+- ✅ **S7. The family side of `S1`–`S3` on the web portal:** parents and students cancel, see open seats, request a
   class, makeup or reschedule, and see their requests' status. (#46)
   - *Plan:* **New work.**
-- [x] **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
+- ✅ **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
   or reject family requests. (#46)
   - *Plan:* **New work.**
 - [ ] **S9. Verify the imported schedule.** Some entries looked wrong in the demo (for example, a student marked
@@ -394,7 +395,7 @@ from the app, without calling or texting the academy.
   and approve or reject family requests. **Only scheduling:** don't copy every web feature into the app.
   - *Plan:* **New work:** the phone marks attendance today. The website's schedule writes move to `shared/` in Phase 1,
     for the phone to use.
-- [x] **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
+- ✅ **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
   rejections, new scores, new reports, announcements, for parents, students, coaches and admins. (#45)
   - *Plan:* **Started early** (Goo, 2026-10-28): the server already pushes every notice; the phone registers.
     `docs/mobile-push.md`.
@@ -476,11 +477,11 @@ These wait until everything else is ready, some even after launch.
 ## 7. What we need from the manager
 
 ### Received at the meeting (Goo has photos of each page)
-- [x] Paper target practice cards in different positions
-- [x] Evaluation packets (all three positions, with notes) from late August / early September
-- [x] Competition result sheets
-- [x] Practice sessions with 20/30/60 shots
-- [x] An "air rifle bingo" game sheet (an example of a fun post)
+- ✅ Paper target practice cards in different positions
+- ✅ Evaluation packets (all three positions, with notes) from late August / early September
+- ✅ Competition result sheets
+- ✅ Practice sessions with 20/30/60 shots
+- ✅ An "air rifle bingo" game sheet (an example of a fun post)
 
 These are **real data**. Goo enters them by hand through the app; Claude Code may test with them locally but never
 imports them automatically, and they're **never committed**.
