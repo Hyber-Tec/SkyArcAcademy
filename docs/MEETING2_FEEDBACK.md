@@ -447,15 +447,17 @@ from the app, without calling or texting the academy.
 - ✅ **M5. The chosen schedule view (`V1`) in the app**, for admins and coaches, with clock-in/out. (decided 2026-10-28: the phone keeps today's Schedule tab)
   - *Plan:* **Nothing to build (Goo, 2026-10-28):** the phone keeps its Schedule tab as it is ("Option 1 on a phone":
     who's in with their clock, then each class with its seats two across). Option B is for the website.
-- [ ] **M6. The scanner in the app:** the holes at their size (`P1`), photo tips (`P3`), the official score (`P4`), labels
-  (`P9`), and the **competition sheet photo** (`P7`).
+- ✅ **M6. The scanner in the app:** the holes at their size (`P1`), photo tips (`P3`), the official score (`P4`), labels
+  (`P9`), and the **competition sheet photo** (`P7`). (#66, #71)
   - *Plan:* **Partly done:** the phone scans with the shared reader and shows tips. New: `P1`, `P3`'s tip, `P4`, `P7`,
     `P9`.
   - *Done (#66), all but `P1`:* the scanner asks what a card was (`P9`), takes the score written on it as the official
     one (`P4`), types a total over any number of shots (`P5`), says to lay the card on something light (`P3`), and
     finds a student by another name (`P12`); "Add a competition" reads a photo of the results sheet (`P7`); the score
-    lists show the kinds. **Still:** `P1`, whose scoring comes with the shared code (#68); drawing each hole at its
-    size is in `docs/mobile-scores.md`. Then M6 gets its ✅.
+    lists show the kinds.
+  - *Done (#71), `P1`:* the scanned card and a bull's close-up draw each hole at its measured size, a dragged shot is
+    scored at its size, the close-call check uses it, and the close-up says how big each hole is, as the website does
+    (the scoring itself came with the shared code, #68).
 - ✅ **M7. Coach availability in the app:** the 7-day lock, add-only with undo (`C1`, `C2`). (#54)
   - *Plan:* **Already done** for the lock; new: add-only with Undo (`C2`).
   - *Done (#54):* inside the lock a coach's day sheet keeps the saved times and adds new ones ("Add time"), with Undo

@@ -69,8 +69,9 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        the office's requests waiting (data.ts), a request's row and Home's card), students, drive
                        (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
                        and the family's), scan
-                       (reading a card, the card and bull views, saving: what it was, the score written on it, a total
-                       over any number of shots; sheet.ts, a results sheet read on the server and its results saved),
+                       (reading a card, the card and bull views with each hole at its measured size, saving: what it
+                       was, the score written on it, a total over any number of shots; sheet.ts, a results sheet read
+                       on the server and its results saved),
                        scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small

@@ -1,8 +1,8 @@
 import { Circle, Group, Image as SkiaImage, RoundedRect, type SkFont, type SkImage, Text as SkiaText, matchFont } from "@shopify/react-native-skia";
 import { CARD_BULLS, bullCentreMm } from "@shared/targets/card";
 import { FLAT, flatPoint } from "@shared/targets/flat";
-import { type BullState, type CardReview, bullState } from "@shared/targets/review";
-import { PELLET_MM, ringRadiusMm } from "@shared/shooting/target";
+import { type BullState, type CardReview, bullState, holeRadiusOf } from "@shared/targets/review";
+import { ringRadiusMm } from "@shared/shooting/target";
 import { useMemo } from "react";
 import { Platform } from "react-native";
 import { useDerivedValue } from "react-native-reanimated";
@@ -20,10 +20,10 @@ const FONT_FAMILY = Platform.select({ ios: "Helvetica Neue", default: "sans-seri
 
 /**
  * The scanned card, flattened as it will be saved, with what the scan found drawn on it: each record bull's outer ring
- * in its state's colour and every counted shot as a pellet-sized circle, with a label of its score. Pinch to zoom in
- * (it stays sharp, and stays where it's left), drag to look around once zoomed, double-tap to zoom in or out; tapping
- * a bull opens its check (`onBull`). `plain`: to look at only (the family's), every bull in one colour and a bull
- * without a shot labelled 0, as it counts.
+ * in its state's colour and every counted shot as a circle the size of its hole, with a label of its score. Pinch to
+ * zoom in (it stays sharp, and stays where it's left), drag to look around once zoomed, double-tap to zoom in or out;
+ * tapping a bull opens its check (`onBull`). `plain`: to look at only (the family's), every bull in one colour and a
+ * bull without a shot labelled 0, as it counts.
  */
 export function CardView({
   image,
@@ -48,14 +48,13 @@ export function CardView({
   const zoom = useZoomState(viewWidth, viewHeight, imageWidth, imageHeight);
   const font = useMemo(() => matchFont({ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: "700" }), []);
   const ring1 = ringRadiusMm(1) * FLAT.pxPerMm;
-  const pellet = (PELLET_MM / 2) * FLAT.pxPerMm;
   const line = 2.5 / zoom.fit;
   const bulls = review.bulls.map((b) => {
     const cb = CARD_BULLS.find((x) => x.kind === "record" && x.n === b.n)!;
     const centre = bullCentreMm(cb);
     const at = flatPoint(centre.x, centre.y);
-    const state = plain ? "ok" : bullState(b, review.shotsPerBull);
-    const shots = b.shots.filter((t) => t.x !== null && t.y !== null).map((t) => flatPoint(centre.x + (t.x as number), centre.y - (t.y as number)));
+    const state = plain ? "ok" : bullState(b, review.shotsPerBull, review);
+    const shots = b.shots.filter((t) => t.x !== null && t.y !== null).map((t) => ({ ...flatPoint(centre.x + (t.x as number), centre.y - (t.y as number)), r: holeRadiusOf(t, review) * FLAT.pxPerMm }));
     return { b, at, state, shots };
   });
   const tapped = (x: number, y: number) => {
@@ -81,7 +80,7 @@ export function CardView({
           <Circle cx={at.x} cy={at.y} r={ring1} color={STATE_COLORS[state]} style="stroke" strokeWidth={line} />
           {shots.map((p, i) => (
             <Group key={i}>
-              <Circle cx={p.x} cy={p.y} r={pellet} color="#22C55E" style="stroke" strokeWidth={line * 0.8} />
+              <Circle cx={p.x} cy={p.y} r={p.r} color="#22C55E" style="stroke" strokeWidth={line * 0.8} />
               <Circle cx={p.x} cy={p.y} r={line * 0.6} color="#22C55E" />
             </Group>
           ))}

@@ -1,9 +1,9 @@
 import { Circle, DashPathEffect, Group, Image as SkiaImage, Skia, type SkImage } from "@shopify/react-native-skia";
-import { PELLET_MM, ringRadiusMm } from "@shared/shooting/target";
-import { type CardReview, type ReviewBull, bullState, closeCall, placeShot, removeShot, takeExtra, typeScores } from "@shared/targets/review";
-import { scoreAt } from "@shared/targets/score";
+import { ringRadiusMm } from "@shared/shooting/target";
+import { type CardReview, type ReviewBull, bullState, closeCall, holeRadiusOf, placeShot, removeShot, takeExtra, typeScores } from "@shared/targets/review";
+import { scoreHole } from "@shared/targets/score";
 import { Minus, Plus } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal, StyleSheet, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { type SharedValue, useDerivedValue, useSharedValue } from "react-native-reanimated";
@@ -19,7 +19,6 @@ import { ZoomScrollView } from "@/components/ZoomScrollView";
 
 /** How much of the bull the close-up shows around its centre, in millimetres: ring 1 and a little beyond. */
 const VIEW_MM = 26;
-const PELLET_R = PELLET_MM / 2;
 const STATE_TEXT = {
   ok: "Looks right. To move a shot, drag anywhere on the picture: the green circle follows your finger. Pinch with two fingers to zoom in.",
   check: "Worth a look: the scan wasn't sure, the hole only just touches a line, or it saw more marks than shots. Pinch to zoom in, then drag anywhere to move the green circle onto the hole.",
@@ -29,10 +28,11 @@ const STATE_TEXT = {
 
 /**
  * One bull, up close, to check what the scan found: the photo turned flat around the bull with its rings drawn on it,
- * each counted shot as a pellet-sized circle (it grows with the zoom, as the hole does). A finger dragged anywhere on
- * the picture moves the shot nearest it by the same amount (so the finger never hides the circle; zoomed in, finer),
- * its score following as it moves; two fingers pinch to zoom; a tap places a missing shot. Other marks the scan saw can
- * be counted instead, and a bull the photo doesn't show takes typed scores.
+ * each counted shot as a circle the size of its hole (as the scan measured it, or the card's usual hole for one placed
+ * by hand), which is what it's scored with; it grows with the zoom, as the hole does. A finger dragged anywhere on the
+ * picture moves the shot nearest it by the same amount (so the finger never hides the circle; zoomed in, finer), its
+ * score following as it moves; two fingers pinch to zoom; a tap places a missing shot. Other marks the scan saw can be
+ * counted instead, and a bull the photo doesn't show takes typed scores.
  */
 export function BullEditor({ image, review, n, onChange, onClose }: { image: SkImage | null; review: CardReview; n: number | null; onChange: (next: CardReview) => void; onClose: () => void }) {
   const colors = useColors();
@@ -53,16 +53,22 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
   const colors = useColors();
   const { width } = useWindowDimensions();
   const size = Math.min(width - space.lg * 2, 460);
-  const state = bullState(bull, review.shotsPerBull);
+  const state = bullState(bull, review.shotsPerBull, review);
   /** The shot being dragged, as it moves (mm from the centre, x right and y up). */
   const [moving, setMoving] = useState<{ i: number; x: number; y: number } | null>(null);
   const short = bull.shots.length < review.shotsPerBull;
 
-  // The shots' places for the gestures (content units: millimetres from the close-up's top-left; NaN when typed).
+  /** Each shot's hole radius (mm): what it's drawn and scored with. */
+  const radii = useMemo(() => bull.shots.map((s) => holeRadiusOf(s, review)), [bull.shots, review]);
+
+  // The shots' places for the gestures (content units: millimetres from the close-up's top-left; NaN when typed), and
+  // their holes' radii.
   const places = useSharedValue<number[]>([]);
+  const holes = useSharedValue<number[]>([]);
   useEffect(() => {
     places.set(bull.shots.flatMap((s) => (s.x === null || s.y === null ? [Number.NaN, Number.NaN] : [VIEW_MM + s.x, VIEW_MM - s.y])));
-  }, [bull.shots, places]);
+    holes.set(radii);
+  }, [bull.shots, radii, places, holes]);
   const dragIndex = useSharedValue(-1);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
@@ -107,8 +113,9 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
       dragY.value = y;
       const mx = x - VIEW_MM;
       const my = VIEW_MM - y;
-      // The score shown while dragging changes by tenths (every 0.25 mm): only then is the screen told.
-      const tenth = Math.floor(Math.sqrt(mx * mx + my * my) * 4);
+      // The score shown while dragging changes by tenths, every 0.25 mm of how far the hole's edge is from the centre:
+      // only then is the screen told.
+      const tenth = Math.floor((Math.sqrt(mx * mx + my * my) - holes.value[i]) * 4);
       if (tenth !== lastTenth.value) {
         lastTenth.value = tenth;
         scheduleOnRN(showMove, i, mx, my);
@@ -129,7 +136,7 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
     if (Math.hypot(x - VIEW_MM, y - VIEW_MM) <= VIEW_MM) onChange(placeShot(review, bull.n, null, x - VIEW_MM, VIEW_MM - y));
   };
 
-  const shown = bull.shots.map((s, i) => (moving && moving.i === i ? { ...s, x: moving.x, y: moving.y, ...scoreAt(Math.hypot(moving.x, moving.y)) } : s));
+  const shown = bull.shots.map((s, i) => (moving && moving.i === i ? { ...s, x: moving.x, y: moving.y, ...scoreHole(Math.hypot(moving.x, moving.y), radii[i]) } : s));
   // Without a picture of the bull (a typed card, or a photo that didn't show it) there's only the score to type.
   const pictured = bull.found && !!image;
   const text = pictured
@@ -159,13 +166,13 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
                 ))}
                 {bull.extra.map((s, i) =>
                   s.x === null || s.y === null ? null : (
-                    <Circle key={`e${i}`} cx={s.x} cy={-s.y} r={PELLET_R} color="#F59E0B" style="stroke" strokeWidth={0.18}>
+                    <Circle key={`e${i}`} cx={s.x} cy={-s.y} r={holeRadiusOf(s, review)} color="#F59E0B" style="stroke" strokeWidth={0.18}>
                       <DashPathEffect intervals={[0.5, 0.35]} />
                     </Circle>
                   ),
                 )}
               </Group>
-              {bull.shots.map((s, i) => (s.x === null || s.y === null ? null : <ShotMark key={i} i={i} x={VIEW_MM + s.x} y={VIEW_MM - s.y} dragIndex={dragIndex} dragX={dragX} dragY={dragY} />))}
+              {bull.shots.map((s, i) => (s.x === null || s.y === null ? null : <ShotMark key={i} i={i} x={VIEW_MM + s.x} y={VIEW_MM - s.y} r={radii[i]} dragIndex={dragIndex} dragX={dragX} dragY={dragY} />))}
             </ZoomCanvas>
           </View>
         ) : null}
@@ -177,7 +184,8 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
         <ListSection title={review.shotsPerBull === 1 ? "The shot" : "The shots"}>
           {shown.length ? (
             shown.map((s, i) => {
-              const close = closeCall(s);
+              const close = closeCall(s, review);
+              const size = s.x !== null ? ` · hole ${(2 * radii[i]).toFixed(1)} mm across` : "";
               const how =
                 moving?.i === i ? "Moving" : s.saved ? (s.x === null ? "Typed in, as saved" : "As saved") : s.x === null ? "Typed in" : s.manual ? "Placed by you" : s.confidence < 0.6 ? "The scan wasn’t sure" : "Found by the scan";
               return (
@@ -188,7 +196,7 @@ function EditorBody({ image, review, bull, onChange, onClose }: { image: SkImage
                   subtitle={
                     // The whole reason, however many lines it takes.
                     <T variant="small" tone="muted">
-                      {close ? `${how} · close call: the hole touches the ${close.ring} ring’s line by ${close.byMm.toFixed(2)} mm, so ISSF counts ${close.ring}; by eye it may look like ${close.ring - 1}` : how}
+                      {close ? `${how}${size} · close call: its edge reaches the ${close.ring} ring’s line by only ${close.byMm.toFixed(2)} mm, so it counts ${close.ring}` : `${how}${size}`}
                     </T>
                   }
                   right={
@@ -242,14 +250,14 @@ function Photo({ image, bull }: { image: SkImage; bull: ReviewBull }) {
   );
 }
 
-/** A counted shot: the pellet's circle and its centre, following the finger while it's being dragged. */
-function ShotMark({ i, x, y, dragIndex, dragX, dragY }: { i: number; x: number; y: number; dragIndex: SharedValue<number>; dragX: SharedValue<number>; dragY: SharedValue<number> }) {
+/** A counted shot: its hole's circle (radius `r`, mm) and its centre, following the finger while it's being dragged. */
+function ShotMark({ i, x, y, r, dragIndex, dragX, dragY }: { i: number; x: number; y: number; r: number; dragIndex: SharedValue<number>; dragX: SharedValue<number>; dragY: SharedValue<number> }) {
   const cx = useDerivedValue(() => (dragIndex.value === i ? dragX.value : x));
   const cy = useDerivedValue(() => (dragIndex.value === i ? dragY.value : y));
   const color = useDerivedValue(() => (dragIndex.value === i ? "#38BDF8" : "#22C55E"));
   return (
     <Group>
-      <Circle cx={cx} cy={cy} r={PELLET_R} color={color} style="stroke" strokeWidth={0.22} />
+      <Circle cx={cx} cy={cy} r={r} color={color} style="stroke" strokeWidth={0.22} />
       <Circle cx={cx} cy={cy} r={0.18} color={color} />
     </Group>
   );
