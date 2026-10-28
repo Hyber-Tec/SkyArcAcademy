@@ -118,7 +118,7 @@ export default function FamilyClassSheet() {
     }
   };
   // "Ask for a class" takes the sheet's place, set to move this seat.
-  const move = (x: SessionDoc) => router.replace({ pathname: "/ask", params: { studentId: x.studentId, kind: "reschedule", forSessionId: x.id } });
+  const move = (x: SessionDoc) => router.replace({ pathname: "/ask", params: { studentId: x.studentId, kind: "reschedule", forSessionId: x.id, forDateKey: x.dateKey } });
 
   return (
     <>

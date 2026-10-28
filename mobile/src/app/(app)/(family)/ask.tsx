@@ -33,10 +33,11 @@ const KINDS: readonly ClassRequestKind[] = ["makeup", "reschedule", "extra"];
  * (web/src/features/requests/AskForClassDialog.tsx; docs/DECISIONS.md §23). Families see how many seats are open, never
  * who's in a class. The server checks the request with the shared rules (`requestCheck`) and says why when it can't
  * be made; the academy approves or declines, and the family is told either way. Opened with `studentId`, `kind` and
- * `forSessionId` (the class to move, or the missed class to make up).
+ * `forSessionId` (the class to move, or the missed class to make up), and a class to move's day (`forDateKey`), so it's
+ * found however far ahead it is (the choices stay within the request horizon).
  */
 export default function AskForClassScreen() {
-  const params = useLocalSearchParams<{ studentId?: string; kind?: string; forSessionId?: string }>();
+  const params = useLocalSearchParams<{ studentId?: string; kind?: string; forSessionId?: string; forDateKey?: string }>();
   const family = useFamily();
   const { branchId, settings } = useBranch();
   const colors = useColors();
@@ -51,11 +52,16 @@ export default function AskForClassScreen() {
   const opened = params.studentId && family.ids.includes(params.studentId) ? params.studentId : null;
   const studentId = chosen ?? opened ?? (family.child !== "all" ? family.child : (family.ids[0] ?? ""));
   const ids = useMemo(() => (studentId ? [studentId] : []), [studentId]);
-  const seats = useFamilySessions(ids, since, horizon);
+  // The child's classes from six weeks back to the horizon, or to the class being moved when it's further ahead.
+  const until = preset === "reschedule" && params.forDateKey && params.forDateKey > horizon ? params.forDateKey : horizon;
+  const seats = useFamilySessions(ids, since, until);
   const requests = useFamilyRequests(ids);
   const classes = useClassSeats(today, horizon);
+  const pending = useMemo(() => requests.data.filter((r) => r.status === "pending"), [requests.data]);
 
-  const owed = useMemo(() => makeupsOwed(seats.data, since), [seats.data, since]);
+  // Missed classes still to make up, less those a request is waiting for (the server would refuse a second one).
+  const missed = useMemo(() => makeupsOwed(seats.data, since), [seats.data, since]);
+  const owed = useMemo(() => missed.filter((s) => !pending.some((r) => r.forSessionId === s.id)), [missed, pending]);
   const moving = preset === "reschedule" ? (seats.data.find((s) => s.id === params.forSessionId) ?? null) : null;
   const [kind, setKind] = useState<ClassRequestKind>(preset ?? "makeup");
   const [forId, setForId] = useState<string | null>(preset === "makeup" ? (params.forSessionId ?? null) : null);
@@ -66,19 +72,20 @@ export default function AskForClassScreen() {
   // A makeup needs one owed; with none, an extra class is what's left (a move comes only from a class's sheet).
   const kindNow: ClassRequestKind = kind === "makeup" && !owed.length && !seats.loading ? "extra" : kind;
   const makeupFor = kindNow === "makeup" ? (owed.find((s) => s.id === forId) ?? owed[0] ?? null) : null;
-  const pending = useMemo(() => requests.data.filter((r) => r.status === "pending"), [requests.data]);
   const live = useMemo(() => seats.data.filter(takesSeat), [seats.data]);
 
-  // Open classes the child can take: not one they're in or at the same time, nor one already asked for.
+  // Open classes the child can take: not one they're in or at the same time (the class being moved included), nor one
+  // already asked for.
   const choices = useMemo(
     () =>
       classes.data.filter(
         (c) =>
           isRequestable({ ...c, startMs: millis(c.startAt) }, now, horizon) &&
+          c.id !== moving?.classId &&
           !live.some((s) => s.id !== moving?.id && s.dateKey === c.dateKey && s.startMin < c.endMin && s.endMin > c.startMin) &&
           !pending.some((r) => r.classId === c.id),
       ),
-    [classes.data, live, pending, horizon, moving?.id, now],
+    [classes.data, live, pending, horizon, moving?.id, moving?.classId, now],
   );
   const byDay = useMemo(() => {
     const m = new Map<DateKey, ClassSeatsDoc[]>();
@@ -90,7 +97,7 @@ export default function AskForClassScreen() {
   const ready = !!picked && !!studentId && (kindNow === "extra" || (kindNow === "makeup" ? !!makeupFor : !!moving));
   const parent = family.who === "parent";
   const name = family.firstName(studentId);
-  const missed = (s: SessionDoc) => `${shortDay(s.dateKey)}, ${clock(s.startMin, hour12)} (${s.status === "no_show" ? "missed" : "canceled"})`;
+  const missedText = (s: SessionDoc) => `${shortDay(s.dateKey)}, ${clock(s.startMin, hour12)} (${s.status === "no_show" ? "missed" : "canceled"})`;
 
   const send = async () => {
     if (!picked || !ready || sending) return;
@@ -159,14 +166,22 @@ export default function AskForClassScreen() {
               selected={kindNow === "makeup"}
               disabled={!owed.length}
               title="A makeup"
-              subtitle={seats.loading ? "Looking for missed classes…" : owed.length ? `For a class ${parent ? name : "you"} missed.` : "No missed classes to make up."}
+              subtitle={
+                seats.loading
+                  ? "Looking for missed classes…"
+                  : owed.length
+                    ? `For a class ${parent ? name : "you"} missed.`
+                    : missed.length
+                      ? "Each missed class has a request waiting."
+                      : "No missed classes to make up."
+              }
               onPress={() => setKind("makeup")}
               testID="ask-kind-makeup"
             />
             {kindNow === "makeup" && owed.length > 1
-              ? owed.map((s) => <ChoiceRow key={s.id} selected={makeupFor?.id === s.id} title={missed(s)} onPress={() => setForId(s.id)} testID={`ask-makeup-${s.id}`} />)
+              ? owed.map((s) => <ChoiceRow key={s.id} selected={makeupFor?.id === s.id} title={missedText(s)} onPress={() => setForId(s.id)} testID={`ask-makeup-${s.id}`} />)
               : null}
-            {kindNow === "makeup" && owed.length === 1 && makeupFor ? <ListRow title={missed(makeupFor)} subtitle="The class it makes up" /> : null}
+            {kindNow === "makeup" && owed.length === 1 && makeupFor ? <ListRow title={missedText(makeupFor)} subtitle="The class it makes up" /> : null}
             <ChoiceRow selected={kindNow === "extra"} title="An extra class" subtitle="Extra practice in an open seat." onPress={() => setKind("extra")} testID="ask-kind-extra" />
           </ListSection>
         )}
