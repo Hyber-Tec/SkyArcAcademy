@@ -18,6 +18,8 @@ const routes: RouteObject[] = [
   { path: '/auth/action', element: <AuthAction /> },
   // Asking the academy for access (coaches, parents), once signed in.
   { path: '/join', lazy: page(() => import('@/features/signup/BranchSignupPage'), 'BranchSignupPage') },
+  // Signing the enrollment contract from the link the office sends: no account needed (docs/DECISIONS.md §23, F4).
+  { path: '/sign/:token', lazy: page(() => import('@/pages/public/SignContract'), 'SignContractPage') },
   academyRoute,
   // The website's pages (`/programs`, `/privacy`, `/help`, `/ko/…`) when the app links to them: loaded from the site.
   { path: '*', element: <RootRoute /> },

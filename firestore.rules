@@ -689,6 +689,48 @@ service cloud.firestore {
           || (isStaff(b) && seesDriveItem(resource.data) && resource.data.status == 'error');
       }
 
+      // ------------------------------------------------------ contracts
+
+      // The enrollment contract (shared/src/contracts, docs/DECISIONS.md §23, F4): owners' and admins' only. Each upload
+      // of the academy's blank contract is kept (a link names the one it was sent with); the newest is current, and
+      // uploading another retires it. Signing links are made, emailed and signed on the server
+      // (functions/src/contracts.ts); admins cancel one still waiting. The signed copies are Drive files in the Contracts
+      // folder, which only owners and admins see.
+      match /contractTemplates/{templateId} {
+        function validTemplate(d) {
+          return d.keys().hasOnly(['name', 'size', 'pages', 'sha256', 'path', 'current', 'uploadedAt', 'uploadedBy',
+                                   'replacedAt', 'replacedBy'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+            && d.size is int && d.size > 0 && d.size <= 10 * 1024 * 1024
+            && d.pages is int && d.pages > 0 && d.pages <= 500
+            && d.sha256 is string && d.sha256.matches('[0-9a-f]{64}')
+            && d.path == 'branches/' + b + '/contracts/templates/' + templateId + '.pdf'
+            && d.current is bool;
+        }
+
+        allow read: if isAdmin(b);
+        allow create: if isAdmin(b) && validTemplate(request.resource.data)
+          && request.resource.data.current == true
+          && request.resource.data.uploadedAt == request.time
+          && byMe(request.resource.data.uploadedBy);
+        allow update: if isAdmin(b) && resource.data.current == true
+          && request.resource.data.current == false
+          && request.resource.data.replacedAt == request.time
+          && byMe(request.resource.data.replacedBy)
+          && changed().hasOnly(['current', 'replacedAt', 'replacedBy']);
+        allow delete: if false;
+      }
+
+      match /contractLinks/{linkId} {
+        allow read: if isAdmin(b);
+        allow update: if isAdmin(b) && resource.data.status == 'sent'
+          && request.resource.data.status == 'canceled'
+          && request.resource.data.canceledAt == request.time
+          && byMe(request.resource.data.canceledBy)
+          && changed().hasOnly(['status', 'canceledAt', 'canceledBy']);
+        allow create, delete: if false;
+      }
+
       // ------------------------------------------------------ scores and reports
 
       // Evaluations: one scored target each (a SIUS result or a paper card). Staff (admins and coaches) read, add,

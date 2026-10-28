@@ -137,6 +137,7 @@ export type NotificationType =
   | 'request_rejected'
   // A new score for a student, to their family.
   | 'score_added'
+  | 'contract_signed'
 
 /** `branches/{b}/notifications/{id}`: the in-app inbox (written by Cloud Functions). */
 export interface AppNotification {
@@ -178,6 +179,7 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   request_approved: { label: 'Request Approved', color: '#16A34A' },
   request_rejected: { label: 'Request Declined', color: '#6B7280' },
   score_added: { label: 'New Score', color: '#2563EB' },
+  contract_signed: { label: 'Contract Signed', color: '#16A34A' },
 }
 
 export function notificationMeta(type: string): { label: string; color: string } {

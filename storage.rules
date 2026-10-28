@@ -85,5 +85,19 @@ service firebase.storage {
       allow delete: if (isAdmin(b) && record().get('trashed', false) == true)
         || (isStaff(b) && record().status == 'error' && (isAdmin(b) || staffSees(record())));
     }
+
+    // The academy's blank enrollment contract (docs/DECISIONS.md §23, F4): a PDF each time owners or admins upload it
+    // (Settings → Enrollment contract), kept for the signed copies' history: never replaced or deleted. Only they read
+    // it; a family reads it through the signing link (functions/src/contracts.ts), and the signed copies are Drive files
+    // in the Contracts folder, which only owners and admins see.
+    match /branches/{b}/contracts/templates/{fileName} {
+      allow read: if isAdmin(b);
+      allow create: if isAdmin(b)
+        && resource == null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf'
+        && fileName.matches('[A-Za-z0-9]{20}[.]pdf');
+      allow update, delete: if false;
+    }
   }
 }

@@ -39,8 +39,11 @@ export const COL = {
   websitePhotos: 'websitePhotos',
   websitePosts: 'websitePosts',
   websiteMessages: 'websiteMessages',
-  /** Server only: how many messages a sender sent lately. */
+  /** Server only: how many messages a sender sent lately (and how often a signing link was asked for). */
   websiteLimits: 'websiteLimits',
+  /** The enrollment contract (shared/src/contracts): each upload of the blank one, and the signing links sent. */
+  contractTemplates: 'contractTemplates',
+  contractLinks: 'contractLinks',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]

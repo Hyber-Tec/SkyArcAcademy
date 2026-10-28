@@ -1,30 +1,12 @@
 import type { ArrowPixels } from '@shared/sius/arrow'
 import { extractSiusPage } from '@shared/sius/extract'
 import { type SiusReading, type SiusResult, parseSiusPage, readSiusResult } from '@shared/sius/parse'
+import { pdfjs } from '@/lib/pdfjs'
 
 /**
  * Reads a dropped PDF as a SIUS result, in the browser: pdf.js (loaded only when a PDF is dropped) opens it, and
  * the shared parser reads the page. Null when the PDF isn't a SIUS result (it's then stored as a plain file).
  */
-
-type PdfJs = typeof import('pdfjs-dist')
-
-let loading: Promise<PdfJs> | null = null
-
-function pdfjs(): Promise<PdfJs> {
-  loading ??= Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(
-    ([lib, worker]) => {
-      lib.GlobalWorkerOptions.workerSrc = worker.default
-      return lib
-    },
-    (e: unknown) => {
-      // Not kept: the next drop tries to load it again (the connection may be back).
-      loading = null
-      throw e
-    },
-  )
-  return loading
-}
 
 /** An ImageBitmap's pixels (when pdf.js hands images over that way). */
 function bitmapPixels(bitmap: unknown): ArrowPixels | null {
