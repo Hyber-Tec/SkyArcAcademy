@@ -1,5 +1,6 @@
 import { doc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore'
 import { COL, DOC } from '@shared/paths'
+import { hourlyRate } from '@shared/pay/rates'
 import { STAFF_STATUS_LABELS } from '@shared/people'
 import { type ClassCoach, coachesIn, takesSeat, uncovered } from '@shared/schedule/classes'
 import { isAhead } from '@shared/schedule/conflicts'
@@ -66,8 +67,8 @@ export async function createEmployee(
   branchId: string,
   actor: Actor,
   input: { firstName: string; lastName: string; email: string; role: Staff['role'] },
-  /** Hourly rates, from the day it's created (left out when the person can't set pay). */
-  pay?: { rates: Compensation['rates']; effectiveFrom: string } | null,
+  /** The hourly rate, from the day it's created (left out when the person can't set pay, or an owner has none). */
+  pay?: { rate: number; effectiveFrom: string } | null,
 ): Promise<string> {
   const ref = doc(branchCol(branchId, COL.staff))
   const name = `${input.firstName} ${input.lastName}`.trim()
@@ -86,7 +87,7 @@ export async function createEmployee(
     coachId: ref.id,
     coachName: name,
   })
-  if (pay) writeCompensation(batch, branchId, actor, { id: ref.id, name, role: input.role }, null, pay.rates, pay.effectiveFrom)
+  if (pay) writeCompensation(batch, branchId, actor, { id: ref.id, name, role: input.role }, null, pay.rate, pay.effectiveFrom)
   await batch.commit()
   return ref.id
 }
@@ -150,18 +151,11 @@ export async function saveEmployeeProfile(
   await batch.commit()
 }
 
-export async function saveCompensation(
-  branchId: string,
-  actor: Actor,
-  staff: WithId<Staff>,
-  before: Compensation | null,
-  next: Pick<Compensation, 'rates'>,
-  effectiveFrom: string,
-) {
-  const changed = !before || before.rates.teaching !== next.rates.teaching || before.rates.admin !== next.rates.admin
-  if (!changed) return
+/** Saves an employee's hourly rate from a date (nothing when it's the rate they already have). */
+export async function saveCompensation(branchId: string, actor: Actor, staff: WithId<Staff>, before: Compensation | null, rate: number, effectiveFrom: string) {
+  if (before && hourlyRate(before.rates) === rate) return
   const batch = writeBatch(db)
-  writeCompensation(batch, branchId, actor, staff, before, next.rates, effectiveFrom)
+  writeCompensation(batch, branchId, actor, staff, before, rate, effectiveFrom)
   await batch.commit()
 }
 

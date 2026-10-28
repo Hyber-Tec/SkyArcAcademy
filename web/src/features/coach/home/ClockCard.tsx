@@ -1,16 +1,21 @@
 import { LuClock } from 'react-icons/lu'
-import { formatDuration, formatMinutes } from '@shared/time'
+import { formatDuration, formatInstantTime, formatMinutes } from '@shared/time'
+import { useBranch } from '@/branch/BranchProvider'
 import { cn } from '@/lib/utils'
 import type { CoachDay } from './useCoachDay'
 
 type Tone = 'live' | 'warn' | 'muted'
 
-/** Where the coach stands with the time clock today (shifts come from the kiosk; nothing is clocked here). */
-function clockState(t: CoachDay): { tone: Tone; title: string; detail: string } {
+/**
+ * Where the coach stands with the time clock today (shifts come from the kiosk; nothing is clocked here), and the time
+ * it pays (from shortly before their first class to the end of their last).
+ */
+function clockState(t: CoachDay, timezone: string): { tone: Tone; title: string; detail: string } {
   const { clock, day, today } = t
   if (clock.open) {
     const since = clock.open.dateKey === today ? formatMinutes(clock.open.inMin) : `yesterday ${formatMinutes(clock.open.inMin)}`
-    return { tone: 'live', title: `Clocked in since ${since}`, detail: `${formatDuration(clock.todayMinutes)} so far. Clock out at the kiosk when you leave.` }
+    const paid = clock.paidFrom !== null ? `Paid from ${formatInstantTime(clock.paidFrom, timezone)}: ` : ''
+    return { tone: 'live', title: `Clocked in since ${since}`, detail: `${paid}${formatDuration(clock.todayMinutes)} paid so far. Clock out at the kiosk when you leave.` }
   }
   const last = clock.closed[clock.closed.length - 1]
   const later = day.later[0]
@@ -18,7 +23,7 @@ function clockState(t: CoachDay): { tone: Tone; title: string; detail: string } 
     return {
       tone: 'muted',
       title: `Clocked out at ${last.outMin != null ? formatMinutes(last.outMin) : '—'}`,
-      detail: later ? `${formatDuration(clock.todayMinutes)} today. Clock in again before ${formatMinutes(later.c.startMin)}.` : `${formatDuration(clock.todayMinutes)} today.`,
+      detail: later ? `${formatDuration(clock.todayMinutes)} paid today. Clock in again before ${formatMinutes(later.c.startMin)}.` : `${formatDuration(clock.todayMinutes)} paid today.`,
     }
   }
   if (day.current.length) {
@@ -42,12 +47,13 @@ const ICON: Record<Tone, string> = {
 
 /** Computers: the time clock card in the side column. */
 export function ClockCard({ t }: { t: CoachDay }) {
-  const s = clockState(t)
+  const { timezone } = useBranch()
+  const s = clockState(t, timezone)
   return (
     <section className="rounded-xl border bg-card p-4" data-testid="coach-clock">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Time clock</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">{formatDuration(t.clock.weekMinutes)} this week</span>
+        <span className="text-xs text-muted-foreground tabular-nums">{formatDuration(t.clock.weekMinutes)} paid this week</span>
       </div>
       <div className="mt-3 flex items-start gap-3">
         <span className={cn('relative flex size-9 shrink-0 items-center justify-center rounded-full', ICON[s.tone])}>
@@ -65,7 +71,8 @@ export function ClockCard({ t }: { t: CoachDay }) {
 
 /** Phones: the same, as one line under the greeting. */
 export function ClockStrip({ t }: { t: CoachDay }) {
-  const s = clockState(t)
+  const { timezone } = useBranch()
+  const s = clockState(t, timezone)
   return (
     <div
       className={cn(
@@ -80,7 +87,11 @@ export function ClockStrip({ t }: { t: CoachDay }) {
         {s.tone === 'warn' ? <span className="mt-0.5 block text-xs text-amber-800/80 dark:text-amber-300/80">{s.detail}</span> : null}
       </span>
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-        {t.clock.open || t.clock.closed.length ? `${formatDuration(t.clock.todayMinutes)} today` : `${formatDuration(t.clock.weekMinutes)} this week`}
+        {t.clock.open && t.clock.paidFrom !== null && t.clock.todayMinutes < 1
+          ? `paid from ${formatInstantTime(t.clock.paidFrom, timezone)}`
+          : t.clock.open || t.clock.closed.length
+            ? `${formatDuration(t.clock.todayMinutes)} paid today`
+            : `${formatDuration(t.clock.weekMinutes)} paid this week`}
       </span>
     </div>
   )

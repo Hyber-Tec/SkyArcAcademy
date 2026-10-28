@@ -2,12 +2,12 @@ import { LuBadgeDollarSign } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import { type PayGap, gapLabel } from './payGaps'
+import type { PayGap } from './payGaps'
 
 const AMBER = 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
 
 /**
- * Says who has no pay rate yet (their worked time is priced at $0), with a link
+ * Says who has no hourly rate yet (their worked time is priced at $0), with a link
  * to Pay Rates unless the page already is Pay Rates.
  */
 export function PayGapNotice({ gaps, link = true, className }: { gaps: PayGap[]; link?: boolean; className?: string }) {
@@ -16,10 +16,10 @@ export function PayGapNotice({ gaps, link = true, className }: { gaps: PayGap[];
   return (
     <Alert className={cn(AMBER, className)} data-testid="pay-gap-notice">
       <LuBadgeDollarSign />
-      <AlertTitle>{one ? `${gaps[0].staff.name} has no pay rate yet` : `${gaps.length} employees have no pay rate yet`}</AlertTitle>
+      <AlertTitle>{one ? `${gaps[0].staff.name} has no hourly rate yet` : `${gaps.length} employees have no hourly rate yet`}</AlertTitle>
       <AlertDescription className="text-amber-800 dark:text-amber-300">
         <p>
-          {one ? `${gapLabel(gaps[0])}, so their worked time is paid $0 until it’s set.` : `Their worked time is paid $0 until it’s set: ${gaps.map((g) => `${g.staff.name} (${gapLabel(g).toLowerCase()})`).join(', ')}.`}
+          {one ? 'Their worked time is paid $0 until it’s set.' : `Their worked time is paid $0 until it’s set: ${gaps.map((g) => g.staff.name).join(', ')}.`}
           {link ? (
             <>
               {' '}

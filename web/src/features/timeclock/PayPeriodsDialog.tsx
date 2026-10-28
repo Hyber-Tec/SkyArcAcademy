@@ -3,11 +3,11 @@ import { useMemo, useState } from 'react'
 import { LuLock, LuLockOpen, LuTriangleAlert } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { COL, DOC } from '@shared/paths'
-import { priceClassBlocks } from '@shared/pay/classes'
+import { payLineTotals, payLines } from '@shared/pay/lines'
 import { payPeriodLabel, periodId } from '@shared/pay/periods'
-import { type PricedSegment, formatMoney, totals } from '@shared/pay/segment'
-import { effectiveRates, priceShifts } from '@shared/pay/shifts'
-import { type DateKey, addDays, formatDateKey, todayKey } from '@shared/time'
+import { formatMoney } from '@shared/pay/segment'
+import { effectiveRates } from '@shared/pay/shifts'
+import { formatDateKey, todayKey } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -19,7 +19,7 @@ import { useStaffList } from '@/features/data/hooks'
 import { addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
-import { namesFrom, useAvailabilityRange, useSessionsRange, useShifts } from './api'
+import { usePayDays, useShifts } from './api'
 import { useCompensationMap, usePayPeriods, usePayrollState } from './hooks'
 
 const money = formatMoney
@@ -30,7 +30,7 @@ const money = formatMoney
  * Only the latest locked period can be unlocked.
  */
 export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { branchId, actor, settings, rules, timezone } = useBranch()
+  const { branchId, actor, settings, timezone } = useBranch()
   const today = todayKey(timezone)
   const { recent, current } = usePayPeriods(12)
   const { lockedThrough } = usePayrollState()
@@ -45,34 +45,26 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff])
   const comps = useCompensationMap(open ? staff.map((s) => s.id) : [])
   const { data: shifts, loading: l1 } = useShifts(period.start, period.end, null, open)
-  const { data: sessions, loading: l2 } = useSessionsRange(addDays(period.start, -1), addDays(period.end, 1), open)
-  // Who was in each day: a class counts for every coach in at its time (Classes taught).
-  const { data: availability, loading: l3 } = useAvailabilityRange(period.start, period.end, null, open && rules.payModels.some((p) => p.model === 'classes'))
-  const loading = l1 || l2 || l3
+  // The classes and who's in: a coach's paid time starts before their first class and ends with their last.
+  const days = usePayDays(period.start, period.end, null, open)
+  const loading = l1 || days.loading
 
-  // Each person's priced time in the period: their time entries, and the classes they taught under Classes taught.
-  const people = useMemo(() => {
+  // Each person's pay in the period: the shared pay lines of their time entries (as Payroll lists them).
+  const lines = useMemo(() => {
     const ratesFor = (id: string) => effectiveRates(staffById.get(id), comps.get(id))
-    const by = new Map<string, { name: string; segments: (PricedSegment & { dateKey: DateKey })[]; open: number }>()
-    const entry = (id: string, name: string) => {
-      const e = by.get(id) ?? { name: staffById.get(id)?.name ?? name, segments: [], open: 0 }
-      by.set(id, e)
-      return e
+    return payLines({ shifts, classes: days.classes, availability: days.availability, settings, ratesFor, from: period.start, to: period.end })
+  }, [shifts, days.classes, days.availability, settings, staffById, comps, period.start, period.end])
+  const people = useMemo(() => {
+    const by = new Map<string, { name: string; lines: typeof lines }>()
+    for (const l of lines) {
+      const e = by.get(l.staffId) ?? { name: staffById.get(l.staffId)?.name ?? l.shift?.staffName ?? 'Employee', lines: [] }
+      e.lines.push(l)
+      by.set(l.staffId, e)
     }
-    for (const p of priceShifts({ shifts, sessions, settings, rules, ratesFor })) {
-      const e = entry(p.shift.staffId, p.shift.staffName)
-      if (p.open) e.open++
-      e.segments.push(...p.segments.map((s) => ({ ...s, dateKey: p.shift.dateKey })))
-    }
-    const names = namesFrom(availability, sessions)
-    for (const b of priceClassBlocks({ sessions, availability, settings, rules, ratesFor })) {
-      if (b.dateKey < period.start || b.dateKey > period.end) continue
-      entry(b.staffId, names.get(b.staffId) ?? 'Coach').segments.push({ ...b.segment, dateKey: b.dateKey })
-    }
-    return [...by.entries()].map(([id, e]) => ({ id, name: e.name, segments: e.segments, t: totals(e.segments), open: e.open }))
-  }, [shifts, sessions, availability, settings, rules, staffById, comps, period.start, period.end])
-  const grand = totals(people.flatMap((p) => p.segments))
-  const openShifts = people.reduce((n, p) => n + p.open, 0)
+    return [...by.entries()].map(([id, e]) => ({ id, name: e.name, lines: e.lines, t: payLineTotals(e.lines) }))
+  }, [lines, staffById])
+  const grand = payLineTotals(lines)
+  const openShifts = grand.open
 
   const locked = isLocked(period.end)
   const ended = period.end < today
@@ -87,7 +79,7 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       ...period,
       type: settings.payroll.payPeriod.type,
       status: 'locked',
-      totals: grand,
+      totals: { total: grand.total, worked: grand.worked, extra: grand.extra },
       previousLockedThrough: lockedThrough ?? null,
       lockedAt: serverTimestamp(),
       lockedBy: actor.email,
@@ -96,8 +88,11 @@ export function PayPeriodsDialog({ open, onOpenChange }: { open: boolean; onOpen
       batch.set(doc(collection(db, branchCol(branchId, COL.payPeriods).path, id, 'lines'), p.id), {
         staffId: p.id,
         name: p.name,
-        ...p.t,
-        segments: p.segments,
+        total: p.t.total,
+        worked: p.t.worked,
+        extra: p.t.extra,
+        // Each paid line as it was paid: when, its hours, the rate and the pay (extra time with its note).
+        segments: p.lines.flatMap((l) => (l.open ? [] : [{ dateKey: l.dateKey, type: l.type, ...l.segment, ...(l.note ? { note: l.note } : {}) }])),
       })
     }
     batch.set(branchDocRef(branchId, COL.payroll, DOC.payrollState), { lockedThrough: period.end, updatedAt: serverTimestamp(), updatedBy: actor.email })

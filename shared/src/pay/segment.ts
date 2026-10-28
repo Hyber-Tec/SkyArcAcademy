@@ -1,30 +1,8 @@
 /**
- * Teaching vs admin pay segmentation (True Education's kiosk algorithm).
- * A shift is split by the coach's teaching windows: time inside sessions is
- * teaching, the rest is admin. Simultaneous students count once (windows merge),
- * back-to-back sessions merge, and sessions outside the shift are clipped away.
- * Hours are rounded to 0.01 h and pay is computed from the rounded hours.
+ * Money and hours for pay. Everyone is paid one hourly rate for the time the kiosk records (docs/DECISIONS.md §23: K1,
+ * K5); a coach's paid part of a shift is worked out in `paidTime.ts`. Hours are rounded to 0.01 h and the pay is computed
+ * from the rounded hours.
  */
-import type { PayModel } from '../settings/businessRules'
-
-export type PayType = 'teaching' | 'admin'
-
-export interface Interval {
-  startMs: number
-  endMs: number
-}
-
-export interface Segment extends Interval {
-  type: PayType
-}
-
-export interface PricedSegment extends Segment {
-  hours: number
-  rate: number
-  pay: number
-  /** Clocked time that isn't paid: outside classes under Teaching only, and all of it under Classes taught (a log). */
-  unpaid?: true
-}
 
 export const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100
 
@@ -37,109 +15,67 @@ export function hoursOf(ms: number): number {
   return round2(ms / 3_600_000)
 }
 
-/** Sort and merge intervals; touching intervals merge. */
-export function mergeIntervals(intervals: readonly Interval[]): Interval[] {
-  const sorted = intervals.filter((i) => i.endMs > i.startMs).sort((a, b) => a.startMs - b.startMs)
-  const out: Interval[] = []
-  for (const i of sorted) {
-    const last = out[out.length - 1]
-    if (last && i.startMs <= last.endMs) last.endMs = Math.max(last.endMs, i.endMs)
-    else out.push({ ...i })
-  }
-  return out
+export interface Interval {
+  startMs: number
+  endMs: number
 }
 
-export function segmentShift(shift: Interval, teachingWindows: readonly Interval[]): Segment[] {
-  const { startMs: S, endMs: E } = shift
-  if (E <= S) return []
-  const windows = mergeIntervals(teachingWindows)
-    .map((w) => ({ startMs: Math.max(w.startMs, S), endMs: Math.min(w.endMs, E) }))
-    .filter((w) => w.endMs > w.startMs)
-  const segs: Segment[] = []
-  let cursor = S
-  for (const w of windows) {
-    if (w.startMs > cursor) segs.push({ type: 'admin', startMs: cursor, endMs: w.startMs })
-    const a = Math.max(w.startMs, cursor)
-    const b = Math.min(w.endMs, E)
-    if (b > a) segs.push({ type: 'teaching', startMs: a, endMs: b })
-    if (w.endMs > cursor) cursor = w.endMs
-  }
-  if (E > cursor) segs.push({ type: 'admin', startMs: cursor, endMs: E })
-  // Merge adjacent segments of the same type.
-  const merged: Segment[] = []
-  for (const s of segs) {
-    const last = merged[merged.length - 1]
-    if (last && last.type === s.type && last.endMs === s.startMs) last.endMs = s.endMs
-    else merged.push({ ...s })
-  }
-  return merged
+/** Paid time: when it was, its hours (rounded to 0.01 h), the rate and the pay. */
+export interface PaySegment extends Interval {
+  hours: number
+  rate: number
+  pay: number
 }
 
+/** Prices time at a rate: its hours rounded to 0.01 h, and the pay from the rounded hours. */
+export function priceTime(startMs: number, endMs: number, rate: number): PaySegment {
+  const hours = hoursOf(Math.max(0, endMs - startMs))
+  return { startMs, endMs, hours, rate, pay: round2(hours * rate) }
+}
+
+/** Prices minutes that have no time of day (extra time), placed at `atMs`. */
+export function priceMinutes(minutes: number, rate: number, atMs: number): PaySegment {
+  const hours = round2(minutes / 60)
+  return { startMs: atMs, endMs: atMs, hours, rate, pay: round2(hours * rate) }
+}
+
+export interface HoursPay {
+  hours: number
+  pay: number
+}
+
+/** Hours and pay added up. */
+export function sumPay(segments: readonly Pick<PaySegment, 'hours' | 'pay'>[]): HoursPay {
+  let hours = 0
+  let pay = 0
+  for (const s of segments) {
+    hours += s.hours
+    pay += s.pay
+  }
+  return { hours: round2(hours), pay: round2(pay) }
+}
+
+/** "+1:00 h": extra time as the website and the audit log show it. */
+export function formatExtra(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes))
+  return `+${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} h`
+}
+
+/** A person's stored rates (`Compensation.rates`): their one hourly rate, in both until the phone app's update. */
 export interface Rates {
   teaching: number
   admin: number
 }
 
 /**
- * How a shift is paid. Coaches follow the academy's pay model on the shift's date (`hourly`: the whole shift at their
- * rate; `teaching_admin`: the split by classes; `teaching_only`: only time in classes is paid; `classes`: none of it,
- * since classes taught are paid from the schedule, see `priceClassBlocks`); owners and admins are paid one rate for all
- * clocked time (`single_rate`).
+ * @deprecated One rate since docs/DECISIONS.md §23: the type an admin once forced a shift's pay to
+ * (`ClockShift.forcedType`, no longer read).
  */
-export type EffectivePayModel = 'classes' | 'hourly' | 'teaching_admin' | 'teaching_only' | 'single_rate'
+export type PayType = 'teaching' | 'admin'
 
-/**
- * Prices a shift. `single_rate` pays the whole shift at the person's hourly rate (`rates.admin`); `hourly` pays the
- * whole shift as teaching time at the coach's rate (`rates.teaching`); a forced type pays the whole shift as that type.
- * Under Teaching only, admin time is kept (so the shift still adds up) but unpaid; under Classes taught the whole shift
- * is an unpaid log.
- */
-export function priceShift(
-  shift: Interval,
-  teachingWindows: readonly Interval[],
-  rates: Rates,
-  model: EffectivePayModel,
-  forcedType: PayType | null = null,
-): PricedSegment[] {
-  if (shift.endMs <= shift.startMs) return []
-  if (model === 'classes') return [{ type: 'admin', ...shift, hours: hoursOf(shift.endMs - shift.startMs), rate: 0, pay: 0, unpaid: true }]
-  const segs: Segment[] =
-    model === 'single_rate'
-      ? [{ type: 'admin', ...shift }]
-      : forcedType
-        ? [{ type: forcedType, ...shift }]
-        : model === 'hourly'
-          ? [{ type: 'teaching', ...shift }]
-          : segmentShift(shift, teachingWindows)
-  return segs.map((s) => {
-    const hours = hoursOf(s.endMs - s.startMs)
-    if (s.type === 'admin' && model === 'teaching_only') return { ...s, hours, rate: 0, pay: 0, unpaid: true as const }
-    const rate = s.type === 'teaching' ? rates.teaching : rates.admin
-    return { ...s, hours, rate, pay: round2(hours * rate) }
-  })
-}
-
+/** @deprecated Teaching and admin time are no longer told apart: `HoursPay`. Kept until the phone app's update. */
 export interface PayTotals {
-  teaching: { hours: number; pay: number }
-  admin: { hours: number; pay: number }
-  total: { hours: number; pay: number }
-}
-
-/** Paid hours and pay by type (unpaid time is left out). */
-export function totals(segments: readonly PricedSegment[]): PayTotals {
-  const t = { teaching: { hours: 0, pay: 0 }, admin: { hours: 0, pay: 0 } }
-  for (const s of segments) {
-    if (s.unpaid) continue
-    t[s.type].hours += s.hours
-    t[s.type].pay += s.pay
-  }
-  const fix = (v: { hours: number; pay: number }) => ({ hours: round2(v.hours), pay: round2(v.pay) })
-  const teaching = fix(t.teaching)
-  const admin = fix(t.admin)
-  return { teaching, admin, total: { hours: round2(teaching.hours + admin.hours), pay: round2(teaching.pay + admin.pay) } }
-}
-
-/** Which pay model applies to an employee's shift: the academy's model for coaches, one rate for owners and admins. */
-export function payModelFor(opts: { role: 'owner' | 'admin' | 'coach' | undefined; branchModel: PayModel }): EffectivePayModel {
-  return opts.role === 'owner' || opts.role === 'admin' ? 'single_rate' : opts.branchModel
+  teaching: HoursPay
+  admin: HoursPay
+  total: HoursPay
 }

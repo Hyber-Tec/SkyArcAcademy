@@ -5,11 +5,11 @@ import { Link, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { STAFF_COLORS } from '@shared/colors'
 import { COL } from '@shared/paths'
-import { missingRates, rateName, coachesNeedAdminRate } from '@shared/pay/rates'
+import { hourlyRate, rateMissing } from '@shared/pay/rates'
+import { formatMoney } from '@shared/pay/segment'
 import { initials, STAFF_STATUS_LABELS, STAFF_STATUSES } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
-import { payModelOn } from '@shared/settings/businessRules'
-import { formatInstant, todayKey } from '@shared/time'
+import { formatDateKey, formatInstant, todayKey } from '@shared/time'
 import type { Compensation, Member, Staff, StaffNotes, StaffRole, StaffStatus } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { StaffStatusBadge } from '@/components/app/StatusBadge'
@@ -31,6 +31,7 @@ import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { KioskPinCard } from '@/features/timeclock/KioskPinCard'
 import { RateMissingNotice } from './PayGapNotice'
+import { rateHelp } from './rateDraft'
 import { classesOnlyThem, compensationRef, saveCompensation, saveEmployeeProfile, saveStaffNotes, staffNotesRef, stopTeachingQuestion } from './api'
 
 export function EmployeeDetailPage() {
@@ -271,7 +272,7 @@ function AccessCard({ member }: { member: (Member & { id: string }) | null }) {
 }
 
 function PayCard({ staff }: { staff: Staff & { id: string } }) {
-  const { branchId, actor, timezone, rules } = useBranch()
+  const { branchId, actor, timezone } = useBranch()
   const ref = useMemo(() => compensationRef(branchId, staff.id), [branchId, staff.id])
   const { data: comp, loading } = useDoc<Compensation>(ref)
   const card = useRef<HTMLDivElement>(null)
@@ -280,28 +281,21 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
   useEffect(() => {
     if (hash === '#pay') card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [hash])
-  const [teaching, setTeaching] = useState('')
-  const [admin, setAdmin] = useState('')
+  const [rate, setRate] = useState('')
   const [effective, setEffective] = useState(todayKey(timezone))
   const [busy, setBusy] = useState(false)
-  // Owners and admins have one hourly rate (kept as the admin rate); coaches follow the branch pay model.
-  const single = isAdminRole(staff.role)
-  const today = todayKey(timezone)
-  const modelNow = payModelOn(rules, today)
-  const usesAdminRate = rules.payModels.some((p) => p.model === 'teaching_admin')
 
   useEffect(() => {
-    setTeaching(comp?.rates?.teaching != null ? String(comp.rates.teaching) : '')
-    setAdmin(comp?.rates?.admin != null ? String(comp.rates.admin) : '')
+    const r = hourlyRate(comp?.rates)
+    setRate(comp && r > 0 ? String(r) : '')
   }, [comp])
 
   async function save() {
-    const t = single ? (comp?.rates?.teaching ?? 0) : Number(teaching)
-    const a = !single && !usesAdminRate ? (comp?.rates?.admin ?? 0) : Number(admin)
-    if (!Number.isFinite(t) || !Number.isFinite(a) || t < 0 || a < 0 || (single ? admin === '' : teaching === '')) return toast.error('Enter valid pay rates.')
+    const n = Number(rate)
+    if (rate === '' || !Number.isFinite(n) || n < 0) return toast.error('Enter a valid hourly rate.')
     setBusy(true)
     try {
-      await saveCompensation(branchId, actor, staff, comp, { rates: { teaching: t, admin: a } }, effective)
+      await saveCompensation(branchId, actor, staff, comp, Math.round(n * 100) / 100, effective)
       toast.success('Pay saved')
     } catch (e) {
       toast.error('Could not save', { description: (e as Error).message })
@@ -310,52 +304,33 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
     }
   }
 
-  // Rates their pay needs that are unset: their worked time is priced at $0 until they're saved.
-  const missing = loading || staff.status !== 'active' ? [] : missingRates(staff.role, comp?.rates, coachesNeedAdminRate(rules, today))
-  const fields = single
-    ? [{ id: 'admin', label: 'Hourly rate', value: admin, set: setAdmin }]
-    : [
-        { id: 'teaching', label: 'Teaching rate', value: teaching, set: setTeaching },
-        ...(usesAdminRate ? [{ id: 'admin', label: 'Admin rate', value: admin, set: setAdmin }] : []),
-      ]
-  const description = single
-    ? 'Paid this hourly rate for all clocked time.'
-    : modelNow === 'classes'
-      ? 'Paid the teaching rate, per hour, for the classes they teach. Clocking in and out is only a log.'
-      : modelNow === 'hourly'
-        ? 'Paid the teaching rate for every clocked hour.'
-        : modelNow === 'teaching_only'
-          ? 'Paid for teaching time only: time inside attended classes. Other clocked time is unpaid.'
-          : 'Time inside attended classes is paid at the teaching rate; the rest of the shift at the admin rate.'
+  // No rate yet: their worked time is priced at $0 until it's saved.
+  const missing = !loading && staff.status === 'active' && rateMissing(staff.role, comp?.rates)
 
   return (
     <Card ref={card} id="pay" className="scroll-mt-4">
       <CardHeader>
         <CardTitle>Pay</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>
+          {staff.role === 'owner' ? 'Paid this hourly rate for the time they’re clocked in at the kiosk, if they’re paid by the hour.' : rateHelp(staff.role)}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
-          {missing.length ? (
-            <RateMissingNotice>
-              No {missing.map((k) => rateName(k, staff.role).replace(/ rate$/, '')).join(' or ')} rate yet, so {staff.firstName || staff.name}’s worked time is paid $0 until you save one.
-            </RateMissingNotice>
-          ) : null}
+          {missing ? <RateMissingNotice>No hourly rate yet, so {staff.firstName || staff.name}’s worked time is paid $0 until you save one.</RateMissingNotice> : null}
           <div className="grid gap-4 sm:grid-cols-3">
-            {fields.map((r) => (
-              <Field key={r.id}>
-                <FieldLabel htmlFor={`pay-${r.id}`}>{r.label}</FieldLabel>
-                <InputGroup>
-                  <InputGroupAddon>
-                    <InputGroupText>$</InputGroupText>
-                  </InputGroupAddon>
-                  <InputGroupInput id={`pay-${r.id}`} inputMode="decimal" value={r.value} onChange={(e) => r.set(e.target.value.replace(/[^\d.]/g, ''))} />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupText>/hr</InputGroupText>
-                  </InputGroupAddon>
-                </InputGroup>
-              </Field>
-            ))}
+            <Field>
+              <FieldLabel htmlFor="pay-rate">Hourly rate</FieldLabel>
+              <InputGroup>
+                <InputGroupAddon>
+                  <InputGroupText>$</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput id="pay-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))} />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>/hr</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            </Field>
             <Field>
               <FieldLabel htmlFor="pay-from">Effective from</FieldLabel>
               <DatePicker id="pay-from" value={effective || null} onChange={setEffective} />
@@ -366,10 +341,8 @@ function PayCard({ staff }: { staff: Staff & { id: string } }) {
               <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">Rate history</div>
               {[...comp.history].reverse().map((h, i) => (
                 <div key={i} className="flex justify-between px-3 py-1.5">
-                  <span>From {h.effectiveFrom}</span>
-                  <span className="tabular-nums">
-                    {single ? `$${h.rates.admin}/hr` : usesAdminRate ? `$${h.rates.teaching} teaching · $${h.rates.admin} admin` : `$${h.rates.teaching} teaching`}
-                  </span>
+                  <span>From {formatDateKey(h.effectiveFrom, 'medium')}</span>
+                  <span className="tabular-nums">{formatMoney(hourlyRate(h.rates))}/hr</span>
                 </div>
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { dayStartInstant, effectiveRanges, normalizeRanges, rangesContain } from './availability'
+import { type SavedDay, dayStartInstant, effectiveRanges, normalizeRanges, rangesContain } from './availability'
 import { type ClassCoach, type DayRecord, coachesIn, takesSeat, uncovered } from './schedule/classes'
 import { isAhead } from './schedule/conflicts'
 import type { DayHours } from './settings/defaults'
@@ -53,6 +53,52 @@ export function availabilityRecord(
 /** "4:00 PM - 9:00 PM, …", or "none". */
 export function describeRanges(ranges: readonly AvailabilityRange[]): string {
   return ranges.length ? ranges.map((r) => formatTimeRange(r.startMin, r.endMin)).join(', ') : 'none'
+}
+
+// ------------------------------------------------------------ adding time inside the lock
+
+/**
+ * How long the Undo of a coach's add inside the lock is offered. The rules allow it for 15 seconds after the add was
+ * saved, so a slow network still makes it.
+ */
+export const UNDO_SECONDS = 10
+
+/**
+ * Inside the lock a coach may add time but not remove it (docs/DECISIONS.md §23, C2; the security rules check the same):
+ * the day ends with times, and every time it had is still inside one of them. A new range, a wider one, or times on a
+ * day that had none or was marked not available are adds; removing or shortening time, or marking a day with times not
+ * available, isn't.
+ */
+export function onlyAddsTime(before: SavedDay | null | undefined, after: Pick<DayWrite, 'ranges' | 'unavailable'>): boolean {
+  if (after.unavailable) return false
+  const next = normalizeRanges(after.ranges)
+  if (!next.length) return false
+  return (before?.unavailable ? [] : (before?.ranges ?? [])).every((r) => rangesContain(next, r.startMin, r.endMin))
+}
+
+/** A day's times after adding some inside the lock: the ones it had, as saved, and the new ones, merged. */
+export function withAddedTime(saved: SavedDay | null | undefined, added: readonly AvailabilityRange[]): AvailabilityRange[] {
+  return normalizeRanges([...(saved?.unavailable ? [] : (saved?.ranges ?? [])), ...added])
+}
+
+/** What an add inside the lock keeps of the day before it, exactly as saved, so its Undo puts back just that. */
+export function undoOf(saved: SavedDay | null | undefined): { ranges: AvailabilityRange[]; unavailable: boolean } {
+  return { ranges: (saved?.ranges ?? []).map((r) => ({ ...r })), unavailable: !!saved?.unavailable }
+}
+
+/** Whether undoing puts the day back with times or a mark (else its record is removed: it had none). */
+export function undoKeepsRecord(undo: { ranges: readonly AvailabilityRange[]; unavailable: boolean }): boolean {
+  return undo.unavailable || undo.ranges.length > 0
+}
+
+/** The audit log's line for an add inside the lock ("Added 6:00 PM – 8:00 PM to Hannah Moreno’s availability on Tue, Oct 20"). */
+export function addedTimeSummary(staffName: string, dateKey: DateKey, added: readonly AvailabilityRange[]): string {
+  return `Added ${describeRanges(normalizeRanges(added))} to ${staffName}’s availability on ${formatDateKey(dateKey, 'weekdayMedium')} (inside the lock)`
+}
+
+/** The audit log's line for the Undo of an add. */
+export function undoneSummary(staffName: string, dateKey: DateKey): string {
+  return `Undid the time added to ${staffName}’s availability on ${formatDateKey(dateKey, 'weekdayMedium')}`
 }
 
 /** The audit log's line for a change: one day ("Marked Hannah Moreno not available on Tue, Oct 20"), or a count. */

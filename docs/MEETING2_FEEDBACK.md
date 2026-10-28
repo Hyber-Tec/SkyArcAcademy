@@ -205,16 +205,16 @@ To start a phase, paste this into Claude Code on the right computer:
     The cancel cutoff follows the same setting.
 
 #### C: Coaches and availability
-- [ ] **C1. Availability lock: 7 days** (was 14; editable).
+- [x] **C1. Availability lock: 7 days** (was 14; editable). (#44)
   - *Plan:* **Already done:** the lock is 7 days (`availability.lockWindowDays`). See `ST3` for the 14.
-- [ ] **C2. Inside the lock, coaches can ADD availability but not REMOVE it.** The lock exists so coaches don't bail at
+- [x] **C2. Inside the lock, coaches can ADD availability but not REMOVE it.** The lock exists so coaches don't bail at
   the last minute; picking up extra time is fine. A short **undo** after adding (about 10 seconds, or until they leave
-  the screen) in case of a mis-tap. After that, removing it means asking the admin.
+  the screen) in case of a mis-tap. After that, removing it means asking the admin. (#44)
   - *Plan:* **New work:** a locked day is read-only for coaches today. Adding inside the lock, with Undo; the rules
     allow adding only (the phone's side is `M7`).
-- [ ] **C3. The admin can always change any coach's availability**, inside the lock too: open a day for a coach who's
+- [x] **C3. The admin can always change any coach's availability**, inside the lock too: open a day for a coach who's
   covering, or turn off a coach who can't come. This is how coach emergencies are handled; no separate "cover another
-  coach" feature.
+  coach" feature. (#44)
   - *Plan:* **Already done** on the website: Employees → Calendar, and "Who's in" on the schedule.
 - [ ] **C4. Pre-fill each coach's fixed weekly schedule** before launch, so a coach's usual days are set when they
   first open the app (for example Mon/Tue/Wed/Thu/Sun). They can still edit outside the lock.
@@ -222,24 +222,24 @@ To start a phase, paste this into Claude Code on the right computer:
     change:** carry them further before launch.
 
 #### K: Kiosk, time clock, payroll
-- [ ] **K1. One pay rate only. Remove the "admin rate"** and everything related to it (website, app, settings,
-  payroll, data). Coaches come **30 minutes early** to set up and get their **normal rate** for that time.
+- [x] **K1. One pay rate only. Remove the "admin rate"** and everything related to it (website, app, settings,
+  payroll, data). Coaches come **30 minutes early** to set up and get their **normal rate** for that time. (#44)
   - *Plan:* **Small change:** two rates and four pay models exist (from HyberCRM). One rate stays; the admin rate goes,
     with the pay models that need it or pay from the schedule (`K5`). Hourly from the kiosk, the academy's model, stays.
-- [ ] **K2. Early clock-in doesn't count.** A class at 6:00 with a 30-minute window means paid time starts at **5:30**,
-  even if the coach clocks in at 5:20.
+- [x] **K2. Early clock-in doesn't count.** A class at 6:00 with a 30-minute window means paid time starts at **5:30**,
+  even if the coach clocks in at 5:20. (#44)
   - *Plan:* **New work:** paid time starts at the clock-in today. It will start at the arrival window (30 minutes before
     the coach's first class), never earlier.
-- [ ] **K3. Automatic clock-out at the end of the last class** (for example 8:00 PM). A setting.
+- [x] **K3. Automatic clock-out at the end of the last class** (for example 8:00 PM). A setting. (#44)
   - *Plan:* **Small change:** automatic clock-out exists at a fixed time (midnight); it moves to the end of the day's
     last class.
-- [ ] **K4. Arrival minutes are editable** (30 now; might become 15).
+- [x] **K4. Arrival minutes are editable** (30 now; might become 15). (#44)
   - *Plan:* **New work**, with `K2`: the arrival minutes setting.
-- [ ] **K5. Paid time comes only from the kiosk.** A coach who was scheduled but never clocked in (no-show) **isn't paid**
-  for that shift. Payroll is never based on scheduled hours alone.
+- [x] **K5. Paid time comes only from the kiosk.** A coach who was scheduled but never clocked in (no-show) **isn't paid**
+  for that shift. Payroll is never based on scheduled hours alone. (#44)
   - *Plan:* **Already done** under Hourly (no clock-in, no pay); with `K1`, Hourly is the only model.
-- [ ] **K6. Manual time adjustments are quick and clear, with a note.** The manager adds an extra hour by hand to one
-  coach's weekly entry (travel compensation). No automation.
+- [x] **K6. Manual time adjustments are quick and clear, with a note.** The manager adds an extra hour by hand to one
+  coach's weekly entry (travel compensation). No automation. (#44)
   - *Plan:* **Already done:** Time Entries adds and edits shifts with a note, audited. **Small change:** an "extra time"
     field (+1 hour), so the clock times stay true.
 

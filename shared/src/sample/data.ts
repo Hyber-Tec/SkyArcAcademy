@@ -2,6 +2,7 @@ import { availabilityRecord } from '../availabilityWrites'
 import { newMemberData } from '../branchFactory'
 import { STAFF_COLORS } from '../colors'
 import { COL, DOC, availabilityDocId } from '../paths'
+import { rateRecord } from '../pay/rates'
 import { makeupLabel } from '../schedule/classes'
 import { DEFAULT_BUSINESS_RULES } from '../settings/businessRules'
 import type { SessionStatus, WeekHours } from '../settings/defaults'
@@ -290,7 +291,8 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       notificationPrefs: { announcements: true, sessionCreated: true, sessionChanged: true, sessionCanceled: true },
       ...stamp,
     })
-    const rates = { teaching: st.rate, admin: st.rate }
+    // Everyone's one hourly rate (docs/DECISIONS.md §23), in both fields until the phone app's update.
+    const rates = rateRecord(st.rate)
     add(`${COL.staff}/${id}/private/${DOC.compensation}`, {
       rates,
       history: [{ effectiveFrom: st.since, rates, setAt: now.toISOString(), setBy: SAMPLE_AUTHOR }],

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { PayType } from '@shared/pay/segment'
+import { formatExtra } from '@shared/pay/segment'
 import { type DateKey, todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -10,14 +10,18 @@ import { TimeSelect } from '@/components/app/TimeSelect'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { type ClockShift, saveShift } from './api'
 
+/** Extra time to choose from: quarter hours up to 4 hours, then whole hours up to 8. */
+const EXTRA_CHOICES = [...Array.from({ length: 16 }, (_, i) => (i + 1) * 15), 300, 360, 420, 480]
+
 /**
- * Add or fix a time entry (a clock-in to clock-out shift). Used by Time Entries
- * and by Payroll, whose rows are pieces of these shifts.
+ * Add or fix a time entry (a clock-in to clock-out shift), and add extra time to it (K6: a coach's travel hour, with
+ * why), so the clock times stay as recorded. Used by Time Entries and by Payroll, whose rows are pieces of these shifts.
  */
 export function ShiftDialog({
   state,
@@ -41,7 +45,8 @@ export function ShiftDialog({
   const [dateKey, setDateKey] = useState('')
   const [inMin, setInMin] = useState(840)
   const [outMin, setOutMin] = useState(1020)
-  const [type, setType] = useState<'auto' | PayType>('auto')
+  const [extraMin, setExtraMin] = useState(0)
+  const [extraNote, setExtraNote] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -56,29 +61,33 @@ export function ShiftDialog({
       setInMin(existing.inMin)
       const out = existing.clockOutAt ? Math.round((existing.clockOutAt.toMillis() - existing.clockInAt.toMillis()) / 60000) + existing.inMin : Math.max(existing.inMin + 60, 1020)
       setOutMin(Math.min(out, 1440))
-      setType(existing.forcedType ?? 'auto')
+      setExtraMin(existing.extraMin ?? 0)
+      setExtraNote(existing.extraNote ?? '')
       setNote(existing.note ?? '')
     } else {
       setStaffId(defaultStaff ?? '')
       setDateKey(todayKey(timezone))
       setInMin(840)
       setOutMin(1020)
-      setType('auto')
+      setExtraMin(0)
+      setExtraNote('')
       setNote('')
     }
   }
   if (!state) return null
   const step = settings.timeEntries.stepMinutes
+  const choices = [...new Set([...EXTRA_CHOICES, ...(extraMin ? [extraMin] : [])])].sort((a, b) => a - b)
 
   async function save() {
     const person = staff.find((s) => s.id === staffId)
     if (!person) return setError('Choose an employee.')
     if (!dateKey) return setError('Choose a date.')
     if (outMin <= inMin) return setError('The end time must be after the start time.')
+    if (extraMin > 0 && !extraNote.trim()) return setError('Say why the extra time is added (for example, travel).')
     if (isLocked(dateKey)) return setError('This date is in a locked pay period.')
     setBusy(true)
     try {
-      await saveShift(branchId, actor, timezone, { staffId, staffName: person.name, dateKey, inMin, outMin, forcedType: type === 'auto' ? null : type, note }, existing)
+      await saveShift(branchId, actor, timezone, { staffId, staffName: person.name, dateKey, inMin, outMin, extraMin, extraNote, note }, existing)
       toast.success(existing ? 'Time entry updated' : 'Time entry added')
       onClose()
     } catch (e) {
@@ -111,21 +120,37 @@ export function ShiftDialog({
               <span className="text-sm text-muted-foreground">to</span>
               <TimeSelect value={outMin} step={step} min={inMin + step} max={1440} onChange={setOutMin} />
             </div>
-            {existing?.autoClosed ? <FieldDescription>This shift was closed automatically. Set the real clock-out time.</FieldDescription> : null}
+            {existing?.autoClosed && !existing.autoCorrected ? (
+              <FieldDescription>
+                {existing.autoClosedBy === 'last_class'
+                  ? 'Clocked out automatically at the end of the last class.'
+                  : 'This shift was closed automatically. Set the real clock-out time.'}
+              </FieldDescription>
+            ) : null}
           </Field>
           <Field>
-            <FieldLabel>Pay as</FieldLabel>
-            <Select value={type} onValueChange={(v) => setType(v as 'auto' | PayType)}>
-              <SelectTrigger className="w-full">
+            <FieldLabel htmlFor="te-extra">Extra time</FieldLabel>
+            <Select value={String(extraMin)} onValueChange={(v) => setExtraMin(Number(v))}>
+              <SelectTrigger id="te-extra" className="w-full" data-testid="shift-extra">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Automatic (the academy’s pay model)</SelectItem>
-                <SelectItem value="admin">All admin time</SelectItem>
-                <SelectItem value="teaching">All teaching time</SelectItem>
+                <SelectItem value="0">None</SelectItem>
+                {choices.map((m) => (
+                  <SelectItem key={m} value={String(m)}>
+                    {formatExtra(m)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <FieldDescription>Paid at their hourly rate on top of the clocked time, which stays as recorded.</FieldDescription>
           </Field>
+          {extraMin > 0 ? (
+            <Field data-invalid={!!error && !extraNote.trim()}>
+              <FieldLabel htmlFor="te-extra-note">Why</FieldLabel>
+              <Input id="te-extra-note" value={extraNote} maxLength={300} onChange={(e) => setExtraNote(e.target.value)} placeholder="For example, travel" data-testid="shift-extra-note" />
+            </Field>
+          ) : null}
           <Field>
             <FieldLabel htmlFor="te-note">Note</FieldLabel>
             <Textarea id="te-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />

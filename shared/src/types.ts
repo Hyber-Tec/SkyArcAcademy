@@ -180,8 +180,8 @@ export interface StaffNotes {
 /** `staff/{id}/private/compensation`. */
 export interface Compensation {
   /**
-   * Hourly rates. Coaches: `teaching` (and `admin` for non-teaching time under
-   * Teaching + Admin). Owners and admins: `admin` is their one hourly rate.
+   * The person's one hourly rate (docs/DECISIONS.md §23, K1), saved in `teaching` and, until the phone app's update,
+   * in `admin` too. Older owners' and admins' records kept it in `admin` alone: read it with `hourlyRate`.
    */
   rates: { teaching: number; admin: number }
   /** Unused since round 2 (the pay model is a branch rule); kept on older records. */
@@ -321,6 +321,19 @@ export interface Availability extends AuditStamp {
   /** First instant of the day; rules use it for the coach lock window. */
   dayStartAt: TimestampLike
   updatedVia: 'coach' | 'admin'
+  /** Set by a coach's add inside the lock: what it replaced, so the add can be undone for a few seconds. */
+  undo?: AvailabilityUndo
+}
+
+/**
+ * What a coach's add inside the lock replaced (docs/DECISIONS.md §23, C2): the day's times and mark as they were, and
+ * when the add was saved. The rules let the coach put exactly this back for 15 seconds (`UNDO_SECONDS` on screen).
+ */
+export interface AvailabilityUndo {
+  ranges: AvailabilityRange[]
+  unavailable: boolean
+  /** When the add was saved (the server's time). */
+  at: TimestampLike
 }
 
 export interface DayConfig extends AuditStamp {
@@ -345,10 +358,22 @@ export interface ClockShift {
   status: 'open' | 'closed'
   source: 'kiosk' | 'admin' | 'auto'
   autoClosed: boolean
+  /**
+   * How the automatic clock-out picked its time: the end of the person's last class (the academy's rule, K3), or the
+   * set time (a day without classes, or with the rule off), which may need a look. Missing on older shifts.
+   */
+  autoClosedBy?: 'last_class' | 'set_time'
   autoCorrected: boolean
-  /** An admin's forced pay type for the whole shift (e.g. a meeting that is all admin time). */
+  /** @deprecated One rate since docs/DECISIONS.md §23: an admin's old "pay as" choice, no longer read. */
   forcedType: PayType | null
   note: string
+  /**
+   * Extra paid minutes an admin added to the shift (a coach's travel hour, K6), so the clock times stay as recorded;
+   * paid at the person's rate. 0 or missing: none.
+   */
+  extraMin?: number
+  /** Why the extra time was added (required with it). */
+  extraNote?: string
 }
 
 // -------------------------------------------------------------------- audit

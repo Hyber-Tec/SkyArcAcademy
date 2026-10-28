@@ -4,9 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { publicProfileFor } from '@shared/branchFactory'
 import { COL, DOC, ROOT } from '@shared/paths'
-import { PAY_MODEL_HELP, PAY_MODEL_LABELS, payModelOn } from '@shared/settings/businessRules'
+import { describePay } from '@shared/pay/paidTime'
 import { DEFAULT_SETTINGS, type BranchSettings } from '@shared/settings/defaults'
-import { formatDateKey, todayKey } from '@shared/time'
 import { type SettingsOverrides, getPath, setPath, unsetPath } from '@shared/settings/resolve'
 import type { Branch, BranchContact } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -122,16 +121,9 @@ function useBranchWriter() {
 
 /** Read-only, for admins: the core rules the academy's owners set (Academy rules). */
 function BusinessRulesCard() {
-  const { rules, timezone } = useBranch()
-  const today = todayKey(timezone)
-  const now = payModelOn(rules, today)
-  const next = rules.payModels.find((p) => p.from > today)
+  const { rules, settings } = useBranch()
   const rows: { label: string; value: string; help?: string }[] = [
-    {
-      label: 'Pay model',
-      value: PAY_MODEL_LABELS[now],
-      help: next ? `Changes to ${PAY_MODEL_LABELS[next.model]} on ${formatDateKey(next.from, 'medium')}. ${PAY_MODEL_HELP[now]}` : PAY_MODEL_HELP[now],
-    },
+    { label: 'Pay', value: 'Hourly, one rate per person', help: describePay(settings) },
     { label: 'Seats per class', value: String(rules.seatsPerClass), help: 'A new class has this many seats; each class can have its own.' },
   ]
   return (
@@ -250,14 +242,15 @@ function BranchProfileCard() {
 }
 
 function BusinessSection({ sectionKey }: { sectionKey: string }) {
-  const { branch, branchId, settings, rules } = useBranch()
+  const { branch, branchId, settings } = useBranch()
   const write = useBranchWriter()
-  const section = useMemo(() => {
-    const full = SETTINGS_SECTIONS.find((s) => s.key === sectionKey)!
-    return { ...full, fields: full.fields.filter((f) => !f.visible || f.visible(rules)) }
-  }, [sectionKey, rules])
   const [draft, setDraft] = useState<BranchSettings>(settings)
   const [busy, setBusy] = useState(false)
+  // The fields the draft needs (the clock-out time only while the automatic clock-out is on).
+  const section = useMemo(() => {
+    const full = SETTINGS_SECTIONS.find((s) => s.key === sectionKey)!
+    return { ...full, fields: full.fields.filter((f) => !f.visible || f.visible(draft)) }
+  }, [sectionKey, draft])
 
   useEffect(() => setDraft(settings), [settings, sectionKey])
 

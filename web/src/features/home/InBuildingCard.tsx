@@ -1,41 +1,57 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { effectiveRanges } from '@shared/availability'
+import { type PayClass, payRule, shiftPaidTime } from '@shared/pay/paidTime'
 import type { DayHours } from '@shared/settings/defaults'
-import { type DateKey, formatMinutes } from '@shared/time'
-import type { Availability, WithId } from '@shared/types'
+import { type DateKey, formatInstantTime, formatMinutes } from '@shared/time'
+import type { Availability, StaffRole, WithId } from '@shared/types'
+import { useBranch } from '@/branch/BranchProvider'
 import type { ClockShift } from '@/features/timeclock/api'
 import { cn } from '@/lib/utils'
 import { dayLabel } from './NeedsYouCard'
 import { PersonDot } from './parts'
 
 /**
- * Who is clocked in now, and who else is in today (their hours, as on the schedule's Who's in): late when their hours
- * have started without a clock-in, or later today.
+ * Who is clocked in now (and, for a coach who came early, when their paid time starts: docs/DECISIONS.md §23), and who
+ * else is in today (their hours, as on the schedule's Who's in): late when their hours have started without a clock-in,
+ * or later today.
  */
 export function InBuildingCard({
   shifts,
   people,
+  classes,
   hours,
   today,
   nowMin,
   nameOf,
   colorOf,
+  roleOf,
 }: {
   shifts: WithId<ClockShift>[]
   /** Everyone's hours today (their availability). */
   people: readonly WithId<Availability>[]
+  /** Today's classes: a coach's paid time starts before their first. */
+  classes: readonly PayClass[]
   /** Today's opening hours. */
   hours: DayHours
   today: DateKey
   nowMin: number
   nameOf: (staffId: string, fallback?: string) => string
   colorOf: (staffId: string) => string | null
+  roleOf: (staffId: string) => StaffRole | undefined
 }) {
   const navigate = useNavigate()
+  const { settings, timezone } = useBranch()
   const model = useMemo(() => {
-    const open = shifts.filter((s) => s.status === 'open').sort((a, b) => a.clockInAt.toMillis() - b.clockInAt.toMillis())
-    const inIds = new Set(open.map((s) => s.staffId))
+    const rule = payRule(settings)
+    const open = shifts
+      .filter((s) => s.status === 'open')
+      .sort((a, b) => a.clockInAt.toMillis() - b.clockInAt.toMillis())
+      .map((s) => {
+        const paid = shiftPaidTime(s, { role: roleOf(s.staffId), classes, availability: people, rule })
+        return { s, paidFrom: paid.startMs > s.clockInAt.toMillis() ? paid.startMs : null }
+      })
+    const inIds = new Set(open.map(({ s }) => s.staffId))
     const inToday = people
       .filter((a) => a.dateKey === today && !a.unavailable)
       .map((a) => ({ id: a.staffId, name: nameOf(a.staffId, a.staffName), spans: effectiveRanges(a.ranges ?? [], hours) }))
@@ -52,7 +68,7 @@ export function InBuildingCard({
       .sort((a, b) => Number(b.late) - Number(a.late) || a.at - b.at || a.name.localeCompare(b.name))
     const clockedIn = inToday.filter((t) => inIds.has(t.id)).length
     return { open, expected, clockedIn, scheduled: inToday.length }
-  }, [shifts, people, hours, today, nowMin, nameOf])
+  }, [shifts, people, classes, hours, today, nowMin, nameOf, roleOf, settings])
 
   const employee = (id: string) => navigate(`/admin/employees/directory/${id}`)
 
@@ -66,12 +82,15 @@ export function InBuildingCard({
       </div>
       {model.open.length ? (
         <ul className="mt-3 space-y-1">
-          {model.open.map((s) => (
+          {model.open.map(({ s, paidFrom }) => (
             <li key={s.id}>
               <button type="button" onClick={() => employee(s.staffId)} className="-mx-1.5 flex w-[calc(100%+0.75rem)] items-center gap-2.5 rounded-md px-1.5 py-1 text-left hover:bg-muted/60">
                 <PersonDot name={s.staffName} color={colorOf(s.staffId)} />
-                <span className="flex-1 truncate text-sm">{s.staffName}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block truncate text-sm">{s.staffName}</span>
+                  {paidFrom !== null ? <span className="block text-xs text-muted-foreground tabular-nums">Paid from {formatInstantTime(paidFrom, timezone)}</span> : null}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                   since {s.dateKey !== today ? `${dayLabel(s.dateKey, today).toLowerCase()} ` : ''}
                   {formatMinutes(s.inMin)}
                 </span>

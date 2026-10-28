@@ -17,6 +17,8 @@ interface Identity {
   staffId: string
   name: string
   openSince: number | null
+  /** Not clocked in, and clocked out automatically earlier today (at the end of the last class): when. */
+  autoOutAt?: number | null
 }
 
 const identify = httpsCallable<{ branchId: string; pin: string }, Identity>(functions, 'kioskIdentify')
@@ -202,7 +204,11 @@ export function KioskPage() {
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="text-4xl font-bold">Welcome, {who.name.split(' ')[0]}</div>
             <div className="text-lg text-muted-foreground">
-              {who.openSince ? `Clocked in at ${formatInstantTime(who.openSince, timezone)}` : 'Currently clocked out'}
+              {who.openSince
+                ? `Clocked in at ${formatInstantTime(who.openSince, timezone)}`
+                : who.autoOutAt
+                  ? `Clocked out automatically at ${formatInstantTime(who.autoOutAt, timezone)}`
+                  : 'Currently clocked out'}
             </div>
             <button
               type="button"

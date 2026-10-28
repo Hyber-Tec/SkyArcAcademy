@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { availabilityGaps, clipToHours, dayHours, dayMark, effectiveLockDays, effectiveRanges, isLockedForCoach, lastAnswered, normalizeRanges, rangesContain, weeklyRepeats, fitRangesToDay } from './availability'
 import { DEFAULT_SETTINGS as ACADEMY_DEFAULTS } from './settings/defaults'
 
-// A fixed week for these tests (Sunday closed, Mon–Fri 2–9 PM, Saturday 9–5), independent of the academy's defaults.
+// A fixed week for these tests (Sunday closed, Mon–Fri 2–9 PM, Saturday 9–5) and a 14-day notice, independent of the
+// academy's defaults.
 const DEFAULT_SETTINGS = {
   ...ACADEMY_DEFAULTS,
+  availability: { ...ACADEMY_DEFAULTS.availability, leadTimeDays: 14 },
   schedule: {
     ...ACADEMY_DEFAULTS.schedule,
     defaultWeek: {
@@ -64,6 +66,9 @@ describe('availability', () => {
   it('extends the lock when the lead time blocks', () => {
     expect(effectiveLockDays(DEFAULT_SETTINGS)).toBe(7)
     expect(effectiveLockDays({ availability: { ...DEFAULT_SETTINGS.availability, leadTimeEnforcement: 'block' } })).toBe(14)
+    // The academy's own: a week's notice and a week's lock (C1), so blocking changes nothing.
+    expect(ACADEMY_DEFAULTS.availability).toMatchObject({ leadTimeDays: 7, lockWindowDays: 7 })
+    expect(effectiveLockDays({ availability: { ...ACADEMY_DEFAULTS.availability, leadTimeEnforcement: 'block' } })).toBe(7)
   })
 
   it('repeats weekly', () => {
@@ -136,6 +141,11 @@ describe('days that still need availability', () => {
   })
   it('has nothing to ask when the center doesn’t ask for notice', () => {
     const settings = { ...DEFAULT_SETTINGS, availability: { ...DEFAULT_SETTINGS.availability, leadTimeEnforcement: 'off' as const } }
+    expect(availabilityGaps({ ...base, settings, dayOn: () => null })).toEqual([])
+  })
+  it('has nothing to ask when the notice is no longer than the lock', () => {
+    // A day enters a 7-day notice as it locks (the academy's defaults), so it's never still to set.
+    const settings = { ...DEFAULT_SETTINGS, availability: { ...DEFAULT_SETTINGS.availability, leadTimeDays: 7 } }
     expect(availabilityGaps({ ...base, settings, dayOn: () => null })).toEqual([])
   })
   it('takes the date’s hours from the caller', () => {

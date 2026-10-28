@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { formatPhone, initials, STAFF_STATUS_LABELS, STAFF_STATUSES } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
-import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
-import type { Compensation, Staff, StaffRole, StaffStatus, WithId } from '@shared/types'
+import type { Staff, StaffRole, StaffStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
 import { PageHeader } from '@/components/app/PageHeader'
@@ -27,7 +26,7 @@ import { useStaffList } from '@/features/data/hooks'
 import { useConfirm } from '@/components/app/useConfirm'
 import { classesOnlyThem, createEmployee, setEmployeeStatus, stopTeachingQuestion } from './api'
 import { PayRateFields } from './PayRateFields'
-import { EMPTY_RATES, type RateDraft, readRates } from './rateDraft'
+import { readRate } from './rateDraft'
 
 type RoleFilter = StaffRole | 'all'
 type StatusFilter = StaffStatus | 'all'
@@ -202,14 +201,14 @@ function NewEmployeeDialog({
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
-  onCreate: (input: { firstName: string; lastName: string; email: string; role: StaffRole }, pay: { rates: Compensation['rates']; effectiveFrom: string } | null) => Promise<void>
+  onCreate: (input: { firstName: string; lastName: string; email: string; role: StaffRole }, pay: { rate: number; effectiveFrom: string } | null) => Promise<void>
 }) {
-  const { rules, timezone, can } = useBranch()
+  const { timezone, can } = useBranch()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<StaffRole>('coach')
-  const [rates, setRates] = useState<RateDraft>(EMPTY_RATES)
+  const [rate, setRate] = useState('')
   const [busy, setBusy] = useState(false)
 
   return (
@@ -221,17 +220,17 @@ function NewEmployeeDialog({
             if (!firstName.trim()) return toast.error('Enter a first name.')
             // The hourly rate is asked up front, so payroll never prices their time at $0.
             const today = todayKey(timezone)
-            const read = can('payRates') ? readRates(role, rates, coachesNeedAdminRate(rules, today)) : { rates: null }
+            const read = can('payRates') ? readRate(role, rate) : { rate: null }
             if ('error' in read) return toast.error(read.error)
             setBusy(true)
             try {
-              await onCreate({ firstName, lastName, email, role }, read.rates ? { rates: read.rates, effectiveFrom: today } : null)
+              await onCreate({ firstName, lastName, email, role }, read.rate !== null ? { rate: read.rate, effectiveFrom: today } : null)
               onOpenChange(false)
               setFirstName('')
               setLastName('')
               setEmail('')
               setRole('coach')
-              setRates(EMPTY_RATES)
+              setRate('')
             } catch (err) {
               toast.error('Could not add the employee', { description: (err as Error).message })
             } finally {
@@ -273,7 +272,7 @@ function NewEmployeeDialog({
               </RadioGroup>
               <FieldDescription>Only coaches teach and appear on the schedule.</FieldDescription>
             </Field>
-            <PayRateFields role={role} value={rates} onChange={setRates} idPrefix="ne-rate" />
+            <PayRateFields role={role} value={rate} onChange={setRate} idPrefix="ne" />
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

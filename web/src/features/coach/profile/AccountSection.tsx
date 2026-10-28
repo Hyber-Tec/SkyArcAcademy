@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { LuCheck } from 'react-icons/lu'
 import { toast } from 'sonner'
+import { hourlyRate } from '@shared/pay/rates'
 import { formatMoney } from '@shared/pay/segment'
-import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { formatPhone } from '@shared/people'
 import { formatDateKey, todayKey } from '@shared/time'
 import type { Compensation } from '@shared/types'
@@ -21,7 +21,7 @@ import { SectionTitle } from '@/features/profile/ProfileLayout'
 
 /** Profile → Account details: the contact details the coach keeps up to date, and what the center has on file. */
 export function AccountSection() {
-  const { branchId, staffId, actor, branch, rules, timezone } = useBranch()
+  const { branchId, staffId, actor, branch, timezone } = useBranch()
   const { data: staff, loading } = useMyStaff()
   const compRef = useMemo(() => (staffId ? compensationRef(branchId, staffId) : null), [branchId, staffId])
   const { data: comp } = useDoc<Compensation>(compRef)
@@ -56,14 +56,13 @@ export function AccountSection() {
     }
   }
 
-  const showAdminRate = coachesNeedAdminRate(rules, todayKey(timezone))
+  const rate = hourlyRate(comp?.rates)
   const facts: [string, React.ReactNode][] = [
     ['Name', staff.name],
     ['Email', staff.email || '—'],
     ['Started', staff.startDate ? formatDateKey(staff.startDate, 'long') : '—'],
     ...(staff.endDate ? ([['Ends', formatDateKey(staff.endDate, 'long')]] as [string, React.ReactNode][]) : []),
-    ['Teaching rate', comp?.rates.teaching ? `${formatMoney(comp.rates.teaching)}/hr` : '—'],
-    ...(showAdminRate ? ([['Admin rate', comp?.rates.admin ? `${formatMoney(comp.rates.admin)}/hr` : '—']] as [string, React.ReactNode][]) : []),
+    ['Hourly rate', rate ? `${formatMoney(rate)}/hr` : '—'],
   ]
 
   return (

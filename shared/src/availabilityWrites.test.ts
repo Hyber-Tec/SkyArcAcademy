@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { availabilityRecord, availabilitySummary, classesLeftUncovered, noCoachWarning, shrinkingDays } from './availabilityWrites'
+import {
+  addedTimeSummary,
+  availabilityRecord,
+  availabilitySummary,
+  classesLeftUncovered,
+  noCoachWarning,
+  onlyAddsTime,
+  shrinkingDays,
+  undoKeepsRecord,
+  undoOf,
+  undoneSummary,
+  withAddedTime,
+} from './availabilityWrites'
 import type { AcademyClass, Session, WithId } from './types'
 
 const NY = 'America/New_York'
@@ -76,5 +88,57 @@ describe('classes a change leaves with no coach in', () => {
     const left = classesLeftUncovered({ ...opts, records, days: [{ dateKey: day, ranges: [{ startMin: t(16), endMin: t(18) }] }] })
     expect(left.map((c) => c.startMin)).toEqual([t(18)])
     expect(noCoachWarning([...left, ...left], 'admin').title).toBe('2 classes would have no coach in')
+  })
+})
+
+describe('adding time inside the lock', () => {
+  const r = (startMin: number, endMin: number) => ({ startMin, endMin })
+  const day = { ranges: [r(t(16), t(18))] }
+
+  it('allows a new range, a wider one, or times on a day with none or marked not available', () => {
+    expect(onlyAddsTime(day, { ranges: [r(t(16), t(18)), r(t(19), t(20))] })).toBe(true)
+    expect(onlyAddsTime(day, { ranges: [r(t(15), t(19))] })).toBe(true)
+    expect(onlyAddsTime(day, { ranges: [r(t(16), t(18))] })).toBe(true)
+    // Ranges touching or overlapping as typed: what counts is the time they cover.
+    expect(onlyAddsTime(day, { ranges: [r(t(17), t(19)), r(t(16), t(17))] })).toBe(true)
+    expect(onlyAddsTime(null, { ranges: [r(t(16), t(18))] })).toBe(true)
+    expect(onlyAddsTime({ ranges: [], unavailable: true }, { ranges: [r(t(16), t(18))] })).toBe(true)
+  })
+
+  it('refuses removing or shortening time, or marking a day with times not available', () => {
+    expect(onlyAddsTime(day, { ranges: [] })).toBe(false)
+    expect(onlyAddsTime(day, { ranges: [r(t(16), t(17, 30))] })).toBe(false)
+    expect(onlyAddsTime(day, { ranges: [r(t(16, 30), t(20))] })).toBe(false)
+    expect(onlyAddsTime(day, { ranges: [r(t(19), t(20))] })).toBe(false)
+    expect(onlyAddsTime(day, { ranges: [], unavailable: true })).toBe(false)
+    // A day with nothing can't be marked not available inside the lock either: only time is added there.
+    expect(onlyAddsTime(null, { ranges: [], unavailable: true })).toBe(false)
+    expect(onlyAddsTime({ ranges: [r(t(14), t(15)), r(t(16), t(18))] }, { ranges: [r(t(16), t(19))] })).toBe(false)
+  })
+
+  it('keeps what the day had, as saved, and merges the new times in', () => {
+    // A saved time outside today's hours stays as it is, so the rules see every time the day had.
+    const saved = { ranges: [r(t(13), t(15)), r(t(16), t(18))] }
+    expect(withAddedTime(saved, [r(t(18), t(19))])).toEqual([r(t(13), t(15)), r(t(16), t(19))])
+    expect(onlyAddsTime(saved, { ranges: withAddedTime(saved, [r(t(18), t(19))]) })).toBe(true)
+    expect(withAddedTime({ ranges: [], unavailable: true }, [r(t(16), t(18))])).toEqual([r(t(16), t(18))])
+    expect(withAddedTime(null, [r(t(17), t(18)), r(t(16), t(17))])).toEqual([r(t(16), t(18))])
+  })
+
+  it('remembers exactly what the add replaced, for its undo', () => {
+    const saved = { ranges: [r(t(16), t(18)), r(t(19), t(20))] }
+    expect(undoOf(saved)).toEqual({ ranges: saved.ranges, unavailable: false })
+    expect(undoOf(saved).ranges[0]).not.toBe(saved.ranges[0])
+    expect(undoOf({ ranges: [], unavailable: true })).toEqual({ ranges: [], unavailable: true })
+    expect(undoOf(null)).toEqual({ ranges: [], unavailable: false })
+    // Undoing an add to a day with no record removes the record; otherwise the day is put back.
+    expect(undoKeepsRecord(undoOf(null))).toBe(false)
+    expect(undoKeepsRecord(undoOf({ ranges: [], unavailable: true }))).toBe(true)
+    expect(undoKeepsRecord(undoOf(saved))).toBe(true)
+  })
+
+  it('says what was added, and undone', () => {
+    expect(addedTimeSummary('Hannah Moreno', '2026-10-20', [r(t(18), t(20))])).toBe('Added 6:00 PM – 8:00 PM to Hannah Moreno’s availability on Tue, Oct 20 (inside the lock)')
+    expect(undoneSummary('Hannah Moreno', '2026-10-20')).toBe('Undid the time added to Hannah Moreno’s availability on Tue, Oct 20')
   })
 })

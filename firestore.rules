@@ -244,18 +244,67 @@ service cloud.firestore {
 
       // ------------------------------------------------------ availability
 
-      // Coaches can't touch days that start inside the lock window (or the lead time,
-      // when the branch blocks late availability). Admins can change any day.
+      // Coaches change their days freely outside the lock window (or the lead time, when the academy blocks late
+      // availability). Inside it they can only add time, with a short undo (docs/DECISIONS.md §23, C2). Admins can
+      // change any day. The defaults are shared/src/settings/defaults.ts's.
       function lockDays() {
         let a = branchDoc(b).data.get('settings', {}).get('availability', {});
         let lock = a.get('lockWindowDays', 7);
-        let lead = a.get('leadTimeDays', 14);
+        let lead = a.get('leadTimeDays', 7);
         return a.get('leadTimeEnforcement', 'warn') == 'block' && lead > lock ? lead : lock;
       }
 
       function coachMayEdit(data) {
         return data.dayStartAt is timestamp
           && data.dayStartAt > request.time + duration.value(lockDays(), 'd');
+      }
+
+      // An undo is only ever written by an add inside the lock: a free change leaves it out, or as it was.
+      function undoKept(before, after) {
+        return !after.keys().hasAny(['undo'])
+          || (before != null && before.keys().hasAny(['undo']) && after.undo == before.undo);
+      }
+
+      // A time the day had is inside one of its times after the change (a day holds at most six,
+      // availability.maxRangesPerDay's highest).
+      function within(r, after) {
+        return (after.size() > 0 && after[0].startMin <= r.startMin && after[0].endMin >= r.endMin)
+          || (after.size() > 1 && after[1].startMin <= r.startMin && after[1].endMin >= r.endMin)
+          || (after.size() > 2 && after[2].startMin <= r.startMin && after[2].endMin >= r.endMin)
+          || (after.size() > 3 && after[3].startMin <= r.startMin && after[3].endMin >= r.endMin)
+          || (after.size() > 4 && after[4].startMin <= r.startMin && after[4].endMin >= r.endMin)
+          || (after.size() > 5 && after[5].startMin <= r.startMin && after[5].endMin >= r.endMin);
+      }
+
+      // Every time the day had is still in it.
+      function keepsTimes(before, after) {
+        return before.size() <= 6
+          && (before.size() < 1 || within(before[0], after))
+          && (before.size() < 2 || within(before[1], after))
+          && (before.size() < 3 || within(before[2], after))
+          && (before.size() < 4 || within(before[3], after))
+          && (before.size() < 5 || within(before[4], after))
+          && (before.size() < 6 || within(before[5], after));
+      }
+
+      // Adding time inside the lock, to a day that isn't over (`dayStartAt` is the day as saved): the day ends with
+      // times and keeps every time it had. Its undo, if it keeps one, is exactly the day before, stamped now.
+      function addsTime(dayStartAt, beforeRanges, beforeUnavailable, after) {
+        return dayStartAt > request.time - duration.value(1, 'd')
+          && after.get('unavailable', false) == false
+          && after.ranges.size() > 0
+          && keepsTimes(beforeRanges, after.ranges)
+          && (!after.keys().hasAny(['undo'])
+              || (after.undo is map && after.undo.keys().hasOnly(['ranges', 'unavailable', 'at'])
+                  && after.undo.ranges == beforeRanges
+                  && after.undo.unavailable == beforeUnavailable
+                  && after.undo.at == request.time));
+      }
+
+      // The undo of an add, for 15 seconds after it (the website and the phone offer it for 10).
+      function undoOpen(before) {
+        return before.keys().hasAny(['undo']) && before.undo is map
+          && request.time < before.undo.at + duration.value(15, 's');
       }
 
       // A day holds times, or is marked not available (an answer, with no times).
@@ -275,12 +324,28 @@ service cloud.firestore {
         allow read: if isStaff(b);
         allow create: if validAvailability(docId, request.resource.data)
           && (isAdmin(b)
-              || (isCoach(b) && request.resource.data.staffId == myStaffId(b) && coachMayEdit(request.resource.data)));
+              || (isCoach(b) && request.resource.data.staffId == myStaffId(b)
+                  && ((coachMayEdit(request.resource.data) && undoKept(null, request.resource.data))
+                      || addsTime(request.resource.data.dayStartAt, [], false, request.resource.data))));
         allow update: if validAvailability(docId, request.resource.data)
           && (isAdmin(b)
               || (isCoach(b) && resource.data.staffId == myStaffId(b) && request.resource.data.staffId == myStaffId(b)
-                  && coachMayEdit(resource.data) && coachMayEdit(request.resource.data)));
-        allow delete: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b) && coachMayEdit(resource.data));
+                  && ((coachMayEdit(resource.data) && coachMayEdit(request.resource.data)
+                       && undoKept(resource.data, request.resource.data))
+                      || addsTime(resource.data.dayStartAt, resource.data.ranges, resource.data.get('unavailable', false),
+                                  request.resource.data)
+                      // Undo: the day exactly as it was before the add.
+                      || (undoOpen(resource.data)
+                          && changed().hasOnly(['ranges', 'unavailable', 'undo', 'updatedAt', 'updatedBy'])
+                          && request.resource.data.ranges == resource.data.undo.ranges
+                          && request.resource.data.get('unavailable', false) == resource.data.undo.unavailable
+                          && !request.resource.data.keys().hasAny(['undo'])))));
+        allow delete: if isAdmin(b)
+          || (isCoach(b) && resource.data.staffId == myStaffId(b)
+              && (coachMayEdit(resource.data)
+                  // Undo of an add to a day that had no record.
+                  || (undoOpen(resource.data) && resource.data.undo.ranges.size() == 0
+                      && resource.data.undo.unavailable == false)));
       }
 
       match /dayConfigs/{dateKey} {
@@ -345,11 +410,23 @@ service cloud.firestore {
         return data.dateKey is string && data.dateKey > lockedThrough();
       }
 
+      // Extra time an admin adds to a shift (a coach's travel hour, docs/DECISIONS.md §23, K6): whole minutes, up to
+      // 12 hours, and always with why.
+      function validExtra(d) {
+        let extra = d.get('extraMin', 0);
+        let note = d.get('extraNote', '');
+        return extra is int && extra >= 0 && extra <= 720
+          && note is string && note.size() <= 300
+          && (extra == 0 || note.trim().size() > 0);
+      }
+
       match /clockShifts/{shiftId} {
         allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
-        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data);
+        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data)
+          && validExtra(request.resource.data);
         allow update: if isAdmin(b) && notRestricted(b, 'timeEntries')
-          && shiftEditable(resource.data) && shiftEditable(request.resource.data);
+          && shiftEditable(resource.data) && shiftEditable(request.resource.data)
+          && validExtra(request.resource.data);
         allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(resource.data);
       }
 

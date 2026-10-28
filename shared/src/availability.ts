@@ -111,8 +111,9 @@ export function dayStartInstant(dateKey: DateKey, timeZone: string): Date {
 }
 
 /**
- * Coaches can't add, change or remove availability for a day that starts within
- * `lockDays` of now (owner decision Q10; enforced by the security rules too).
+ * A day that starts within `lockDays` of now is locked for its coach (owner decision Q10; the security rules check it
+ * too): they can add time to it but not remove or shorten it (`onlyAddsTime`, docs/DECISIONS.md §23, C2), and a day
+ * that's over can't change at all.
  */
 export function isLockedForCoach(dateKey: DateKey, timeZone: string, lockDays: number, now: Date = new Date()): boolean {
   if (lockDays <= 0) return dayStartInstant(dateKey, timeZone).getTime() <= now.getTime()

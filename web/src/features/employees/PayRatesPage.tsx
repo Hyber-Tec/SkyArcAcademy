@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LuSearch } from 'react-icons/lu'
 import { toast } from 'sonner'
+import { hourlyRate } from '@shared/pay/rates'
 import { initials, STAFF_STATUS_LABELS, STAFF_STATUSES } from '@shared/people'
 import { ROLE_LABELS, isAdminRole } from '@shared/roles'
-import type { RateKind } from '@shared/pay/rates'
-import { PAY_MODEL_LABELS, payModelOn } from '@shared/settings/businessRules'
 import { todayKey } from '@shared/time'
 import type { Compensation, Staff, StaffStatus, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -23,8 +22,8 @@ import { compensationRef, saveCompensation } from './api'
 import { PayGapNotice } from './PayGapNotice'
 import { usePayGaps } from './payGaps'
 
+/** Each employee's one hourly rate (docs/DECISIONS.md §23, K1), edited in place. */
 export function PayRatesPage() {
-  const { rules, timezone } = useBranch()
   const { data: staff } = useStaffList()
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<'coach' | 'admin' | 'all'>('coach')
@@ -38,17 +37,14 @@ export function PayRatesPage() {
         (!q || s.nameLower.includes(q)),
     )
   }, [staff, search, role, status])
-  // Coaches' admin rate only matters while the branch pays admin time.
-  const usesAdminRate = rules.payModels.some((p) => p.model === 'teaching_admin')
-  const modelNow = payModelOn(rules, todayKey(timezone))
   const { gaps } = usePayGaps()
-  const missingOf = useMemo(() => new Map(gaps.map((g) => [g.staff.id, g.missing])), [gaps])
+  const missing = useMemo(() => new Set(gaps.map((g) => g.staff.id)), [gaps])
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-3xl">
       <PageHeader
         title="Pay Rates"
-        description={`Hourly rates per employee. Changes save when you leave a field and apply from today. Pay model: ${PAY_MODEL_LABELS[modelNow]}; owners and admins are paid their admin rate for all clocked time.`}
+        description="Each employee’s hourly rate, paid for the time they’re clocked in at the kiosk. Changes save when you leave a field and apply from today."
       />
       <PayGapNotice gaps={gaps} link={false} className="mb-4" />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -87,14 +83,13 @@ export function PayRatesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Employee</TableHead>
-              <TableHead className="w-40">Teaching rate</TableHead>
-              <TableHead className="w-40">Admin rate</TableHead>
+              <TableHead className="w-44">Hourly rate</TableHead>
               <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((s) => (
-              <RateRow key={s.id} staff={s} usesAdminRate={usesAdminRate} missing={missingOf.get(s.id) ?? []} />
+              <RateRow key={s.id} staff={s} missing={missing.has(s.id)} />
             ))}
           </TableBody>
         </Table>
@@ -103,65 +98,34 @@ export function PayRatesPage() {
   )
 }
 
-function RateRow({ staff, usesAdminRate, missing }: { staff: WithId<Staff>; usesAdminRate: boolean; missing: RateKind[] }) {
+function RateRow({ staff, missing }: { staff: WithId<Staff>; missing: boolean }) {
   const { branchId, actor, timezone } = useBranch()
   const ref = useMemo(() => compensationRef(branchId, staff.id), [branchId, staff.id])
   const { data: comp } = useDoc<Compensation>(ref)
-  const [teaching, setTeaching] = useState('')
-  const [admin, setAdmin] = useState('')
+  const [rate, setRate] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    setTeaching(comp?.rates?.teaching != null ? String(comp.rates.teaching) : '')
-    setAdmin(comp?.rates?.admin != null ? String(comp.rates.admin) : '')
+    const r = hourlyRate(comp?.rates)
+    setRate(comp && r > 0 ? String(r) : '')
   }, [comp])
 
-  const single = isAdminRole(staff.role)
-
   async function commit() {
-    const t = teaching === '' ? 0 : Number(teaching)
-    const a = admin === '' ? 0 : Number(admin)
-    if (!Number.isFinite(t) || !Number.isFinite(a)) {
+    const n = rate === '' ? 0 : Number(rate)
+    if (!Number.isFinite(n) || n < 0) {
       toast.error('Enter a valid amount.')
       return
     }
+    if (!comp && n === 0) return
     setBusy(true)
     try {
-      await saveCompensation(
-        branchId,
-        actor,
-        staff,
-        comp,
-        { rates: { teaching: t, admin: a } },
-        todayKey(timezone),
-      )
+      await saveCompensation(branchId, actor, staff, comp, Math.round(n * 100) / 100, todayKey(timezone))
     } catch (e) {
       toast.error('Could not save', { description: (e as Error).message })
     } finally {
       setBusy(false)
     }
   }
-
-  const rateInput = (value: string, set: (v: string) => void, label: string, kind: RateKind) => (
-    <InputGroup className={cn('h-8', missing.includes(kind) && 'border-amber-400 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-950/30')}>
-      <InputGroupAddon>
-        <InputGroupText>$</InputGroupText>
-      </InputGroupAddon>
-      <InputGroupInput
-        aria-label={`${label} for ${staff.name}`}
-        inputMode="decimal"
-        placeholder={missing.includes(kind) ? 'Not set' : undefined}
-        value={value}
-        disabled={busy}
-        onChange={(e) => set(e.target.value.replace(/[^\d.]/g, ''))}
-        onBlur={() => void commit()}
-        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-      />
-      <InputGroupAddon align="inline-end">
-        <InputGroupText>/hr</InputGroupText>
-      </InputGroupAddon>
-    </InputGroup>
-  )
 
   return (
     <TableRow>
@@ -179,9 +143,25 @@ function RateRow({ staff, usesAdminRate, missing }: { staff: WithId<Staff>; uses
           </div>
         </div>
       </TableCell>
-      <TableCell>{single ? <span className="text-sm text-muted-foreground">Doesn’t teach</span> : rateInput(teaching, setTeaching, 'Teaching rate', 'teaching')}</TableCell>
       <TableCell>
-        {single || usesAdminRate ? rateInput(admin, setAdmin, 'Admin rate', 'admin') : <span className="text-sm text-muted-foreground">Not paid (teaching only)</span>}
+        <InputGroup className={cn('h-8', missing && 'border-amber-400 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-950/30')}>
+          <InputGroupAddon>
+            <InputGroupText>$</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            aria-label={`Hourly rate for ${staff.name}`}
+            inputMode="decimal"
+            placeholder={missing ? 'Not set' : undefined}
+            value={rate}
+            disabled={busy}
+            onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))}
+            onBlur={() => void commit()}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupText>/hr</InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
       </TableCell>
       <TableCell>{busy ? <Spinner className="size-4" /> : null}</TableCell>
     </TableRow>

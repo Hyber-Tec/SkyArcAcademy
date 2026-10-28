@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_BUSINESS_RULES, earliestPayModelChange, payModelOn, resolveBusinessRules, withPayModelChange } from './businessRules'
+import { DEFAULT_BUSINESS_RULES, payModelOn, resolveBusinessRules } from './businessRules'
 
 describe('business rules', () => {
   it('fills gaps with the defaults and clamps nonsense', () => {
@@ -7,36 +7,19 @@ describe('business rules', () => {
     expect(resolveBusinessRules({ maxStudentsPerCoach: 0 }).maxStudentsPerCoach).toBe(5)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 99 }).maxStudentsPerCoach).toBe(6)
     expect(resolveBusinessRules({ maxStudentsPerCoach: 2 }).maxStudentsPerCoach).toBe(2)
-    expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('classes')
+    expect(resolveBusinessRules({ seatsPerClass: 99 }).seatsPerClass).toBe(12)
+    expect(payModelOn(resolveBusinessRules(undefined), '2026-10-15')).toBe('hourly')
   })
 
-  it('finds the pay model in force on a date', () => {
+  it('pays Hourly whatever was stored (the other models are gone)', () => {
     const r = resolveBusinessRules({
       payModels: [
         { model: 'teaching_only', from: '2026-10-15' },
-        { model: 'teaching_admin', from: '2000-01-01' },
+        { model: 'classes', from: '2000-01-01' },
       ],
     })
-    expect(payModelOn(r, '2026-10-14')).toBe('teaching_admin')
-    expect(payModelOn(r, '2026-10-15')).toBe('teaching_only')
-    expect(payModelOn(r, '1999-01-01')).toBe('teaching_admin')
-  })
-
-  it('switches from a date without touching earlier pay', () => {
-    const start = resolveBusinessRules({ payModels: [{ model: 'teaching_admin', from: '2000-01-01' }] })
-    const next = withPayModelChange(start, 'teaching_only', '2026-11-01')
-    expect(next.payModels).toEqual([
-      { model: 'teaching_admin', from: '2000-01-01' },
-      { model: 'teaching_only', from: '2026-11-01' },
-    ])
-    // A later decision replaces a switch scheduled after it.
-    const again = withPayModelChange(next, 'teaching_admin', '2026-10-20')
-    expect(again.payModels).toEqual([{ model: 'teaching_admin', from: '2000-01-01' }])
-    expect(payModelOn(again, '2026-12-01')).toBe('teaching_admin')
-  })
-
-  it('starts changes after the last locked pay period', () => {
-    expect(earliestPayModelChange('2026-09-30')).toBe('2026-10-01')
-    expect(earliestPayModelChange(null)).toBeNull()
+    expect(r.payModels).toEqual([{ model: 'hourly', from: '2000-01-01' }])
+    expect(payModelOn(r, '2026-10-14')).toBe('hourly')
+    expect(payModelOn(r, '2026-10-15')).toBe('hourly')
   })
 })

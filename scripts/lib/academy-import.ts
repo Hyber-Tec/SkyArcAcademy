@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { availabilityRecord } from '../../shared/src/availabilityWrites'
 import { COL, DOC, availabilityDocId } from '../../shared/src/paths'
+import { rateRecord } from '../../shared/src/pay/rates'
 import { pickStaffColor } from '../../shared/src/colors'
 import { seatKind, uncovered } from '../../shared/src/schedule/classes'
 import type { SessionStatus } from '../../shared/src/settings/defaults'
@@ -140,8 +141,8 @@ export function peopleDocs(input: ImportFile, opts: PeopleOptions): PeopleResult
       notificationPrefs: { announcements: true, sessionCreated: true, sessionChanged: true, sessionCanceled: true },
       ...stamp,
     })
-    // Coaches are paid their teaching rate under Hourly; the admin rate is the same, for time the office marks as admin.
-    const rates = { teaching: st.rate, admin: st.rate }
+    // Everyone's one hourly rate (docs/DECISIONS.md §23), in both fields until the phone app's update.
+    const rates = rateRecord(st.rate)
     add(`${COL.staff}/${id}/private/${DOC.compensation}`, {
       rates,
       history: [{ effectiveFrom: opts.today, rates, setAt: opts.now.toISOString(), setBy: IMPORT_AUTHOR }],

@@ -7,13 +7,14 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { dayHours } from '@shared/availability'
 import { COL, ROOT, availabilityDocId } from '@shared/paths'
+import { type PayClass, autoClockOutAt } from '@shared/pay/paidTime'
 import { coachesIn } from '@shared/schedule/classes'
 import { type ConflictSeat, type ConflictSession, seatConflicts, sessionConflicts, staffCoachState } from '@shared/schedule/conflicts'
 import { resolveBusinessRules } from '@shared/settings/businessRules'
 import { type SessionSnapshot, inNoticeWindow, sessionCreatedNotices } from '@shared/schedule/notify'
 import { resolveSettings } from '@shared/settings/resolve'
 import type { BranchSettings } from '@shared/settings/defaults'
-import { addDays, dateKeyOf, formatMinutes, minutesOf, parseHHMM, toInstant, todayKey } from '@shared/time'
+import { dateKeyOf, formatMinutes, minutesOf, todayKey } from '@shared/time'
 import type { AcademyClass, Availability, Branch, DayConfig, Member, Session, StaffStatus, StudentStatus } from '@shared/types'
 
 
@@ -119,14 +120,28 @@ async function staffForPin(branchId: string, pin: string) {
   return { staffId, name: staff.data()!.name as string }
 }
 
-/** Kiosk step 1: who is this, and are they clocked in? */
+/**
+ * Kiosk step 1: who is this, and are they clocked in? When they aren't, and today's last shift was closed automatically
+ * (at the end of their last class, K3), when: they may have come to clock out.
+ */
 export const kioskIdentify = onCall(async (req) => {
   const { branchId, pin } = (req.data ?? {}) as { branchId?: string; pin?: string }
   if (!branchId) throw new HttpsError('invalid-argument', 'Missing academy.')
   await requireAdmin(branchId, req.auth)
   const { staffId, name } = await staffForPin(branchId, pin ?? '')
   const open = await db.doc(`${ROOT.branches}/${branchId}/${COL.openShifts}/${staffId}`).get()
-  return { staffId, name, openSince: open.exists ? (open.data()!.clockInAt as Timestamp).toMillis() : null }
+  if (open.exists) return { staffId, name, openSince: (open.data()!.clockInAt as Timestamp).toMillis(), autoOutAt: null }
+  const { branch } = await loadBranch(branchId)
+  const today = await db
+    .collection(`${ROOT.branches}/${branchId}/${COL.clockShifts}`)
+    .where('staffId', '==', staffId)
+    .where('dateKey', '==', todayKey(branch.timezone))
+    .get()
+  const last = today.docs
+    .map((d) => d.data())
+    .filter((s) => s.status === 'closed' && s.clockOutAt)
+    .sort((a, b) => (b.clockOutAt as Timestamp).toMillis() - (a.clockOutAt as Timestamp).toMillis())[0]
+  return { staffId, name, openSince: null, autoOutAt: last?.autoClosed && !last.autoCorrected ? (last.clockOutAt as Timestamp).toMillis() : null }
 })
 
 /** Kiosk step 2: clock in, or clock out of the open shift. Server time only. */
@@ -197,7 +212,21 @@ export const kioskPunch = onCall(async (req) => {
 
 // ---------------------------------------------------------------- schedules
 
-/** Closes shifts still open after each branch's local cut-off (default midnight). */
+/** A day's classes and who's in, as the automatic clock-out reads them. */
+async function payDay(branchId: string, dateKey: string): Promise<{ classes: PayClass[]; availability: Availability[] }> {
+  const base = `${ROOT.branches}/${branchId}`
+  const [classes, availability] = await Promise.all([
+    db.collection(`${base}/${COL.classes}`).where('dateKey', '==', dateKey).get(),
+    db.collection(`${base}/${COL.availability}`).where('dateKey', '==', dateKey).get(),
+  ])
+  return { classes: classes.docs.map((d) => d.data() as PayClass), availability: availability.docs.map((d) => d.data() as Availability) }
+}
+
+/**
+ * Closes shifts still open once each academy's automatic clock-out comes (docs/DECISIONS.md §23, K3): at the end of the
+ * person's last class that day (the last they're in for, else the day's last), or at the set time on a day without
+ * classes (`autoClockOutAt`). The shift closes at that moment, marked as closed automatically and how.
+ */
 export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone: 'UTC', ...LIGHT }, async () => {
   const branches = await db.collection(ROOT.branches).where('status', '==', 'active').get()
   const now = Date.now()
@@ -205,9 +234,8 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
     const branch = b.data() as Branch
     const settings = resolveSettings(branch.settings)
     if (!settings.timeClock.autoClockOut.enabled) continue
-    const cutoffMin = parseHHMM(settings.timeClock.autoClockOut.localTime)
-    if (Number.isNaN(cutoffMin)) continue
     const open = await db.collection(`${ROOT.branches}/${b.id}/${COL.openShifts}`).get()
+    const days = new Map<string, ReturnType<typeof payDay>>()
     for (const o of open.docs) {
       const shiftRef = db.doc(`${ROOT.branches}/${b.id}/${COL.clockShifts}/${o.data().shiftId}`)
       const shift = await shiftRef.get()
@@ -216,16 +244,27 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
         continue
       }
       const s = shift.data()!
-      const cutoffDate = cutoffMin > (s.inMin as number) ? (s.dateKey as string) : addDays(s.dateKey as string, 1)
-      const cutoff = toInstant(cutoffDate, cutoffMin, branch.timezone)
-      if (now < cutoff.getTime()) continue
+      const dateKey = s.dateKey as string
+      if (!days.has(dateKey)) days.set(dateKey, payDay(b.id, dateKey))
+      const { classes, availability } = await days.get(dateKey)!
+      const out = autoClockOutAt({
+        shift: { staffId: s.staffId as string, dateKey, inMin: s.inMin as number, clockInMs: (s.clockInAt as Timestamp).toMillis() },
+        classes,
+        availability,
+        settings,
+        timeZone: branch.timezone,
+      })
+      if (!out || now < out.atMs) continue
+      const at = new Date(out.atMs)
+      const outMin = minutesOf(at, branch.timezone)
       const batch = db.batch()
       batch.update(shiftRef, {
-        clockOutAt: Timestamp.fromDate(cutoff),
-        outDateKey: cutoffDate,
-        outMin: cutoffMin,
+        clockOutAt: Timestamp.fromDate(at),
+        outDateKey: dateKeyOf(at, branch.timezone),
+        outMin,
         status: 'closed',
         autoClosed: true,
+        autoClosedBy: out.by,
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: 'system',
       })
@@ -238,8 +277,8 @@ export const autoClockOut = onSchedule({ schedule: 'every 15 minutes', timeZone:
         entityId: shiftRef.id,
         coachId: s.staffId,
         coachName: s.staffName,
-        dateKey: s.dateKey,
-        summary: `${s.staffName} was clocked out automatically at ${formatMinutes(cutoffMin)}`,
+        dateKey,
+        summary: `${s.staffName} was clocked out automatically at ${formatMinutes(outMin)}${out.by === 'last_class' ? ', at the end of the last class' : ''}`,
       })
     }
   }
