@@ -132,7 +132,7 @@ To start a phase, paste this into Claude Code on the right computer:
 ### Phase 1: Mac mini · Foundation (backend + web admin)
 
 #### V: Schedule view options (first)
-- ✅ **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; round 2 the same day: `schedule-timeline-options.html`; waits for Goo's pick)
+- ✅ **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; round 2 the same day: `schedule-timeline-options.html`; Goo picked B)
   - **Round 2 (Goo, 2026-10-28):** option 1 is today's view, option 2 is out, and the timeline (option 3) is the one,
     made like HyberCRM's: a row per coach whose background is their day (grey when not in, white for their hours, a
     quiet band from clock-in to clock-out), with the classes on top, and clock times as clocked (no "late", no pay
@@ -161,7 +161,14 @@ To start a phase, paste this into Claude Code on the right computer:
   - **Goo picks one**, then the chosen view is built in the web portal (`V2`).
 - [ ] **V2. Build the chosen schedule view** in the web portal. It replaces or sits next to the current one, as Goo
   decides. The phone version comes in Phase 3 (`M5`).
-  - *Plan:* Waits for Goo's pick (`V1`).
+  - *Plan:* **Goo's pick (2026-10-28): B, one block per class, on the website**, with these changes:
+    - **Students first:** each student gets a much bigger card (name, level colour, rifle, status) with a ⋯ menu for
+      their actions. "The main thing is the students," not the coaches.
+    - **Week:** B's stacked days, at the same bigger sizes (each day is taller, which is fine).
+    - **The right panel** opens and closes.
+    - **Any number of coaches:** usually two or three are in at once, but one to four (or more) must lay out well.
+    - **On phones:** the website keeps today's schedule at narrow widths, and the phone app keeps its Schedule tab
+      (`M5`).
 
 #### ST: Settings
 - ✅ **ST1. A much simpler Settings page.** (#49)
@@ -431,8 +438,9 @@ from the app, without calling or texting the academy.
   - *Plan:* **Coaches already have four switches**; the rest come with `S4`.
   - *Done (#58):* More → Notifications for parents, students, owners and admins (`noticeSwitchesFor`); coaches keep
     their four.
-- [ ] **M5. The chosen schedule view (`V1`) in the app**, for admins and coaches, with clock-in/out.
-  - *Plan:* **Small change** once `V2` is built: the phone's schedule already matches the website's.
+- ✅ **M5. The chosen schedule view (`V1`) in the app**, for admins and coaches, with clock-in/out. (decided 2026-10-28: the phone keeps today's Schedule tab)
+  - *Plan:* **Nothing to build (Goo, 2026-10-28):** the phone keeps its Schedule tab as it is ("Option 1 on a phone":
+    who's in with their clock, then each class with its seats two across). Option B is for the website.
 - [ ] **M6. The scanner in the app:** the new scoring rule (`P1`), photo tips (`P3`), the official score (`P4`), labels
   (`P9`), and the **competition sheet photo** (`P7`).
   - *Plan:* **Partly done:** the phone scans with the shared reader and shows tips. New: `P1`, `P3`'s tip, `P4`, `P7`,

@@ -713,6 +713,17 @@ the main product: families do everything they need there, without calling or tex
   picked from three clickable options (`V1`).
 - **Later:** Korean, the academy's domain and email (the spam fix), a how-to video for parents, tuition on the website,
   a merch shop, and an automatic weekly pay adjustment.
+- **Goo's picks, the evening of 2026-10-28:**
+  - **The schedule on the website is option B** of the second round: a row per coach whose background is their day
+    (not in, their hours, clocked in), each class drawn once across its coaches' rows, clock times as clocked. The
+    students come first: each gets a much bigger card with a ⋯ menu; the Week view stacks the days at the same sizes;
+    the right panel opens and closes; one to four coaches (usually two or three) all lay out well. Narrow screens keep
+    today's schedule, and **the phone app keeps its Schedule tab as it is** (`M5`: nothing to build).
+  - **Paper cards keep the match rule** (option A of `scoring-proposal.html`): a hole touching a ring's line counts
+    that ring, as the competition sheets show matches do. The manager isn't asked. One change: the reader measures each
+    hole at its real size in the photo instead of drawing every hole at the pellet's 4.5 mm (paper closes up around the
+    hole, so the fixed circle reached lines the real hole doesn't, where coaches saw the lower ring). "Most of the hole"
+    (`fix/paper-scoring`) is dropped.
 - **Built on 2026-10-28** (Phase 1 on the Mac mini, merged the same day; the phone's side is Phase 3 on the MacBook Pro):
   - **Availability and pay (#44):** inside the lock the rules let a coach only add time, and undo an add for 15 seconds
     (the website offers it for 10). One hourly rate, written to both stored rate fields until the phone's update; Hourly
@@ -740,8 +751,7 @@ the main product: families do everything they need there, without calling or tex
     own bulls); the app's rule stays meanwhile, and the strict rule waits on a local branch (`fix/paper-scoring`).
     The competition sheets (2026-10-28, `scoring-proposal.html`, local) show that matches give the higher ring when
     the hole touches the line, the app's rule; the recommendation is to keep it, and the manager decides.
-  - **The schedule view (V2)** waits for Goo's pick of `schedule-timeline-options.html` (round 2, four ways to make
-    the timeline like HyberCRM's; local).
+  - **The schedule view (V2):** Goo picked B of `schedule-timeline-options.html` on 2026-10-28 (§23, "Goo's picks").
   - **Coaches' usual days after November 30 (C4):** the import set them through November 30. Done 2026-10-28 with
     Goo's OK: each person's week as production had it (November's standing week: Monday to Thursday and Sunday, as
     each one's days) carried on from December 1 through February 28, 2027 (191 days), leaving any day already set
