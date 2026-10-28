@@ -405,8 +405,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **New work**, with `D1`.
 - [ ] **D3. Real student data never goes into the repository.** Import straight into the app's database and storage.
   - *Plan:* The rule for `D1`.
-- [ ] **X1. The academy owner's account**, with payroll access: the owner runs payroll but isn't in the app yet.
-  *(Needs their email from the manager.)*
+- ✅ **X1. The academy owner's account**, with payroll access: the owner runs payroll but isn't in the app yet.
+  *(Needs their email from the manager.)* (not needed, Goo 2026-10-28: the manager's account is the owner)
   - *Plan:* **Already possible:** Account → Add person → Owner sends the sign-in email. Waits for the email.
 
 ---
@@ -516,9 +516,10 @@ These wait until everything else is ready, some even after launch.
 
 ## 6. Still open
 
-- [ ] **Payroll details, once the manager talks to the academy's owner:** the final clock-out rule, 30 or 15 arrival
-  minutes, and the pay period (the manager reviews payroll weekly).
-- [ ] **The academy owner's account** (email and role).
+- ✅ **Payroll details, once the manager talks to the academy's owner:** the final clock-out rule, 30 or 15 arrival
+  minutes, and the pay period (the manager reviews payroll weekly). (not asked, Goo 2026-10-28: the academy sets them
+  itself in Settings)
+- ✅ **The academy owner's account** (email and role). (not needed, Goo 2026-10-28: the manager's account is the owner)
 
 ---
 
@@ -535,18 +536,18 @@ These are **real data**. Goo enters them by hand through the app; Claude Code ma
 imports them automatically, and they're **never committed**.
 
 ### Still needed
-- [ ] **The complete SIUS PDF folder** (everything since reopening) → `D1`
-- [ ] **Past schedules** (Google Sheets, September on) → `D1`
-- [ ] **The latest weekly schedule sheet** (this week) → `S9`
-- [ ] **A short rules summary** (scoring, practice vs. competition) the manager offered to write, plus the rules email
-  mentioned → `P9`
-- [ ] **The blank enrollment contract (PDF)** → `F4`
-- [ ] **The signed contracts** (the academy's Google Drive folder) → `F5`
-- [ ] **Parents' names and second parents' emails** (optional) → `F1`, `F3`
-- [ ] **Students' nicknames and preferred names** → `P12`
-- [ ] **The academy owner's email**, for their owner account → `X1`
-- [ ] **Payroll decisions with the academy's owner:** the clock-out rule, arrival minutes, the pay period → Section 6
-- [ ] **Honest feedback** after using the portal (three design options for anything, on request)
+- [ ] **The complete SIUS PDF folder** (everything since reopening) → `D1` (asked 2026-10-28: a shared Drive folder)
+- [ ] **Past schedules** (Google Sheets, September on) → `D1` (asked 2026-10-28)
+- [ ] **The latest weekly schedule sheet** (this week) → `S9` (asked 2026-10-28: the sheet shared view-only, this week on)
+- ✅ **A short rules summary** (scoring, practice vs. competition) the manager offered to write, plus the rules email
+  mentioned → `P9` (not needed, Goo 2026-10-28: the scoring rule is decided, `P1`)
+- [ ] **The blank enrollment contract (PDF)** → `F4` (asked 2026-10-28)
+- [ ] **The signed contracts** (the academy's Google Drive folder) → `F5` (asked 2026-10-28)
+- ✅ **Parents' names and second parents' emails** (optional) → `F1`, `F3` (not asked, Goo 2026-10-28)
+- ✅ **Students' nicknames and preferred names** → `P12` (not asked now, Goo 2026-10-28)
+- ✅ **The academy owner's email**, for their owner account → `X1` (not needed: the manager's account is the owner)
+- ✅ **Payroll decisions with the academy's owner:** the clock-out rule, arrival minutes, the pay period → Section 6 (not asked: set in Settings)
+- ✅ **Honest feedback** after using the portal (three design options for anything, on request) (not asked, Goo 2026-10-28)
 - [ ] *Later, in person:* domain access and the `info@` email account → `E1`
 
 ---
