@@ -189,8 +189,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   there is an admin's, and past days can't change. A save asks first when classes would be left with no coach in
   (`classesLeftUncovered`), then returns at once (the server confirms in the background) and waits for the question's
   alert to leave before closing the sheet.
-- **Circles** (a day, a dot, an avatar with a fill) take `radius.full`: with a radius of exactly half their size,
-  Android drew some fills as squares.
+- **Circles** (a day, a dot, an avatar with a fill) take `radius.full`. One whose fill changes after it's first drawn
+  (a day chosen, a day's times or classes loaded) takes a key that changes with its fill (`key={fill}`), so it's made
+  again with its new fill: on Android (React Native 0.86) a background that comes after a view is first drawn is drawn
+  square, whatever the radius. A view drawn with its fill from the start, or with a border, stays round.
 - **The staff's announcements and notifications** are the website's queries: a coach's posts are the two the rules can
   check (`where("audienceType", "==", "all")` and `where("audienceKeys", "array-contains", email)`, merged), the
   office's every post not archived; their own read receipts (collection group `reads` by email: a coach opening a post

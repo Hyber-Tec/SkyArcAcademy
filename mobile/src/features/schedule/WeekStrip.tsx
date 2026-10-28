@@ -96,10 +96,12 @@ export function WeekStrip({
               <T variant="tiny" style={{ color: isToday ? colors.now : colors.mutedForeground, fontWeight: "600" }}>
                 {weekdayInitial(d.dateKey)}
               </T>
-              <View style={[styles.circle, { backgroundColor: fill }]}>
+              {/* The circle and the dot are made again when their fill changes (the day chosen, the week's classes
+                  loaded): on Android a fill that comes after a circle is first drawn is drawn square. */}
+              <View key={fill} style={[styles.circle, { backgroundColor: fill }]}>
                 <T style={[styles.number, { color: numberColor, fontWeight: isToday || isSelected ? "700" : "500" }]}>{parseDateKey(d.dateKey).day}</T>
               </View>
-              <View style={[styles.dot, { backgroundColor: d.classes ? colors.mutedForeground : "transparent" }]} />
+              <View key={d.classes ? "dot" : "no-dot"} style={[styles.dot, { backgroundColor: d.classes ? colors.mutedForeground : "transparent" }]} />
             </Pressable>
           );
         })}
