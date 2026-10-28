@@ -157,7 +157,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* Waits for Goo's pick (`V1`).
 
 #### ST: Settings
-- [ ] **ST1. A much simpler Settings page.**
+- [x] **ST1. A much simpler Settings page.** (#49)
   - *Plan:* **Small change:** the sections regrouped with the most-used first, plain labels, a search box, and the
     strays moved (the Trash's days, the clock-out lookback, the first-class bell, seats per class).
   - When the manager asked a question during the meeting, even Goo had to scroll around to find the right setting. That
@@ -165,11 +165,11 @@ To start a phase, paste this into Claude Code on the right computer:
   - Group settings clearly, use plain words, put the most-used settings first, and put each rule where people would
     look for it.
   - **Suggested:** a search box at the top of Settings.
-- [ ] **ST2. Move the class confirmation and cancellation policy into Schedule settings.** It was under Students.
+- [x] **ST2. Move the class confirmation and cancellation policy into Schedule settings.** It was under Students. (#49)
   - *Plan:* **Small change:** the confirmation already sits under Schedule; the new cancel rule (`S1`) joins it there as
     "Confirmation and cancellation".
-- [ ] **ST3. The new default values** (Section 5): the 7-day coach availability lock, the 24-hour family cancel cutoff,
-  the 24-hour confirmation, 30 minutes' early arrival, automatic clock-out at class end, and so on. All stay editable.
+- [x] **ST3. The new default values** (Section 5): the 7-day coach availability lock, the 24-hour family cancel cutoff,
+  the 24-hour confirmation, 30 minutes' early arrival, automatic clock-out at class end, and so on. All stay editable. (#49)
   - *Plan:* **Small change:** the lock is already 7 days; the 14 the manager saw is the coaches' notice period, which
     becomes 7 too. New: the cancel cutoff (24 hours, the same as the confirmation), the arrival window (30 minutes) and
     the clock-out at the end of the last class.

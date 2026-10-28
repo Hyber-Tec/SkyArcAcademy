@@ -1,6 +1,7 @@
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { LuChevronDown, LuChevronRight, LuSearch } from 'react-icons/lu'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { publicProfileFor } from '@shared/branchFactory'
 import { COL, DOC, ROOT } from '@shared/paths'
@@ -13,6 +14,8 @@ import { PageHeader } from '@/components/app/PageHeader'
 import { TimeZonePicker } from '@/components/app/TimeZonePicker'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -26,27 +29,67 @@ import { cn } from '@/lib/utils'
 import { AcademyRulesCard } from './AcademyRulesCard'
 import { DateHoursCard } from './DateHoursCard'
 import { SettingField } from './SettingsFields'
-import { SETTINGS_SECTIONS, type FieldDef } from './schema'
+import { OTHER_FINDS, SETTINGS_SECTIONS, type FieldDef } from './schema'
 
+// The most used first (the manager's second meeting, ST1); the website (docs/DECISIONS.md §18) and the sign-up page
+// after the academy's own rules, and the activity log last.
 const SECTIONS = [
   { key: 'academy', title: 'Academy' },
-  // The public website (docs/DECISIONS.md §18): its own page until 2026-10-27; its messages show on Home too.
+  ...SETTINGS_SECTIONS.filter((s) => s.key !== 'signup').map((s) => ({ key: s.key, title: s.title })),
   { key: 'website', title: 'Website' },
-  ...SETTINGS_SECTIONS.map((s) => ({ key: s.key, title: s.title })),
-  { key: 'audit-log', title: 'Audit Log' },
+  { key: 'signup', title: 'Sign-up page' },
+  { key: 'audit-log', title: 'Activity log' },
+]
+
+/** Addresses of sections that were renamed. */
+const MOVED: Record<string, string> = { home: 'announcements' }
+
+const words = (t: string) => t.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim()
+
+/** Every setting and every other place on the page, for the search. */
+const FINDS = [
+  ...SETTINGS_SECTIONS.flatMap((sec) =>
+    sec.fields.map((f) => ({ key: `field:${f.path}`, label: f.label, section: sec.key, sectionTitle: sec.title, find: f.path, text: words(`${f.label} ${f.help ?? ''} ${f.keywords ?? ''} ${f.group ?? ''} ${sec.title}`) })),
+  ),
+  ...OTHER_FINDS.map((o) => ({
+    key: `other:${o.label}`,
+    label: o.label,
+    section: o.section,
+    sectionTitle: SECTIONS.find((x) => x.key === o.section)?.title ?? '',
+    find: o.anchor ?? null,
+    text: words(`${o.label} ${o.keywords}`),
+  })),
 ]
 
 export function SettingsPage() {
   const { isOwner } = useBranch()
   const { section } = useParams()
   const navigate = useNavigate()
-  const active = SECTIONS.some((s) => s.key === section) ? section! : 'academy'
+  const [params] = useSearchParams()
+  const [search, setSearch] = useState('')
+  const asked = section ? (MOVED[section] ?? section) : 'academy'
+  const active = SECTIONS.some((s) => s.key === asked) ? asked : 'academy'
   const setActive = (key: string) => navigate(`/admin/settings/${key}`)
+  const q = words(search)
+  const found = q ? FINDS.filter((f) => q.split(' ').every((w) => f.text.includes(w))) : []
+  // A setting found by the search: its section opens on it (and its "More options" with it), marked.
+  const findPath = params.get('find')
+  useEffect(() => {
+    if (!findPath) return
+    const t = window.setTimeout(() => document.getElementById(`setting-${findPath}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150)
+    return () => window.clearTimeout(t)
+  }, [findPath, active])
   return (
     <div>
       <PageHeader title="Settings" description="The academy’s profile and day-to-day settings. Anything you don’t change keeps the standard setup." />
       <div className="flex flex-col gap-6 lg:flex-row">
-        <nav className="lg:sticky lg:top-4 lg:w-52 lg:shrink-0 lg:self-start">
+        <nav className="space-y-3 lg:sticky lg:top-4 lg:w-56 lg:shrink-0 lg:self-start">
+          <InputGroup>
+            <InputGroupAddon>
+              <LuSearch />
+            </InputGroupAddon>
+            <InputGroupInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search settings" aria-label="Search settings" data-testid="settings-search" />
+          </InputGroup>
           <div className="lg:hidden">
             <Select value={active} onValueChange={setActive}>
               <SelectTrigger className="w-full">
@@ -78,8 +121,39 @@ export function SettingsPage() {
             ))}
           </ul>
         </nav>
-        <div className={cn('min-w-0 flex-1', active === 'website' ? 'lg:max-w-6xl' : active === 'audit-log' ? 'lg:max-w-5xl' : 'lg:max-w-3xl')}>
-          {active === 'website' ? (
+        <div className={cn('min-w-0 flex-1', q ? 'lg:max-w-3xl' : active === 'website' ? 'lg:max-w-6xl' : active === 'audit-log' ? 'lg:max-w-5xl' : 'lg:max-w-3xl')}>
+          {q ? (
+            <Card data-testid="settings-results">
+              <CardHeader>
+                <CardTitle>{found.length ? `${found.length} ${found.length === 1 ? 'setting' : 'settings'} found` : 'Nothing found'}</CardTitle>
+                <CardDescription>{found.length ? 'Open one to change it.' : 'Try another word: “cancel”, “lock”, “pay”, “hours”.'}</CardDescription>
+              </CardHeader>
+              {found.length ? (
+                <CardContent className="p-0">
+                  <ul className="divide-y border-t">
+                    {found.map((f) => (
+                      <li key={f.key}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-3 px-6 py-3 text-left text-sm hover:bg-muted/50"
+                          onClick={() => {
+                            setSearch('')
+                            navigate(`/admin/settings/${f.section}${f.find ? `?find=${encodeURIComponent(f.find)}` : ''}`)
+                          }}
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-medium">{f.label}</span>
+                            <span className="block text-xs text-muted-foreground">{f.sectionTitle}</span>
+                          </span>
+                          <LuChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              ) : null}
+            </Card>
+          ) : active === 'website' ? (
             <WebsiteSettings />
           ) : active === 'academy' ? (
             <div className="space-y-4">
@@ -90,16 +164,18 @@ export function SettingsPage() {
             <AuditLogSection />
           ) : active === 'schedule' ? (
             <div className="space-y-4">
-              <BusinessSection sectionKey={active} />
-              <DateHoursCard />
+              <BusinessSection sectionKey={active} findPath={findPath} />
+              <div id="setting-date-hours" className={cn('scroll-mt-24 rounded-xl', findPath === 'date-hours' && 'ring-2 ring-amber-400/70 ring-offset-4 ring-offset-background')}>
+                <DateHoursCard />
+              </div>
             </div>
           ) : active === 'signup' ? (
             <div className="space-y-4">
-              <BusinessSection sectionKey={active} />
+              <BusinessSection sectionKey={active} findPath={findPath} />
               <SignupShareCard />
             </div>
           ) : (
-            <BusinessSection sectionKey={active} />
+            <BusinessSection sectionKey={active} findPath={findPath} />
           )}
         </div>
       </div>
@@ -241,11 +317,12 @@ function BranchProfileCard() {
   )
 }
 
-function BusinessSection({ sectionKey }: { sectionKey: string }) {
+function BusinessSection({ sectionKey, findPath }: { sectionKey: string; findPath: string | null }) {
   const { branch, branchId, settings } = useBranch()
   const write = useBranchWriter()
   const [draft, setDraft] = useState<BranchSettings>(settings)
   const [busy, setBusy] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   // The fields the draft needs (the clock-out time only while the automatic clock-out is on).
   const section = useMemo(() => {
     const full = SETTINGS_SECTIONS.find((s) => s.key === sectionKey)!
@@ -253,6 +330,37 @@ function BusinessSection({ sectionKey }: { sectionKey: string }) {
   }, [sectionKey, draft])
 
   useEffect(() => setDraft(settings), [settings, sectionKey])
+
+  // Groups in the order their first setting comes; fine-tuning under "More options", opened when one was found or
+  // changed from the standard setup.
+  const groups = useMemo(() => {
+    const out: { title: string | null; fields: FieldDef[] }[] = []
+    for (const f of section.fields.filter((x) => !x.more)) {
+      const title = f.group ?? null
+      const g = out.find((x) => x.title === title)
+      if (g) g.fields.push(f)
+      else out.push({ title, fields: [f] })
+    }
+    return out
+  }, [section])
+  const more = section.fields.filter((f) => f.more)
+  const showMore = moreOpen || more.some((f) => f.path === findPath)
+  const field = (f: FieldDef) => (
+    <div
+      key={f.path}
+      id={`setting-${f.path}`}
+      className={cn('scroll-mt-24 rounded-lg', f.path === findPath && 'bg-amber-50 ring-2 ring-amber-300/80 ring-offset-4 ring-offset-card dark:bg-amber-950/30')}
+    >
+      <SettingField
+        def={f}
+        value={getPath(draft, f.path)}
+        isDefault={JSON.stringify(getPath(draft, f.path)) === JSON.stringify(getPath(DEFAULT_SETTINGS, f.path))}
+        onChange={(v) => setDraft((d) => setPath(d, f.path, v))}
+        onReset={() => setDraft((d) => setPath(d, f.path, getPath(DEFAULT_SETTINGS, f.path)))}
+        weekStartsOn={draft.general.weekStartsOn}
+      />
+    </div>
+  )
 
   const dirty = useMemo(
     () => section.fields.some((f) => JSON.stringify(getPath(draft, f.path)) !== JSON.stringify(getPath(settings, f.path))),
@@ -300,20 +408,25 @@ function BusinessSection({ sectionKey }: { sectionKey: string }) {
         <CardTitle>{section.title}</CardTitle>
         <CardDescription>{section.description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          {section.fields.map((f) => (
-            <SettingField
-              key={f.path}
-              def={f}
-              value={getPath(draft, f.path)}
-              isDefault={JSON.stringify(getPath(draft, f.path)) === JSON.stringify(getPath(DEFAULT_SETTINGS, f.path))}
-              onChange={(v) => setDraft((d) => setPath(d, f.path, v))}
-              onReset={() => setDraft((d) => setPath(d, f.path, getPath(DEFAULT_SETTINGS, f.path)))}
-              weekStartsOn={draft.general.weekStartsOn}
-            />
-          ))}
-        </FieldGroup>
+      <CardContent className="space-y-7">
+        {groups.map((g) => (
+          <section key={g.title ?? 'main'} className="space-y-4">
+            {g.title ? <h3 className="border-b pb-2 text-sm font-semibold">{g.title}</h3> : null}
+            <FieldGroup>{g.fields.map(field)}</FieldGroup>
+          </section>
+        ))}
+        {more.length ? (
+          <Collapsible open={showMore} onOpenChange={setMoreOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
+                <LuChevronDown className={cn('transition-transform', showMore && 'rotate-180')} /> {showMore ? 'Fewer options' : 'More options'}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <FieldGroup>{more.map(field)}</FieldGroup>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
       </CardContent>
       <CardFooter className="justify-end gap-2">
         <Button variant="outline" disabled={!dirty || busy} onClick={() => setDraft(settings)}>

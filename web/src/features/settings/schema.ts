@@ -2,7 +2,11 @@ import { ROLE_LABELS } from '@shared/roles'
 import type { BranchSettings } from '@shared/settings/defaults'
 import { WEEKDAYS, WEEKDAY_LABELS } from '@shared/time'
 
-/** Declarative description of the academy's settings (the Settings page renders these). */
+/**
+ * Declarative description of the academy's settings (the Settings page renders these). Each section holds what people
+ * look for there, the most used first, in groups with plain names; the fine-tuning few ever change sits under "More
+ * options" (the manager's second meeting, ST1: even Goo had to scroll around to find the right setting).
+ */
 
 interface Base {
   path: string
@@ -10,6 +14,12 @@ interface Base {
   help?: string
   /** Shown only when the other settings need it (as they are being edited), e.g. the clock-out time when it's on. */
   visible?: (settings: BranchSettings) => boolean
+  /** The heading it sits under in its section. */
+  group?: string
+  /** Fine-tuning: under "More options", closed until opened or found. */
+  more?: true
+  /** Other words people search for it by. */
+  keywords?: string
 }
 
 export type FieldDef =
@@ -38,49 +48,31 @@ const SESSION_STATUS_OPTIONS = [
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
-    key: 'signup',
-    title: 'Sign-up page',
-    description: 'The public page where new coaches, parents and students request access with Google.',
-    fields: [
-      { kind: 'boolean', path: 'signup.enabled', label: 'Accept sign-up requests' },
-      {
-        kind: 'multiselect',
-        path: 'signup.roles',
-        label: 'Who can request access',
-        options: (['coach', 'parent', 'student'] as const).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
-      },
-      { kind: 'text', path: 'signup.welcomeMessage', label: 'Welcome message', multiline: true, help: 'Shown at the top of the sign-up page.' },
-    ],
-  },
-  {
     key: 'schedule',
-    title: 'Schedule',
-    description: 'Opening hours, class defaults and automatic confirmation.',
+    title: 'Classes & opening hours',
+    description: 'When the academy is open, how classes are set up, and until when families can cancel.',
     fields: [
       {
-        kind: 'select',
-        path: 'general.weekStartsOn',
-        label: 'Weeks start on',
-        options: WEEKDAYS.map((d) => ({ value: d, label: WEEKDAY_LABELS[d] })),
-        help: 'The first day of the schedule’s week (also for Duplicate a week and the week’s totals). Month calendars always start on Sunday.',
+        kind: 'weekHours',
+        path: 'schedule.defaultWeek',
+        group: 'Opening hours',
+        label: 'Usual opening hours',
+        keywords: 'open close hours days weekly closed friday saturday sunday',
+        help: 'When the academy is open each weekday, not only class times: start early and end late enough that the schedule also shows coaches arriving before the first class and leaving after the last. Dates set below (or edited on the schedule) override them. Classes already booked outside new hours stay booked and show as conflicts on the schedule until moved.',
       },
-      { kind: 'weekHours', path: 'schedule.defaultWeek', label: 'Default opening hours', help: 'When the academy is open each weekday, not only class times: start early and end late enough that the schedule also shows coaches arriving before the first class and leaving after the last. Dates set in “Opening hours by date” below (or edited on the schedule) override them. Classes already booked outside new hours stay booked and show as conflicts on the schedule until moved.' },
-      { kind: 'number', path: 'schedule.defaultSessionMinutes', label: 'Default class length', min: 15, max: 480, step: 5, suffix: 'min' },
-      { kind: 'number', path: 'schedule.snapMinutes', label: 'Time snap', min: 1, max: 60, step: 1, suffix: 'min', help: 'Clicks, drags and resizes snap to this step.' },
       {
-        kind: 'select',
-        path: 'schedule.defaultView',
-        label: 'Default view',
-        options: [
-          { value: 'day', label: 'Day' },
-          { value: 'week', label: 'Week' },
-        ],
+        kind: 'boolean',
+        path: 'schedule.autoConfirm.enabled',
+        group: 'Confirmation and cancellation',
+        label: 'Confirm classes automatically',
+        keywords: 'confirmed pending',
       },
-      { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending classes automatically' },
       {
         kind: 'number',
         path: 'schedule.autoConfirm.hoursBefore',
+        group: 'Confirmation and cancellation',
         label: 'Confirm, and stop families canceling, this long before the start',
+        keywords: 'cancel cancellation cutoff deadline 24 hours families parents students policy',
         help: 'Parents and students can cancel a class in the app until it’s confirmed. After that, the Cancel button is off, with a note saying why.',
         min: 1,
         max: 168,
@@ -89,24 +81,65 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       {
         kind: 'number',
         path: 'schedule.requests.daysAhead',
+        group: 'Confirmation and cancellation',
         label: 'Families can ask for open seats up to',
+        keywords: 'makeup make-up reschedule extra class request book families parents students',
         help: 'A makeup, a class moved to another time, or an extra class. The office approves or declines each request.',
         min: 1,
         max: 60,
         suffix: 'days ahead',
       },
-      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated classes', options: SESSION_STATUS_OPTIONS },
-      { kind: 'list', path: 'schedule.events.titlePresets', label: 'Event title presets', help: 'One per line. Offered when adding an event.' },
-      { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Bell: student’s first class' },
-      { kind: 'number', path: 'trash.retentionDays', label: 'Keep deleted classes in Trash for', min: 1, max: 365, suffix: 'days' },
+      { kind: 'number', path: 'schedule.defaultSessionMinutes', group: 'Classes', label: 'A new class lasts', keywords: 'length duration', min: 15, max: 480, step: 5, suffix: 'min' },
+      {
+        kind: 'select',
+        path: 'general.weekStartsOn',
+        group: 'Classes',
+        label: 'Weeks start on',
+        keywords: 'monday sunday calendar',
+        options: WEEKDAYS.map((d) => ({ value: d, label: WEEKDAY_LABELS[d] })),
+        help: 'The first day of the schedule’s week (also for Duplicate a week and the week’s totals). Month calendars always start on Sunday.',
+      },
+      {
+        kind: 'select',
+        path: 'schedule.defaultView',
+        group: 'Classes',
+        label: 'The schedule opens on',
+        options: [
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+        ],
+      },
+      { kind: 'list', path: 'schedule.events.titlePresets', group: 'Classes', label: 'Event names to pick from', keywords: 'event tournament closed presets', help: 'One per line. Offered when adding an event to the schedule.' },
+      { kind: 'number', path: 'schedule.snapMinutes', more: true, label: 'Clicks and drags snap to', keywords: 'snap step grid', min: 1, max: 60, step: 1, suffix: 'min' },
+      { kind: 'select', path: 'schedule.pasteStatus', more: true, label: 'Pasted and duplicated classes start as', keywords: 'paste duplicate status', options: SESSION_STATUS_OPTIONS },
+      {
+        kind: 'number',
+        path: 'trash.retentionDays',
+        more: true,
+        label: 'Keep deleted classes and Drive files in the Trash for',
+        keywords: 'trash delete restore drive files',
+        min: 1,
+        max: 365,
+        suffix: 'days',
+      },
     ],
   },
   {
     key: 'availability',
-    title: 'Availability',
-    description: 'How far ahead coaches must enter availability, and when it locks.',
+    title: 'Coaches’ availability',
+    description: 'When coaches’ days lock, and how far ahead they set them.',
     fields: [
-      { kind: 'number', path: 'availability.leadTimeDays', label: 'Ask coaches to set availability at least', min: 0, max: 90, suffix: 'days ahead' },
+      {
+        kind: 'number',
+        path: 'availability.lockWindowDays',
+        label: 'Lock availability that starts within',
+        keywords: 'lock locked 7 days coaches add remove',
+        min: 0,
+        max: 60,
+        suffix: 'days',
+        help: 'Inside this window coaches can add time but not remove or shorten it. Admins can always change it. 0 locks only today and past days.',
+      },
+      { kind: 'number', path: 'availability.leadTimeDays', label: 'Ask coaches to set their days at least', keywords: 'notice reminder ahead', min: 0, max: 90, suffix: 'days ahead' },
       {
         kind: 'select',
         path: 'availability.leadTimeEnforcement',
@@ -117,42 +150,52 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
           { value: 'block', label: 'Lock those days too (time can only be added)' },
         ],
       },
-      {
-        kind: 'number',
-        path: 'availability.lockWindowDays',
-        label: 'Lock availability that starts within',
-        min: 0,
-        max: 60,
-        suffix: 'days',
-        help: 'Inside this window coaches can add time but not remove or shorten it. Admins can always change it. 0 locks only today and past days.',
-      },
-      { kind: 'number', path: 'availability.maxRangesPerDay', label: 'Time ranges per day', min: 1, max: 6 },
-      { kind: 'number', path: 'availability.stepMinutes', label: 'Picker step', min: 5, max: 60, step: 5, suffix: 'min' },
-      { kind: 'number', path: 'availability.minBlockMinutes', label: 'Shortest range', min: 5, max: 240, step: 5, suffix: 'min' },
-    ],
-  },
-  {
-    key: 'students',
-    title: 'Students',
-    description: 'Automatic status changes, grades, levels and programs.',
-    fields: [
-      { kind: 'boolean', path: 'students.autoStatus.enabled', label: 'Update student statuses automatically', help: 'Signed Up → Enrolled after the first class; Enrolled ↔ Paused by activity.' },
-      { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', label: 'Pause after no classes for', min: 1, max: 180, suffix: 'days' },
-      { kind: 'boolean', path: 'students.autoStatus.respectManual', label: 'Keep a status set by hand', help: 'A manual status stops the automatic changes until someone changes it again.' },
-      { kind: 'list', path: 'students.gradeOptions', label: 'Grades', help: 'One per line.' },
-      { kind: 'list', path: 'students.levels', label: 'Levels', help: 'The skill ladder, lowest first. One per line.' },
-      { kind: 'list', path: 'students.programs', label: 'Programs', help: 'One per line.' },
+      { kind: 'number', path: 'availability.maxRangesPerDay', more: true, label: 'Time ranges a day can have', min: 1, max: 6 },
+      { kind: 'number', path: 'availability.stepMinutes', more: true, label: 'Times are picked in steps of', min: 5, max: 60, step: 5, suffix: 'min' },
+      { kind: 'number', path: 'availability.minBlockMinutes', more: true, label: 'The shortest time a coach can set', min: 5, max: 240, step: 5, suffix: 'min' },
     ],
   },
   {
     key: 'payroll',
-    title: 'Payroll & time clock',
-    description: 'Pay periods, when paid time starts and ends, the automatic clock-out and the kiosk. Everyone is paid their hourly rate (Employees → Pay Rates).',
+    title: 'Pay & time clock',
+    description: 'When paid time starts and ends, the automatic clock-out, pay periods and the kiosk. Everyone is paid their hourly rate (Employees → Pay Rates).',
     fields: [
+      {
+        kind: 'number',
+        path: 'timeClock.arrivalMinutes',
+        group: 'Paid time',
+        label: 'Paid time starts this long before a coach’s first class',
+        keywords: 'arrival early clock in 30 minutes setup',
+        min: 0,
+        max: 180,
+        step: 5,
+        suffix: 'min',
+        help: 'Earlier clock-ins don’t count: with 30 minutes, a coach who clocks in at 5:20 for a 6:00 class is paid from 5:30. A later clock-in counts from the clock-in.',
+      },
+      { kind: 'boolean', path: 'timeClock.autoClockOut.enabled', group: 'Paid time', label: 'Clock everyone out automatically', keywords: 'clock out forgot', help: 'Closes the shift of anyone who forgets to clock out.' },
+      {
+        kind: 'boolean',
+        path: 'timeClock.autoClockOut.atLastClass',
+        group: 'Paid time',
+        label: 'Clock out automatically at the end of the coach’s last class',
+        keywords: 'last class end clock out',
+        help: 'Their paid time ends there too, even if they clock out later. Off: everyone is clocked out at the time below and paid until they clock out.',
+        visible: (s) => s.timeClock.autoClockOut.enabled,
+      },
+      {
+        kind: 'hhmm',
+        path: 'timeClock.autoClockOut.localTime',
+        group: 'Paid time',
+        label: 'On days without classes, clock out at',
+        help: 'Also every day when the end of the last class is off. 12:00 AM is the midnight after the clock-in.',
+        visible: (s) => s.timeClock.autoClockOut.enabled,
+      },
       {
         kind: 'select',
         path: 'payroll.payPeriod.type',
+        group: 'Pay periods',
         label: 'Pay period',
+        keywords: 'payroll weekly biweekly monthly',
         options: [
           { value: 'weekly', label: 'Weekly' },
           { value: 'biweekly', label: 'Every two weeks' },
@@ -160,52 +203,72 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
           { value: 'monthly', label: 'Monthly' },
         ],
       },
-      { kind: 'date', path: 'payroll.payPeriod.anchorDate', label: 'A pay period starts on', help: 'For weekly and two-week periods.' },
-      {
-        kind: 'number',
-        path: 'timeClock.arrivalMinutes',
-        label: 'Paid time starts this long before a coach’s first class',
-        min: 0,
-        max: 180,
-        step: 5,
-        suffix: 'min',
-        help: 'Earlier clock-ins don’t count: with 30 minutes, a coach who clocks in at 5:20 for a 6:00 class is paid from 5:30. A later clock-in counts from the clock-in.',
-      },
-      { kind: 'boolean', path: 'timeClock.autoClockOut.enabled', label: 'Clock everyone out automatically', help: 'Closes the shift of anyone who forgets to clock out.' },
-      {
-        kind: 'boolean',
-        path: 'timeClock.autoClockOut.atLastClass',
-        label: 'Clock out automatically at the end of the coach’s last class',
-        help: 'Their paid time ends there too, even if they clock out later. Off: everyone is clocked out at the time below and paid until they clock out.',
-        visible: (s) => s.timeClock.autoClockOut.enabled,
-      },
-      {
-        kind: 'hhmm',
-        path: 'timeClock.autoClockOut.localTime',
-        label: 'On days without classes, clock out at',
-        help: 'Also every day when the end of the last class is off. 12:00 AM is the midnight after the clock-in.',
-        visible: (s) => s.timeClock.autoClockOut.enabled,
-      },
-      { kind: 'number', path: 'timeClock.kiosk.pinLength', label: 'Kiosk PIN length', min: 4, max: 8 },
-      { kind: 'number', path: 'timeEntries.stepMinutes', label: 'Time entry step', min: 1, max: 30, suffix: 'min' },
+      { kind: 'date', path: 'payroll.payPeriod.anchorDate', group: 'Pay periods', label: 'A pay period starts on', help: 'For weekly and two-week periods.' },
+      { kind: 'number', path: 'timeClock.kiosk.pinLength', group: 'Kiosk', label: 'Kiosk PIN length', keywords: 'pin kiosk tablet', min: 4, max: 8 },
+      { kind: 'number', path: 'timeEntries.stepMinutes', more: true, label: 'Time entries are edited in steps of', min: 1, max: 30, suffix: 'min' },
+      { kind: 'number', path: 'home.clockLookbackDays', more: true, label: 'Home lists automatic clock-outs from the last', keywords: 'home fix clock out', min: 1, max: 31, suffix: 'days' },
     ],
   },
   {
-    key: 'home',
-    title: 'Home & announcements',
-    description: 'What the admin Home dashboard looks at, and the announcement categories.',
+    key: 'students',
+    title: 'Students',
+    description: 'Levels, programs and grades, and automatic statuses.',
     fields: [
-      { kind: 'number', path: 'home.clockLookbackDays', label: 'Look for automatic clock-outs in the last', min: 1, max: 31, suffix: 'days' },
-      { kind: 'list', path: 'announcements.defaultCategories', label: 'Announcement categories', help: 'One per line. Listed first, in this order.' },
+      { kind: 'list', path: 'students.levels', label: 'Levels', keywords: 'ladder skill marksman hunter scout', help: 'The skill ladder, lowest first. One per line.' },
+      { kind: 'list', path: 'students.programs', label: 'Programs', help: 'One per line.' },
+      { kind: 'list', path: 'students.gradeOptions', label: 'Grades', keywords: 'school grade', help: 'One per line.' },
+      {
+        kind: 'boolean',
+        path: 'students.autoStatus.enabled',
+        group: 'Automatic status',
+        label: 'Update student statuses automatically',
+        keywords: 'enrolled paused signed up status',
+        help: 'Signed Up → Enrolled after the first class; Enrolled ↔ Paused by activity.',
+      },
+      { kind: 'number', path: 'students.autoStatus.inactivityPauseDays', group: 'Automatic status', label: 'Pause after no classes for', min: 1, max: 180, suffix: 'days' },
+      { kind: 'boolean', path: 'students.autoStatus.respectManual', group: 'Automatic status', label: 'Keep a status set by hand', help: 'A manual status stops the automatic changes until someone changes it again.' },
     ],
   },
   {
     key: 'notifications',
     title: 'Notifications',
-    description: 'Push notifications arrive with the phone app; the app already records them.',
+    description: 'What the academy’s notices cover. Each person turns kinds of notices on or off for themself (Profile, or the account menu).',
     fields: [
-      { kind: 'number', path: 'notifications.sessionChangeWindowHours', label: 'Notify coaches of changes within', min: 1, max: 168, suffix: 'hours' },
-      { kind: 'number', path: 'notifications.retentionDays', label: 'Keep notifications for', min: 1, max: 365, suffix: 'days' },
+      { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Remind the office of a student’s first class', keywords: 'bell first class new student' },
+      { kind: 'number', path: 'notifications.sessionChangeWindowHours', label: 'Tell coaches about class changes within', keywords: 'coaches changes push', min: 1, max: 168, suffix: 'hours' },
+      { kind: 'number', path: 'notifications.retentionDays', more: true, label: 'Keep notifications for', keywords: 'delete old', min: 1, max: 365, suffix: 'days' },
     ],
   },
+  {
+    key: 'announcements',
+    title: 'Announcements',
+    description: 'The categories offered when writing a post.',
+    fields: [{ kind: 'list', path: 'announcements.defaultCategories', label: 'Announcement categories', keywords: 'news posts categories', help: 'One per line. Listed first, in this order.' }],
+  },
+  {
+    key: 'signup',
+    title: 'Sign-up page',
+    description: 'The public page where new coaches, parents and students request access with Google.',
+    fields: [
+      { kind: 'boolean', path: 'signup.enabled', label: 'Accept sign-up requests', keywords: 'join access request' },
+      {
+        kind: 'multiselect',
+        path: 'signup.roles',
+        label: 'Who can request access',
+        options: (['coach', 'parent', 'student'] as const).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+      },
+      { kind: 'text', path: 'signup.welcomeMessage', label: 'Welcome message', multiline: true, help: 'Shown at the top of the sign-up page.' },
+    ],
+  },
+]
+
+/** Things on the Settings page that aren't fields of a section above, found by the search too. */
+export const OTHER_FINDS: { label: string; section: string; anchor?: string; keywords: string }[] = [
+  { label: 'Academy name, email, phone and address', section: 'academy', keywords: 'name contact email phone address website time zone timezone profile' },
+  { label: 'Seats per class', section: 'academy', keywords: 'seats capacity class size six' },
+  { label: 'How pay works', section: 'academy', keywords: 'pay model hourly rate rules' },
+  { label: 'Opening hours by date', section: 'schedule', anchor: 'date-hours', keywords: 'holiday closed date special hours' },
+  { label: 'Website: messages, photos, pages, coaches, testimonials', section: 'website', keywords: 'website public site photos testimonials coaches messages trial instagram news' },
+  { label: 'Sign-up link and QR code', section: 'signup', keywords: 'link qr share' },
+  { label: 'Activity log', section: 'audit-log', keywords: 'audit history changes who changed' },
 ]
