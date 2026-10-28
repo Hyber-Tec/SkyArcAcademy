@@ -1,9 +1,8 @@
-import { payLineTotals, payModelsBetween } from "@shared/pay/lines";
+import { payLineTotals } from "@shared/pay/lines";
+import { describePay } from "@shared/pay/paidTime";
 import { type PayPeriod, payPeriodLabel, periodId, recentPeriods } from "@shared/pay/periods";
-import { missingRates, rateName } from "@shared/pay/rates";
+import { rateMissing } from "@shared/pay/rates";
 import { formatMoney } from "@shared/pay/segment";
-import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
-import { payModelOn } from "@shared/settings/businessRules";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { CalendarDays, ChevronDown, TriangleAlert, Wallet } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -26,11 +25,13 @@ import { radius, space, useColors } from "@/theme";
 
 /**
  * A coach's own pay (opened from More), with the same records as the website's Payroll: the current pay period at
- * first, or another recent one, or dates of their own; the total pay with its hours and classes; then each record by
- * day, newest first. Read-only and live, in the academy's time zone.
+ * first, or another recent one, or dates of their own; the total pay with its hours, at their one hourly rate (its worked
+ * and extra parts when an admin added time); then each record by day, newest first. Pay comes from the kiosk only
+ * (docs/DECISIONS.md §23): the note at the end says how, as the academy has it set. Read-only and live, in the academy's
+ * time zone.
  */
 export default function PayrollScreen() {
-  const { settings, rules, staffId, staff, timezone } = useBranch();
+  const { settings, staffId, staff, timezone } = useBranch();
   const colors = useColors();
   const { today } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -59,21 +60,11 @@ export default function PayrollScreen() {
     return out;
   }, [pay.lines]);
 
-  const singleRate = staff?.role === "owner" || staff?.role === "admin";
-  const models = payModelsBetween(rules, from, to);
-  const paysAdmin = singleRate || models.includes("teaching_admin");
-  const byClasses = payModelOn(rules, today) === "classes";
-  const { total, teaching, admin, classBlocks } = pay.totals;
+  const { total, worked, extra } = pay.totals;
   const records = pay.lines.filter((l) => !l.open).length;
-  const missing = staff && !pay.loading ? missingRates(staff.role, pay.rates, models.includes("teaching_admin")) : [];
-  const rateText = singleRate
-    ? `Hourly rate ${formatMoney(pay.rates.admin)}/hr`
-    : [paysAdmin ? `Admin rate ${formatMoney(pay.rates.admin)}/hr` : null, `Teaching rate ${formatMoney(pay.rates.teaching)}/hr`].filter(Boolean).join(" · ");
+  const missing = !!staff && !pay.loading && rateMissing(staff.role, pay.rates);
   const isCurrent = !!period && periodId(period) === periodId(current);
   const label = period ? payPeriodLabel(period) : from === to ? formatDateKey(from, "medium") : weekRange(from, to);
-  const statuses = settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(", ");
-  // Coaches under Classes taught are paid for their classes; everyone else for the time they clock.
-  const forClasses = models.includes("classes") && !singleRate;
   const calendar = (
     <RowIcon>
       <CalendarDays size={17} color={colors.foreground} />
@@ -84,7 +75,7 @@ export default function PayrollScreen() {
     <>
       <Screen typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="payroll-screen">
         <T tone="muted" testID="payroll-intro">
-          {byClasses && !singleRate ? "Your pay for the classes you taught, from the schedule." : "Your recorded hours and pay, worked out with the academy’s pay model."}
+          Your pay: the time you’re clocked in at the kiosk, and extra time an admin added, at your hourly rate.
         </T>
         {!staffId ? (
           <EmptyState
@@ -143,31 +134,26 @@ export default function PayrollScreen() {
                   <T variant="display" style={styles.nums} testID="payroll-total">
                     {formatMoney(total.pay)}
                   </T>
-                  {paysAdmin && !singleRate ? (
-                    <T variant="small" tone="muted" style={styles.nums}>
-                      Teaching {formatMoney(teaching.pay)} · Admin {formatMoney(admin.pay)}
+                  {extra.hours > 0 ? (
+                    <T variant="small" tone="muted" style={styles.nums} testID="payroll-parts">
+                      Worked {formatMoney(worked.pay)} · Extra time {formatMoney(extra.pay)}
                     </T>
                   ) : null}
                   <View style={[styles.stats, { borderTopColor: colors.border }]}>
                     <Stat value={total.hours.toFixed(2)} label="hours" testID="payroll-hours" />
                     <View style={[styles.rule, { backgroundColor: colors.border }]} />
-                    {forClasses ? (
-                      <Stat value={String(classBlocks)} label={classBlocks === 1 ? "class" : "classes"} testID="payroll-classes" />
-                    ) : (
-                      <Stat value={String(records)} label={records === 1 ? "record" : "records"} testID="payroll-records" />
-                    )}
+                    <Stat value={String(records)} label={records === 1 ? "record" : "records"} testID="payroll-records" />
                   </View>
                   <T variant="small" tone="muted" style={styles.center} testID="payroll-rates">
-                    {rateText}
+                    Hourly rate {formatMoney(pay.rate)}/hr
                   </T>
                 </Card>
 
-                {missing.length && staff ? (
+                {missing ? (
                   <View style={[styles.notice, { backgroundColor: colors.warningTint }]} testID="payroll-rate-missing">
                     <TriangleAlert size={18} color={colors.warning} />
                     <T variant="small" style={[styles.grow, { color: colors.warning }]}>
-                      Your {missing.map((k) => rateName(k, staff.role).replace(/ rate$/, "")).join(" and ")} rate{missing.length > 1 ? "s aren’t" : " isn’t"} set yet,
-                      so your pay shows $0. Ask an admin to set {missing.length > 1 ? "them" : "it"}.
+                      Your hourly rate isn’t set yet, so your pay shows $0. Ask an admin to set it.
                     </T>
                   </View>
                 ) : null}
@@ -185,16 +171,12 @@ export default function PayrollScreen() {
                     testID="payroll-empty"
                     icon={<Wallet size={26} color={colors.mutedForeground} />}
                     title={isCurrent ? "No pay yet this period" : "No pay on these dates"}
-                    text={forClasses ? `Your classes show here once they’re marked ${statuses}.` : "Your time shows here once you clock out."}
+                    text="Your time shows here once you clock out at the kiosk."
                   />
                 )}
 
-                <T variant="small" tone="muted" style={styles.note}>
-                  {forClasses
-                    ? "Each class is paid once, however many students are in it. Clocking in and out is kept as a log and doesn’t change your pay. "
-                    : ""}
-                  {singleRate ? "" : `Classes count when they’re marked ${statuses}. `}
-                  Hours are rounded to 0.01 h. If something looks wrong, ask an admin.
+                <T variant="small" tone="muted" style={styles.note} testID="payroll-note">
+                  {`${describePay(settings)} Hours are rounded to 0.01 h. If something looks wrong, ask an admin.`}
                 </T>
               </>
             )}

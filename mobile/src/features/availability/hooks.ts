@@ -58,9 +58,10 @@ function lastDayWhere(from: DateKey, maxDays: number, test: (d: DateKey) => bool
 }
 
 /**
- * Where the lock window and the lead time end today, from the shared rules (`@shared/availability`): days up to
- * `lockedThrough` can't be changed by the coach (past days included), and open days up to `leadThrough` should already
- * be answered. Recomputed as the clock moves; the dates only change when a boundary is crossed.
+ * Where the lock window and the lead time end today, from the shared rules (`@shared/availability`): on days up to
+ * `lockedThrough` the coach can't remove or shorten time (past days can't be changed at all; on the others the coach can
+ * add time, `addOnly`), and open days up to `leadThrough` should already be answered. Recomputed as the clock moves; the
+ * dates only change when a boundary is crossed.
  */
 export function useAvailabilityRules() {
   const { settings, timezone } = useBranch();
@@ -76,6 +77,8 @@ export function useAvailabilityRules() {
     lockedThrough,
     leadThrough,
     locked: useCallback((d: DateKey) => d <= lockedThrough, [lockedThrough]),
+    /** Locked but not over: the coach can add time there, never remove it (docs/DECISIONS.md §23, C2). */
+    addOnly: useCallback((d: DateKey) => d <= lockedThrough && d >= today, [lockedThrough, today]),
     /** The website's lead-time warning: only when the academy warns, inside the lead time, and not locked. */
     leadWarning: useCallback((d: DateKey) => a.leadTimeEnforcement === "warn" && d <= leadThrough && d > lockedThrough, [a.leadTimeEnforcement, leadThrough, lockedThrough]),
   };

@@ -1,5 +1,5 @@
-import { type DayMark, fitRangesToDay, normalizeRanges, rangesEqual, weeklyRepeats } from "@shared/availability";
-import { availabilitySummary, describeRanges } from "@shared/availabilityWrites";
+import { type DayMark, fitRangesToDay, normalizeRanges, rangesContain, rangesEqual, weeklyRepeats } from "@shared/availability";
+import { UNDO_SECONDS, availabilitySummary, describeRanges } from "@shared/availabilityWrites";
 import { type DateKey, WEEKDAY_LABELS, addDays, formatDateKey, formatMinutes, formatTimeRange, nowMinutes, weekdayOf } from "@shared/time";
 import type { AvailabilityRange } from "@shared/types";
 import { router, useNavigation } from "expo-router";
@@ -20,7 +20,7 @@ import { ToastHost } from "@/components/ToastHost";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useStatusColors } from "@/theme";
-import { type DayWrite, availabilityError, planDays, saveDays, skippedText } from "./api";
+import { type DayWrite, addTimeInLock, availabilityError, planDays, saveDays, skippedText, undoError } from "./api";
 import { useAvailabilityRules, useAvailabilityWindow } from "./hooks";
 
 type DayForm = { ranges: AvailabilityRange[]; off: boolean };
@@ -45,7 +45,9 @@ const timeLabel = (m: number) => (m === 1440 ? "Midnight" : formatMinutes(m));
  * the start and end time wheels (the academy's step, inside that date's hours), up to the academy's number of time
  * ranges; Repeat every weekday; then Cancel, Remove and Save. "Not available" is saved as an answer, so the day no
  * longer counts as one to set. Saving warns first when booked classes would be left outside the new times; it returns
- * at once (the server confirms in the background).
+ * at once (the server confirms in the background). Inside the lock (not a day that's over) the coach adds time, as on
+ * the website (docs/DECISIONS.md §23, C2): the saved times stay as they are, new ones start where they end, and "Add
+ * time" saves them with an Undo for a few seconds; removing time there is an admin's.
  */
 export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat weekly preset (from the ⋯ menu's Repeat weekly). */ repeatWeeks?: number }) {
   const { branchId, actor, settings, timezone, staffId, staff } = useBranch();
@@ -53,14 +55,15 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
   const a = settings.availability;
   const step = a.stepMinutes;
   const rules = useAvailabilityRules();
-  const { today, now, lockDays } = rules;
+  const { today, now } = rules;
   const lastRepeat = addDays(date, 7 * REPEAT_WEEKS[REPEAT_WEEKS.length - 1]);
-  const { hoursOf, rangesOf, markOf, loading } = useAvailabilityWindow(date, lastRepeat);
+  const { availability, hoursOf, rangesOf, markOf, loading } = useAvailabilityWindow(date, lastRepeat);
 
   const hours = hoursOf(date);
   const saved = rangesOf(date);
   const savedMark = markOf(date);
   const locked = rules.locked(date);
+  const addOnly = rules.addOnly(date);
   const past = date < today;
   const leadWarning = rules.leadWarning(date);
 
@@ -74,7 +77,11 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   if (!form && !loading) {
-    const first = { ranges: saved.length ? saved : [{ startMin: hours.openMin, endMin: hours.closeMin }], off: savedMark === "unavailable" };
+    const fresh = [{ startMin: hours.openMin, endMin: hours.closeMin }];
+    // Inside the lock the form holds only the times to add: one starting where the saved ones end, when there's room.
+    const first = addOnly
+      ? { ranges: saved.length ? nextRange(saved, hours.closeMin, a.minBlockMinutes) : fresh, off: false }
+      : { ranges: saved.length ? saved : fresh, off: savedMark === "unavailable" };
     setForm(first);
     setOpened(first);
   }
@@ -96,7 +103,7 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
   const edited = !!form && !!opened && (form.off !== opened.off || (!form.off && !rangesEqual(form.ranges, opened.ranges)));
   const dirty = edited || weeks !== repeatWeeks || everyOther;
 
-  usePreventRemove(dirty && !locked, ({ data }) => {
+  usePreventRemove(dirty && (!locked || addOnly), ({ data }) => {
     if (leaving.current) return navigation.dispatch(data.action);
     if (busy) return;
     void confirmAsync({ title: "Discard changes?", message: "Your changes to this day aren’t saved.", confirmLabel: "Discard", cancelLabel: "Keep editing", destructive: true }).then((ok) => {
@@ -121,11 +128,13 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
     });
   };
 
-  const canAdd = !!form && !form.off && form.ranges.length < a.maxRangesPerDay && roomAfter(form.ranges, hours.closeMin, a.minBlockMinutes);
+  // Another range fits after the last one (the saved ones too, inside the lock) before closing.
+  const all = form ? (addOnly ? [...saved, ...form.ranges] : form.ranges) : [];
+  const canAdd = !!form && !form.off && all.length < a.maxRangesPerDay && roomAfter(all, hours.closeMin, a.minBlockMinutes);
   const addRange = () => {
     if (!form) return;
-    const last = normalizeRanges(form.ranges).pop();
-    const start = last ? Math.min(last.endMin + step, hours.closeMin - a.minBlockMinutes) : hours.openMin;
+    const last = normalizeRanges(all).pop();
+    const start = last ? Math.min(last.endMin + (addOnly ? 0 : step), hours.closeMin - a.minBlockMinutes) : hours.openMin;
     setForm({ ...form, ranges: [...form.ranges, { startMin: start, endMin: Math.min(start + 120, hours.closeMin) }] });
     setActive(form.ranges.length);
     setError(null);
@@ -139,6 +148,30 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
 
   const ctx = () => ({ branchId, actor, timezone, staffId: staffId!, staffName, currentRanges: rangesOf, hoursOf, today, nowMin: nowMinutes(timezone, now) });
 
+  /** The times typed, fitted to this date's opening hours (the website's checks, in its words); null when they don't fit. */
+  const fitted = (ranges: AvailabilityRange[]): AvailabilityRange[] | null => {
+    const wrong = ranges.some((r) => r.endMin <= r.startMin)
+      ? "End time must be after start time."
+      : ranges.some((r) => r.endMin - r.startMin < a.minBlockMinutes)
+        ? `Each range must be at least ${a.minBlockMinutes} minutes.`
+        : null;
+    if (wrong) {
+      setError(wrong);
+      return null;
+    }
+    // Availability follows this date's opening hours (owner rule).
+    const fit = fitRangesToDay(ranges, hours, a);
+    if (fit.ok) return fit.ranges;
+    setError(
+      fit.reason === "closed"
+        ? "The academy is closed on this day."
+        : fit.reason === "too_many"
+          ? `Use at most ${a.maxRangesPerDay} time ranges per day.`
+          : `Choose a time within opening hours (${formatTimeRange(hours.openMin, hours.closeMin)}).`,
+    );
+    return null;
+  };
+
   /** Saves the day (times, or not available) and its weekly repeat. */
   const save = async () => {
     if (!form || !staffId || locked) return;
@@ -146,23 +179,9 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
     let day: DayWrite;
     if (form.off) day = { dateKey: date, ranges: [], unavailable: true };
     else {
-      // The website's checks, in its words.
-      for (const r of form.ranges) {
-        if (r.endMin <= r.startMin) return setError("End time must be after start time.");
-        if (r.endMin - r.startMin < a.minBlockMinutes) return setError(`Each range must be at least ${a.minBlockMinutes} minutes.`);
-      }
-      // Availability follows this date's opening hours (owner rule).
-      const fit = fitRangesToDay(form.ranges, hours, a);
-      if (!fit.ok) {
-        return setError(
-          fit.reason === "closed"
-            ? "The academy is closed on this day."
-            : fit.reason === "too_many"
-              ? `Use at most ${a.maxRangesPerDay} time ranges per day.`
-              : `Choose a time within opening hours (${formatTimeRange(hours.openMin, hours.closeMin)}).`,
-        );
-      }
-      day = { dateKey: date, ranges: fit.ranges };
+      const fit = fitted(form.ranges);
+      if (!fit) return;
+      day = { dateKey: date, ranges: fit };
     }
     const dayChanged = day.unavailable ? savedMark !== "unavailable" : savedMark === "unavailable" || !rangesEqual(day.ranges, saved);
     const days: DayWrite[] = dayChanged ? [day] : [];
@@ -197,6 +216,40 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
     }
   };
 
+  /**
+   * Inside the lock: adds the new times to what's saved, then offers Undo for a few seconds (the rules allow it a little
+   * longer by the server's clock), which puts the day back exactly as it was.
+   */
+  const add = () => {
+    if (!form || !staffId || !addOnly) return;
+    setError(null);
+    if (!form.ranges.length) return setError("Add a time range first.");
+    const fit = fitted(form.ranges);
+    if (!fit) return;
+    if (fit.every((r) => rangesContain(saved, r.startMin, r.endMin))) return setError("Those times are already in your availability.");
+    if (normalizeRanges([...saved, ...fit]).length > a.maxRangesPerDay) return setError(`Use at most ${a.maxRangesPerDay} time ranges per day.`);
+    const record = availability.get(date);
+    const day = formatDateKey(date, "weekdayMedium");
+    try {
+      const undo = addTimeInLock(ctx(), date, record ? { ranges: record.ranges ?? [], unavailable: !!record.unavailable } : null, fit);
+      toast.success(`Added to ${day}`, {
+        description: describeRanges(normalizeRanges(fit)),
+        duration: UNDO_SECONDS * 1000,
+        action: {
+          label: "Undo",
+          onPress: () =>
+            void undo().then(
+              () => toast.success("Undone", { description: `${day} is back as it was.` }),
+              (e: unknown) => toast.error("Couldn’t undo", { description: undoError(e) }),
+            ),
+        },
+      });
+      close();
+    } catch (e) {
+      setError(availabilityError(e, false, true));
+    }
+  };
+
   /** Clears the day: neither times nor "not available" (it's a day to set again). */
   const remove = async () => {
     if (!staffId || locked || (savedMark !== "available" && savedMark !== "unavailable")) return;
@@ -219,11 +272,87 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
   const lastRepeatDate = weeks > 0 ? addDays(date, 7 * weeks) : null;
   const canRemove = !locked && (savedMark === "available" || savedMark === "unavailable");
 
+  // The times being set (inside the lock: the ones to add): a list when there's more than one, the wheels for the one
+  // chosen, and another time when one fits.
+  const timesEditor = form ? (
+    <>
+      {form.ranges.length > 1 ? (
+        <View style={[styles.group, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          {form.ranges.map((r, i) => {
+            const on = i === activeIndex;
+            return (
+              <View key={i} style={[styles.rangeLine, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, on && { backgroundColor: colors.accent }]}>
+                <Pressable
+                  testID={`range-${i}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Time range ${i + 1}: ${formatTimeRange(r.startMin, r.endMin)}`}
+                  accessibilityHint="Changes this range with the wheels below"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => setActive(i)}
+                  style={styles.rangeMain}
+                >
+                  <View style={[styles.dot, { backgroundColor: on ? colors.success : colors.border }]} />
+                  <T variant="label" style={[styles.grow, r.endMin <= r.startMin && { color: colors.destructive }]}>
+                    {formatTimeRange(r.startMin, r.endMin)}
+                  </T>
+                </Pressable>
+                <IconButton icon={<Trash2 size={17} color={colors.mutedForeground} />} size={36} accessibilityLabel={`Remove ${formatTimeRange(r.startMin, r.endMin)}`} onPress={() => removeRange(i)} testID={`range-${i}-remove`} />
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+      {range ? (
+        <SheetScrollArea style={styles.wheels}>
+          <View style={styles.wheel}>
+            <T variant="tiny" tone="muted" style={styles.caps}>
+              START TIME
+            </T>
+            <TimeWheel
+              key={`start-${activeIndex}`}
+              values={timeOptions(hours.openMin, hours.closeMin - step, step, range.startMin)}
+              value={range.startMin}
+              onChange={(m) => setRange(activeIndex, { startMin: m })}
+              format={timeLabel}
+              label="Start time"
+              testID="start"
+            />
+          </View>
+          <View style={styles.wheel}>
+            <T variant="tiny" tone="muted" style={styles.caps}>
+              END TIME
+            </T>
+            <TimeWheel
+              key={`end-${activeIndex}`}
+              values={timeOptions(hours.openMin + step, hours.closeMin, step, range.endMin)}
+              value={range.endMin}
+              onChange={(m) => setRange(activeIndex, { endMin: m })}
+              format={timeLabel}
+              label="End time"
+              testID="end"
+            />
+          </View>
+        </SheetScrollArea>
+      ) : (
+        <T tone="muted">{addOnly && !canAdd ? "Your times already reach closing time: there’s nothing to add." : "No times yet."}</T>
+      )}
+      {/* Only when another time fits after the last one (a whole day has no room: nothing to offer). */}
+      {canAdd ? (
+        <Pressable testID="range-add" accessibilityRole="button" onPress={addRange} style={({ pressed }) => [styles.add, pressed && { opacity: 0.6 }]}>
+          <Plus size={16} color={colors.foreground} />
+          <T variant="small" style={styles.addText}>
+            Add another time
+          </T>
+        </Pressable>
+      ) : null}
+    </>
+  ) : null;
+
   return (
     <View style={styles.sheet} testID="availability-day">
       <View>
         <T variant="heading" testID="availability-day-title">
-          {locked ? "Availability" : "Edit availability"}
+          {addOnly ? "Add availability" : locked ? "Availability" : "Edit availability"}
         </T>
         <T tone="muted">{formatDateKey(date, "weekdayLong")}</T>
         {hours.isOpen && !loading ? (
@@ -247,14 +376,22 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
             <Notice
               tone="locked"
               icon={<Lock size={16} color={colors.warning} />}
-              text={past ? "This day is over, so its availability can’t be changed." : `Locked: changes within ${lockDays} days need an admin. Please contact one.`}
+              text={past ? "This day is over, so its availability can’t be changed." : "Locked: you can add time, not remove it. Ask an admin to remove time."}
               testID="availability-locked"
             />
           ) : leadWarning ? (
             <Notice tone="locked" icon={<TriangleAlert size={16} color={colors.warning} />} text={`Please set availability at least ${a.leadTimeDays} days in advance.`} testID="availability-lead-warning" />
           ) : null}
 
-          {locked ? (
+          {addOnly ? (
+            <>
+              <SavedTimes mark={savedMark} ranges={saved} />
+              <T variant="tiny" tone="muted" style={styles.caps}>
+                ADD
+              </T>
+              {timesEditor}
+            </>
+          ) : locked ? (
             <SavedDay mark={savedMark} ranges={saved} />
           ) : (
             <>
@@ -278,77 +415,7 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
                   </T>
                 </View>
               ) : (
-                <>
-                  {form.ranges.length > 1 ? (
-                    <View style={[styles.group, { borderColor: colors.border, backgroundColor: colors.card }]}>
-                      {form.ranges.map((r, i) => {
-                        const on = i === activeIndex;
-                        return (
-                          <View key={i} style={[styles.rangeLine, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, on && { backgroundColor: colors.accent }]}>
-                            <Pressable
-                              testID={`range-${i}`}
-                              accessibilityRole="button"
-                              accessibilityLabel={`Time range ${i + 1}: ${formatTimeRange(r.startMin, r.endMin)}`}
-                              accessibilityHint="Changes this range with the wheels below"
-                              accessibilityState={{ selected: on }}
-                              onPress={() => setActive(i)}
-                              style={styles.rangeMain}
-                            >
-                              <View style={[styles.dot, { backgroundColor: on ? colors.success : colors.border }]} />
-                              <T variant="label" style={[styles.grow, r.endMin <= r.startMin && { color: colors.destructive }]}>
-                                {formatTimeRange(r.startMin, r.endMin)}
-                              </T>
-                            </Pressable>
-                            <IconButton icon={<Trash2 size={17} color={colors.mutedForeground} />} size={36} accessibilityLabel={`Remove ${formatTimeRange(r.startMin, r.endMin)}`} onPress={() => removeRange(i)} testID={`range-${i}-remove`} />
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                  {range ? (
-                    <SheetScrollArea style={styles.wheels}>
-                      <View style={styles.wheel}>
-                        <T variant="tiny" tone="muted" style={styles.caps}>
-                          START TIME
-                        </T>
-                        <TimeWheel
-                          key={`start-${activeIndex}`}
-                          values={timeOptions(hours.openMin, hours.closeMin - step, step, range.startMin)}
-                          value={range.startMin}
-                          onChange={(m) => setRange(activeIndex, { startMin: m })}
-                          format={timeLabel}
-                          label="Start time"
-                          testID="start"
-                        />
-                      </View>
-                      <View style={styles.wheel}>
-                        <T variant="tiny" tone="muted" style={styles.caps}>
-                          END TIME
-                        </T>
-                        <TimeWheel
-                          key={`end-${activeIndex}`}
-                          values={timeOptions(hours.openMin + step, hours.closeMin, step, range.endMin)}
-                          value={range.endMin}
-                          onChange={(m) => setRange(activeIndex, { endMin: m })}
-                          format={timeLabel}
-                          label="End time"
-                          testID="end"
-                        />
-                      </View>
-                    </SheetScrollArea>
-                  ) : (
-                    <T tone="muted">No times yet.</T>
-                  )}
-                  {/* Only when another time fits after the last one (a whole day has no room: nothing to offer). */}
-                  {canAdd ? (
-                    <Pressable testID="range-add" accessibilityRole="button" onPress={addRange} style={({ pressed }) => [styles.add, pressed && { opacity: 0.6 }]}>
-                      <Plus size={16} color={colors.foreground} />
-                      <T variant="small" style={styles.addText}>
-                        Add another time
-                      </T>
-                    </Pressable>
-                  ) : null}
-                </>
+                timesEditor
               )}
             </>
           )}
@@ -392,13 +459,15 @@ export function DayEditor({ date, repeatWeeks = 0 }: { date: DateKey; /** Repeat
 
       <View style={styles.buttons}>
         <Button variant="secondary" style={styles.grow} onPress={goBack} testID="availability-cancel">
-          {locked ? "Close" : "Cancel"}
+          {locked && !addOnly ? "Close" : "Cancel"}
         </Button>
-        <Button variant="destructive" style={styles.grow} disabled={!canRemove || busy} onPress={() => void remove()} testID="availability-remove">
-          Remove
-        </Button>
-        <Button style={styles.grow} disabled={locked || loading || !hours.isOpen} busy={busy} onPress={() => void save()} testID="availability-save">
-          {locked ? "Locked" : "Save"}
+        {addOnly ? null : (
+          <Button variant="destructive" style={styles.grow} disabled={!canRemove || busy} onPress={() => void remove()} testID="availability-remove">
+            Remove
+          </Button>
+        )}
+        <Button style={styles.grow} disabled={(locked && !addOnly) || loading || !hours.isOpen} busy={busy} onPress={() => (addOnly ? add() : void save())} testID="availability-save">
+          {addOnly ? "Add time" : locked ? "Locked" : "Save"}
         </Button>
       </View>
       <ToastHost />
@@ -419,6 +488,41 @@ function SavedDay({ mark, ranges }: { mark: DayMark; ranges: AvailabilityRange[]
       </T>
     </View>
   );
+}
+
+/** Inside the lock: the times saved, which stay as they are (adding is all a coach can do there). */
+function SavedTimes({ mark, ranges }: { mark: DayMark; ranges: AvailabilityRange[] }) {
+  const status = useStatusColors();
+  return (
+    <View style={styles.savedTimes} testID="availability-saved-times">
+      <T variant="tiny" tone="muted" style={styles.caps}>
+        YOUR TIMES
+      </T>
+      {ranges.length ? (
+        <View style={styles.chips}>
+          {ranges.map((r) => (
+            <View key={`${r.startMin}-${r.endMin}`} style={[styles.chip, { backgroundColor: status.confirmed.bg, borderColor: status.confirmed.border }]}>
+              <Lock size={12} color={status.confirmed.text} />
+              <T variant="small" style={{ color: status.confirmed.text, fontWeight: "600" }}>
+                {formatTimeRange(r.startMin, r.endMin)}
+              </T>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <T variant="small" tone="muted">
+          {mark === "unavailable" ? "Marked not available. Times you add make you available." : "None yet."}
+        </T>
+      )}
+    </View>
+  );
+}
+
+/** The time to add after the saved ones, inside the lock: from where they end, when another one fits before closing. */
+function nextRange(saved: AvailabilityRange[], closeMin: number, minBlock: number): AvailabilityRange[] {
+  const last = normalizeRanges(saved).pop();
+  if (!last || last.endMin + minBlock > closeMin) return [];
+  return [{ startMin: last.endMin, endMin: Math.min(last.endMin + 120, closeMin) }];
 }
 
 /** Whether another range still fits after the last one before closing. */
@@ -462,5 +566,8 @@ const styles = StyleSheet.create({
   repeat: { gap: space.sm },
   everyOther: { flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.xs },
   savedDay: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, minHeight: 50 },
+  savedTimes: { gap: space.xs },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 8, paddingVertical: 4 },
   buttons: { flexDirection: "row", gap: space.sm },
 });

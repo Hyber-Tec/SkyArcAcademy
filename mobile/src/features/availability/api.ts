@@ -1,6 +1,20 @@
-import { collection, getDocs, query, serverTimestamp, where, writeBatch } from "@react-native-firebase/firestore";
-import { fitRangesToDay, type DayMark } from "@shared/availability";
-import { type DayWrite, type UncoveredClass, availabilityRecord, availabilitySummary, classesLeftUncovered, noCoachWarning, shrinkingDays } from "@shared/availabilityWrites";
+import { collection, deleteField, getDocs, query, serverTimestamp, where, writeBatch } from "@react-native-firebase/firestore";
+import { type DayMark, type SavedDay, fitRangesToDay } from "@shared/availability";
+import {
+  type DayWrite,
+  type UncoveredClass,
+  addedTimeSummary,
+  availabilityRecord,
+  availabilitySummary,
+  classesLeftUncovered,
+  describeRanges,
+  noCoachWarning,
+  shrinkingDays,
+  undoKeepsRecord,
+  undoOf,
+  undoneSummary,
+  withAddedTime,
+} from "@shared/availabilityWrites";
 import { COL, ROOT, availabilityDocId } from "@shared/paths";
 import type { BranchSettings, DayHours } from "@shared/settings/defaults";
 import type { DateKey } from "@shared/time";
@@ -102,6 +116,44 @@ export async function saveDays(ctx: SaveContext, days: DayWrite[], summary?: str
   return true;
 }
 
+/**
+ * Adds time to a day inside the lock, as the website does (web/src/features/availability/api.ts, `addTimeInLock`): the
+ * day keeps every time it had, as saved, with the new ones merged in, and keeps what it was (`undo`, stamped by the
+ * server) so the add can be undone for a few seconds: the rules allow exactly that. Adding time can't leave a class
+ * without a coach, so nothing is asked first. It returns at once (the server confirms in the background; a refusal says
+ * so) with the Undo, which puts the day back exactly as it was and resolves once the server has it.
+ */
+export function addTimeInLock(ctx: Pick<SaveContext, "branchId" | "actor" | "timezone" | "staffId" | "staffName">, dateKey: DateKey, saved: SavedDay | null, added: AvailabilityRange[]): () => Promise<void> {
+  const ref = branchDoc(ctx.branchId, COL.availability, availabilityDocId(ctx.staffId, dateKey));
+  const ranges = withAddedTime(saved, added);
+  const before = undoOf(saved);
+  const record = availabilityRecord(ctx.staffId, { dateKey, ranges }, ctx.timezone, "coach", ctx.staffName, "coach");
+  if (!record) throw new Error("Choose the times to add.");
+  const audit = { category: "availability", entityType: "availability", entityId: availabilityDocId(ctx.staffId, dateKey), coachId: ctx.staffId, coachName: ctx.staffName, dateKey } as const;
+  const was = before.unavailable ? "Not available" : describeRanges(before.ranges);
+  const batch = writeBatch(db);
+  batch.set(ref, { ...record, undo: { ...before, at: serverTimestamp() }, updatedAt: serverTimestamp(), updatedBy: ctx.actor.email });
+  addAudit(batch, ctx.branchId, ctx.actor, {
+    ...audit,
+    action: "availability.add",
+    summary: addedTimeSummary(ctx.staffName, dateKey, added),
+    changes: [{ field: "ranges", label: "Times", from: was, to: describeRanges(ranges) }],
+  });
+  batch.commit().catch((e: unknown) => toast.error("The time wasn’t added", { description: availabilityError(e, false, true) }));
+  return async () => {
+    const undo = writeBatch(db);
+    if (undoKeepsRecord(before)) undo.update(ref, { ranges: before.ranges, unavailable: before.unavailable, undo: deleteField(), updatedAt: serverTimestamp(), updatedBy: ctx.actor.email });
+    else undo.delete(ref);
+    addAudit(undo, ctx.branchId, ctx.actor, {
+      ...audit,
+      action: "availability.undo",
+      summary: undoneSummary(ctx.staffName, dateKey),
+      changes: [{ field: "ranges", label: "Times", from: describeRanges(ranges), to: was }],
+    });
+    await undo.commit();
+  };
+}
+
 export const SKIP_REASON = { closed: "closed", outside: "outside opening hours", too_many: "too many ranges", locked: "locked" } as const;
 export type SkipReason = keyof typeof SKIP_REASON;
 
@@ -152,10 +204,22 @@ export function skippedText(skipped: Partial<Record<SkipReason, number>>): strin
   return notes.length ? `Skipped: ${notes.join(", ")}.` : null;
 }
 
-/** A refused or failed save in words (the rules refuse days inside the lock window). */
-export function availabilityError(e: unknown, manyDays: boolean): string {
+/**
+ * A refused or failed save in words: inside the lock window the rules refuse anything but added time (`adding`: the
+ * save was an add there).
+ */
+export function availabilityError(e: unknown, manyDays: boolean, adding = false): string {
   const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
   const message = e instanceof Error ? e.message : "";
-  if (/permission-denied/.test(code) || /permission/i.test(message)) return manyDays ? "Some of those days are locked. Please contact an admin." : "This day is locked. Please contact an admin.";
+  if (/permission-denied/.test(code) || /permission/i.test(message)) {
+    if (adding) return "This day is locked: you can add time, not remove it. Ask an admin to remove time.";
+    return manyDays ? "Some of those days are locked. Please contact an admin." : "This day is locked: you can add time there, not remove it. Ask an admin to remove time.";
+  }
   return errorMessage(e, "Couldn’t save your availability. Try again.");
+}
+
+/** A refused Undo in words: the rules allow it for a few seconds only. */
+export function undoError(e: unknown): string {
+  const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
+  return /permission-denied/.test(code) ? "It’s too late to undo. Ask an admin to remove the time." : errorMessage(e, "Check your connection, then try again.");
 }

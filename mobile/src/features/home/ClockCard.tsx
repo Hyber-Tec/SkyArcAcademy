@@ -1,4 +1,4 @@
-import { type DateKey, addDays, formatDuration } from "@shared/time";
+import { type DateKey, addDays, formatDuration, minutesOf } from "@shared/time";
 import { Clock } from "lucide-react-native";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
@@ -9,12 +9,16 @@ import { T } from "@/components/Text";
 import type { ClassView } from "@/features/schedule/classes";
 import { clock, shortDay } from "@/features/schedule/format";
 import { type Colors, space, useColors } from "@/theme";
+import { useBranch } from "@/state/BranchProvider";
 import { type MyClock, useMyClock } from "./clock";
 
 type Tone = "live" | "warn" | "muted";
 
-/** Where the coach stands with the time clock today, in the website's words (its ClockCard): nothing is clocked here. */
-function clockState(c: MyClock, todays: readonly ClassView[], today: DateKey, nowMin: number, hour12: boolean): { tone: Tone; title: string; detail: string } {
+/**
+ * Where the coach stands with the time clock today, in the website's words (its ClockCard): nothing is clocked here, and
+ * the time is the paid time (from shortly before their first class to the end of their last).
+ */
+function clockState(c: MyClock, todays: readonly ClassView[], today: DateKey, nowMin: number, hour12: boolean, timezone: string): { tone: Tone; title: string; detail: string } {
   const at = (m: number) => clock(m, hour12);
   // The classes in their hours: they're in for them whether or not every student comes (the clock pays the time).
   const current = todays.filter((v) => v.c.startMin <= nowMin && v.c.endMin > nowMin).map((v) => v.c);
@@ -22,7 +26,8 @@ function clockState(c: MyClock, todays: readonly ClassView[], today: DateKey, no
   if (c.open) {
     const d = c.open.dateKey;
     const since = d === today ? at(c.open.inMin) : d === addDays(today, -1) ? `yesterday ${at(c.open.inMin)}` : `${shortDay(d)}, ${at(c.open.inMin)}`;
-    return { tone: "live", title: `Clocked in since ${since}`, detail: `${formatDuration(c.todayMinutes)} so far. Clock out at the kiosk when you leave.` };
+    const paid = c.paidFrom !== null ? `Paid from ${at(minutesOf(c.paidFrom, timezone))}: ` : "";
+    return { tone: "live", title: `Clocked in since ${since}`, detail: `${paid}${formatDuration(c.todayMinutes)} paid so far. Clock out at the kiosk when you leave.` };
   }
   const last = c.closed[c.closed.length - 1];
   const next = later[0];
@@ -30,7 +35,7 @@ function clockState(c: MyClock, todays: readonly ClassView[], today: DateKey, no
     return {
       tone: "muted",
       title: `Clocked out at ${last.outMin != null ? at(last.outMin) : "—"}`,
-      detail: next ? `${formatDuration(c.todayMinutes)} today. Clock in again before ${at(next.startMin)}.` : `${formatDuration(c.todayMinutes)} today.`,
+      detail: next ? `${formatDuration(c.todayMinutes)} paid today. Clock in again before ${at(next.startMin)}.` : `${formatDuration(c.todayMinutes)} paid today.`,
     };
   }
   if (current.length) return { tone: "warn", title: "Not clocked in", detail: `Your ${at(current[0].startMin)} class has started. Clock in at the kiosk with your PIN.` };
@@ -46,11 +51,12 @@ function toneColors(colors: Colors, tone: Tone): { bg: string; fg: string } {
 
 /**
  * The coach's time clock on Home, as the website's coach Home shows it: clocked in since when (a live dot), clocked out,
- * or a reminder to clock in at the kiosk with their PIN (amber once a class has started), and their hours this week.
+ * or a reminder to clock in at the kiosk with their PIN (amber once a class has started), and their paid time this week.
  * `todays` are the classes in the coach's hours today (Home has them; `loading` while it waits for them).
  */
 export function ClockCard({ todays, loading, today, nowMin, hour12 }: { todays: readonly ClassView[]; loading: boolean; today: DateKey; nowMin: number; hour12: boolean }) {
   const colors = useColors();
+  const { timezone } = useBranch();
   const c = useMyClock();
   if (c.loading || loading) {
     return (
@@ -63,7 +69,7 @@ export function ClockCard({ todays, loading, today, nowMin, hour12 }: { todays: 
       </Card>
     );
   }
-  const s = clockState(c, todays, today, nowMin, hour12);
+  const s = clockState(c, todays, today, nowMin, hour12, timezone);
   const tone = toneColors(colors, s.tone);
   const week = formatDuration(c.weekMinutes);
   return (
@@ -85,7 +91,7 @@ export function ClockCard({ todays, loading, today, nowMin, hour12 }: { todays: 
           {week}
         </T>
         <T variant="tiny" tone="muted">
-          this week
+          paid this week
         </T>
       </View>
     </Card>

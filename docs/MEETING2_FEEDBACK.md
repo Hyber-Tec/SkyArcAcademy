@@ -411,8 +411,12 @@ from the app, without calling or texting the academy.
   (`P9`), and the **competition sheet photo** (`P7`).
   - *Plan:* **Partly done:** the phone scans with the shared reader and shows tips. New: `P1`, `P3`'s tip, `P4`, `P7`,
     `P9`.
-- [ ] **M7. Coach availability in the app:** the 7-day lock, add-only with undo (`C1`, `C2`).
+- ✅ **M7. Coach availability in the app:** the 7-day lock, add-only with undo (`C1`, `C2`). (#54)
   - *Plan:* **Already done** for the lock; new: add-only with Undo (`C2`).
+  - *Done (#54):* inside the lock a coach's day sheet keeps the saved times and adds new ones ("Add time"), with Undo
+    for 10 seconds, as the website does; past days stay read-only. With it, the phone's pay follows `K1`–`K6`
+    (`docs/mobile-pay.md`): one hourly rate, paid time from the kiosk as the shared rule says, and extra time with its
+    note.
 - [ ] **M8. Posts in the app:** the rich text and images from `N1`/`N2` display correctly.
   - *Plan:* **Already done:** the phone draws the editor's rich text and pictures.
 - [ ] **M9. A new build and release** following the release process, after the current review.

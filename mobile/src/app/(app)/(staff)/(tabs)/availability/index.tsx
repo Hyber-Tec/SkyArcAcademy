@@ -188,7 +188,7 @@ export default function AvailabilityScreen() {
     ]);
 
   const asksNotice = a.leadTimeEnforcement !== "off";
-  const rule = [asksNotice ? `Set availability ${span(a.leadTimeDays)} ahead` : null, lockDays > 0 ? `Changes within ${lockDays} days need an admin` : "Past days can’t be changed"]
+  const rule = [asksNotice ? `Set availability ${span(a.leadTimeDays)} ahead` : null, lockDays > 0 ? `Within ${lockDays} days you can add time, not remove it` : "Past days can’t be changed"]
     .filter(Boolean)
     .join(" · ");
 

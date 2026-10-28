@@ -1,4 +1,4 @@
-import { coachesNeedAdminRate } from "@shared/pay/rates";
+import { hourlyRate } from "@shared/pay/rates";
 import { formatMoney } from "@shared/pay/segment";
 import { COL, DOC, ROOT } from "@shared/paths";
 import { STAFF_STATUS_LABELS, formatPhone } from "@shared/people";
@@ -37,7 +37,7 @@ import { space, useColors } from "@/theme";
 /**
  * More → Account. A coach's is the website's Profile → Account details (web/src/features/coach/profile/AccountSection.tsx):
  * their phone, birth date and address, which only admins see and which they keep up to date themselves (the rules let a
- * coach change only these on their own record), and what the academy has on file for them (start date, pay rates),
+ * coach change only these on their own record), and what the academy has on file for them (start date, hourly rate),
  * read-only. Owners and admins have no such page on the website (they change employee records under Employees), so
  * theirs is read-only here, with the way to the website.
  */
@@ -55,7 +55,7 @@ function CoachAccount() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { branchId, actor, staff, staffId, member, name: academy, rules } = useBranch();
+  const { branchId, actor, staff, staffId, member, name: academy } = useBranch();
   const { email } = useAuth();
   const { today } = useAcademyNow();
   const comp = useDoc<Compensation>(staffId ? `${ROOT.branches}/${branchId}/${COL.staff}/${staffId}/private/${DOC.compensation}` : null);
@@ -122,8 +122,7 @@ function CoachAccount() {
     toast.success("Your details are saved");
   };
 
-  const rate = (n: number | undefined) => (comp.loading ? "…" : n ? `${formatMoney(n)}/hr` : "—");
-  const showAdminRate = coachesNeedAdminRate(rules, today);
+  const rate = comp.loading ? "…" : comp.data && hourlyRate(comp.data.rates) > 0 ? `${formatMoney(hourlyRate(comp.data.rates))}/hr` : "—";
 
   return (
     <Screen
@@ -205,8 +204,7 @@ function CoachAccount() {
         <FactRow label="Email" value={staff.email || "—"} />
         <FactRow label="Started" value={staff.startDate ? formatDateKey(staff.startDate, "long") : "—"} />
         {staff.endDate ? <FactRow label="Ends" value={formatDateKey(staff.endDate, "long")} /> : null}
-        <FactRow label="Teaching rate" value={rate(comp.data?.rates.teaching)} testID="account-teaching-rate" />
-        {showAdminRate ? <FactRow label="Admin rate" value={rate(comp.data?.rates.admin)} testID="account-admin-rate" /> : null}
+        <FactRow label="Hourly rate" value={rate} testID="account-rate" />
       </ListSection>
     </Screen>
   );
