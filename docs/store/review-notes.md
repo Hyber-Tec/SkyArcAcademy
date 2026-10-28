@@ -53,7 +53,7 @@ COMMENTS (guideline 1.2)
 The only user-generated content is comments on the academy's announcements, written and read by its staff only (owners, admins, coaches); families never see them. Whoever posts chooses whether a post takes comments, owners and admins can delete any comment, and the academy can pause or remove anyone's access. Contact details: More → Help.
 
 PERMISSIONS AND DATA
-The camera and the photo picker are used only in Scan (staff), to photograph or choose a paper target; nothing is saved to the phone's photos. The target is read on the phone itself. No ads, analytics or tracking.
+The camera and the photo picker are used only in Scan (staff), to photograph or choose a paper target or a match's results sheet; nothing is saved to the phone's photos. A target is read on the phone itself; a results sheet's text is read on Sky Arc's server, and the sheet is filed in the student's folder. No ads, analytics or tracking.
 
 SERVICES THE APP USES
 Google Firebase (sign-in, database, file storage, server functions) and Google Sign-In. No payment, advertising or AI services.

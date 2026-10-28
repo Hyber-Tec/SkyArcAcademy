@@ -28,12 +28,15 @@ export function StudentPicker({
   recent = null,
   onPick,
   onClose,
+  title = "Who shot this card?",
 }: {
   open: boolean;
   /** The last card's student, offered first (the same student's next position often follows). */
   recent?: PickedStudent | null;
   onPick: (s: PickedStudent) => void;
   onClose: () => void;
+  /** The question at its top (a card's, unless said). */
+  title?: string;
 }) {
   const colors = useColors();
   const { today, nowMin } = useAcademyNow();
@@ -50,10 +53,20 @@ export function StudentPicker({
     return list.sort((a, b) => score(a) - score(b) || (score(a) === 1 ? b.c.endMin - a.c.endMin : a.c.startMin - b.c.startMin));
   }, [day.byDate, today, nowMin]);
 
+  // A student is found by their name or the other names they go by (a nickname, another spelling), as on the website.
   const everyone = useMemo(
-    () => students.filter((s) => (q ? s.nameLower.includes(q) || s.name.toLowerCase().includes(q) : s.status !== "finished")),
+    () =>
+      students.filter((s) =>
+        q ? s.nameLower.includes(q) || s.name.toLowerCase().includes(q) || (s.otherNames ?? []).some((n) => n.toLowerCase().includes(q)) : s.status !== "finished",
+      ),
     [students, q],
   );
+  // Found by another name: which one, so the person sees why.
+  const alias = (s: StudentDoc) => {
+    if (!q || s.nameLower.includes(q) || s.name.toLowerCase().includes(q)) return null;
+    const other = (s.otherNames ?? []).find((n) => n.toLowerCase().includes(q));
+    return other ? `Goes by ${other}` : null;
+  };
   const pick = (s: Pick<StudentDoc, "id" | "name">) => {
     onPick({ id: s.id, name: s.name });
     setSearch("");
@@ -63,7 +76,7 @@ export function StudentPicker({
     <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={[styles.fill, { backgroundColor: colors.grouped }]} edges={["bottom"]}>
         <View style={styles.head}>
-          <T variant="heading">Who shot this card?</T>
+          <T variant="heading">{title}</T>
           <Button variant="ghost" size="sm" onPress={onClose} testID="student-picker-close">
             Cancel
           </Button>
@@ -125,7 +138,7 @@ export function StudentPicker({
               <ListRow
                 divider={index > 0}
                 title={studentLabel(item.name, item.grade)}
-                subtitle={[item.level, item.program].filter(Boolean).join(" · ") || undefined}
+                subtitle={[alias(item), item.level, item.program].filter(Boolean).join(" · ") || undefined}
                 onPress={() => pick(item)}
                 testID={`pick-${item.id}`}
               />

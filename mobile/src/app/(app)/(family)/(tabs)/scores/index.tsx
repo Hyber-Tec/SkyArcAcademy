@@ -1,3 +1,4 @@
+import { type ResultKind, kindOf } from "@shared/shooting/evaluation";
 import { personalBestIds } from "@shared/shooting/progress";
 import { router } from "expo-router";
 import { Target } from "lucide-react-native";
@@ -14,6 +15,7 @@ import { T } from "@/components/Text";
 import { type EvaluationDoc, useAcademyNow } from "@/features/data/hooks";
 import { useFamilyEvaluations } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
+import { ResultKindFilter } from "@/features/scores/kinds";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { ScoreRow } from "@/features/family/ScoreRow";
 import { PositionTiles, ScoresChart, ShotPattern } from "@/features/family/ScoreSummary";
@@ -27,7 +29,8 @@ const PAGE = 30;
  * Every score of the family's students (SIUS results and paper cards), as the staff see them: for one student, each
  * position's figures, the scores over time and where the latest shots went, then every result newest first, month by
  * month, "New best" on each that beat every earlier one in its position. A parent with several children picks All (each
- * child's figures and chart, then everyone's results with their names) or one child, as on the other tabs. A result
+ * child's figures and chart, then everyone's results with their names) or one child, as on the other tabs; with more
+ * than one kind of result (practice, competitions, evaluations), one kind can be chosen, as on the website. A result
  * opens its own screen.
  */
 export default function FamilyScoresScreen() {
@@ -37,6 +40,7 @@ export default function FamilyScoresScreen() {
   const { width } = useWindowDimensions();
   const scores = useFamilyEvaluations(family.ids);
   const [count, setCount] = useState(PAGE);
+  const [kind, setKind] = useState<ResultKind | "all">("all");
 
   // Personal bests, each student's against their own earlier results.
   const best = useMemo(() => {
@@ -44,10 +48,13 @@ export default function FamilyScoresScreen() {
     for (const id of family.ids) for (const x of personalBestIds(scores.data.filter((e) => e.studentId === id))) ids.add(x);
     return ids;
   }, [scores.data, family.ids]);
-  const list = useMemo(() => {
+  const theirs = useMemo(() => {
     const shown = new Set(family.shown);
     return scores.data.filter((e) => shown.has(e.studentId));
   }, [scores.data, family.shown]);
+  // One kind, while the shown results have it (another child may have none: everything shows again).
+  const kindNow = kind !== "all" && theirs.some((e) => kindOf(e) === kind) ? kind : "all";
+  const list = useMemo(() => (kindNow === "all" ? theirs : theirs.filter((e) => kindOf(e) === kindNow)), [theirs, kindNow]);
   const months = useMemo(() => {
     const all = new Map<string, number>();
     for (const e of list) all.set(e.dateKey.slice(0, 7), (all.get(e.dateKey.slice(0, 7)) ?? 0) + 1);
@@ -72,6 +79,7 @@ export default function FamilyScoresScreen() {
         <>
           <View style={styles.controls}>
             <ChildSwitcher />
+            <ResultKindFilter list={theirs} value={kindNow} onChange={setKind} testID="family-scores-kind" />
             <T tone="muted" style={styles.intro}>
               {`Every result from ${whose} classes, newest first.`}
             </T>

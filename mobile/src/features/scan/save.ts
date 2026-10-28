@@ -1,10 +1,11 @@
 import { collection, doc, getDoc, serverTimestamp, writeBatch } from "@react-native-firebase/firestore";
 import { type DriveActor, studentFolderId } from "@shared/drive/types";
 import { COL, ROOT } from "@shared/paths";
-import { type Evaluation, POSITION_LABELS, type Position, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
+import { type Evaluation, POSITION_LABELS, type Position, type ResultKind, SOURCE_LABELS, paperEvaluation, per10 } from "@shared/shooting/evaluation";
 import { cardEvaluation } from "@shared/targets/flat";
 import type { CardReview } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
+import type { AuditStamp } from "@shared/types";
 import { addAudit } from "@/lib/audit";
 import { db } from "@/lib/firebase";
 import { toast } from "@/lib/toast";
@@ -32,6 +33,15 @@ export interface SaveCard {
   /** The reviewed shots; null when only a total was typed. */
   review: CardReview | null;
   total: number | null;
+  /** A total typed without bulls: how many shots it's over (10 when not said). */
+  shotCount?: number;
+  /** Practice (the usual), a competition or an evaluation. */
+  kind: ResultKind;
+  /**
+   * The score the coach wrote on a scanned card, when there is one: the official score (everyone sees it), with the
+   * app's reading kept for reference.
+   */
+  written?: number | null;
   file: CardFile;
 }
 
@@ -61,6 +71,16 @@ export function knowFolder(branchId: string, studentId: string): Promise<boolean
   return known;
 }
 
+/** The student's folder now has its document (or will in a moment): no need to ask again. */
+export function folderMade(branchId: string, studentId: string): void {
+  folders.set(`${branchId}/${studentId}`, Promise.resolve(true));
+}
+
+/** The student's folder was given up on (the save failed): asked again next time. */
+export function folderUnknown(branchId: string, studentId: string): void {
+  folders.delete(`${branchId}/${studentId}`);
+}
+
 const describe = (e: Pick<Evaluation, "position" | "dateKey" | "total" | "shots">) =>
   `${SOURCE_LABELS.paper} ${POSITION_LABELS[e.position].toLowerCase()} result of ${formatDateKey(e.dateKey, "medium")} (${e.total} over ${e.shots} shots, ${per10(e.total, e.shots) ?? 0} per 10)`;
 
@@ -76,7 +96,18 @@ export async function saveCard(c: SaveCard): Promise<{ evaluationId: string; fil
   const folderRef = doc(db, ROOT.branches, c.branchId, COL.driveFolders, folderId);
   const by = driveActor(c.actor);
   const name = cardFileName(c.dateKey, c.position);
-  const data = cardEvaluation(c, fileRef.id);
+  // A total typed without bulls is over the shots said (any number: 20, 30, 60), as on the website.
+  const data: Omit<Evaluation, keyof AuditStamp> = c.review
+    ? cardEvaluation(c, fileRef.id)
+    : paperEvaluation({ studentId: c.student.id, studentName: c.student.name, position: c.position, dateKey: c.dateKey, shots: null, total: c.total, shotCount: c.shotCount ?? 10, fileId: fileRef.id, note: c.note.trim() });
+  data.kind = c.kind;
+  // The written score, when it differs from the app's reading, is what everyone sees (totals, charts, reports).
+  const official = c.review && c.written !== null && c.written !== undefined && c.written !== data.total ? c.written : null;
+  data.official = official === null ? null : { appTotal: data.total, by: c.actor.email, at: serverTimestamp() as unknown as NonNullable<Evaluation["official"]>["at"] };
+  if (official !== null) {
+    data.total = official;
+    data.wholeTotal = official;
+  }
 
   const batch = writeBatch(db);
   // The student's folder exists as a stand-in until its first file: made now if it isn't there yet. A student's folder,
@@ -112,10 +143,10 @@ export async function saveCard(c: SaveCard): Promise<{ evaluationId: string; fil
   const upload = { branchId: c.branchId, fileId: fileRef.id, name, studentName: c.student.name, savedAt: Date.now() };
   keepForUpload(upload, c.file.uri);
   // The folder now has its document (or will in a moment): no need to ask again.
-  folders.set(`${c.branchId}/${c.student.id}`, Promise.resolve(true));
+  folderMade(c.branchId, c.student.id);
   const saved = batch.commit();
   saved.catch((e: unknown) => {
-    folders.delete(`${c.branchId}/${c.student.id}`);
+    folderUnknown(c.branchId, c.student.id);
     toast.error(`${c.student.name}’s card wasn’t saved`, { description: e instanceof Error ? e.message : String(e) });
   });
   uploadAfter(upload, saved);

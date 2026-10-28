@@ -1,10 +1,10 @@
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, paperEvaluation } from "@shared/shooting/evaluation";
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, RESULT_KINDS, RESULT_KIND_LABELS, type ResultKind, paperEvaluation } from "@shared/shooting/evaluation";
 import { canReplay } from "@shared/shooting/replay";
 import { type CardReview, changeShotsPerBull, reviewShots, reviewTotals, startReview, typedReview } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { Calendar, Camera, ImageIcon, UserRound, X } from "lucide-react-native";
+import { Calendar, Camera, Hash, ImageIcon, UserRound, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,8 +40,11 @@ const UNSET_COLOR = "#6b7280";
  * A scanned card, checked and saved: the photos come from the camera or the library (`photos`, one or several, read
  * one after the other). Each is read (photo.ts) and shown as a score's screen shows it: the total, the shots played
  * back one by one (at once), the card flattened with every bull's score to zoom into and correct bull by bull. It's
- * saved once a person has chosen who shot it, the position and the date: the card's copy goes to the student's Drive
- * folder and its scores become an evaluation, which the progress reports use.
+ * saved once a person has chosen who shot it, the position, the date and what it was (practice, a competition, an
+ * evaluation): the card's copy goes to the student's Drive folder and its scores become an evaluation, which the
+ * progress reports use. A card the coach already scored by hand takes the score written on it as the official one (the
+ * app's reading is kept for reference); a card that can't be read can have its bulls typed, or only its total, over any
+ * number of shots, as the website's paper dialog (web/src/features/scores/PaperScoreDialog.tsx).
  */
 export default function ScanReviewScreen() {
   const params = useLocalSearchParams<{ photos?: string; from?: string }>();
@@ -69,6 +72,14 @@ export default function ScanReviewScreen() {
   const [position, setPosition] = useState<Position | null>(lastChoices.position);
   const [dateKey, setDateKey] = useState<DateKey>(lastChoices.dateKey ?? today);
   const [note, setNote] = useState("");
+  const [kind, setKind] = useState<ResultKind>(lastChoices.kind ?? "practice");
+  // The score written on a scanned card by the coach, when there is one (the official score).
+  const [written, setWritten] = useState("");
+  // Bulls typed rather than read (no written score to compare), or only the total typed, over its shots.
+  const [typed, setTyped] = useState(false);
+  const [mode, setMode] = useState<"bulls" | "total">("bulls");
+  const [typedTotal, setTypedTotal] = useState("");
+  const [shotCount, setShotCount] = useState("10");
   const [editing, setEditing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [choosingDate, setChoosingDate] = useState(false);
@@ -86,6 +97,11 @@ export default function ScanReviewScreen() {
     setReview(null);
     setNote("");
     setStudent(null);
+    setWritten("");
+    setTyped(false);
+    setMode("bulls");
+    setTypedTotal("");
+    setShotCount("10");
   }
   useEffect(() => {
     if (!uri) return;
@@ -138,6 +154,12 @@ export default function ScanReviewScreen() {
   };
   const typeInstead = () => {
     setReview(typedReview(lastChoices.shotsPerBull ?? 1));
+    setTyped(true);
+    setPhase({ kind: "review" });
+  };
+  // Only the total written on the card (any number of shots: 20, 30, 60).
+  const typeTotal = () => {
+    setMode("total");
     setPhase({ kind: "review" });
   };
 
@@ -147,9 +169,41 @@ export default function ScanReviewScreen() {
     () => (review ? paperEvaluation({ studentId: "", studentName: "", position: "standing", dateKey: today, shots: reviewShots(review), total: null, fileId: null, note: "" }) : null),
     [review, today],
   );
-  const ready = !!review && !!student && !!position && phase.kind === "review";
+  const slots = totals?.shots ?? 10;
+  const writtenNumber = Number(written);
+  const writtenOk = written.trim() === "" || (Number.isInteger(writtenNumber) && writtenNumber >= 0 && writtenNumber <= slots * 10);
+  const shotsNumber = Number(shotCount);
+  const totalNumber = Number(typedTotal);
+  const shotsOk = Number.isInteger(shotsNumber) && shotsNumber >= 1 && shotsNumber <= 200;
+  const totalOk = typedTotal.trim() !== "" && Number.isInteger(totalNumber) && totalNumber >= 0 && shotsOk && totalNumber <= shotsNumber * 10;
+  const ready = !!student && !!position && phase.kind === "review" && (mode === "total" ? totalOk && !!read : !!review && writtenOk);
+
+  const remember = (s: PickedStudent, p: Position) => {
+    lastChoices.student = s;
+    lastChoices.position = p;
+    lastChoices.dateKey = dateKey;
+    lastChoices.kind = kind;
+  };
+
+  /** Only the total typed: saved over the shots said. */
+  const saveTotal = async () => {
+    if (!student || !position || !read || !totalOk) return;
+    setPhase({ kind: "saving" });
+    try {
+      const file = fileRef.current?.read === read ? fileRef.current.file : cardFile(read, flat);
+      await saveCard({ branchId, actor, student, position, dateKey, note, review: null, total: totalNumber, shotCount: shotsNumber, kind, file });
+      remember(student, position);
+      toast.success(`Saved for ${student.name}`, { description: `${totalNumber} out of ${shotsNumber * 10}, ${POSITION_LABELS[position].toLowerCase()}. The card’s photo goes to their Drive in the background.` });
+      next();
+    } catch (e) {
+      fileRef.current = null;
+      setPhase({ kind: "review" });
+      toast.error("Couldn’t save the card", { description: e instanceof Error ? e.message : String(e) });
+    }
+  };
 
   const save = async () => {
+    if (mode === "total") return saveTotal();
     if (!review || !student || !position || !read || !totals) return;
     const short = review.bulls.filter((b) => b.shots.length < review.shotsPerBull).map((b) => b.n);
     if (short.length) {
@@ -163,12 +217,14 @@ export default function ScanReviewScreen() {
     setPhase({ kind: "saving" });
     try {
       const file = fileRef.current?.read === read ? fileRef.current.file : cardFile(read, flat);
-      await saveCard({ branchId, actor, student, position, dateKey, note, review, total: null, file });
-      lastChoices.student = student;
-      lastChoices.position = position;
-      lastChoices.dateKey = dateKey;
+      const official = !typed && written.trim() !== "" ? writtenNumber : null;
+      await saveCard({ branchId, actor, student, position, dateKey, note, review, total: null, kind, written: official, file });
+      remember(student, position);
       lastChoices.shotsPerBull = review.shotsPerBull;
-      toast.success(`Saved for ${student.name}`, { description: `${totals.total} out of ${totals.shots * 10}, ${POSITION_LABELS[position].toLowerCase()}. The card’s photo goes to their Drive in the background.` });
+      const shown = official ?? totals.total;
+      toast.success(`Saved for ${student.name}`, {
+        description: `${shown} out of ${totals.shots * 10}${official !== null && official !== totals.total ? " (as written on the card)" : ""}, ${POSITION_LABELS[position].toLowerCase()}. The card’s photo goes to their Drive in the background.`,
+      });
       next();
     } catch (e) {
       // The copy is made again on the next try.
@@ -180,6 +236,51 @@ export default function ScanReviewScreen() {
 
   const viewWidth = width - space.lg * 2;
   const title = photos.length > 1 ? `Card ${index + 1} of ${photos.length}` : "Check the card";
+  // Who shot it and when, the position, what it was and the note: the same for scanned, typed and total-only cards.
+  const details = (
+    <>
+      <ListSection title="Who and when">
+        <ListRow
+          icon={<UserRound size={20} color={colors.mutedForeground} />}
+          title={student ? student.name : "Who shot it?"}
+          subtitle={student ? "Tap to change" : "Choose the student"}
+          onPress={() => setPicking(true)}
+          testID="scan-student"
+        />
+        <ListRow
+          icon={<Calendar size={20} color={colors.mutedForeground} />}
+          title={formatDateKey(dateKey, "medium")}
+          subtitle={dateKey === today ? "Today: the day it was shot" : "The day it was shot"}
+          onPress={() => setChoosingDate(true)}
+          testID="scan-date"
+        />
+      </ListSection>
+      <ListSection title="Position">
+        <View style={styles.inset}>
+          <SegmentedControl
+            testID="scan-position"
+            value={position ?? ("" as Position)}
+            options={POSITIONS.map((p) => ({ value: p, label: POSITION_LABELS[p] }))}
+            onChange={setPosition}
+          />
+        </View>
+      </ListSection>
+      <ListSection title="What it was" footer="Practice, a competition or an evaluation: scores, charts and reports can show one kind.">
+        <View style={styles.inset}>
+          <SegmentedControl testID="scan-kind" value={kind} options={RESULT_KINDS.map((k) => ({ value: k, label: RESULT_KIND_LABELS[k] }))} onChange={setKind} />
+        </View>
+      </ListSection>
+      <Field
+        label="Coach’s note (optional)"
+        value={note}
+        onChangeText={setNote}
+        multiline
+        maxLength={2000}
+        placeholder="Anything worth remembering about this card."
+        testID="scan-note"
+      />
+    </>
+  );
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: colors.grouped }]} edges={["bottom"]} testID="scan-review">
       <Stack.Screen
@@ -225,6 +326,9 @@ export default function ScanReviewScreen() {
               >
                 Type the scores instead
               </Button>
+              <Button variant="outline" icon={<Hash size={18} color={colors.foreground} />} onPress={typeTotal} disabled={!read} testID="scan-type-total">
+                Type only the total
+              </Button>
               {photos.length > 1 ? (
                 <Button variant="ghost" onPress={next}>
                   Skip this photo
@@ -232,6 +336,30 @@ export default function ScanReviewScreen() {
               ) : null}
             </View>
           </Card>
+        ) : mode === "total" && read ? (
+          <>
+            <ListSection title="The total written on the card" footer={shotsOk ? `Out of ${shotsNumber * 10}.` : "Shots: a whole number from 1 to 200."}>
+              <View style={styles.insetGap}>
+                <Field
+                  label="Total"
+                  value={typedTotal}
+                  onChangeText={(t) => setTypedTotal(t.replace(/[^0-9]/g, "").slice(0, 4))}
+                  keyboardType="number-pad"
+                  error={typedTotal.trim() === "" || totalOk || !shotsOk ? null : `A whole number up to ${shotsNumber * 10}.`}
+                  testID="scan-typed-total"
+                />
+                <Field
+                  label="Shots"
+                  hint="10 for most cards; 20, 30 or 60 for longer ones."
+                  value={shotCount}
+                  onChangeText={(t) => setShotCount(t.replace(/[^0-9]/g, "").slice(0, 3))}
+                  keyboardType="number-pad"
+                  testID="scan-shot-count"
+                />
+              </View>
+            </ListSection>
+            {details}
+          </>
         ) : review && read ? (
           <>
             <Card style={styles.head}>
@@ -282,41 +410,26 @@ export default function ScanReviewScreen() {
                 />
               </View>
             </ListSection>
-            <ListSection title="Who and when">
-              <ListRow
-                icon={<UserRound size={20} color={colors.mutedForeground} />}
-                title={student ? student.name : "Who shot it?"}
-                subtitle={student ? "Tap to change" : "Choose the student"}
-                onPress={() => setPicking(true)}
-                testID="scan-student"
-              />
-              <ListRow
-                icon={<Calendar size={20} color={colors.mutedForeground} />}
-                title={formatDateKey(dateKey, "medium")}
-                subtitle={dateKey === today ? "Today: the day it was shot" : "The day it was shot"}
-                onPress={() => setChoosingDate(true)}
-                testID="scan-date"
-              />
-            </ListSection>
-            <ListSection title="Position">
-              <View style={styles.inset}>
-                <SegmentedControl
-                  testID="scan-position"
-                  value={position ?? ("" as Position)}
-                  options={POSITIONS.map((p) => ({ value: p, label: POSITION_LABELS[p] }))}
-                  onChange={setPosition}
-                />
-              </View>
-            </ListSection>
-            <Field
-              label="Coach’s note (optional)"
-              value={note}
-              onChangeText={setNote}
-              multiline
-              maxLength={2000}
-              placeholder="Anything worth remembering about this card."
-              testID="scan-note"
-            />
+            {/* A card the coach already scored by hand: the written score is the official one. */}
+            {typed ? null : (
+              <ListSection
+                title="Score written on the card (official)"
+                footer="For a card the coach already scored: families, charts and reports show the written score; the app’s reading is kept for reference. Leave it empty otherwise."
+              >
+                <View style={styles.inset}>
+                  <Field
+                    value={written}
+                    onChangeText={(t) => setWritten(t.replace(/[^0-9]/g, "").slice(0, 4))}
+                    keyboardType="number-pad"
+                    placeholder={`The app read ${totals?.total ?? 0}`}
+                    error={writtenOk ? null : `A whole number up to ${slots * 10}.`}
+                    accessibilityLabel="Score written on the card"
+                    testID="scan-written"
+                  />
+                </View>
+              </ListSection>
+            )}
+            {details}
           </>
         ) : null}
       </ZoomScrollView>

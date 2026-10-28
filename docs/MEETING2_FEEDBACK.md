@@ -437,6 +437,10 @@ from the app, without calling or texting the academy.
   (`P9`), and the **competition sheet photo** (`P7`).
   - *Plan:* **Partly done:** the phone scans with the shared reader and shows tips. New: `P1`, `P3`'s tip, `P4`, `P7`,
     `P9`.
+  - *Done (#66), all but `P1`:* the scanner asks what a card was (`P9`), takes the score written on it as the official
+    one (`P4`), types a total over any number of shots (`P5`), says to lay the card on something light (`P3`), and
+    finds a student by another name (`P12`); "Add a competition" reads a photo of the results sheet (`P7`); the score
+    lists show the kinds. **Still:** the scoring rule (`P1`), which waits for the manager; then M6 gets its ✅.
 - ✅ **M7. Coach availability in the app:** the 7-day lock, add-only with undo (`C1`, `C2`). (#54)
   - *Plan:* **Already done** for the lock; new: add-only with Undo (`C2`).
   - *Done (#54):* inside the lock a coach's day sheet keeps the saved times and adds new ones ("Add time"), with Undo

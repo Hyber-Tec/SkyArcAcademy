@@ -62,6 +62,8 @@ export default function AdminLayout() {
       {/* Scanning a paper card: the camera, then the card's check. Full screen, and no swipe away from a half-checked card. */}
       <Stack.Screen name="scan/camera" options={{ presentation: "fullScreenModal", gestureEnabled: false, contentStyle: { backgroundColor: "#000" } }} />
       <Stack.Screen name="scan/review" options={{ ...page, title: "Check the card", presentation: "fullScreenModal", gestureEnabled: false }} />
+      {/* A competition's results from a photo of its results sheet. */}
+      <Stack.Screen name="scan/sheet" options={{ ...page, title: "Add a competition" }} />
     </Stack>
   );
 }

@@ -7,6 +7,7 @@ import { one } from "@/features/reports/format";
 import { shortDay } from "@/features/schedule/format";
 import { scoreTotal } from "@/features/scores/format";
 import { MiniTarget } from "@/features/scores/MiniTarget";
+import { ResultKindChip } from "@/features/scores/kinds";
 import { BestBadge } from "@/features/scores/ScoreParts";
 import { space, useColors } from "@/theme";
 
@@ -72,6 +73,7 @@ export function ScoreRow({
             {who ?? POSITION_LABELS[e.position]}
           </T>
           {best ? <BestBadge position={e.position} /> : null}
+          <ResultKindChip e={e} />
           {note ? <MessageSquareQuote size={14} color={colors.mutedForeground} /> : null}
         </View>
         <T variant="small" tone="muted" numberOfLines={2}>
@@ -99,7 +101,8 @@ export function ScoreRow({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 64 },
   grow: { flex: 1, gap: 2 },
-  title: { flexDirection: "row", alignItems: "center", gap: 6 },
+  // The badges ("New best", a competition's or an evaluation's chip) wrap rather than cut the name short.
+  title: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 6, rowGap: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   shrink: { flexShrink: 1 },
   score: { alignItems: "flex-end" },
