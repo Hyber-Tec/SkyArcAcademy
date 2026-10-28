@@ -64,16 +64,15 @@ Nothing on the server has to change for M3.
 
 ## What Goo does (once)
 
-1. **Apple's push key:** [developer.apple.com/account](https://developer.apple.com/account) → Certificates, IDs &
-   Profiles → **Keys** → **+** → name it "Sky Arc push" → tick **Apple Push Notifications service (APNs)** →
-   **Configure**: Environment **Sandbox & Production**, Key Restriction **Topic Specific**, tick
-   `com.skyarcacademy.app` → **Save** → Continue → Register → **Download** the `.p8` file (Apple lets you download it
-   only once; keep it with the other keys) and note its **Key ID**. Topic Specific, because HyberTec's team already has
-   the two Team Scoped keys Apple allows (HyberCRM's notes, 2026-10-05); HyberCRM's own key is Topic Specific for its
-   app, so it can't serve Sky Arc. Don't revoke a key to make room: its app's notifications stop at once.
+1. **Apple's push key: reuse one of the team's.** A **Team Scoped** APNs key sends to every app on HyberTec's Apple team,
+   Sky Arc included, and the team already has the two Apple allows: don't make a new one, and don't revoke one (its
+   apps' notifications would stop at once). A Topic Specific key serves only the app it names, so it can't serve Sky
+   Arc. At [developer.apple.com/account](https://developer.apple.com/account) → Certificates, IDs & Profiles →
+   **Keys**, open the Team Scoped key whose `.p8` file you kept (Apple lets you download it only once, when it's made;
+   the file is named `AuthKey_<Key ID>.p8`) and note its **Key ID**.
 2. **Into Firebase:** [console.firebase.google.com](https://console.firebase.google.com) → Sky Arc → ⚙ Project settings
-   → **Cloud Messaging** → Apple app configuration → the iOS app → **APNs Authentication Key** → Upload: the `.p8`, its
-   Key ID, and HyberTec's Team ID (top right of the Apple developer site).
+   → **Cloud Messaging** → Apple app configuration → the iOS app → **APNs Authentication Key** → Upload: that `.p8`,
+   its Key ID, and HyberTec's Team ID (top right of the Apple developer site).
 3. **The app's identifier:** Certificates, IDs & Profiles → **Identifiers** → the Sky Arc app → make sure **Push
    Notifications** is ticked (the build's signing may do it by itself).
 
