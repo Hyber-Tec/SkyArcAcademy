@@ -1,41 +1,63 @@
-import { type BusinessRules, payModelOn } from '../settings/businessRules'
 import type { DateKey } from '../time'
 import type { StaffRole } from '../types'
+import type { Rates } from './segment'
 
 /**
- * Which hourly rates an employee must have so their worked time is never
- * priced at $0 (round 3: the rate is asked when the employee is created, and
- * anyone still without one is flagged on Home, Pay Rates and Payroll).
+ * Everyone has one hourly rate (docs/DECISIONS.md §23, K1: the admin rate is gone). It's asked when an employee is
+ * created, and anyone still without one is flagged on Home, Pay Rates and Payroll, so worked time is never paid $0
+ * (round 3).
  */
+
+/**
+ * A person's hourly rate: `rates.teaching`, or `rates.admin` on older owners' and admins' records, which kept theirs
+ * there. 0 when unset.
+ */
+export function hourlyRate(rates: Partial<Rates> | null | undefined): number {
+  const teaching = Number(rates?.teaching)
+  if (teaching > 0) return teaching
+  const admin = Number(rates?.admin)
+  return admin > 0 ? admin : 0
+}
+
+/**
+ * What saving a rate stores: the rate in `teaching` and, until the phone app's update, in `admin` too (the phone's
+ * builds in the stores read an owner's or admin's rate there).
+ */
+export function rateRecord(rate: number): Rates {
+  return { teaching: rate, admin: rate }
+}
+
+/** Coaches and admins need an hourly rate, so their worked time is never paid $0; an owner's is optional. */
+export function needsRate(role: StaffRole | null | undefined): boolean {
+  return role === 'coach' || role === 'admin'
+}
+
+/** Someone whose worked time would be paid $0: they need a rate and have none. */
+export function rateMissing(role: StaffRole | null | undefined, rates: Partial<Rates> | null | undefined): boolean {
+  return needsRate(role) && !(hourlyRate(rates) > 0)
+}
+
+// ------------------------------------------------------------ until the phone app's update
+
+/** @deprecated One rate since §23: `rateMissing`. Kept until the phone app's update. */
 export type RateKind = 'teaching' | 'admin'
 
-/** Coaches need an admin rate too while the branch pays admin time, today or from a later date. */
-export function coachesNeedAdminRate(rules: Pick<BusinessRules, 'payModels'>, today: DateKey): boolean {
-  return payModelOn(rules, today) === 'teaching_admin' || rules.payModels.some((p) => p.from > today && p.model === 'teaching_admin')
+/** @deprecated There is no admin rate any more (§23, K1): always false. Kept until the phone app's update. */
+export function coachesNeedAdminRate(_rules?: unknown, _today?: DateKey): boolean {
+  return false
 }
 
-/**
- * Coaches: the teaching rate (and the admin rate under Teaching + Admin).
- * Admins: their one hourly rate, kept as the admin rate. Owners: none, since
- * an owner may not be paid by the hour.
- */
-export function requiredRates(role: StaffRole | null | undefined, needAdminRate: boolean): RateKind[] {
-  if (role === 'coach') return needAdminRate ? ['teaching', 'admin'] : ['teaching']
-  if (role === 'admin') return ['admin']
-  return []
+/** @deprecated `needsRate`. Kept until the phone app's update. */
+export function requiredRates(role: StaffRole | null | undefined, _needAdminRate?: boolean): RateKind[] {
+  return needsRate(role) ? ['teaching'] : []
 }
 
-/** The required rates that are unset or $0. */
-export function missingRates(
-  role: StaffRole | null | undefined,
-  rates: Partial<Record<RateKind, number>> | null | undefined,
-  needAdminRate: boolean,
-): RateKind[] {
-  return requiredRates(role, needAdminRate).filter((k) => !(Number(rates?.[k]) > 0))
+/** @deprecated `rateMissing`: the one rate, as a list. Kept until the phone app's update. */
+export function missingRates(role: StaffRole | null | undefined, rates: Partial<Rates> | null | undefined, _needAdminRate?: boolean): RateKind[] {
+  return rateMissing(role, rates) ? ['teaching'] : []
 }
 
-/** "teaching rate", "admin rate", "hourly rate" (admins and owners have one rate). */
-export function rateName(kind: RateKind, role: StaffRole | null | undefined): string {
-  if (role !== 'coach') return 'hourly rate'
-  return kind === 'teaching' ? 'teaching rate' : 'admin rate'
+/** @deprecated Every rate is the hourly rate. Kept until the phone app's update. */
+export function rateName(_kind?: RateKind, _role?: StaffRole | null): string {
+  return 'hourly rate'
 }

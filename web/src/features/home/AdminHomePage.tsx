@@ -48,6 +48,8 @@ export function AdminHomePage() {
   const loading = attention.classesLoading
   const coachCount = new Set(classes.flatMap((v) => v.coaches.map((k) => k.staffId))).size
   const peopleToday = useMemo(() => attention.availability.filter((a) => a.dateKey === today), [attention.availability, today])
+  const todaysClasses = useMemo(() => (attention.byDate.get(today) ?? []).map((v) => v.c), [attention.byDate, today])
+  const roleOf = useCallback((id: string) => staffById.get(id)?.role, [staffById])
 
   const date = formatInstant(toInstant(today, 720, timezone), timezone, { weekday: 'long', month: 'long', day: 'numeric' })
   const firstName = actor.name.trim().split(/\s+/)[0]
@@ -117,11 +119,13 @@ export function AdminHomePage() {
           <InBuildingCard
             shifts={attention.shifts}
             people={peopleToday}
+            classes={todaysClasses}
             hours={attention.hoursOf(today)}
             today={today}
             nowMin={nowMin}
             nameOf={nameOf}
             colorOf={(id) => staffById.get(id)?.color || null}
+            roleOf={roleOf}
           />
         </div>
       </div>

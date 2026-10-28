@@ -410,11 +410,23 @@ service cloud.firestore {
         return data.dateKey is string && data.dateKey > lockedThrough();
       }
 
+      // Extra time an admin adds to a shift (a coach's travel hour, docs/DECISIONS.md §23, K6): whole minutes, up to
+      // 12 hours, and always with why.
+      function validExtra(d) {
+        let extra = d.get('extraMin', 0);
+        let note = d.get('extraNote', '');
+        return extra is int && extra >= 0 && extra <= 720
+          && note is string && note.size() <= 300
+          && (extra == 0 || note.trim().size() > 0);
+      }
+
       match /clockShifts/{shiftId} {
         allow read: if isAdmin(b) || (isCoach(b) && resource.data.staffId == myStaffId(b));
-        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data);
+        allow create: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(request.resource.data)
+          && validExtra(request.resource.data);
         allow update: if isAdmin(b) && notRestricted(b, 'timeEntries')
-          && shiftEditable(resource.data) && shiftEditable(request.resource.data);
+          && shiftEditable(resource.data) && shiftEditable(request.resource.data)
+          && validExtra(request.resource.data);
         allow delete: if isAdmin(b) && notRestricted(b, 'timeEntries') && shiftEditable(resource.data);
       }
 

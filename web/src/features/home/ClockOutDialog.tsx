@@ -45,7 +45,7 @@ export function ClockOutDialog({ shift, onClose }: { shift: WithId<ClockShift> |
         branchId,
         actor,
         timezone,
-        { staffId: shift.staffId, staffName: shift.staffName, dateKey: shift.dateKey, inMin: shift.inMin, outMin, forcedType: shift.forcedType, note: shift.note ?? '' },
+        { staffId: shift.staffId, staffName: shift.staffName, dateKey: shift.dateKey, inMin: shift.inMin, outMin, note: shift.note ?? '', extraMin: shift.extraMin ?? 0, extraNote: shift.extraNote ?? '' },
         shift,
       )
       toast.success('Clock-out time updated')

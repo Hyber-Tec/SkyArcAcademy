@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { LuArrowDown, LuArrowUp } from 'react-icons/lu'
-import { PAY_LINE_LABELS, type PayLineType } from '@shared/pay/lines'
-import { type PayTotals, type Rates, formatMoney } from '@shared/pay/segment'
-import type { DateKey } from '@shared/time'
+import { PAY_LINE_LABELS, type PayLineTotals, type PayLineType } from '@shared/pay/lines'
+import { formatMoney } from '@shared/pay/segment'
+import { type DateKey, formatInstantTime } from '@shared/time'
 import { DatePicker } from '@/components/app/DatePicker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils'
 
 /**
  * The pieces the office's Payroll and a coach's own share, so the two pages look and read the same: the filters card
- * with its dates and buttons, the summary's rates and pay tiles, the records' heading, date column, type badge and
- * pager.
+ * with its dates and buttons, the summary's rate and pay tiles, the records' heading, date column, type badge, paid
+ * times and pager.
  */
 
 const money = formatMoney
@@ -61,35 +61,21 @@ export function GenerateClear({ onGenerate, onClear }: { onGenerate: () => void;
   )
 }
 
-/** The rates a summary's pay uses: owners' and admins' one hourly rate, or a coach's teaching (and admin) rate. */
-export function PayRates({ rates, singleRate, paysAdmin }: { rates: Rates; singleRate: boolean; paysAdmin: boolean }) {
-  return singleRate ? (
+/** The rate a summary's pay uses: everyone's one hourly rate (docs/DECISIONS.md §23, K1). */
+export function PayRate({ rate }: { rate: number }) {
+  return (
     <span>
-      Hourly rate: <strong>{money(rates.admin)}/hr</strong>
+      Hourly rate: <strong>{money(rate)}/hr</strong>
     </span>
-  ) : (
-    <>
-      {paysAdmin ? (
-        <span>
-          Admin rate: <strong>{money(rates.admin)}/hr</strong>
-        </span>
-      ) : null}
-      <span>
-        Teaching rate: <strong>{money(rates.teaching)}/hr</strong>
-      </span>
-    </>
   )
 }
 
-/** Pay and hours by type (admin time only where it's paid), then the total. */
-export function PayTiles({ sum, singleRate, paysAdmin }: { sum: PayTotals; singleRate: boolean; paysAdmin: boolean }) {
+/** The pay: its worked time and extra time when there is extra time, then the total. */
+export function PayTiles({ sum }: { sum: PayLineTotals }) {
+  const tiles = [...(sum.extra.hours > 0 ? [{ label: 'Worked', v: sum.worked }, { label: 'Extra time', v: sum.extra }] : []), { label: 'Total pay', v: sum.total, total: true }]
   return (
-    <div className={cn('grid gap-2 sm:gap-3', singleRate ? 'grid-cols-1' : paysAdmin ? 'grid-cols-3' : 'grid-cols-2')}>
-      {[
-        ...(!singleRate && paysAdmin ? [{ label: 'Admin', v: sum.admin }] : []),
-        ...(!singleRate ? [{ label: 'Teaching', v: sum.teaching }] : []),
-        { label: 'Total pay', v: sum.total, total: true },
-      ].map((t) => (
+    <div className={cn('grid gap-2 sm:gap-3', tiles.length === 3 ? 'grid-cols-3' : 'grid-cols-1 sm:max-w-xs')} data-testid="payroll-tiles">
+      {tiles.map((t) => (
         <div key={t.label} className={cn('min-w-0 rounded-lg border px-3 py-2.5 sm:px-4 sm:py-3', 'total' in t && 'bg-muted/40')}>
           <div className="truncate text-[11px] font-semibold text-muted-foreground uppercase sm:text-xs">{t.label}</div>
           <div className="truncate text-base font-semibold tabular-nums sm:text-2xl">{money(t.v.pay)}</div>
@@ -135,21 +121,37 @@ export function DateSortHead({ sortable, asc, onToggle }: { sortable: boolean; a
 }
 
 const TYPE_COLORS: Record<PayLineType, string> = {
+  worked: 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300',
+  extra: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300',
   classes: 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300',
   teaching: 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300',
   admin: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300',
 }
 
-/** A record's type (Classes, Teaching or Admin), with the students under a block of classes. */
-export function PayTypeBadge({ type, students }: { type: PayLineType; students: number | null }) {
+/** A record's type (Worked, or Extra time with why under it). */
+export function PayTypeBadge({ type, note }: { type: PayLineType; note?: string | null }) {
   return (
     <>
       <Badge variant="outline" className={TYPE_COLORS[type]}>
         {PAY_LINE_LABELS[type]}
       </Badge>
-      {students !== null ? (
-        <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
-          {students} student{students === 1 ? '' : 's'}
+      {note ? <div className="mt-0.5 max-w-48 truncate text-xs text-muted-foreground" title={note}>{note}</div> : null}
+    </>
+  )
+}
+
+/**
+ * A paid time, with the clock time under it when they differ (K2, K3): "5:30 PM", "clocked in 5:20 PM". Extra time has
+ * no time of day.
+ */
+export function PaidTime({ ms, clockMs, edge, timezone }: { ms: number | null; clockMs?: number; edge: 'in' | 'out'; timezone: string }) {
+  if (ms === null) return <span className="text-muted-foreground">—</span>
+  return (
+    <>
+      <span className="whitespace-nowrap tabular-nums">{formatInstantTime(ms, timezone)}</span>
+      {clockMs !== undefined && clockMs !== ms ? (
+        <div className="text-xs whitespace-nowrap text-muted-foreground tabular-nums" data-testid="paid-clock-time">
+          Clocked {edge} {formatInstantTime(clockMs, timezone)}
         </div>
       ) : null}
     </>

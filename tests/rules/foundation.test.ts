@@ -197,6 +197,40 @@ describe('people and pay', () => {
   })
 })
 
+describe('time entries', () => {
+  const shift = (dateKey: string, extra: Record<string, unknown> = {}) => ({ staffId: 'staff-coach', staffName: 'Coach', dateKey, inMin: 960, status: 'closed', note: '', ...extra })
+
+  it('admins add extra time to a shift, with why: whole minutes, up to 12 hours', async () => {
+    const admin = user('admin@a.test')
+    const ref = doc(admin, `branches/${A}/clockShifts/sh1`)
+    await assertSucceeds(setDoc(ref, shift('2026-10-20')))
+    await assertSucceeds(updateDoc(ref, { extraMin: 60, extraNote: 'Travel' }))
+    await assertFails(updateDoc(ref, { extraMin: 60, extraNote: '  ' }))
+    await assertFails(updateDoc(ref, { extraMin: 30, extraNote: '' }))
+    await assertFails(updateDoc(ref, { extraMin: 1.5, extraNote: 'Travel' }))
+    await assertFails(updateDoc(ref, { extraMin: -60, extraNote: 'Travel' }))
+    await assertFails(updateDoc(ref, { extraMin: 721, extraNote: 'Travel' }))
+    await assertFails(updateDoc(ref, { extraMin: 60, extraNote: 'x'.repeat(301) }))
+    await assertSucceeds(updateDoc(ref, { extraMin: 0, extraNote: '' }))
+    await assertSucceeds(setDoc(doc(admin, `branches/${A}/clockShifts/sh2`), shift('2026-10-21', { extraMin: 30, extraNote: 'Set-up' })))
+    await assertFails(setDoc(doc(admin, `branches/${A}/clockShifts/sh3`), shift('2026-10-21', { extraMin: 30 })))
+    // Coaches read their own, never write.
+    await assertSucceeds(getDoc(doc(user('coach@a.test'), `branches/${A}/clockShifts/sh2`)))
+    await assertFails(updateDoc(doc(user('coach@a.test'), `branches/${A}/clockShifts/sh2`), { extraMin: 120, extraNote: 'More' }))
+  })
+
+  it('a locked pay period keeps its shifts and their extra time', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `branches/${A}/clockShifts/old`), shift('2026-10-01'))
+      await setDoc(doc(ctx.firestore(), `branches/${A}/payroll/state`), { lockedThrough: '2026-10-10' })
+    })
+    const admin = user('admin@a.test')
+    await assertFails(updateDoc(doc(admin, `branches/${A}/clockShifts/old`), { extraMin: 60, extraNote: 'Travel' }))
+    await assertFails(setDoc(doc(admin, `branches/${A}/clockShifts/new`), shift('2026-10-09', { extraMin: 60, extraNote: 'Travel' })))
+    await assertSucceeds(setDoc(doc(admin, `branches/${A}/clockShifts/new`), shift('2026-10-11', { extraMin: 60, extraNote: 'Travel' })))
+  })
+})
+
 describe('sign-up requests', () => {
   const request = (email: string, uid: string, extra: Record<string, unknown> = {}) => ({
     email,

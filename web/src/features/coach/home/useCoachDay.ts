@@ -3,6 +3,8 @@ import { useCallback, useMemo } from 'react'
 import type { Announcement } from '@shared/comms'
 import { availabilityGaps, dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
+import { extraMinutes } from '@shared/pay/lines'
+import { payRule, shiftPaidTime } from '@shared/pay/paidTime'
 import { unionMinutes } from '@shared/schedule/lanes'
 import { type DateKey, addDays, dateRange, nowMinutes, startOfWeek, todayKey } from '@shared/time'
 import type { Availability, Student, WithId } from '@shared/types'
@@ -34,9 +36,14 @@ export interface WeekDay {
 
 export interface ClockState {
   open: WithId<ClockShift> | null
+  /** When the open shift's paid time starts, when that's after its clock-in (they came before the arrival window). */
+  paidFrom: number | null
   /** Today's finished shifts. */
   closed: WithId<ClockShift>[]
-  /** Minutes clocked today (the open shift counts up to now). */
+  /**
+   * Minutes paid today (the open shift counts up to now): from shortly before their first class to the end of their last,
+   * with any extra time (docs/DECISIONS.md §23).
+   */
   todayMinutes: number
   weekMinutes: number
 }
@@ -144,14 +151,24 @@ export function useCoachDay() {
     }
   }, [weekDays, mine, today, nowMin, classHours, staffId])
 
+  const role = me.data?.role
   const clock = useMemo<ClockState>(() => {
-    const minutesOf = (s: WithId<ClockShift>) => Math.max(0, ((s.status === 'open' ? now : ms(s.clockOutAt)) - ms(s.clockInAt)) / 60_000)
+    const rule = payRule(settings)
+    // The classes loaded for the page (this week on): a coach's paid time starts before their first class and ends with
+    // their last.
+    const classes = [...data.byDate.values()].flat().map((v) => v.c)
+    const paidOf = (s: WithId<ClockShift>) => shiftPaidTime(s, { role, classes, availability: data.availability, rule, nowMs: now })
+    const minutesOf = (s: WithId<ClockShift>) => {
+      const p = paidOf(s)
+      return Math.max(0, (p.endMs - p.startMs) / 60_000) + (s.status === 'open' ? 0 : extraMinutes(s))
+    }
     const open = shifts.data.find((s) => s.status === 'open') ?? null
+    const openFrom = open ? paidOf(open).startMs : null
     const closed = shifts.data.filter((s) => s.status !== 'open' && s.dateKey === today).sort((a, b) => ms(a.clockInAt) - ms(b.clockInAt))
     const todayMinutes = [...closed, ...(open ? [open] : [])].reduce((m, s) => m + minutesOf(s), 0)
     const weekMinutes = shifts.data.filter((s) => s.dateKey >= weekStart).reduce((m, s) => m + minutesOf(s), 0)
-    return { open, closed, todayMinutes, weekMinutes }
-  }, [shifts.data, today, now, weekStart])
+    return { open, paidFrom: open && openFrom !== null && openFrom > ms(open.clockInAt) ? openFrom : null, closed, todayMinutes, weekMinutes }
+  }, [shifts.data, today, now, weekStart, settings, role, data.byDate, data.availability])
 
   return {
     me: me.data,

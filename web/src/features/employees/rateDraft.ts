@@ -1,29 +1,23 @@
-import { type RateKind, rateName, requiredRates } from '@shared/pay/rates'
-import type { Compensation, StaffRole } from '@shared/types'
-
-/** What was typed into the rate fields. */
-export type RateDraft = Record<RateKind, string>
-
-export const EMPTY_RATES: RateDraft = { teaching: '', admin: '' }
-
-/** The rates a new employee is asked for; owners get one optional hourly rate. */
-export function askedRates(role: StaffRole, needAdminRate: boolean): RateKind[] {
-  return role === 'owner' ? ['admin'] : requiredRates(role, needAdminRate)
-}
+import { needsRate } from '@shared/pay/rates'
+import type { StaffRole } from '@shared/types'
 
 /**
- * Turns the typed rates into the record to save. Coaches and admins must have
- * every rate their pay needs (above $0), so payroll never prices their time
- * at $0; an owner's rate may stay empty (no pay record then).
+ * Turns the hourly rate typed for a new employee into the one to save. Coaches and admins must have one above $0, so
+ * payroll never prices their time at $0; an owner's may stay empty (no pay record then).
  */
-export function readRates(role: StaffRole, draft: RateDraft, needAdminRate: boolean): { rates: Compensation['rates'] | null } | { error: string } {
-  const rates = { teaching: 0, admin: 0 }
-  for (const kind of askedRates(role, needAdminRate)) {
-    const text = draft[kind].trim()
-    if (role === 'owner' && text === '') return { rates: null }
-    const n = Number(text)
-    if (text === '' || !Number.isFinite(n) || n <= 0) return { error: `Enter the ${rateName(kind, role)} (dollars per hour).` }
-    rates[kind] = Math.round(n * 100) / 100
-  }
-  return { rates }
+export function readRate(role: StaffRole, draft: string): { rate: number | null } | { error: string } {
+  const text = draft.trim()
+  if (!needsRate(role) && text === '') return { rate: null }
+  const n = Number(text)
+  if (text === '' || !Number.isFinite(n) || n <= 0) return { error: 'Enter the hourly rate (dollars per hour).' }
+  return { rate: Math.round(n * 100) / 100 }
+}
+
+/** What a person's hourly rate pays, in plain words. */
+export function rateHelp(role: StaffRole): string {
+  return role === 'coach'
+    ? 'Paid for the time they’re clocked in at the kiosk, from shortly before their first class to the end of their last.'
+    : role === 'admin'
+      ? 'Paid for the time they’re clocked in at the kiosk.'
+      : 'Optional. Leave it empty if they aren’t paid by the hour.'
 }

@@ -3,18 +3,17 @@ import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { dayHours, effectiveRanges } from '@shared/availability'
 import { COL } from '@shared/paths'
-import { priceClassBlocks } from '@shared/pay/classes'
+import { payLines } from '@shared/pay/lines'
 import { unionMinutes } from '@shared/schedule/lanes'
-import type { AcademyClass, WithId } from '@shared/types'
+import type { AcademyClass, Staff, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { boxRange, timeRange } from '@/lib/calendar'
 import { branchCol, useQuery } from '@/lib/firestore'
-import { type DayCell, HoursCalendar } from './HoursCalendar'
-import { addDays, formatInstantTime } from '@shared/time'
-import { effectiveRates, priceShifts } from '@shared/pay/shifts'
-import { useAvailabilityRange, useSessionsRange, useShifts } from '@/features/timeclock/api'
-import { useCompensationMap } from '@/features/timeclock/hooks'
-import { useAvailability, useDayConfigs, useStaffList as useStaffListForPay } from '@/features/data/hooks'
+import { type DayCell, HoursCalendar, fmtHours } from './HoursCalendar'
+import { formatInstantTime } from '@shared/time'
+import { effectiveRates } from '@shared/pay/shifts'
+import { usePayDays, useShifts } from '@/features/timeclock/api'
+import { useAvailability, useDayConfigs } from '@/features/data/hooks'
 import { STAFF_STATUSES, STAFF_STATUS_LABELS } from '@shared/people'
 import type { StaffStatus } from '@shared/types'
 import { OptionPicker } from '@/components/app/OptionPicker'
@@ -25,14 +24,13 @@ import { AvailabilityCalendar } from '@/features/availability/AvailabilityCalend
 import { useStaffList } from '@/features/data/hooks'
 import { plural } from '@/features/home/parts'
 
-type CalendarMode = 'availability' | 'scheduled' | 'clock' | 'teaching' | 'admin'
+type CalendarMode = 'availability' | 'scheduled' | 'clock' | 'paid'
 
-const MODES: { value: CalendarMode; label: string; ready: boolean }[] = [
-  { value: 'availability', label: 'Availability', ready: true },
-  { value: 'scheduled', label: 'Scheduled hours', ready: true },
-  { value: 'clock', label: 'Clock in/out', ready: true },
-  { value: 'teaching', label: 'Teaching hours', ready: true },
-  { value: 'admin', label: 'Admin hours', ready: true },
+const MODES: { value: CalendarMode; label: string }[] = [
+  { value: 'availability', label: 'Availability' },
+  { value: 'scheduled', label: 'Scheduled hours' },
+  { value: 'clock', label: 'Clock in/out' },
+  { value: 'paid', label: 'Paid hours' },
 ]
 
 export function EmployeeCalendarPage() {
@@ -40,7 +38,9 @@ export function EmployeeCalendarPage() {
   const [params, setParams] = useSearchParams()
   const [role, setRole] = useState<'coach' | 'admin' | 'all'>('coach')
   const [status, setStatus] = useState<StaffStatus | 'all'>('active')
-  const mode = (params.get('mode') as CalendarMode) || 'availability'
+  // Older links asked for teaching hours, now paid hours (one rate: docs/DECISIONS.md §23).
+  const asked = params.get('mode') === 'teaching' ? 'paid' : params.get('mode')
+  const mode: CalendarMode = MODES.some((m) => m.value === asked) ? (asked as CalendarMode) : 'availability'
   const staffId = params.get('staff')
   const options = useMemo(
     () =>
@@ -100,9 +100,8 @@ export function EmployeeCalendarPage() {
           </SelectTrigger>
           <SelectContent>
             {MODES.map((m) => (
-              <SelectItem key={m.value} value={m.value} disabled={!m.ready}>
+              <SelectItem key={m.value} value={m.value}>
                 {m.label}
-                {m.ready ? '' : ' (soon)'}
               </SelectItem>
             ))}
           </SelectContent>
@@ -110,8 +109,8 @@ export function EmployeeCalendarPage() {
       </div>
       {selected && mode === 'scheduled' ? (
         <ScheduledHours key={selected.id} staffId={selected.id} teaches={selected.role === 'coach'} />
-      ) : selected && (mode === 'clock' || mode === 'teaching' || mode === 'admin') ? (
-        <WorkedHours key={`${selected.id}-${mode}`} staffId={selected.id} mode={mode} />
+      ) : selected && (mode === 'clock' || mode === 'paid') ? (
+        <WorkedHours key={`${selected.id}-${mode}`} staff={selected} mode={mode} />
       ) : selected ? (
         <AvailabilityCalendar key={selected.id} staffId={selected.id} staffName={selected.name} staffRole={selected.role} mode="admin" />
       ) : (
@@ -175,43 +174,43 @@ function ScheduledHours({ staffId, teaches }: { staffId: string; teaches: boolea
   )
 }
 
-function WorkedHours({ staffId, mode }: { staffId: string; mode: 'clock' | 'teaching' | 'admin' }) {
-  const { settings, rules, timezone } = useBranch()
+/**
+ * Their clocked time each day (Clock in/out), or the time it pays (Paid hours: from shortly before their first class to
+ * the end of their last, with any extra time), from the shared pay lines as Payroll lists them.
+ */
+function WorkedHours({ staff, mode }: { staff: WithId<Staff>; mode: 'clock' | 'paid' }) {
+  const { settings, timezone } = useBranch()
   const [range, setRange] = useState<{ from: string; to: string } | null>(null)
   const onRange = useCallback((from: string, to: string) => setRange({ from, to }), [])
   const from = range?.from ?? '0000-00-00'
   const to = range?.to ?? '0000-00-00'
-  const { data: shifts } = useShifts(from, to, staffId, !!range, { keepPrevious: true })
-  // Every class (they're taught together), and the days they were in: a class counts for every coach in at its time.
-  const { data: sessions } = useSessionsRange(addDays(from, -1), addDays(to, 1), !!range && mode !== 'clock', { keepPrevious: true })
-  const { data: availability } = useAvailabilityRange(from, to, staffId, !!range && mode === 'teaching', { keepPrevious: true })
-  const { data: staff } = useStaffListForPay()
-  const comps = useCompensationMap([staffId])
+  const { data: shifts } = useShifts(from, to, staff.id, !!range, { keepPrevious: true })
+  // The classes and their days in: their paid time starts before their first class and ends with their last.
+  const days = usePayDays(from, to, staff.id, !!range && mode === 'paid', { keepPrevious: true })
   const cells = useMemo(() => {
     const m = new Map<string, DayCell>()
-    const ratesFor = () => effectiveRates(staff.find((s) => s.id === staffId), comps.get(staffId))
-    const add = (d: string, startMs: number, endMs: number, tone: 'clock' | 'teaching' | 'admin') => {
+    const add = (d: string, minutes: number, label: string, tone: 'clock' | 'paid') => {
       const cell = m.get(d) ?? { minutes: 0, lines: [] }
-      cell.minutes += (endMs - startMs) / 60000
-      cell.lines!.push({ label: boxRange(formatInstantTime(startMs, timezone), formatInstantTime(endMs, timezone)), tone })
+      cell.minutes += minutes
+      cell.lines!.push({ label, tone })
       if (cell.minutes > 0) m.set(d, cell)
     }
-    for (const p of priceShifts({ shifts: shifts.filter((s) => s.status === 'closed'), sessions, settings, rules, ratesFor })) {
-      if (mode === 'clock') add(p.shift.dateKey, p.shift.clockInAt.toMillis(), p.shift.clockOutAt!.toMillis(), 'clock')
-      // Unpaid time (Teaching only's gaps, and every clock-in under Classes taught) isn't paid time.
-      else for (const seg of p.segments.filter((x) => x.type === mode && !x.unpaid)) add(p.shift.dateKey, seg.startMs, seg.endMs, mode)
+    const time = (ms: number) => formatInstantTime(ms, timezone)
+    if (mode === 'clock') {
+      for (const s of shifts) if (s.status === 'closed' && s.clockOutAt) add(s.dateKey, (s.clockOutAt.toMillis() - s.clockInAt.toMillis()) / 60000, boxRange(time(s.clockInAt.toMillis()), time(s.clockOutAt.toMillis())), 'clock')
+      return m
     }
-    if (mode === 'teaching') {
-      for (const b of priceClassBlocks({ sessions, availability, settings, rules, ratesFor })) {
-        if (b.staffId === staffId && b.dateKey >= from && b.dateKey <= to) add(b.dateKey, b.segment.startMs, b.segment.endMs, 'teaching')
-      }
+    const ratesFor = () => effectiveRates(staff, null)
+    for (const l of payLines({ shifts, classes: days.classes, availability: days.availability, settings, ratesFor, from, to })) {
+      if (l.open) continue
+      if (l.type === 'extra') add(l.dateKey, l.segment.hours * 60, `Extra ${fmtHours(l.segment.hours * 60)}`, 'paid')
+      else add(l.dateKey, (l.segment.endMs - l.segment.startMs) / 60000, boxRange(time(l.segment.startMs), time(l.segment.endMs)), 'paid')
     }
     return m
-  }, [shifts, sessions, availability, settings, rules, timezone, staff, comps, staffId, mode, from, to])
+  }, [shifts, days.classes, days.availability, settings, timezone, staff, mode, from, to])
   const notes = {
-    clock: 'Worked time from clock-ins and time entries.',
-    teaching: 'Time paid as teaching under the academy’s pay model: classes taught under Classes taught, otherwise clocked time.',
-    admin: 'Clocked time paid as admin time.',
+    clock: 'Their time clocked in at the kiosk, and time entries added by admins.',
+    paid: 'The time their clock-ins pay: a coach from shortly before their first class to the end of their last, with any extra time added.',
   }
   return <HoursCalendar cells={cells} tone={mode} onRange={onRange} footnote={notes[mode]} />
 }

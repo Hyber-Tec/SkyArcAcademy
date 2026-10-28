@@ -4,15 +4,14 @@ import { LuDownload } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL, DOC } from '@shared/paths'
-import { PAY_LINE_LABELS, payLineTotals, payLines, payModelsBetween } from '@shared/pay/lines'
+import { PAY_LINE_LABELS, payLineTotals, payLines } from '@shared/pay/lines'
+import { describePay } from '@shared/pay/paidTime'
 import { payPeriodLabel, periodId } from '@shared/pay/periods'
-import { missingRates, rateName } from '@shared/pay/rates'
+import { hourlyRate, rateMissing } from '@shared/pay/rates'
 import { formatMoney } from '@shared/pay/segment'
 import { effectiveRates } from '@shared/pay/shifts'
-import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
-import { payModelOn } from '@shared/settings/businessRules'
 import { type DateKey, addDays, diffDays, formatDateKey, formatInstantTime, isDateKey, todayKey } from '@shared/time'
-import type { Availability, Compensation, Session, Staff } from '@shared/types'
+import type { Compensation, Staff } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { PageHeader } from '@/components/app/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -25,22 +24,21 @@ import { RateMissingNotice } from '@/features/employees/PayGapNotice'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef, useDoc, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { type ClockShift, useAvailabilityRange, useSessionsRange, useShifts } from './api'
+import { type ClockShift, usePayDays, useShifts } from './api'
 import { usePayPeriods } from './hooks'
-import { DateSortHead, GenerateClear, PayFilters, PayPager, PayRangeFields, PayRates, PayRecordsHeading, PayTiles, PayTypeBadge } from './PayParts'
+import { DateSortHead, GenerateClear, PaidTime, PayFilters, PayPager, PayRangeFields, PayRate, PayRecordsHeading, PayTiles, PayTypeBadge } from './PayParts'
 import { BROWSE_DAYS, BROWSE_PAGE, REPORT_PAGE, downloadCsv, payDateLabel, shadeByDate } from './payTable'
 
 const money = formatMoney
 
 /**
  * A coach's own pay in the office's Payroll layout, read-only: a pay period (or dates) to choose, the chosen dates'
- * summary (their rates and pay), and the records: the most recent 25 at a time, or the chosen dates'. The records are
+ * summary (their rate and pay), and the records: the most recent 25 at a time, or the chosen dates'. The records are
  * the shared pay lines (`payLines`), exactly as the office's Payroll and the phone list them, and asked for as the rules
- * let a coach read them (their own time entries; every class and who was in, as classes are taught together). The
- * chosen dates live in the URL.
+ * let a coach read them (their own time entries and days in; every class). The chosen dates live in the URL.
  */
 export function CoachPayrollPage() {
-  const { branchId, staffId, settings, rules, timezone } = useBranch()
+  const { branchId, staffId, settings, timezone } = useBranch()
   const today = todayKey(timezone)
   const [params, setParams] = useSearchParams()
   const { current, recent } = usePayPeriods(12)
@@ -84,38 +82,23 @@ export function CoachPayrollPage() {
   const qFrom = report ? report.from : browseFrom
   const qTo = report ? report.to : today
   const { data: shifts, loading: loadingShifts } = useShifts(qFrom, qTo, staffId, !!staffId, { keepPrevious: true })
-  const { data: sessions, loading: loadingSessions } = useSessionsRange(addDays(qFrom, -1), addDays(qTo, 1), !!staffId, { keepPrevious: true })
-  const paysClasses = rules.payModels.some((p) => p.model === 'classes')
-  // Their days in: a class counts for every coach in at its time.
-  const { data: availability, loading: loadingAvailability } = useAvailabilityRange(qFrom, qTo, staffId, !!staffId && paysClasses, { keepPrevious: true })
-  // How far back the recent records can go: the coach's first time entry, and while classes taught are paid, their first
-  // day in (or a class of their own, from before classes were taught together), with the indexes the website already
-  // has: the coach's own, oldest first.
+  // Every class, and their own days in: their paid time starts before their first class and ends with their last.
+  const days = usePayDays(qFrom, qTo, staffId, !!staffId, { keepPrevious: true })
+  // How far back the recent records can go: the coach's first time entry (their own, oldest first).
   const firstShiftQuery = useMemo(
     () => (isReport || !staffId ? null : query(branchCol(branchId, COL.clockShifts), where('staffId', '==', staffId), orderBy('dateKey'), limit(1))),
     [branchId, staffId, isReport],
   )
   const { data: firstShift, loading: loadingFirstShift } = useQuery<ClockShift>(firstShiftQuery, `pay-first-${branchId}-${staffId}`)
-  const firstClassQuery = useMemo(
-    () => (isReport || !staffId || !paysClasses ? null : query(branchCol(branchId, COL.sessions), where('coachId', '==', staffId), orderBy('dateKey'), limit(1))),
-    [branchId, staffId, isReport, paysClasses],
-  )
-  const { data: firstClass, loading: loadingFirstClass } = useQuery<Session>(firstClassQuery, `pay-first-classes-${branchId}-${staffId}`)
-  const firstDayQuery = useMemo(
-    () => (isReport || !staffId || !paysClasses ? null : query(branchCol(branchId, COL.availability), where('staffId', '==', staffId), orderBy('dateKey'), limit(1))),
-    [branchId, staffId, isReport, paysClasses],
-  )
-  const { data: firstDay, loading: loadingFirstDay } = useQuery<Availability>(firstDayQuery, `pay-first-day-${branchId}-${staffId}`)
-  const loading = loadingShifts || loadingSessions || loadingAvailability || loadingFirstShift || loadingFirstClass || loadingFirstDay
-  const first = [firstShift[0]?.dateKey, firstClass[0]?.dateKey, firstDay[0]?.dateKey].filter((d): d is DateKey => !!d).sort()[0] ?? null
+  const loading = loadingShifts || days.loading || loadingFirstShift
+  const first = firstShift[0]?.dateKey ?? null
   const olderExists = !isReport && !!first && first < browseFrom
 
-  // A coach's few weeks of records: worked out on each render. Only their own lines: `ratesFor` knows only this coach's
-  // rates, and another coach's session from before would make lines for them.
+  // A coach's few weeks of records: worked out on each render. Only their own lines: `ratesFor` knows only their rate.
   const ratesFor = () => effectiveRates(me, comp)
   const dir = sortAsc ? 1 : -1
   // Newest dates first, unless chosen dates are sorted oldest first; each day in time order.
-  const lines = payLines({ shifts, sessions, availability, settings, rules, ratesFor, from: qFrom, to: qTo })
+  const lines = payLines({ shifts, classes: days.classes, availability: days.availability, settings, ratesFor, from: qFrom, to: qTo })
     .filter((l) => l.staffId === staffId)
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey) * dir || a.startMs - b.startMs)
 
@@ -158,20 +141,28 @@ export function CoachPayrollPage() {
   }
 
   // The chosen dates' summary.
-  const singleRate = me?.role === 'owner' || me?.role === 'admin'
-  const models = report ? payModelsBetween(rules, report.from, report.to) : []
-  const paysAdmin = singleRate || models.includes('teaching_admin')
   const sum = payLineTotals(lines)
-  const rates = effectiveRates(me, comp).rates
-  const missing = report && me && !loadingComp ? missingRates(me.role, rates, models.includes('teaching_admin')) : []
-  const byClasses = payModelOn(rules, today) === 'classes'
+  const missing = !!report && !!me && !loadingComp && rateMissing(me.role, comp?.rates)
   const timeOf = (ms: number) => formatInstantTime(ms, timezone)
 
   function exportCsv() {
-    const out = [['Date', 'Type', 'Start time', 'End time', 'Hours', 'Rate', 'Total']]
+    const out = [['Date', 'Type', 'Paid from', 'Paid to', 'Clocked in', 'Clocked out', 'Hours', 'Rate', 'Total', 'Note']]
     for (const l of lines) {
-      if (l.open) continue
-      out.push([l.dateKey, PAY_LINE_LABELS[l.type], timeOf(l.segment.startMs), timeOf(l.segment.endMs), l.segment.hours.toFixed(2), l.segment.rate.toFixed(2), l.segment.pay.toFixed(2)])
+      if (l.open || !l.shift) continue
+      const worked = l.type !== 'extra'
+      const clockOut = l.shift.clockOutAt?.toMillis()
+      out.push([
+        l.dateKey,
+        PAY_LINE_LABELS[l.type],
+        worked ? timeOf(l.segment.startMs) : '',
+        worked ? timeOf(l.segment.endMs) : '',
+        timeOf(l.shift.clockInAt.toMillis()),
+        clockOut !== undefined ? timeOf(clockOut) : '',
+        l.segment.hours.toFixed(2),
+        l.segment.rate.toFixed(2),
+        l.segment.pay.toFixed(2),
+        l.note ?? '',
+      ])
     }
     downloadCsv(report ? `payroll_${(me?.name ?? 'coach').replace(/\W+/g, '_')}_${report.from}_${report.to}.csv` : `payroll_recent_${today}.csv`, out)
   }
@@ -183,11 +174,7 @@ export function CoachPayrollPage() {
     <div className="max-w-5xl">
       <PageHeader
         title="Payroll"
-        description={
-          byClasses
-            ? 'Your pay for the classes you taught, from the schedule. Clocking in and out is kept as a log and doesn’t change your pay.'
-            : 'Your recorded hours and pay, worked out with the academy’s pay model.'
-        }
+        description="Your pay: the time you’re clocked in at the kiosk, and extra time an admin added, at your hourly rate."
         actions={
           <Button variant="outline" onClick={exportCsv} disabled={!lines.some((l) => !l.open)}>
             <LuDownload /> CSV
@@ -235,27 +222,10 @@ export function CoachPayrollPage() {
             <span className="text-muted-foreground">
               {formatDateKey(report.from, 'medium')} – {formatDateKey(report.to, 'medium')}
             </span>
-            {!loadingComp ? <PayRates rates={rates} singleRate={singleRate} paysAdmin={paysAdmin} /> : null}
+            {!loadingComp ? <PayRate rate={hourlyRate(comp?.rates)} /> : null}
           </div>
-          <PayTiles sum={sum} singleRate={singleRate} paysAdmin={paysAdmin} />
-          {missing.length && me ? (
-            <RateMissingNotice>
-              Your {missing.map((k) => rateName(k, me.role).replace(/ rate$/, '')).join(' and ')} rate{missing.length > 1 ? 's aren’t' : ' isn’t'} set yet, so this
-              time is priced at $0. Ask an admin to set {missing.length > 1 ? 'them' : 'it'}.
-            </RateMissingNotice>
-          ) : null}
-          {!singleRate && models.includes('teaching_only') ? (
-            <p className="text-xs text-muted-foreground">
-              {models.length > 1 ? 'Some of these dates are paid by Teaching only: ' : 'These dates are paid by Teaching only: '}your clocked time outside classes isn’t
-              paid, so it isn’t listed.
-            </p>
-          ) : null}
-          {!singleRate && models.includes('classes') && (models.length > 1 || !byClasses) ? (
-            <p className="text-xs text-muted-foreground">
-              {models.length > 1 ? 'Some of these dates are paid by Classes taught: ' : 'These dates are paid by Classes taught: '}you’re paid for the classes you
-              teach, from the schedule. Your clock-ins are kept as a log and aren’t listed.
-            </p>
-          ) : null}
+          <PayTiles sum={sum} />
+          {missing ? <RateMissingNotice>Your hourly rate isn’t set yet, so this time is priced at $0. Ask an admin to set it.</RateMissingNotice> : null}
         </Card>
       ) : null}
 
@@ -270,8 +240,8 @@ export function CoachPayrollPage() {
               </TableHead>
               <TableHead>Type</TableHead>
               {/* Narrow screens: the times go under the type, and the rate (the same on every line) is left out. */}
-              <TableHead className="hidden sm:table-cell">Start time</TableHead>
-              <TableHead className="hidden sm:table-cell">End time</TableHead>
+              <TableHead className="hidden sm:table-cell">Paid from</TableHead>
+              <TableHead className="hidden sm:table-cell">Paid to</TableHead>
               <TableHead className="text-right">Hrs</TableHead>
               <TableHead className="hidden text-right sm:table-cell">Rate</TableHead>
               <TableHead className="text-right">Total</TableHead>
@@ -304,13 +274,32 @@ export function CoachPayrollPage() {
                   ) : (
                     <>
                       <TableCell>
-                        <PayTypeBadge type={l.type} students={l.students} />
-                        <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums sm:hidden">
-                          {timeOf(l.segment.startMs)} – {timeOf(l.segment.endMs)}
-                        </div>
+                        <PayTypeBadge type={l.type} note={l.note} />
+                        {l.type !== 'extra' ? (
+                          <div className="mt-0.5 text-xs text-muted-foreground tabular-nums sm:hidden">
+                            <div className="whitespace-nowrap">
+                              {timeOf(l.segment.startMs)} – {timeOf(l.segment.endMs)}
+                            </div>
+                            {l.clocked ? (
+                              <div>
+                                Clocked{' '}
+                                {[
+                                  l.clocked.inMs !== l.segment.startMs ? `in ${timeOf(l.clocked.inMs)}` : null,
+                                  l.clocked.outMs !== l.segment.endMs ? `out ${timeOf(l.clocked.outMs)}` : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </TableCell>
-                      <TableCell className="hidden whitespace-nowrap tabular-nums sm:table-cell">{timeOf(l.segment.startMs)}</TableCell>
-                      <TableCell className="hidden whitespace-nowrap tabular-nums sm:table-cell">{timeOf(l.segment.endMs)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <PaidTime ms={l.type !== 'extra' ? l.segment.startMs : null} clockMs={l.clocked?.inMs} edge="in" timezone={timezone} />
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <PaidTime ms={l.type !== 'extra' ? l.segment.endMs : null} clockMs={l.clocked?.outMs} edge="out" timezone={timezone} />
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{l.segment.hours.toFixed(2)}</TableCell>
                       <TableCell className="hidden text-right tabular-nums sm:table-cell">{money(l.segment.rate)}</TableCell>
                       <TableCell className="text-right font-semibold tabular-nums">{money(l.segment.pay)}</TableCell>
@@ -330,9 +319,7 @@ export function CoachPayrollPage() {
         />
       </Card>
       <p className="mt-2 text-xs text-muted-foreground">
-        {paysClasses ? 'Under Classes taught, each Classes row is a block of classes you taught, paid once however many students were in it. ' : null}
-        Classes count when they’re marked {settings.payroll.teachingSessionStatuses.map((s) => SESSION_STATUS_LABELS[s]).join(', ')}. Hours are rounded to 0.01 h;
-        pay is computed from the rounded hours. If something looks wrong, ask an admin.
+        {describePay(settings)} Hours are rounded to 0.01 h; pay is computed from the rounded hours. If something looks wrong, ask an admin.
       </p>
     </div>
   )

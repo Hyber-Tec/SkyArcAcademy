@@ -74,15 +74,32 @@ export interface BranchSettings {
     /** What the academy offers (its website's programs): a student's `program`. */
     programs: string[]
   }
-  /** The pay model itself is a branch rule (`businessRules`); owners and admins are always paid one rate. */
+  /** Everyone is paid one hourly rate for the time the kiosk records (docs/DECISIONS.md §23, K1 to K6). */
   payroll: {
-    /** Sessions in these statuses count as teaching time (default: only attended sessions). */
+    /**
+     * @deprecated Classes taught and the teaching/admin split are gone (Hourly is the only pay model, §23): nothing reads
+     * it. Kept until the phone app's update, which still shows it.
+     */
     teachingSessionStatuses: SessionStatus[]
     hoursDecimals: number
     payPeriod: { type: PayPeriodType; anchorDate: string }
   }
   timeClock: {
-    autoClockOut: { enabled: boolean; localTime: string }
+    /**
+     * A coach's paid time starts this many minutes before their first class of the day: an earlier clock-in doesn't
+     * count, a later one counts from the clock-in (K2, K4; shared/src/pay/paidTime.ts).
+     */
+    arrivalMinutes: number
+    autoClockOut: {
+      enabled: boolean
+      /**
+       * At the end of the person's last class that day (K3), and a coach's pay ends there too, even when they clock out
+       * later; at `localTime` on a day without classes. Off: at `localTime` every day, and pay follows the clock-out.
+       */
+      atLastClass: boolean
+      /** "HH:MM" in the academy's zone: the first one after the clock-in. */
+      localTime: string
+    }
     kiosk: { pinLength: number; successReturnSeconds: number }
   }
   timeEntries: {
@@ -165,7 +182,10 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     payPeriod: { type: 'biweekly', anchorDate: '2026-01-04' },
   },
   timeClock: {
-    autoClockOut: { enabled: true, localTime: '00:00' },
+    // Coaches arrive 30 minutes before the first class to set up, and are clocked out when the last class ends (the
+    // manager, 2026-10-27: docs/DECISIONS.md §23). The academy's owner may still change both.
+    arrivalMinutes: 30,
+    autoClockOut: { enabled: true, atLastClass: true, localTime: '00:00' },
     kiosk: { pinLength: 4, successReturnSeconds: 3 },
   },
   timeEntries: { stepMinutes: 5 },

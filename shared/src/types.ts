@@ -180,8 +180,8 @@ export interface StaffNotes {
 /** `staff/{id}/private/compensation`. */
 export interface Compensation {
   /**
-   * Hourly rates. Coaches: `teaching` (and `admin` for non-teaching time under
-   * Teaching + Admin). Owners and admins: `admin` is their one hourly rate.
+   * The person's one hourly rate (docs/DECISIONS.md §23, K1), saved in `teaching` and, until the phone app's update,
+   * in `admin` too. Older owners' and admins' records kept it in `admin` alone: read it with `hourlyRate`.
    */
   rates: { teaching: number; admin: number }
   /** Unused since round 2 (the pay model is a branch rule); kept on older records. */
@@ -358,10 +358,22 @@ export interface ClockShift {
   status: 'open' | 'closed'
   source: 'kiosk' | 'admin' | 'auto'
   autoClosed: boolean
+  /**
+   * How the automatic clock-out picked its time: the end of the person's last class (the academy's rule, K3), or the
+   * set time (a day without classes, or with the rule off), which may need a look. Missing on older shifts.
+   */
+  autoClosedBy?: 'last_class' | 'set_time'
   autoCorrected: boolean
-  /** An admin's forced pay type for the whole shift (e.g. a meeting that is all admin time). */
+  /** @deprecated One rate since docs/DECISIONS.md §23: an admin's old "pay as" choice, no longer read. */
   forcedType: PayType | null
   note: string
+  /**
+   * Extra paid minutes an admin added to the shift (a coach's travel hour, K6), so the clock times stay as recorded;
+   * paid at the person's rate. 0 or missing: none.
+   */
+  extraMin?: number
+  /** Why the extra time was added (required with it). */
+  extraNote?: string
 }
 
 // -------------------------------------------------------------------- audit

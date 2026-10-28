@@ -15,7 +15,7 @@ export interface DayCell {
   /** Total minutes shown as the day's bubble. */
   minutes: number
   /** Optional ranges shown as boxes under the bubble (a time, and who or what). */
-  lines?: { label: string; detail?: string; tone: 'clock' | 'teaching' | 'admin' | 'scheduled' }[]
+  lines?: { label: string; detail?: string; tone: 'clock' | 'paid' | 'scheduled' }[]
 }
 
 const LINES_SHOWN = 3
@@ -23,8 +23,7 @@ const LINES_SHOWN = 3
 const TONES: Record<NonNullable<DayCell['lines']>[number]['tone'], string> = {
   scheduled: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-200',
   clock: 'border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100',
-  teaching: 'border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200',
-  admin: 'border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200',
+  paid: 'border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200',
 }
 
 /**

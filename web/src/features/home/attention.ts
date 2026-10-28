@@ -30,8 +30,9 @@ export interface NewStudent {
 
 /**
  * What needs an admin's attention (the Home badge): classes in the next four weeks that may not happen as booked
- * (listed first: no coach in, too many students, a student in two classes at once…), unfixed automatic clock-outs,
- * pending sign-up requests, new students nobody has opened yet, and employees without a pay rate. It also hands Home
+ * (listed first: no coach in, too many students, a student in two classes at once…), automatic clock-outs at the set
+ * time not fixed yet, pending sign-up requests, new students nobody has opened yet, and employees without an hourly
+ * rate. It also hands Home
  * those weeks' classes and who's in. The sidebar badge and the Home page run the same queries, so Firestore shares the
  * listeners.
  */
@@ -91,8 +92,10 @@ export function useAttention(enabled = true) {
   const { gaps: payGaps } = usePayGaps(enabled)
 
   return useMemo(() => {
+    // An automatic clock-out at the end of the last class is the academy's rule (docs/DECISIONS.md §23, K3); one at the
+    // set time (a day without classes, or a shift started after them) may need the real time.
     const autoClockOuts = shifts.data
-      .filter((s) => s.autoClosed && !s.autoCorrected && s.status === 'closed')
+      .filter((s) => s.autoClosed && !s.autoCorrected && s.status === 'closed' && s.autoClosedBy !== 'last_class')
       .sort((a, b) => b.clockInAt.toMillis() - a.clockInAt.toMillis())
     const pendingRequests = requests.data.slice().sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
 

@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { isReservedEmail } from '@shared/brand'
 import { emailKey } from '@shared/paths'
 import { ROLES, ROLE_LABELS, type Role, isAdminRole, isStaffRole } from '@shared/roles'
-import { coachesNeedAdminRate } from '@shared/pay/rates'
 import { todayKey } from '@shared/time'
 import type { Member, SignupRequest, Staff, StaffRole, Student, WithId } from '@shared/types'
 import { gradeLabel } from '@shared/people'
@@ -13,7 +12,7 @@ import { MultiOptionPicker, OptionPicker } from '@/components/app/OptionPicker'
 import { useConfirm } from '@/components/app/useConfirm'
 import { classesOnlyThem, stopTeachingQuestion } from '@/features/employees/api'
 import { PayRateFields } from '@/features/employees/PayRateFields'
-import { EMPTY_RATES, type RateDraft, readRates } from '@/features/employees/rateDraft'
+import { readRate } from '@/features/employees/rateDraft'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -49,7 +48,7 @@ export interface MemberDialogProps {
 }
 
 export function MemberDialog({ open, onOpenChange, member, request, members, staff, students }: MemberDialogProps) {
-  const { branchId, actor, isOwner, timezone, rules, can } = useBranch()
+  const { branchId, actor, isOwner, timezone, can } = useBranch()
   const { confirm, dialog: confirmDialog } = useConfirm()
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -59,7 +58,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
   const [staffId, setStaffId] = useState<string>('new')
   const [studentId, setStudentId] = useState<string>('new')
   const [studentIds, setStudentIds] = useState<string[]>([])
-  const [rates, setRates] = useState<RateDraft>(EMPTY_RATES)
+  const [rate, setRate] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,7 +67,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
   useEffect(() => {
     if (!open) return
     setError(null)
-    setRates(EMPTY_RATES)
+    setRate('')
     if (member) {
       const [f = '', ...rest] = (member.displayName || '').split(' ')
       const linkedStaff = member.staffId ? staffById.get(member.staffId) : null
@@ -140,7 +139,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     if (!role) return setError('Choose a role.')
     if (role === 'parent' && studentIds.length === 0) return setError('Choose the parent’s child or children.')
     const today = todayKey(timezone)
-    const read = newStaff && can('payRates') ? readRates(role as StaffRole, rates, coachesNeedAdminRate(rules, today)) : { rates: null }
+    const read = newStaff && can('payRates') ? readRate(role as StaffRole, rate) : { rate: null }
     if ('error' in read) return setError(read.error)
     setError(null)
     setBusy(true)
@@ -169,7 +168,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
             studentId: role === 'student' ? studentId : null,
             studentIds,
           },
-          pay: newStaff && read.rates ? { rates: read.rates, effectiveFrom: today } : null,
+          pay: newStaff && read.rate !== null ? { rate: read.rate, effectiveFrom: today } : null,
         },
       })
       const emailed = active && !isReservedEmail(key)
@@ -261,7 +260,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
                   </FieldDescription>
                 </Field>
               ) : null}
-              {newStaff ? <PayRateFields role={role as StaffRole} value={rates} onChange={setRates} idPrefix="m-rate" /> : null}
+              {newStaff ? <PayRateFields role={role as StaffRole} value={rate} onChange={setRate} idPrefix="m" /> : null}
               {role === 'student' ? (
                 <Field>
                   <FieldLabel>Student record</FieldLabel>

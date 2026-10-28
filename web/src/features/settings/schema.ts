@@ -1,5 +1,5 @@
 import { ROLE_LABELS } from '@shared/roles'
-import type { BusinessRules } from '@shared/settings/businessRules'
+import type { BranchSettings } from '@shared/settings/defaults'
 import { WEEKDAYS, WEEKDAY_LABELS } from '@shared/time'
 
 /** Declarative description of the academy's settings (the Settings page renders these). */
@@ -8,8 +8,8 @@ interface Base {
   path: string
   label: string
   help?: string
-  /** Shown only when the academy's business rules need it (e.g. teaching statuses for a non-hourly pay model). */
-  visible?: (rules: BusinessRules) => boolean
+  /** Shown only when the other settings need it (as they are being edited), e.g. the clock-out time when it's on. */
+  visible?: (settings: BranchSettings) => boolean
 }
 
 export type FieldDef =
@@ -34,9 +34,6 @@ export interface SettingsSection {
 const SESSION_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'present', label: 'Here (attended)' },
-  { value: 'no_show', label: 'No-show' },
-  { value: 'canceled', label: 'Canceled' },
 ]
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
@@ -81,7 +78,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       },
       { kind: 'boolean', path: 'schedule.autoConfirm.enabled', label: 'Confirm pending classes automatically' },
       { kind: 'number', path: 'schedule.autoConfirm.hoursBefore', label: 'Confirm this long before the start', min: 1, max: 168, suffix: 'hours' },
-      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated classes', options: SESSION_STATUS_OPTIONS.slice(0, 2) },
+      { kind: 'select', path: 'schedule.pasteStatus', label: 'Status of pasted and duplicated classes', options: SESSION_STATUS_OPTIONS },
       { kind: 'list', path: 'schedule.events.titlePresets', label: 'Event title presets', help: 'One per line. Offered when adding an event.' },
       { kind: 'boolean', path: 'schedule.alerts.firstSession', label: 'Bell: student’s first class' },
       { kind: 'number', path: 'trash.retentionDays', label: 'Keep deleted classes in Trash for', min: 1, max: 365, suffix: 'days' },
@@ -133,16 +130,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: 'payroll',
     title: 'Payroll & time clock',
-    description: 'Pay periods, the automatic clock-out and the kiosk. The pay model is an academy rule (Academy).',
+    description: 'Pay periods, when paid time starts and ends, the automatic clock-out and the kiosk. Everyone is paid their hourly rate (Employees → Pay Rates).',
     fields: [
-      {
-        kind: 'multiselect',
-        path: 'payroll.teachingSessionStatuses',
-        label: 'Classes that count as teaching time',
-        options: SESSION_STATUS_OPTIONS.slice(0, 4),
-        help: 'Which classes are paid under Classes taught, and count as teaching time under Teaching + Admin and Teaching only. Not used by Hourly.',
-        visible: (r) => r.payModels.some((p) => p.model !== 'hourly'),
-      },
       {
         kind: 'select',
         path: 'payroll.payPeriod.type',
@@ -155,8 +144,31 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         ],
       },
       { kind: 'date', path: 'payroll.payPeriod.anchorDate', label: 'A pay period starts on', help: 'For weekly and two-week periods.' },
-      { kind: 'boolean', path: 'timeClock.autoClockOut.enabled', label: 'Clock everyone out automatically' },
-      { kind: 'hhmm', path: 'timeClock.autoClockOut.localTime', label: 'Automatic clock-out time' },
+      {
+        kind: 'number',
+        path: 'timeClock.arrivalMinutes',
+        label: 'Paid time starts this long before a coach’s first class',
+        min: 0,
+        max: 180,
+        step: 5,
+        suffix: 'min',
+        help: 'Earlier clock-ins don’t count: with 30 minutes, a coach who clocks in at 5:20 for a 6:00 class is paid from 5:30. A later clock-in counts from the clock-in.',
+      },
+      { kind: 'boolean', path: 'timeClock.autoClockOut.enabled', label: 'Clock everyone out automatically', help: 'Closes the shift of anyone who forgets to clock out.' },
+      {
+        kind: 'boolean',
+        path: 'timeClock.autoClockOut.atLastClass',
+        label: 'Clock out automatically at the end of the coach’s last class',
+        help: 'Their paid time ends there too, even if they clock out later. Off: everyone is clocked out at the time below and paid until they clock out.',
+        visible: (s) => s.timeClock.autoClockOut.enabled,
+      },
+      {
+        kind: 'hhmm',
+        path: 'timeClock.autoClockOut.localTime',
+        label: 'On days without classes, clock out at',
+        help: 'Also every day when the end of the last class is off. 12:00 AM is the midnight after the clock-in.',
+        visible: (s) => s.timeClock.autoClockOut.enabled,
+      },
       { kind: 'number', path: 'timeClock.kiosk.pinLength', label: 'Kiosk PIN length', min: 4, max: 8 },
       { kind: 'number', path: 'timeEntries.stepMinutes', label: 'Time entry step', min: 1, max: 30, suffix: 'min' },
     ],
