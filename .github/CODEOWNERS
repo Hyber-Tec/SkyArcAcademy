@@ -22,7 +22,12 @@
 package.json                @goochoi913
 package-lock.json           @goochoi913
 
-# CI and deploys, the repository check, the deploy runbook and this file
+# CI and deploys (what each deploy deploys, and how), the repository check, the deploy runbook and this file
 /.github/                   @goochoi913
 /scripts/check-repo.sh      @goochoi913
+/scripts/ci-checks.sh       @goochoi913
+/scripts/deploy.sh          @goochoi913
+/scripts/deploy-plan.ts     @goochoi913
+/scripts/lib/deploy-plan.ts @goochoi913
+/scripts/open-callables.sh  @goochoi913
 /docs/DEPLOY.md             @goochoi913

@@ -8,20 +8,55 @@ GitHub deploys `main` after every merge, once CI passes on `main`. Nobody deploy
 
 1. A pull request passes CI (`.github/workflows/ci.yml`: jobs "Typecheck, tests and builds" and "Security rules
    tests") and is merged.
-2. CI runs again on `main`. When both pass, the `deploy` job builds the website with the Firebase web settings from
-   GitHub secrets and runs `scripts/deploy.sh`: `firebase deploy --only hosting,firestore,database,storage --force`,
-   then `--only functions`, then `scripts/open-callables.sh` (see "Cloud Functions").
-3. The new version is live. To roll back Hosting: Firebase console → Hosting → Release history → Roll back. Functions
+2. CI runs again on `main`. While the checks run, the job **Plan the deploy** works out what changed since the last
+   successful deploy (`scripts/deploy-plan.ts`, see "What each deploy deploys") and, when the website changed, builds
+   it for production with the Firebase web settings from GitHub secrets.
+3. When both checks pass, **Deploy main to production** deploys only that, with `scripts/deploy.sh`:
+   `firebase deploy --only` the website and the rules that changed, then the functions whose code changed, then
+   `scripts/open-callables.sh` (see "Cloud Functions"). A merge that changes nothing production runs (the docs, the
+   phone app) deploys nothing, and the deploy job is skipped.
+4. The new version is live. To roll back Hosting: Firebase console → Hosting → Release history → Roll back. Functions
    roll back by reverting the change on `main`.
 
+Runs on `main` go one at a time, in the order of the merges, so a deploy never puts an older `main` over a newer one.
+
 To redeploy `main` without a change: GitHub → Actions → CI → Run workflow on `main`, or
-`gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy`.
+`gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy`. A run started by hand deploys everything (the
+Firebase CLI still skips a function whose code, settings and secrets' versions are unchanged).
+
+## What each deploy deploys
+
+`scripts/deploy-plan.ts` compares `main` with the commit production runs: the last run on `main` whose deploy job
+succeeded, from GitHub's record of CI's runs.
+
+| What changed | What deploys |
+|---|---|
+| `web/`, or the shared code (`shared/src/`, not its tests) | Hosting: the website's production build |
+| `firestore.rules`, `firestore.indexes.json` | Firestore's rules and indexes |
+| `storage.rules` | Storage's rules |
+| `database.rules.json` | The Realtime Database's rules |
+| `functions/src/` or the shared code (not their tests) | The functions whose code changed, and new ones |
+| `functions/package.json`, `package-lock.json` or `tsconfig.json` | Every function |
+| The deploy itself: `.github/workflows/ci.yml`, `firebase.json`, `.firebaserc`, `scripts/deploy.sh`, `scripts/deploy-plan.ts` and its `lib/deploy-plan.ts`, `scripts/open-callables.sh` | Everything |
+| Anything else: docs, the phone app, tests | Nothing |
+
+- **A function's code** is what its module bundles, everything it imports included, as the functions' build bundles
+  it (the functions in `functions/src/index.ts` itself: the entry without its re-exports). The plan bundles each
+  module at both commits and deploys the functions whose bundle differs. So a change to shared code redeploys only the
+  functions that use it, and a change to a comment redeploys none. The setup every function shares stays in
+  `functions/src/app.ts`, which every module imports: a change there redeploys them all. Code that would change a
+  function without its module importing it isn't seen, so don't write any (setup belongs in `app.ts`).
+- **Everything** deploys when the plan can't tell: no earlier deploy found, the last deploy didn't finish (it may
+  have deployed part of its commit), production's commit isn't in `main`'s history, or the functions' code couldn't
+  be compared (then every function). A function removed from the code deploys every function, which deletes it.
+- **Nothing** deploys when production already runs this commit or a newer one (an old run started again).
+- To see what a deploy would do: `npx tsx scripts/deploy-plan.ts --base <production's commit> --head <commit>`.
 
 ## What gets deployed
 
 | Target | From | Notes |
 |---|---|---|
-| Hosting | `web/dist` (built in CI) | The public website's pages are files of their own (`index.html`, `programs.html`, `ko/…`; a news post `/news/…` is `news-post.html`, by a rewrite), with `sitemap.xml` and `robots.txt`. Every other address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
+| Hosting | `web/dist` (built by Plan the deploy) | The public website's pages are files of their own (`index.html`, `programs.html`, `ko/…`; a news post `/news/…` is `news-post.html`, by a rewrite), with `sitemap.xml` and `robots.txt`. Every other address serves the app except `/assets/…`, so a build file that a deploy removed answers "not found" instead of the app's page. A tab opened before a deploy reloads itself when it can't load a page (`web/src/app/staleBuild.ts`). |
 | Firestore rules and indexes | `firestore.rules`, `firestore.indexes.json` | `--force` deletes indexes that aren't in the file: the file is the truth. |
 | Realtime Database rules | `database.rules.json` | Deny-all. Nothing uses the Realtime Database yet. |
 | Storage rules | `storage.rules` | Announcement files and the Drive's files (staff only, read through the rules), and the website's pictures (anyone reads them). See "Storage" below. |
@@ -255,5 +290,5 @@ From an up-to-date `main`, never from a branch:
 git switch main && git pull
 npm ci --prefix web && npm ci --prefix functions
 npm --prefix web run build                           # reads web/.env.local
-bash scripts/deploy.sh                               # with your own login: firebase login, gcloud auth login
+bash scripts/deploy.sh                               # everything; with your own login: firebase login, gcloud auth login
 ```

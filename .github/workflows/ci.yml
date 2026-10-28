@@ -1,5 +1,6 @@
 # Checks every pull request before it can reach main, and main after each merge (two pull requests that pass apart
-# can still break together). Once main passes, it deploys main to production (https://skyarcacademy.web.app).
+# can still break together). Once main passes, it deploys to production (https://skyarcacademy.web.app) what changed
+# since the last deploy: "Plan the deploy" works it out while the checks run (scripts/deploy-plan.ts).
 # The checks need no secrets. The deploy signs in to Google Cloud as github-deploy@skyarcacademy.iam.gserviceaccount.com
 # through Workload Identity Federation (no key file), which Google allows only for main of this repository.
 # See CLAUDE.md and docs/DEPLOY.md. The ruleset on main requires the two check jobs by name.
@@ -9,9 +10,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Run by hand on main, it deploys everything (docs/DEPLOY.md).
   workflow_dispatch:
 
-# A new push to the same pull request cancels the check still running for the previous push; runs on main queue.
+# A new push to the same pull request cancels the check still running for the previous push; runs on main queue, so
+# they deploy in the order they were merged.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -19,6 +22,8 @@ concurrency:
 permissions:
   contents: read
 
+# The installed packages are kept between runs, keyed by their lock files, so a run whose lock files didn't change
+# skips `npm ci`. Build output inside them (TypeScript's and Vite's caches) is left out.
 jobs:
   check:
     name: Typecheck, tests and builds
@@ -33,29 +38,27 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            web/package-lock.json
-            functions/package-lock.json
+
+      - name: Installed packages
+        id: modules
+        uses: actions/cache@v6
+        with:
+          path: |
+            node_modules
+            web/node_modules
+            functions/node_modules
+            !node_modules/.vite
+            !web/node_modules/.tmp
+            !web/node_modules/.vite
+          key: modules-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json', 'web/package-lock.json', 'functions/package-lock.json') }}
 
       - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
         run: npm ci && npm ci --prefix web && npm ci --prefix functions
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build the website
-        run: npm --prefix web run build
-
-      - name: Build the functions
-        run: npm --prefix functions run build
+      # Two lanes side by side: the typecheck, and the unit tests, lint and builds (scripts/ci-checks.sh).
+      - name: Typecheck, unit tests, lint and builds
+        run: bash scripts/ci-checks.sh
 
   rules:
     name: Security rules tests
@@ -67,8 +70,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       # The Firestore emulator needs Java 21 or later.
       - uses: actions/setup-java@v6
@@ -76,13 +77,30 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # The Firebase CLI's version, here and in the keys below, is the one scripts/test-rules.sh and deploy.sh pin.
       - name: Cache the emulator
         uses: actions/cache@v6
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-15.32.1
 
+      - name: The Firebase CLI
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm/_npx
+          key: npx-firebase-tools-15.32.1-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Installed packages
+        id: modules
+        uses: actions/cache@v6
+        with:
+          path: |
+            node_modules
+            !node_modules/.vite
+          key: modules-root-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Firestore rules tests
@@ -94,25 +112,129 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # It checks the phone app and the shared code it compiles, so a change to neither can't break it. A pull
+      # request's checkout is its merge into main (the first parent); a push to main compares with main before it.
+      - name: Did the phone app or the shared code change?
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case $EVENT in
+            pull_request) files=$(git diff --name-only --no-renames HEAD^1 HEAD) || files=all ;;
+            push) files=$(git diff --name-only --no-renames "$BEFORE" HEAD) || files=all ;;
+            *) files=all ;;
+          esac
+          if [ "$files" = all ] || grep -qE '^(mobile/|shared/|\.github/workflows/ci\.yml$)' <<<"$files"; then
+            echo "run=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "Nothing the phone app compiles changed."
+            echo "run=false" >>"$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-node@v7
+        if: steps.changed.outputs.run == 'true'
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
+
+      - name: Installed packages
+        if: steps.changed.outputs.run == 'true'
+        id: modules
+        uses: actions/cache@v6
+        with:
+          path: mobile/node_modules
+          key: modules-mobile-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('mobile/package-lock.json') }}
 
       # The phone app is only typechecked and linted here, so none of its packages' install scripts are needed.
       - name: Install
+        if: steps.changed.outputs.run == 'true' && steps.modules.outputs.cache-hit != 'true'
         run: npm ci --prefix mobile --ignore-scripts
 
       # It compiles shared/ too, so a change there that breaks the phone app is caught here.
       - name: Typecheck and lint
+        if: steps.changed.outputs.run == 'true'
         run: npm --prefix mobile run typecheck && npm --prefix mobile run lint
+
+  # Main only: what changed since the last successful deploy, and the website's production build when it changed,
+  # while the checks run. The deploy then deploys only that.
+  plan:
+    name: Plan the deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      targets: ${{ steps.plan.outputs.targets }}
+      hosting: ${{ steps.plan.outputs.hosting }}
+      functions: ${{ steps.plan.outputs.functions }}
+      deploy: ${{ steps.plan.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Installed packages
+        id: modules
+        uses: actions/cache@v6
+        with:
+          path: |
+            node_modules
+            web/node_modules
+            functions/node_modules
+            !node_modules/.vite
+            !web/node_modules/.tmp
+            !web/node_modules/.vite
+          key: modules-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json', 'web/package-lock.json', 'functions/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci && npm ci --prefix web && npm ci --prefix functions
+
+      - name: What changed since the last deploy
+        id: plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVERYTHING: ${{ github.event_name == 'workflow_dispatch' }}
+        run: npx tsx scripts/deploy-plan.ts
+
+      # The Firebase web settings live in GitHub secrets, never in the repository (CLAUDE.md, "Secrets"). Vite's build
+      # alone: the checks typecheck the website.
+      - name: Build the website for production
+        if: steps.plan.outputs.hosting == 'true'
+        working-directory: web
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: npx --no-install vite build
+
+      - name: Keep the website for the deploy
+        if: steps.plan.outputs.hosting == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: website
+          path: web/dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+          overwrite: true
 
   deploy:
     name: Deploy main to production
-    needs: [check, rules]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [check, rules, plan]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.plan.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -121,30 +243,41 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      DEPLOY_TARGETS: ${{ needs.plan.outputs.targets }}
+      DEPLOY_FUNCTIONS: ${{ needs.plan.outputs.functions }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            web/package-lock.json
-            functions/package-lock.json
 
-      - name: Install
-        run: npm ci --prefix web && npm ci --prefix functions
+      - name: The Firebase CLI
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm/_npx
+          key: npx-firebase-tools-15.32.1-${{ runner.os }}-${{ runner.arch }}
 
-      # The Firebase web settings live in GitHub secrets, never in the repository (CLAUDE.md, "Secrets").
-      - name: Build the website for production
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-        run: npm --prefix web run build
+      # The Firebase CLI loads the functions with their packages to see what to deploy.
+      - name: The functions' packages
+        if: env.DEPLOY_FUNCTIONS != 'none'
+        id: modules
+        uses: actions/cache@v6
+        with:
+          path: functions/node_modules
+          key: modules-functions-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('functions/package-lock.json') }}
+
+      - name: Install the functions' packages
+        if: env.DEPLOY_FUNCTIONS != 'none' && steps.modules.outputs.cache-hit != 'true'
+        run: npm ci --prefix functions
+
+      - name: The website, built while the checks ran
+        if: needs.plan.outputs.hosting == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: website
+          path: web/dist
 
       - name: Sign in to Google Cloud
         uses: google-github-actions/auth@v3
@@ -152,7 +285,9 @@ jobs:
           workload_identity_provider: projects/1025403274020/locations/global/workloadIdentityPools/github/providers/github-actions
           service_account: github-deploy@skyarcacademy.iam.gserviceaccount.com
 
+      # gcloud opens new callable functions (scripts/open-callables.sh).
       - uses: google-github-actions/setup-gcloud@v3
+        if: env.DEPLOY_FUNCTIONS != 'none'
 
-      - name: Deploy Hosting, the security rules and the functions
+      - name: Deploy to production
         run: bash scripts/deploy.sh
