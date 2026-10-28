@@ -667,3 +667,43 @@ first presentation.
     count. Each opens in Settings → Website → Messages, marked.
   - Home's sidebar badge adds them to what needs the admin.
   - A message's notification opens the message itself.
+
+## 23. The second meeting with the manager (2026-10-27), and Goo's picks (2026-10-28)
+
+The manager saw the website, the portal, the kiosk and the phone app, and asked for changes; the academy will start
+using the app once the stores approve it. Every task is in [`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase,
+ticked as its pull request is merged (the full notes, with names and pay, are on Goo's Mac mini only). The phone app is
+the main product: families do everything they need there, without calling or texting the academy.
+
+- **Families cancel and request** (`S1`–`S3`): parents and students cancel up to 24 hours before a class (editable; the
+  same moment the class is confirmed, so one setting), and request a class, a makeup or a reschedule in an open seat;
+  the admin approves or rejects and can still book anything. Families see how many seats are open, never who's in them.
+  A student who doesn't show up still gets a makeup; missing that makeup too loses it (`S5`).
+- **Everyone is notified** of what concerns them (cancellations, changes, requests, decisions, new scores and reports,
+  announcements), with switches per person and push on the phone (`S4`, `P13`, `M3`, `M4`). Goo started the phone's
+  push early on the MacBook Pro (`docs/mobile-push.md`): the server already pushes every notice.
+- **Coaches' availability:** the lock is 7 days (the notice period becomes 7 too); inside it coaches can add time,
+  with an undo, but not remove it; the admin can always change any day (`C1`–`C3`).
+- **Pay: one rate, from the kiosk only** (`K1`–`K6`): no admin rate; paid time starts 30 minutes before the coach's first
+  class (editable), never earlier; clock-out is automatic at the end of the day's last class; no clock-in, no pay. The
+  pay models other than Hourly go, since each needs the second rate or pays from the schedule. A coach's extra hour is
+  added by hand. The final clock-out rule, the arrival minutes and the pay period wait on the academy's owner.
+- **Paper cards are scored by "most of the hole"** (Goo; this answers A15): a hole scores the ring where most of it
+  sits, so a hole mostly in the 9 is a 9 even if it touches the 10's line, and a clean bullseye is a 10. Whole numbers,
+  10 to 1. A card the coach already scored keeps the written score as the official one (`P4`). The reader is checked on
+  the manager's real cards on the Mac mini only; they're never imported or committed (`P2`).
+- **Results have a kind:** Practice, Competition or Evaluation (`P7`–`P9`). Sessions have any number of shots, and an
+  electronic shot reaches 10.9; the inner-ten count breaks ties and shows next to totals. **"Bench"** (a new student's
+  first week or two) is not a position.
+- **Competition sheets from a photo** (`P7`): Google's text reader (Cloud Vision) reads the total and inner tens from the
+  photo on the server, and the admin checks them before saving (Goo, 2026-10-28). It needs the Cloud Vision API switched
+  on in the Firebase project, which Goo approved.
+- **Contracts** (`F4`, `F5`): the office sends a link; the family reads the contract on any phone, types their name and
+  signs with a finger, with no app or account; the signed PDF goes to a Contracts folder in the Drive that only owners
+  and admins see (Goo, 2026-10-28). The text waits for the academy's blank contract.
+- **One post, several places** (`N1`): the announcement editor already writes to coaches, families and the website's
+  News; it says so plainly (Internal, Public or Both).
+- **A simpler Settings page** with a search box (`ST1`), and **a new schedule view** that shows clock-in and clock-out,
+  picked from three clickable options (`V1`).
+- **Later:** Korean, the academy's domain and email (the spam fix), a how-to video for parents, tuition on the website,
+  a merch shop, and an automatic weekly pay adjustment.

@@ -19,7 +19,7 @@ service-account*.json
 /Sample SIUS PDFs/
 /Sample paper target photos/
 /logo/
-/SkyArc_Meeting_Notes.md
+/SkyArc_Meeting*.md
 # Client-internal notes (people's names, contacts, timeline, money) and findings about other HyberTec products: this
 # repository is public, so they stay on the owner's machine (see docs/internal/README.md there).
 /docs/internal/
@@ -33,6 +33,8 @@ service-account*.json
 /*.heic
 /*.png
 /*.zip
+# design demos opened from the project folder (made-up people, but local only)
+/*.html
 
 # editors / OS
 .DS_Store
