@@ -412,7 +412,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
                   <LuTrash2 /> Trash
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => navigate('/admin/settings/schedule')}>
+                <DropdownMenuItem onSelect={() => navigate('/admin/settings/hours')}>
                   <LuClock /> Usual opening hours
                 </DropdownMenuItem>
               </DropdownMenuContent>

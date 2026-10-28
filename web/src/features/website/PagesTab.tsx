@@ -248,7 +248,7 @@ function HoursCard({ content }: { content: WebsiteContent }) {
         <CardDescription>
           The hours the website shows, and the days families pick from when they ask for a trial. This is only what the website says: the schedule’s own opening hours
           stay in{' '}
-          <Link to="/admin/settings/schedule" className="underline underline-offset-2 hover:text-foreground">
+          <Link to="/admin/settings/hours" className="underline underline-offset-2 hover:text-foreground">
             Settings
           </Link>
           .

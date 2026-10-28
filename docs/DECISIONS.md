@@ -729,6 +729,14 @@ the main product: families do everything they need there, without calling or tex
     hole, so the fixed circle reached lines the real hole doesn't, where coaches saw the lower ring). "Most of the hole"
     (`fix/paper-scoring`) is dropped. Built in #68; the page that led to it, without the academy's names or photos:
     `docs/proposals/scoring-rule-2026-10-28.html`.
+  - **Settings is option 1, "Settings home"** (of three in `settings-options.html`, local; #49's page wasn't simple
+    enough): Settings opens on big tiles in three groups (Day to day, People, The academy), each saying in a sentence
+    what it's set to now, and a search that finds any setting by its words. Each tile opens a short page at its own
+    address (`/admin/settings/hours`, `…/classes`, `…/pay`…) with plain labels, a worked example under the settings it
+    helps (pay above all: "in at 3:21 → paid from 3:30"), the fine-tuning under "More options", and a bar at the bottom
+    while something isn't saved (Save, Discard; leaving asks first). Only overrides are stored, as before; seats per
+    class stay the owners' (admins see them). The addresses from before (`/admin/settings/payroll`,
+    `…/schedule?find=…`) open the page their setting is on now.
 - **Built on 2026-10-28** (Phase 1 on the Mac mini, merged the same day; the phone's side is Phase 3 on the MacBook Pro):
   - **Availability and pay (#44):** inside the lock the rules let a coach only add time, and undo an add for 15 seconds
     (the website offers it for 10). One hourly rate, written to both stored rate fields until the phone's update; Hourly
