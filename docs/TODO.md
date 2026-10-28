@@ -26,21 +26,21 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    together; both get the demo academy for the demo logins, the schedule by Day or Week with its events (#41), and the
    marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
+6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
+   each is merged. Yours there: pick a schedule view (`V1`), and tell Claude Code when the manager's files arrive
+   (Section 7: the SIUS folder, past schedules, the latest sheet, the blank contract, nicknames, the academy owner's
+   email). No rush for the manager.
+7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does"), while the
+   MacBook Pro builds the phone's side.
 
 ## Product questions waiting for the owner
 
 - **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0. Owners in both academies could
   also get the website's Demo data switch on the phone, if wanted.
-- Families and the academy's announcements: built to try (`docs/DECISIONS.md` §16): keep it, change it, or remove it?
-  Should families also be notified (email, or the phone app's push once it's on)?
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
   recorded: languages, push, the stores; the public website is live since 2026-10-20, `docs/DECISIONS.md` §18):
-  - **Families cancel a class themselves**, with the academy's notice rule (24 hours, preferably: §20), and the office
-    is told (an inbox for owners and admins on the website, an email, or both). Today a class's sheet says to contact
-    the academy.
-  - **Families book a makeup or extra practice in an open seat** (§7: families book classes for their children; the
-    manager, 2026-10-24: students who come for extra practice should "be able to book whenever extra space opens
-    up"). Not built.
+  - **Families cancel, and request a class or a makeup in an open seat:** the second meeting's `S1`–`S3`
+    (`docs/MEETING2_FEEDBACK.md`).
   - **A student's class that repeats every week.** Today the office copies whole weeks (Duplicate week).
   - **Coaches' notes on a class** (a session log, "if they want"). Today only the office writes a class's note.
   - **The kiosk as a registered device** with a setup PIN (§6 Q9); until then it opens for a signed-in admin.
@@ -67,7 +67,6 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   break (the schedule's coach column was narrowed on 2026-10-17).
 - **Sign in with Apple:** only if Apple insists at review (guideline 4.8). The quicker fallback is email and password
   only in the iPhone app (`docs/publishing/apple/rules.md`, "Sign in with Apple").
-- **Push notifications in the phone app**, with Apple's rules for them (guideline 4.5.4) and the App Privacy answer.
 - **SIUS PDFs from the phone**, if coaches get them there: the phone can pick files already, but reading a SIUS result
   is the website's (a server-side reader would do it).
 - **Korean and other languages:** one pass once everything works (`docs/DECISIONS.md` §6, Q14). The public website
