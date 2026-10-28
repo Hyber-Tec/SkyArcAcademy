@@ -1,23 +1,26 @@
 import { query, where } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightClose, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
 import { MAKEUP_LOOKBACK_DAYS, makeupsOwed } from '@shared/schedule/classes'
+import type { ClassRequest } from '@shared/schedule/requests'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, addDays, formatDateKey, formatMinutesShort, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
-import type { Availability, Session, Student, WithId } from '@shared/types'
+import type { Availability, ClockShift, Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useStaffList, useStudentList } from '@/features/data/hooks'
+import { usePendingRequests } from '@/features/requests/hooks'
 import { useShifts } from '@/features/timeclock/api'
 import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { branchCol, useQuery } from '@/lib/firestore'
+import { cn } from '@/lib/utils'
 import { RequestsButton } from '@/features/requests/OfficeRequests'
 import { AddClassDialog } from './AddClassDialog'
 import { AddSeatDialog } from './AddSeatDialog'
@@ -32,6 +35,7 @@ import { EventDialog, type EventDialogState } from './dialogs/EventDialog'
 import { TrashDialog } from './dialogs/TrashDialog'
 import { type ClassViewMode, SchedulePanel, ViewSwitch } from './SchedulePanel'
 import { coachColor } from './seatParts'
+import { TIMELINE_MIN_WIDTH, TimelineDay, TimelineWeek } from './Timeline'
 import { useClassData } from './useClassData'
 import { useScheduleRoute } from './useScheduleRoute'
 import { WeekGrid } from './WeekGrid'
@@ -91,7 +95,19 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   // teach: their record says so once the office has saved it).
   const isCoach = useCallback((id: string) => (admin ? staffById.get(id)?.role === 'coach' && staffById.get(id)?.status === 'active' : true), [admin, staffById])
   const data = useClassData(week[0], week[6], { isCoach, keepPrevious: true })
-  const { data: shifts } = useShifts(today, today, null, admin)
+  // The week's clock-ins (the office only): the timeline draws them behind each person's row, as clocked.
+  const { data: shifts } = useShifts(week[0], week[6], null, admin, { keepPrevious: true })
+  const shiftsByDate = useMemo(() => {
+    const m = new Map<DateKey, WithId<ClockShift>[]>()
+    for (const s of shifts) m.set(s.dateKey, [...(m.get(s.dateKey) ?? []), s])
+    return m
+  }, [shifts])
+  const pending = usePendingRequests(admin)
+  const requestsByClass = useMemo(() => {
+    const m = new Map<string, WithId<ClassRequest>[]>()
+    for (const r of pending.data) m.set(r.classId, [...(m.get(r.classId) ?? []), r])
+    return m
+  }, [pending.data])
 
   // ---------------------------------------------------------------- dialogs
   const [classId, setClassId] = useState<string | null>(() => params.get('class'))
@@ -155,7 +171,19 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     student: (id) => studentById.get(id),
     staffName: (id, fallback) => staffById.get(id)?.name ?? fallback ?? (admin ? 'Former staff' : 'A coach'),
     staffColor: (id) => coachColor(id, staffById.get(id)?.color),
-    clockedIn: (id) => shifts.find((s) => s.staffId === id && s.status === 'open')?.inMin ?? null,
+    clockedIn: (id) => shifts.find((s) => s.staffId === id && s.status === 'open' && s.dateKey === today)?.inMin ?? null,
+    shiftsOn: (d) => shiftsByDate.get(d) ?? [],
+    teaches: isCoach,
+    requestsFor: (id) => requestsByClass.get(id) ?? [],
+    openRequest: (id) =>
+      setParams(
+        (p) => {
+          const next = new URLSearchParams(p)
+          next.set('request', id)
+          return next
+        },
+        { replace: true },
+      ),
     canEdit: (d) => admin && d >= today,
     openClass: setClassId,
     openDay: (d) => route.go({ view: 'day', date: d }),
@@ -228,10 +256,13 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
 
   // -------------------------------------------------------------- panel
   const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
+  const [contentRef, contentWidth] = useElementWidth<HTMLDivElement>()
   // Before the first measure, a guess from the window (the sidebar takes about 300 px), so the panel doesn't flash.
   const docked = (areaWidth || window.innerWidth - 300) >= DOCK_FROM
   const [shown, setShownState] = useState<boolean | null>(() => readPanel())
   const panelOpen = !isMobile && (shown ?? docked)
+  // The timeline (the owner's pick, 2026-10-28) where there's room for it; on a phone, the list as before.
+  const wide = !isMobile && (contentWidth || window.innerWidth - (panelOpen ? 620 : 320)) >= TIMELINE_MIN_WIDTH
   const setShown = useCallback((open: boolean) => {
     setShownState(open)
     try {
@@ -291,7 +322,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
       onNext={() => step(1)}
       onToday={goToday}
       onClose={() => (inSheet ? setSheetOpen(false) : setShown(false))}
-      className={inSheet ? 'rounded-none border-0 shadow-none' : 'max-h-[calc(100svh-7rem)]'}
+      timeline={wide && !inSheet}
+      className={inSheet ? 'rounded-none border-0 shadow-none' : wide ? 'max-h-full' : 'max-h-[calc(100svh-7rem)]'}
     />
   )
 
@@ -329,9 +361,18 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
               <ViewSwitch view={view} onView={onView} compact />
             </>
           ) : null}
-          {!isMobile && !panelOpen ? (
-            <Button variant="outline" size="icon-sm" aria-label="Open the calendar panel" title="Open the calendar panel (Esc)" onClick={() => setShown(true)}>
-              <LuPanelRightOpen />
+          {!isMobile ? (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-pressed={panelOpen}
+              aria-label={panelOpen ? 'Hide the panel' : 'Show the panel'}
+              title={`${panelOpen ? 'Hide' : 'Show'} the calendar panel (Esc)`}
+              onClick={() => setShown(!panelOpen)}
+              data-testid="panel-toggle"
+            >
+              {panelOpen ? <LuPanelRightClose /> : <LuPanelRightOpen />}
+              <span className="hidden lg:inline">{panelOpen ? 'Hide panel' : 'Show panel'}</span>
             </Button>
           ) : null}
           {admin ? <RequestsButton /> : null}
@@ -378,11 +419,27 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             </DropdownMenu>
           ) : null}
         </div>
-        <div ref={areaRef} className="relative flex min-h-0 flex-1 items-start gap-5 overflow-auto px-3 pt-4 pb-16 sm:px-5" data-testid="schedule-area">
-          <div className="min-w-0 flex-1">{view === 'week' ? <WeekGrid days={week} /> : <DayList dateKey={date} />}</div>
+        <div ref={areaRef} className={cn('relative flex min-h-0 flex-1 items-start gap-5 px-3 pt-4 sm:px-5', wide ? 'overflow-hidden pb-4' : 'overflow-auto pb-16')} data-testid="schedule-area">
+          <div
+            ref={contentRef}
+            data-timeline-scroller={wide ? '' : undefined}
+            className={cn('min-w-0 flex-1', wide && 'h-full overflow-auto overscroll-contain', wide && view === 'day' && 'rounded-xl border bg-card shadow-xs')}
+          >
+            {wide ? (
+              view === 'week' ? (
+                <TimelineWeek days={week} width={contentWidth} />
+              ) : (
+                <TimelineDay dateKey={date} width={contentWidth} />
+              )
+            ) : view === 'week' ? (
+              <WeekGrid days={week} />
+            ) : (
+              <DayList dateKey={date} />
+            )}
+          </div>
           {panelOpen ? (
             docked ? (
-              <div className="sticky top-0 w-[280px] shrink-0">{panel(false)}</div>
+              <div className={cn('w-[280px] shrink-0', wide ? 'h-full' : 'sticky top-0')}>{panel(false)}</div>
             ) : (
               <div className="absolute top-4 right-4 z-30 w-[min(300px,calc(100%-2rem))]">{panel(false)}</div>
             )

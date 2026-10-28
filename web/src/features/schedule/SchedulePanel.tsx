@@ -27,6 +27,8 @@ export function SchedulePanel(p: {
   onNext: () => void
   onToday: () => void
   onClose: () => void
+  /** The timeline is showing: the legend says what its background means too. */
+  timeline?: boolean
   className?: string
 }) {
   const b = useBoard()
@@ -87,7 +89,7 @@ export function SchedulePanel(p: {
         />
       </div>
       {p.view === 'day' ? <WhosIn date={p.date} /> : <CoachesThisWeek days={week} />}
-      <Legend />
+      <Legend timeline={p.timeline} />
     </aside>
   )
 }
@@ -235,12 +237,41 @@ function CoachRow({ staffId, name, clocked, sub, right, onClick }: { staffId: st
   )
 }
 
-/** What the colours and marks mean. */
-function Legend() {
+/** What the colours and marks mean (and, on the timeline, what's behind each person's row). */
+function Legend({ timeline }: { timeline?: boolean }) {
   const b = useBoard()
   return (
     <Section title="Legend">
       <div className="space-y-2.5 px-2 pb-1 text-xs text-muted-foreground">
+        {timeline ? (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-5 shrink-0 rounded-[4px] bg-background ring-1 ring-border" /> In (their hours)
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="tl-off h-3 w-5 shrink-0 rounded-[4px] ring-1 ring-border" /> Not in
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="tl-clock relative h-3 w-5 shrink-0">
+                <span className="tl-clock-end absolute inset-y-0 -right-px w-[3px]" />
+              </span>
+              Clocked in
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="tl-clock relative h-3 w-5 shrink-0">
+                <span className="tl-clock-live absolute inset-y-0 -right-px w-[3px]" />
+              </span>
+              Still in
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="tl-closed h-3 w-5 shrink-0 rounded-[4px]" /> Closed
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="ml-2 h-3.5 w-0.5 shrink-0 rounded-full bg-brand-solid" />
+              <span className="ml-2">Now</span>
+            </span>
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {b.levels.map((l) => (
             <span key={l} className="inline-flex min-w-0 items-center gap-1.5">

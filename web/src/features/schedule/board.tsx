@@ -1,7 +1,8 @@
 import { type DragEvent, type HTMLAttributes, createContext, use } from 'react'
+import type { ClassRequest } from '@shared/schedule/requests'
 import type { SessionStatus } from '@shared/settings/defaults'
 import type { DateKey } from '@shared/time'
-import type { AcademyClass, Availability, Session, Student, WithId } from '@shared/types'
+import type { AcademyClass, Availability, ClockShift, Session, Student, WithId } from '@shared/types'
 import type { ClassView, EventDoc } from './useClassData'
 
 /** A seat being dragged to another class. */
@@ -33,6 +34,14 @@ export interface Board {
   staffColor: (staffId: string) => string
   /** Clocked in now (the kiosk), for today's who's in. */
   clockedIn: (staffId: string) => number | null
+  /** The kiosk's shifts that day, as clocked (the office only: the timeline draws them behind each person's row). */
+  shiftsOn: (d: DateKey) => WithId<ClockShift>[]
+  /** Teaches: a coach (the manager and the owner can be in without teaching). */
+  teaches: (staffId: string) => boolean
+  /** Families' requests for a class still waiting for the office (the office only). */
+  requestsFor: (classId: string) => WithId<ClassRequest>[]
+  /** Opens a request to approve or decline. */
+  openRequest: (requestId: string) => void
   /** The office can change this day: not a coach, and not a past day. */
   canEdit: (d: DateKey) => boolean
 

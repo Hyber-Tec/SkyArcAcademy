@@ -75,4 +75,36 @@
   .hatch-off {
     background-image: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in oklch, var(--foreground) 7%, transparent) 5px 6px);
   }
+  /* The timeline, as HyberCRM draws it: time someone isn't in (a faint hatch), time the academy is closed (a stronger
+     one), the row of classes nobody is in for, and the clocked-in stretch (green, its end dashed while still in). */
+  .tl-off {
+    background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+    background-image: repeating-linear-gradient(135deg, color-mix(in oklch, var(--foreground) 5%, transparent) 0 1px, transparent 1px 7px);
+  }
+  .tl-closed {
+    background-color: color-mix(in oklch, var(--muted) 90%, transparent);
+    background-image: repeating-linear-gradient(135deg, color-mix(in oklch, var(--foreground) 11%, transparent) 0 2px, transparent 2px 8px);
+  }
+  .tl-none {
+    background-color: color-mix(in oklch, var(--brand) 3%, transparent);
+    background-image: repeating-linear-gradient(135deg, color-mix(in oklch, var(--brand) 7%, transparent) 0 1px, transparent 1px 7px);
+  }
+  .tl-clock {
+    background-color: color-mix(in oklch, var(--tl-clock) 16%, transparent);
+    border-left: 3px solid var(--tl-clock);
+  }
+  .tl-clock-end {
+    background-color: var(--tl-clock);
+  }
+  .tl-clock-live {
+    background-image: repeating-linear-gradient(to bottom, var(--tl-clock) 0 6px, transparent 6px 10px);
+  }
+}
+
+/* The timeline's clocked-in green (HyberCRM's). */
+:root {
+  --tl-clock: #88d5a4;
+}
+.dark {
+  --tl-clock: #2f9a5e;
 }

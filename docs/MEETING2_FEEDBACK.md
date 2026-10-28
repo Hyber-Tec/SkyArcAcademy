@@ -159,8 +159,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - One standalone HTML file Goo opens in a browser and clicks through (switch options, click a class, a student, a
     coach): `schedule-options.html` in the project folder, **never committed**.
   - **Goo picks one**, then the chosen view is built in the web portal (`V2`).
-- [ ] **V2. Build the chosen schedule view** in the web portal. It replaces or sits next to the current one, as Goo
-  decides. The phone version comes in Phase 3 (`M5`).
+- ✅ **V2. Build the chosen schedule view** in the web portal. It replaces or sits next to the current one, as Goo
+  decides. The phone version comes in Phase 3 (`M5`). (#67)
   - *Plan:* **Goo's pick (2026-10-28): B, one block per class, on the website**, with these changes:
     - **Students first:** each student gets a much bigger card (name, level colour, rifle, status) with a ⋯ menu for
       their actions. "The main thing is the students," not the coaches.
@@ -169,6 +169,10 @@ To start a phase, paste this into Claude Code on the right computer:
     - **Any number of coaches:** usually two or three are in at once, but one to four (or more) must lay out well.
     - **On phones:** the website keeps today's schedule at narrow widths, and the phone app keeps its Schedule tab
       (`M5`).
+  - *Done (#67):* the website's Day and Week are the timeline wherever there's room: a row per person in, their
+    hours and clock-in behind it; each class one block across its coaches' rows (in parts when they can't sit
+    together); its students as big cards with ⋯. Every action of the old schedule is still there. Phones and narrow
+    windows keep today's schedule.
 
 #### ST: Settings
 - ✅ **ST1. A much simpler Settings page.** (#49)

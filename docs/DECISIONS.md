@@ -744,6 +744,13 @@ the main product: families do everything they need there, without calling or tex
     competitions apart and compare positions both periods shot; students' other names match SIUS reports and search.
   - **Settings (#49):** regrouped in plain words, the most used first, with a search. **Parents (#50):** a student's
     Family card shows who can sign in and gives a parent access in one click; a parent's name is optional.
+  - **The schedule's timeline (V2, #67):** where the page has room, Day and Week show a row for each person in:
+    the coaches, a "No coach in" row when a class has nobody, then owners and admins (who don't teach). Behind each
+    row are their hours, the time they're not in, and their clock-in to clock-out as clocked (still in: to now).
+    Each class is one block across its coaches' rows, ordered so they sit together; a class whose coaches can't
+    shows in parts. Its students are cards with the marks and ⋯, then families' requests and open seats. The rows
+    grow to fit; the Week stacks the days at one scale. The panel's open or closed is kept per browser. Phones and
+    narrow windows keep the sheets' layout (§21).
 - **Waiting:**
   - **The paper scoring rule (P1)** waits for the manager (2026-10-30). On his 36 hand-scored cards, strict "most of
     the hole" scores 6.4 points under his coaches on average, and the app's rule (touching counts) 2.6 over: his coaches
@@ -751,7 +758,6 @@ the main product: families do everything they need there, without calling or tex
     own bulls); the app's rule stays meanwhile, and the strict rule waits on a local branch (`fix/paper-scoring`).
     The competition sheets (2026-10-28, `scoring-proposal.html`, local) show that matches give the higher ring when
     the hole touches the line, the app's rule; the recommendation is to keep it, and the manager decides.
-  - **The schedule view (V2):** Goo picked B of `schedule-timeline-options.html` on 2026-10-28 (§23, "Goo's picks").
   - **Coaches' usual days after November 30 (C4):** the import set them through November 30. Done 2026-10-28 with
     Goo's OK: each person's week as production had it (November's standing week: Monday to Thursday and Sunday, as
     each one's days) carried on from December 1 through February 28, 2027 (191 days), leaving any day already set
