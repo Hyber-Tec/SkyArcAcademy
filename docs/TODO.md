@@ -27,11 +27,16 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
-   each is merged. Yours there: pick a schedule view (`V1`), and tell Claude Code when the manager's files arrive
-   (Section 7: the SIUS folder, past schedules, the latest sheet, the blank contract, nicknames, the academy owner's
-   email). No rush for the manager.
-7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does"), while the
-   MacBook Pro builds the phone's side.
+   each is merged. Phase 1 is merged except contracts (`F4`–`F6`); Phase 3 runs on the MacBook Pro. Yours:
+   - **Pick a schedule view (`V1`):** open `schedule-options.html` from the project folder; then `V2` and the phone's
+     `M5` follow.
+   - **Friday with the manager:** the paper scoring rule (`P1`) with `scoring-examples.html` (his own bulls, local).
+   - **The manager's files**, when he sends them (Section 7): the SIUS folder, past schedules, the latest sheet, the
+     blank contract, nicknames, the academy owner's email. No rush.
+   - **Before launch:** coaches' usual days after November 30 (`C4`): ask Claude Code to carry them on, or the office
+     uses Repeat weekly.
+7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
+   a test push to your iPhone from the MacBook Pro when you say.
 
 ## Product questions waiting for the owner
 

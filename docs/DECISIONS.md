@@ -707,3 +707,31 @@ the main product: families do everything they need there, without calling or tex
   picked from three clickable options (`V1`).
 - **Later:** Korean, the academy's domain and email (the spam fix), a how-to video for parents, tuition on the website,
   a merch shop, and an automatic weekly pay adjustment.
+- **Built on 2026-10-28** (Phase 1 on the Mac mini, merged the same day; the phone's side is Phase 3 on the MacBook Pro):
+  - **Availability and pay (#44):** inside the lock the rules let a coach only add time, and undo an add for 15 seconds
+    (the website offers it for 10). One hourly rate, written to both stored rate fields until the phone's update; Hourly
+    is the only pay model. A coach is paid from `max(clock-in, first class − arrival minutes)` to the clock-out, or to
+    the end of their last class when the automatic clock-out at the last class is on (the default); their first and
+    last class are the ones they're in for (as on the schedule), else the class not over at their clock-in and the
+    day's last. Owners and admins are paid as clocked. Extra time on a time entry needs a reason.
+  - **Push on the phone (#45, MacBook Pro):** the phone registers for the notices the server already pushed.
+  - **Families cancel and ask (#46):** the cancel deadline is the confirmation setting; requests go through the server
+    (`cancelClass`, `requestClass`, `decideClassRequest`) and are labeled in the sheets' words on approval; families see
+    seats taken (`classSeats`), never names; requests whose class passes unanswered close at night. Notices go to
+    families, students, coaches and the office, each with switches; every role has the website's bell.
+  - **Posts (#47):** one "Where it goes" choice (inside the academy, the website, or both), and Write news in Settings →
+    Website.
+  - **Results (#48):** a kind on every result; a card's written score is official (stored as its total, the app's
+    reading kept); competitions from their results sheet, read with Google's text reader (Cloud Vision, switched on in
+    the project with Goo's OK; on the manager's 8 sheets, 5 read whole and 3 with one or two shots to type); reports list
+    competitions apart and compare positions both periods shot; students' other names match SIUS reports and search.
+  - **Settings (#49):** regrouped in plain words, the most used first, with a search. **Parents (#50):** a student's
+    Family card shows who can sign in and gives a parent access in one click; a parent's name is optional.
+- **Waiting:**
+  - **The paper scoring rule (P1)** waits for the manager (2026-10-30). On his 36 hand-scored cards, strict "most of
+    the hole" scores 6.4 points under his coaches on average, and the app's rule (touching counts) 2.6 over: his coaches
+    give the higher ring until about 90% of the hole is past the line. Goo shows him `scoring-examples.html` (local, his
+    own bulls); the app's rule stays meanwhile, and the strict rule waits on a local branch (`fix/paper-scoring`).
+  - **The schedule view (V2)** waits for Goo's pick of `schedule-options.html` (three options, local).
+  - **Coaches' usual days after November 30 (C4):** the import set them through November 30; before launch, carry them
+    on (with Goo's OK for the production write) or the office uses Repeat weekly.
