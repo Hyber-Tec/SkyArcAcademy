@@ -8,7 +8,7 @@ import { isAdminRole, ROLE_LABELS, ROLE_LABELS_PLURAL, ROLES, type Role } from '
 import { formatInstant } from '@shared/time'
 import type { Member, SignupRequest, Staff, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import { initials } from '@shared/people'
+import { initials, parentLabel } from '@shared/people'
 import { ContextMenuFor, ItemMenuButton, menu } from '@/components/app/ItemMenu'
 import { PageHeader } from '@/components/app/PageHeader'
 import {
@@ -187,7 +187,9 @@ export function AccountPage() {
                           </Avatar>
                           <div className="min-w-0">
                             <div className="truncate font-medium">
-                              {m.displayName || '—'}
+                              {m.role === 'parent' && !m.displayName && m.studentIds?.[0]
+                                ? parentLabel(null, studentById.get(m.studentIds[0])?.firstName || studentById.get(m.studentIds[0])?.name.split(' ')[0] || 'A student')
+                                : m.displayName || '—'}
                             </div>
                             <div className="truncate text-xs text-muted-foreground">{m.email}</div>
                             <InviteStatus member={m} timezone={timezone} className="text-xs md:hidden" />

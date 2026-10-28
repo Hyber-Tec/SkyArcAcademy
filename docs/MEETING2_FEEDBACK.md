@@ -326,13 +326,13 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **Already done:** rich text with pictures, shown on the website, in the portal and in the phone app.
 
 #### F: Families, contracts, Drive
-- [ ] **F1. Two parents per student.** Each parent has their own login and sees the same child. Some kids have one
-  involved parent, some have both.
+- [x] **F1. Two parents per student.** Each parent has their own login and sees the same child. Some kids have one
+  involved parent, some have both. (#50)
   - *Plan:* **Already done:** two parents' logins can share a child. **Small change:** the student's page shows which
     parents can sign in, and gives a parent access in one click.
-- [ ] **F2. Siblings.** One parent account with several kids (for example, two brothers) keeps working with `F1`.
+- [x] **F2. Siblings.** One parent account with several kids (for example, two brothers) keeps working with `F1`. (#50)
   - *Plan:* **Already done.**
-- [ ] **F3. Parent names are optional.** Without a name, show something like "Alex's parent."
+- [x] **F3. Parent names are optional.** Without a name, show something like "Alex's parent." (#50)
   - *Plan:* **Small change:** a parent's name becomes optional ("Alex's parent").
 - [ ] **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
   without printing. A Google form tried before failed (parents couldn't sign), so it must be simple and reliable. The

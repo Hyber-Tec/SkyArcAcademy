@@ -135,7 +135,8 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     const key = emailKey(email)
     if (!member && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return setError('Enter a valid email address.')
     if (!member && members.some((m) => m.id === key)) return setError('This email already has access. Edit it instead.')
-    if (!firstName.trim()) return setError('Enter a first name.')
+    // A parent's name is optional (the manager's F3): the app calls them their child's parent.
+    if (!firstName.trim() && role !== 'parent') return setError('Enter a first name.')
     if (!role) return setError('Choose a role.')
     if (role === 'parent' && studentIds.length === 0) return setError('Choose the parent’s child or children.')
     const today = todayKey(timezone)
@@ -221,7 +222,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor="m-first">First name</FieldLabel>
+                  <FieldLabel htmlFor="m-first">First name{role === 'parent' ? ' (optional)' : ''}</FieldLabel>
                   <Input id="m-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={lockedForNonOwner} />
                 </Field>
                 <Field>

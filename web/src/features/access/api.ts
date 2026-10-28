@@ -1,4 +1,4 @@
-import { type WriteBatch, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { type WriteBatch, arrayUnion, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { newMemberData } from '@shared/branchFactory'
 import { pickStaffColor } from '@shared/colors'
 import { COL, emailKey } from '@shared/paths'
@@ -260,4 +260,57 @@ export async function removeMember(branchId: string, actor: Actor, member: WithI
     summary: `Removed access for ${member.displayName || member.email}`,
   })
   await batch.commit()
+}
+
+/**
+ * Gives a parent access to a child, from the student's Family card (the manager's second meeting, F1: each parent signs
+ * in with their own login and sees the same child): a parent who can sign in already gets the child added; an email
+ * without access becomes a parent's login (the sign-in email goes out as for anyone added). The name is optional
+ * (F3): without one, the app calls them the child's parent.
+ */
+export async function giveParentAccess(opts: {
+  branchId: string
+  actor: Actor
+  email: string
+  name: string
+  student: { id: string; name: string }
+  existing: WithId<Member> | null
+}): Promise<'linked' | 'created'> {
+  const { branchId, actor, student } = opts
+  const key = emailKey(opts.email)
+  if (opts.existing && opts.existing.role !== 'parent') throw new Error(`${key} already signs in as ${ROLE_LABELS[opts.existing.role]}.`)
+  const batch = writeBatch(db)
+  const ref = branchDocRef(branchId, COL.members, key)
+  const who = opts.name.trim() || opts.existing?.displayName || key
+  if (opts.existing) {
+    if ((opts.existing.studentIds ?? []).includes(student.id) && opts.existing.status === 'active') return 'linked'
+    batch.update(ref, { studentIds: arrayUnion(student.id), status: 'active', updatedAt: serverTimestamp(), updatedBy: actor.email })
+    addAudit(batch, branchId, actor, {
+      action: 'member.update',
+      category: 'access',
+      entityType: 'member',
+      entityId: key,
+      summary: `Gave ${who} access to ${student.name}`,
+      studentId: student.id,
+      studentName: student.name,
+    })
+    await batch.commit()
+    return 'linked'
+  }
+  batch.set(ref, {
+    ...newMemberData({ email: key, displayName: opts.name.trim(), role: 'parent', createdBy: actor.email, studentIds: [student.id] }),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  addAudit(batch, branchId, actor, {
+    action: 'member.create',
+    category: 'access',
+    entityType: 'member',
+    entityId: key,
+    summary: `Gave ${who} access as ${ROLE_LABELS.parent}, for ${student.name}`,
+    studentId: student.id,
+    studentName: student.name,
+  })
+  await batch.commit()
+  return 'created'
 }
