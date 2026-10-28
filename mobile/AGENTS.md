@@ -79,8 +79,9 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        PhoneNotifications), home (a coach's to-do and time clock on Home), availability (a coach's
                        days: the clean month calendar's day (CalendarDay), the day sheet (DayEditor: available or not,
                        the time wheels, Repeat), Copy last week, and the writes with the website's checks (api.ts, from
-                       `@shared/availabilityWrites`)), pay (a coach's pay lines from `@shared/pay/lines`, the period
-                       chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
+                       `@shared/availabilityWrites`)), pay (a coach's pay lines from `@shared/pay/lines`: the kiosk's
+                       time at one hourly rate, paid from shortly before the first class, `@shared/pay/paidTime`; the
+                       period chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
                        reports (also the staff's list, a report's staff card and sharing), account (also a coach's
                        details, notification switches and the sign-in methods, SignInSecurity, for every role)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
@@ -162,9 +163,12 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A coach's availability** is the website's: one record a day (`availability/{staffId}_{dateKey}`), holding times or
   "not available" (an answer: the day no longer counts as one to set), removed when the day is cleared, written through
   `@shared/availabilityWrites` with their name and role (`staffName`, `staffRole`: the other coaches see who's in with
-  them) and the audit entry; days inside the lock window are the admin's (the rules refuse them). A save asks first
-  when classes would be left with no coach in (`classesLeftUncovered`), then returns at once (the server confirms in
-  the background) and waits for the question's alert to leave before closing the sheet.
+  them) and the audit entry. Inside the lock window (7 days) a coach only adds time, as on the website: the saved times
+  stay, "Add time" merges the new ones (`addTimeInLock`, from the shared `withAddedTime` and `undoOf`) and offers Undo
+  for `UNDO_SECONDS`, which puts the day back exactly as it was (the rules allow it a little longer); removing time
+  there is an admin's, and past days can't change. A save asks first when classes would be left with no coach in
+  (`classesLeftUncovered`), then returns at once (the server confirms in the background) and waits for the question's
+  alert to leave before closing the sheet.
 - **Circles** (a day, a dot, an avatar with a fill) take `radius.full`: with a radius of exactly half their size,
   Android drew some fills as squares.
 - **The staff's announcements and notifications** are the website's queries: a coach's posts are the two the rules can

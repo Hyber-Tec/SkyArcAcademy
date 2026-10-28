@@ -5,14 +5,15 @@ import { StyleSheet, View } from "react-native";
 import { Badge } from "@/components/Badge";
 import { ListRow } from "@/components/List";
 import { T } from "@/components/Text";
-import { clock, plural, timeRange } from "@/features/schedule/format";
+import { clock, timeRange } from "@/features/schedule/format";
 import { space } from "@/theme";
 import type { OwnPayLine } from "./data";
 
 /**
- * One record of pay, as the website's Payroll lists it: its type (Classes, Teaching or Admin, coloured as there), the
- * time in the academy's zone, the students of a block of classes, the hours at the rate, and what it pays. A time entry
- * still clocked in shows when it began; it's paid once it's clocked out.
+ * One record of pay, as the website's Payroll lists it: Worked (the paid part of a time entry, its times in the
+ * academy's zone, and the clock's own times when they differ: an early clock-in, a clock-out after the last class) or
+ * Extra time an admin added (no time of day: why it was added), then the hours at the rate and what it pays. A time
+ * entry still clocked in shows when it began; it's paid once it's clocked out.
  */
 export function PayLineRow({ line, timezone, hour12, divider = false, testID }: { line: OwnPayLine; timezone: string; hour12: boolean; divider?: boolean; testID?: string }) {
   if (line.open) {
@@ -36,21 +37,24 @@ export function PayLineRow({ line, timezone, hour12, divider = false, testID }: 
       />
     );
   }
-  const { segment: s, students } = line;
-  const time = timeRange(minutesOf(s.startMs, timezone), minutesOf(s.endMs, timezone), hour12);
-  const detail = [students !== null ? plural(students, "student") : null, `${s.hours.toFixed(2)} h × ${formatMoney(s.rate)}`].filter(Boolean).join(" · ");
+  const { segment: s } = line;
+  const extra = line.type === "extra";
+  const range = (a: number, b: number) => timeRange(minutesOf(a, timezone), minutesOf(b, timezone), hour12);
+  // Extra time has no time of day: its line says why it was added.
+  const what = extra ? line.note || "Added by an admin" : range(s.startMs, s.endMs);
+  const detail = [line.clocked ? `Clocked ${range(line.clocked.inMs, line.clocked.outMs)}` : null, `${s.hours.toFixed(2)} h × ${formatMoney(s.rate)}`].filter(Boolean).join(" · ");
   return (
     <ListRow
       divider={divider}
       testID={testID}
-      accessibilityLabel={`${PAY_LINE_LABELS[line.type]}, ${time}, ${detail.replace(" × ", " at ")}, ${formatMoney(s.pay)}`}
+      accessibilityLabel={`${PAY_LINE_LABELS[line.type]}, ${what}, ${detail.replace(" × ", " at ")}, ${formatMoney(s.pay)}`}
       title={
         <View style={styles.head}>
-          <Badge tone={line.type === "admin" ? "info" : "success"} style={styles.badge}>
+          <Badge tone={extra ? "info" : "success"} style={styles.badge}>
             {PAY_LINE_LABELS[line.type]}
           </Badge>
           <T variant="label" style={styles.nums} numberOfLines={1}>
-            {time}
+            {what}
           </T>
         </View>
       }
