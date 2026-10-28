@@ -15,6 +15,7 @@ import {
   type LucideIcon,
   Mail,
   Megaphone,
+  Signature,
   Target,
   UserMinus,
   UserPlus,
@@ -47,6 +48,7 @@ const ICONS: Record<string, LucideIcon> = {
   request_approved: CircleCheck,
   request_rejected: CircleX,
   score_added: Target,
+  contract_signed: Signature,
 };
 
 const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? null;

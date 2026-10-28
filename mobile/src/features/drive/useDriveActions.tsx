@@ -1,5 +1,6 @@
 import { cleanFolderName } from "@shared/drive/files";
 import { type DriveItem, type IndexFile, type IndexFolder, folderNameProblem, trashQuestion } from "@shared/drive/model";
+import { isFixedFolder } from "@shared/drive/types";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -97,6 +98,8 @@ export function useDriveActions(index: LiveDriveIndex, here: string | null) {
       actions.push({ label: "Student’s page", onPress: () => router.push({ pathname: "/student/[id]", params: { id: studentId } }) });
       return showActions(f.name, actions, "A student’s folder stays at the top of the Drive, named after the student.");
     }
+    // The Contracts folder: signed contracts land in it by themselves; it can't be renamed, moved or trashed.
+    if (isFixedFolder(f)) return showActions(f.name, actions, "Signed enrollment contracts, for owners and admins. The folder stays at the top of the Drive.");
     actions.push(
       { label: "Rename", onPress: () => setDialog({ kind: "renameFolder", id: f.id }) },
       { label: "Move to…", onPress: () => setDialog({ kind: "move", folderIds: [f.id], fileIds: [] }) },

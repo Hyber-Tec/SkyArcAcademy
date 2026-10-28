@@ -1,8 +1,8 @@
 import { type WriteBatch, collection, deleteDoc, doc, serverTimestamp, updateDoc, writeBatch } from "@react-native-firebase/firestore";
 import { deleteObject, ref } from "@react-native-firebase/storage";
 import { cleanFileName, cleanFolderName } from "@shared/drive/files";
-import { type DriveIndex, planMove } from "@shared/drive/model";
-import { type DriveActor, type DriveFile, type DriveFolder, driveObjectPath } from "@shared/drive/types";
+import { type DriveIndex, type MovedFile, type MovedFolder, planMove } from "@shared/drive/model";
+import { DRIVE_ACCESS_LABELS, type DriveAccess, type DriveActor, type DriveFile, type DriveFolder, driveObjectPath, isFixedFolder } from "@shared/drive/types";
 import { COL, ROOT } from "@shared/paths";
 import type { WithId } from "@shared/types";
 import { type PendingUpload, keepForUpload, uploadAfter } from "@/features/scan/uploads";
@@ -12,10 +12,11 @@ import type { Actor } from "@/state/BranchProvider";
 
 /**
  * The Drive's changes from the phone, as the website makes them (web/src/features/drive/api.ts and upload.ts): the same
- * documents and the same audit entries, in one batch each. Moving something to the Trash flags that one document (what's
- * inside a folder comes back with it on Restore, on the website). Every change is kept on the phone at once and the
- * screens move on (the lists show it straight away); the returned promise settles when the server has it, so a refusal
- * can be said in a message.
+ * documents and the same audit entries, in one batch each. Every folder and file carries who sees it (`access`,
+ * shared/src/drive/types.ts): what's added takes its folder's, and what moves follows where it lands (`planMove`).
+ * Moving something to the Trash flags that one document (what's inside a folder comes back with it on Restore, on the
+ * website). Every change is kept on the phone at once and the screens move on (the lists show it straight away); the
+ * returned promise settles when the server has it, so a refusal can be said in a message.
  */
 
 export const driveActor = (a: Actor): DriveActor => ({ uid: a.uid, email: a.email, name: a.name });
@@ -26,14 +27,40 @@ const fileRef = (branchId: string, id: string) => doc(db, ROOT.branches, branchI
 /** Firestore takes up to 500 writes in a batch; stay well under. */
 const BATCH_MAX = 400;
 
-/** Writes every batch at once (the phone keeps them all straight away); settles when the server has them all. */
-function commitAll(writes: ((b: WriteBatch) => void)[]): Promise<void> {
+/**
+ * A write, and the folder the security rules read to check it: what lands in a folder (or moves, or changes who sees
+ * it) is checked against that folder's access, and the rules read at most 20 documents a batch, each once.
+ */
+type DriveWrite = ((b: WriteBatch) => void) | { write: (b: WriteBatch) => void; reads: string | null };
+
+/** Folders read in one batch: with the member's and the academy's documents, well under the rules' 20. */
+const READS_PER_BATCH = 10;
+
+/** What the rules read for something landing in `folderId` with `access`: the folder, unless it's owners' and admins' anyway. */
+const readsFor = (folderId: string | null, access: DriveAccess) => (access === "staff" ? folderId : null);
+
+/**
+ * Writes in order, in as few batches as the limits allow (the audit entry goes last, with the end of the change), every
+ * batch at once: the phone keeps them all straight away and sends them in order. Settles when the server has them all.
+ */
+function commitAll(writes: DriveWrite[]): Promise<void> {
   const commits: Promise<void>[] = [];
-  for (let i = 0; i < writes.length; i += BATCH_MAX) {
-    const batch = writeBatch(db);
-    for (const w of writes.slice(i, i + BATCH_MAX)) w(batch);
-    commits.push(batch.commit());
+  let batch = writeBatch(db);
+  let count = 0;
+  let reads = new Set<string>();
+  for (const w of writes) {
+    const { write, reads: folder } = typeof w === "function" ? { write: w, reads: null } : w;
+    if (count && (count >= BATCH_MAX || (folder && !reads.has(folder) && reads.size >= READS_PER_BATCH))) {
+      commits.push(batch.commit());
+      batch = writeBatch(db);
+      count = 0;
+      reads = new Set();
+    }
+    write(batch);
+    count += 1;
+    if (folder) reads.add(folder);
   }
+  if (count) commits.push(batch.commit());
   return Promise.all(commits).then(() => undefined);
 }
 
@@ -48,7 +75,7 @@ function folderWrites(branchId: string, index: DriveIndex, folderId: string | nu
   if (!folderId) return [];
   const folder = index.folderOf(folderId);
   if (folder?.virtual) {
-    const data = { name: folder.name, parentId: null, studentId: folder.studentId, createdAt: serverTimestamp(), createdBy: driveActor(actor), ...touched(actor) };
+    const data = { name: folder.name, parentId: null, studentId: folder.studentId, access: "staff" as const, createdAt: serverTimestamp(), createdBy: driveActor(actor), ...touched(actor) };
     return [(b) => b.set(folderRef(branchId, folderId), data)];
   }
   return [(b) => b.update(folderRef(branchId, folderId), touched(actor))];
@@ -57,9 +84,11 @@ function folderWrites(branchId: string, index: DriveIndex, folderId: string | nu
 export function createFolder(branchId: string, actor: Actor, index: DriveIndex, name: string, parentId: string | null): Promise<void> {
   const folder = doc(collection(db, ROOT.branches, branchId, COL.driveFolders));
   const clean = cleanFolderName(name);
+  // A new folder is seen by whoever sees the one it's made in.
+  const access = index.accessIn(parentId);
   return commitAll([
     ...folderWrites(branchId, index, parentId, actor),
-    (b) => b.set(folder, { name: clean, parentId, studentId: null, createdAt: serverTimestamp(), createdBy: driveActor(actor) }),
+    { write: (b) => b.set(folder, { name: clean, parentId, studentId: null, access, createdAt: serverTimestamp(), createdBy: driveActor(actor) }), reads: readsFor(parentId, access) },
     (b) =>
       addAudit(b, branchId, actor, {
         action: "drive.folder_create",
@@ -91,25 +120,50 @@ export function renameFile(branchId: string, actor: Actor, file: WithId<DriveFil
 }
 
 /**
- * Moves folders and files into `targetId` (null: the top). Files keep track of whose folder they're in, and a score's
- * file that leaves its student stops being a score's file (planMove in @shared/drive/model, as on the website).
+ * The writes of folders and files changing place or who sees them, as the website orders them so nothing is ever left
+ * open inside a folder only owners and admins see, even if a later batch failed: making things theirs goes from what's
+ * inside up to the folder, opening them from the folder down (the rules check each against the folder it's in).
+ */
+function placeWrites(branchId: string, index: DriveIndex, folders: MovedFolder[], files: MovedFile[], closing: boolean): DriveWrite[] {
+  const folderAfter = (f: MovedFolder) => (f.patch.parentId !== undefined ? f.patch.parentId : (index.storedFolder(f.id)?.parentId ?? null));
+  const fileAfter = (f: MovedFile) => (f.patch.folderId !== undefined ? f.patch.folderId : (index.storedFile(f.id)?.folderId ?? null));
+  // Only what lands in a folder (or changes who sees it) is read against it, and a change to owners' and admins' isn't.
+  const placed = (patch: { access?: DriveAccess; parentId?: string | null; folderId?: string | null }) => patch.access !== undefined || patch.parentId !== undefined || patch.folderId !== undefined;
+  const folderWritesOut: DriveWrite[] = folders.map((f) => ({ write: (b: WriteBatch) => b.update(folderRef(branchId, f.id), f.patch), reads: placed(f.patch) && f.patch.access !== "admins" ? folderAfter(f) : null }));
+  const fileWritesOut: DriveWrite[] = files.map((f) => ({ write: (b: WriteBatch) => b.update(fileRef(branchId, f.id), f.patch), reads: placed(f.patch) && f.patch.access !== "admins" ? fileAfter(f) : null }));
+  return closing ? [...fileWritesOut, ...folderWritesOut.reverse()] : [...folderWritesOut, ...fileWritesOut];
+}
+
+/**
+ * Moves folders and files into `targetId` (null: the top). Files keep track of whose folder they're in, at any depth,
+ * and a score's file that leaves its student stops being a score's file; who sees them follows where they land: into a
+ * folder only owners and admins see, theirs; out of one, everyone's on staff again (planMove in @shared/drive/model, as
+ * on the website).
  */
 export function moveItems(branchId: string, actor: Actor, index: DriveIndex, folderIds: string[], fileIds: string[], targetId: string | null): Promise<void> {
   const plan = planMove(index, folderIds, fileIds, targetId);
   return commitAll([
     ...folderWrites(branchId, index, targetId, actor),
-    ...plan.folderIds.map((id) => (b: WriteBatch) => b.update(folderRef(branchId, id), { parentId: targetId })),
-    ...plan.files.map((f) => (b: WriteBatch) => b.update(fileRef(branchId, f.id), f.patch)),
-    (b) => addAudit(b, branchId, actor, { action: "drive.move", category: "drive", entityType: "drive", entityId: targetId ?? "top", summary: plan.summary, studentId: plan.student }),
+    ...placeWrites(branchId, index, plan.folders, plan.files, plan.access === "admins"),
+    (b) =>
+      addAudit(b, branchId, actor, {
+        action: "drive.move",
+        category: "drive",
+        entityType: "drive",
+        entityId: targetId ?? "top",
+        summary: plan.access ? `${plan.summary} (now for ${DRIVE_ACCESS_LABELS[plan.access].toLowerCase()})` : plan.summary,
+        studentId: plan.student,
+      }),
   ]);
 }
 
 /** Moves folders and files to the Trash: one flag each; what's inside a folder stays as it is. */
 export function trashItems(branchId: string, actor: Actor, folders: WithId<DriveFolder>[], files: WithId<DriveFile>[]): Promise<void> {
-  if (folders.some((f) => f.studentId)) return Promise.reject(new Error("A student’s folder can’t go to the Trash."));
+  const fixed = folders.find((f) => isFixedFolder(f));
+  if (fixed) return Promise.reject(new Error(fixed.studentId ? "A student’s folder can’t go to the Trash." : "The Contracts folder can’t go to the Trash."));
   const stamp = { trashed: true, trashedAt: serverTimestamp(), trashedBy: driveActor(actor) };
   const leaving = new Set(folders.map((f) => f.id));
-  const writes: ((b: WriteBatch) => void)[] = [];
+  const writes: DriveWrite[] = [];
   for (const id of new Set([...folders.map((f) => f.parentId), ...files.map((f) => f.folderId)])) {
     if (id && !leaving.has(id)) writes.push((b) => b.update(folderRef(branchId, id), touched(actor)));
   }
@@ -155,6 +209,8 @@ export interface PhoneFile {
  */
 export function addFiles(branchId: string, actor: Actor, index: DriveIndex, folderId: string | null, files: PhoneFile[]): { added: string[]; failed: string[]; saved: Promise<void> } {
   const student = index.studentOf(folderId);
+  // Who sees the new files: whoever sees the folder they're added to.
+  const access = index.accessIn(folderId);
   const by = driveActor(actor);
   const kept: { upload: PendingUpload; file: PhoneFile }[] = [];
   const failed: string[] = [];
@@ -173,9 +229,10 @@ export function addFiles(branchId: string, actor: Actor, index: DriveIndex, fold
   const saved = commitAll([
     ...folderWrites(branchId, index, folderId, actor),
     ...kept.map(
-      ({ upload, file }) =>
-        (b: WriteBatch) =>
-          b.set(fileRef(branchId, upload.fileId), { name: file.name, size: file.size, kind: file.kind, mime: file.mime, status: "uploading", folderId, studentId: student, uploadedAt: serverTimestamp(), uploadedBy: by }),
+      ({ upload, file }): DriveWrite => ({
+        write: (b) => b.set(fileRef(branchId, upload.fileId), { name: file.name, size: file.size, kind: file.kind, mime: file.mime, status: "uploading", folderId, studentId: student, access, uploadedAt: serverTimestamp(), uploadedBy: by }),
+        reads: readsFor(folderId, access),
+      }),
     ),
     (b) =>
       addAudit(b, branchId, actor, {

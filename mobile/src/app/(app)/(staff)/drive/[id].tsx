@@ -1,6 +1,7 @@
 import { DRIVE_DEFAULT_SORT, formatBytes, levelItems, sortDriveItems } from "@shared/drive/model";
+import { CONTRACTS_FOLDER_ID, DRIVE_ACCESS_LABELS, accessOf, isFixedFolder } from "@shared/drive/types";
 import { Stack, router, useLocalSearchParams, useNavigation } from "expo-router";
-import { Ellipsis, FolderOpen, FolderX, Plus, UserRound } from "lucide-react-native";
+import { Ellipsis, FolderOpen, FolderX, Lock, Plus, UserRound } from "lucide-react-native";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
@@ -119,8 +120,8 @@ export default function DriveFolderScreen() {
               </T>
               <Crumbs path={index.pathOf(folder.parentId)} onOpen={goTo} />
             </View>
-            {/* A student's folder can't be renamed, moved or trashed: its page is the button below. */}
-            {folder.studentId ? null : (
+            {/* A student's folder (its page is the button below) and the Contracts folder can't be renamed, moved or trashed. */}
+            {isFixedFolder(folder) ? null : (
               <IconButton icon={<Ellipsis size={20} color={colors.mutedForeground} />} accessibilityLabel={`More for ${folder.name}`} onPress={() => actions.folderMenu(folder, true)} size={36} testID="drive-folder-more" />
             )}
           </View>
@@ -128,6 +129,14 @@ export default function DriveFolderScreen() {
             {contents}
             {counts.bytes ? ` · ${formatBytes(counts.bytes)}` : ""}
           </T>
+          {accessOf(folder) === "admins" ? (
+            <View style={styles.admins} testID="drive-folder-admins">
+              <Lock size={13} color={colors.mutedForeground} />
+              <T variant="small" tone="muted">
+                {folder.id === CONTRACTS_FOLDER_ID ? "Owners and admins: signed enrollment contracts land here." : `${DRIVE_ACCESS_LABELS.admins}, with everything in it.`}
+              </T>
+            </View>
+          ) : null}
           {folder.studentId ? (
             <Button
               variant="outline"
@@ -180,4 +189,5 @@ const styles = StyleSheet.create({
   headTop: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   grow: { flex: 1, gap: 2 },
   note: { paddingHorizontal: space.xs },
+  admins: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -space.xs },
 });
