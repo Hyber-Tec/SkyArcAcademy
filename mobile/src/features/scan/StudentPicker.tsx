@@ -7,6 +7,7 @@ import { FlatList, Modal, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { ListRow, ListSection } from "@/components/List";
+import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
 import { type StudentDoc, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
 import { firstName } from "@/features/schedule/classes";
@@ -74,7 +75,7 @@ export function StudentPicker({
 
   return (
     <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.fill, { backgroundColor: colors.grouped }]} edges={["bottom"]}>
+      <SafeAreaView style={[styles.fill, { backgroundColor: colors.grouped }]} edges={SHEET_EDGES}>
         <View style={styles.head}>
           <T variant="heading">{title}</T>
           <Button variant="ghost" size="sm" onPress={onClose} testID="student-picker-close">

@@ -8,6 +8,7 @@ import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from "react-n
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
+import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
 import { ChosenShot, NEWEST, RingNumbers, ShotDot, TargetFace, toPoints, useTargetFont } from "./Target";
@@ -117,7 +118,7 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
   const count = shots.length;
   return (
     <Modal visible={!!shot} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.fill, { backgroundColor: colors.background }]} edges={["bottom"]}>
+      <SafeAreaView style={[styles.fill, { backgroundColor: colors.background }]} edges={SHEET_EDGES}>
         {shot ? (
           <>
             <View style={styles.sheetHead}>
