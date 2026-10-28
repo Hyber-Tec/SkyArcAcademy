@@ -18,6 +18,7 @@ import { ScoreRow } from "@/features/family/ScoreRow";
 import { ClockCard } from "@/features/home/ClockCard";
 import { ToDoCard } from "@/features/home/ToDoCard";
 import { InboxBell } from "@/features/notifications/InboxBell";
+import { RequestsCard } from "@/features/requests/RequestsCard";
 import { ClassRow } from "@/features/schedule/ClassRow";
 import { teaches } from "@/features/schedule/classes";
 import { clock, longDay, plural, shortDay, timeRange } from "@/features/schedule/format";
@@ -36,8 +37,8 @@ const AHEAD_DAYS = 14;
 
 /**
  * The day at a glance (the app opens here): the lockup with the bell (the person's notifications) beside it, a greeting
- * with the date, a coach's time clock, today's numbers, a coach's to-do (availability to set, posts to read), the way to
- * scan targets, today's classes in time order with the coaches in (for a coach, the classes in their hours, with the
+ * with the date, a coach's time clock, today's numbers, a coach's to-do (availability to set, posts to read), the
+ * office's requests from families waiting for an answer, the way to scan targets, today's classes in time order with the coaches in (for a coach, the classes in their hours, with the
  * other coaches in with them, and their hours), and the latest scores. Everything is live and in the academy's time
  * zone.
  */
@@ -104,6 +105,8 @@ export default function TodayScreen() {
       </Card>
 
       {coach ? <ToDoCard /> : null}
+
+      <RequestsCard />
 
       <Pressable
         testID="today-scan"

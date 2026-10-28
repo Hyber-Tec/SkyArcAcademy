@@ -11,9 +11,9 @@ export const unstable_settings = { anchor: "(tabs)" };
 
 /**
  * The family's part of the app (parents and students, who see much the same: a parent their children, a student
- * themself): five tabs, and what opens over them (a class's sheet, a score, its original file, a progress report, the
- * academy's news, a post and its attachments). Every screen loads its record by ID, so links and the back gesture
- * always work.
+ * themself): five tabs, and what opens over them (a class's sheet, asking for a class, a score, its original file, a
+ * progress report, the academy's news, a post and its attachments, and their notifications). Every screen loads its
+ * record by ID, so links and the back gesture always work.
  */
 export default function FamilyLayout() {
   const colors = useColors();
@@ -37,12 +37,14 @@ export default function FamilyLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="session/[id]" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
+        <Stack.Screen name="ask" options={{ ...page, title: "Ask for a class" }} />
         <Stack.Screen name="score/[id]" options={page} />
         <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
         <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
         <Stack.Screen name="news/index" options={{ ...page, title: "News" }} />
         <Stack.Screen name="news/[id]" options={page} />
         <Stack.Screen name="news/attachment" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
+        <Stack.Screen name="inbox" options={{ ...page, title: "Notifications" }} />
       </Stack>
     </FamilyProvider>
   );

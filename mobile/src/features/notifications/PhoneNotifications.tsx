@@ -16,8 +16,8 @@ import { space } from "@/theme";
  */
 export function pushReason({ isCoach, isAdmin, name }: Pick<BranchState, "isCoach" | "isAdmin" | "name">): string {
   if (isCoach) return `Get told on this phone when one of your classes changes, and when ${name} posts news.`;
-  if (isAdmin) return "Get told on this phone when a trial request or a question comes in from the website.";
-  return `Get told on this phone when ${name} shares a progress report with you.`;
+  if (isAdmin) return "Get told on this phone when a family cancels or asks for a class, and when a trial request or a question comes in from the website.";
+  return `Get told on this phone when a class changes, when ${name} answers a request, and about new scores, progress reports and news.`;
 }
 
 const STATE: Record<PermissionState, { badge: string; tone: BadgeTone; text: string }> = {

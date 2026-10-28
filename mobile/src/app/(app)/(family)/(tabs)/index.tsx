@@ -20,6 +20,7 @@ import { AcademyContact, ChildSwitcher, NotLinked } from "@/features/family/Fami
 import { useFamily } from "@/features/family/FamilyProvider";
 import { hasEnded, namesList } from "@/features/family/format";
 import { useFamilyNews, useIsNewNews } from "@/features/family/news";
+import { InboxBell } from "@/features/notifications/InboxBell";
 import { NewsRow } from "@/features/family/NewsRow";
 import { ReportRow } from "@/features/family/ReportRow";
 import { ScoreRow } from "@/features/family/ScoreRow";
@@ -106,9 +107,14 @@ export default function FamilyHomeScreen() {
   return (
     <Screen tab typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-home">
       <View style={styles.header}>
-        <View style={styles.brand}>
-          <SkyArcLockup size="sm" testID="family-home-lockup" />
-          <DemoBadge />
+        <View style={styles.top}>
+          <View style={styles.brand}>
+            <SkyArcLockup size="sm" testID="family-home-lockup" />
+            <DemoBadge />
+          </View>
+          <View style={styles.bell}>
+            <InboxBell testID="family-home-notifications" />
+          </View>
         </View>
         <T variant="title" accessibilityRole="header" style={styles.greeting} testID="family-home-greeting">
           {greeting(nowMin)}
@@ -331,7 +337,10 @@ function Attendance({ name, sessions, from, today, nowMin, loading, divider }: {
 
 const styles = StyleSheet.create({
   header: { gap: 2 },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
   brand: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  // The bell is a little taller than the lockup: it overhangs rather than pushing the greeting down.
+  bell: { marginVertical: -4 },
   greeting: { marginTop: space.md },
   section: { gap: space.sm },
   list: { gap: space.md },

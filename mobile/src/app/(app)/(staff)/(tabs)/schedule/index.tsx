@@ -3,7 +3,7 @@ import { KIND_COLORS } from "@shared/schedule/seatColors";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import { type DateKey, addDays, diffDays, startOfWeek, weekDays } from "@shared/time";
 import { router } from "expo-router";
-import { CalendarDays, CalendarX2 } from "lucide-react-native";
+import { CalendarCheck, CalendarDays, CalendarX2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/Card";
@@ -16,6 +16,7 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { useAcademyNow, useClassesBetween, useClockedIn, useEventsBetween, useStudentList } from "@/features/data/hooks";
+import { usePendingRequests } from "@/features/requests/data";
 import { ClassCard } from "@/features/schedule/ClassCard";
 import { teaches } from "@/features/schedule/classes";
 import { longDay, plural, timeRange, weekRange } from "@/features/schedule/format";
@@ -32,10 +33,11 @@ import { radius, space, useColors } from "@/theme";
  * time order, or the whole week's days one after another. Each class is laid out like the academy's sheets
  * (ClassCard): the coaches in, the seats two across with every student in their level's colour and rifle code, the
  * labels in theirs. Coaches see every class; theirs (in their hours) stand out. A class opens its sheet; the office
- * marks who's here there, and makes other changes on the website.
+ * marks who's here there and adds, moves or takes out students. The office's Requests (with their count) are the
+ * families' requests waiting for an answer, as the website's schedule has them.
  */
 export default function ScheduleScreen() {
-  const { settings, isCoach, staffId } = useBranch();
+  const { settings, isCoach, isAdmin, staffId } = useBranch();
   const colors = useColors();
   const hour12 = settings.general.timeFormat !== "24h";
   const weekStartsOn = settings.general.weekStartsOn;
@@ -43,6 +45,7 @@ export default function ScheduleScreen() {
   const [selected, setSelected] = useState<DateKey>(today);
   const [view, setView] = useState<"day" | "week">(settings.schedule.defaultView === "week" ? "week" : "day");
   const [picking, setPicking] = useState(false);
+  const requests = usePendingRequests(isAdmin);
 
   const week = weekDays(selected, weekStartsOn);
   const data = useClassesBetween(week[0], week[6]);
@@ -102,6 +105,17 @@ export default function ScheduleScreen() {
                 testID="schedule-view"
               />
             </View>
+            {requests.data.length ? (
+              <IconButton
+                testID="schedule-requests"
+                icon={<CalendarCheck size={21} color={colors.foreground} />}
+                badge={requests.data.length}
+                accessibilityLabel="Requests from families"
+                onPress={() => router.push("/requests")}
+                size={40}
+                filled
+              />
+            ) : null}
             <IconButton testID="schedule-pick-date" icon={<CalendarDays size={21} color={colors.foreground} />} accessibilityLabel="Go to a date" onPress={() => setPicking(true)} size={40} filled />
           </View>
         }

@@ -76,7 +76,7 @@ export default function FamilyMoreScreen() {
             </RowIcon>
           }
           title="Notifications"
-          subtitle="On this phone"
+          subtitle="On this phone, and what you’re told about"
           onPress={() => router.push("/more/notifications")}
           testID="family-more-notifications"
         />

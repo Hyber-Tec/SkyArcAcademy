@@ -12,8 +12,8 @@ export const unstable_settings = { anchor: "(tabs)" };
 
 /**
  * The staff's part of the app (owners, admins and coaches, each seeing what the rules give their role): five tabs, and
- * the screens that open over them (a class, a student, a score, a file, a coach; the Scan screens add their own). Every
- * screen loads its record by ID, so links and the back gesture always work.
+ * the screens that open over them (a class and its changes, a student, a score, a file, a coach, families' requests; the
+ * Scan screens add their own). Every screen loads its record by ID, so links and the back gesture always work.
  */
 export default function AdminLayout() {
   const colors = useColors();
@@ -38,6 +38,11 @@ export default function AdminLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="class/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
+      {/* The office's changes to a class (a student added, one moved to another class), and families' requests. */}
+      <Stack.Screen name="add-seat" options={{ ...page, title: "Add a student" }} />
+      <Stack.Screen name="move-seat" options={{ ...page, title: "Move to another class" }} />
+      <Stack.Screen name="requests" options={{ ...page, title: "Requests from families" }} />
+      <Stack.Screen name="request/[id]" options={{ ...sheet, sheetAllowedDetents: [0.75, 1] }} />
       <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
       <Stack.Screen name="student/[id]" options={page} />
       <Stack.Screen name="score/[id]" options={page} />
