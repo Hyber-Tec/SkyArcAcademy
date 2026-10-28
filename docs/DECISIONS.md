@@ -738,14 +738,19 @@ the main product: families do everything they need there, without calling or tex
     the hole" scores 6.4 points under his coaches on average, and the app's rule (touching counts) 2.6 over: his coaches
     give the higher ring until about 90% of the hole is past the line. Goo shows him `scoring-examples.html` (local, his
     own bulls); the app's rule stays meanwhile, and the strict rule waits on a local branch (`fix/paper-scoring`).
-  - **The schedule view (V2)** waits for Goo's pick of `schedule-options.html` (three options, local).
-  - **Coaches' usual days after November 30 (C4):** the import set them through November 30; before launch, carry them
-    on (with Goo's OK for the production write) or the office uses Repeat weekly.
+    The competition sheets (2026-10-28, `scoring-proposal.html`, local) show that matches give the higher ring when
+    the hole touches the line, the app's rule; the recommendation is to keep it, and the manager decides.
+  - **The schedule view (V2)** waits for Goo's pick of `schedule-timeline-options.html` (round 2, four ways to make
+    the timeline like HyberCRM's; local).
+  - **Coaches' usual days after November 30 (C4):** the import set them through November 30. Done 2026-10-28 with
+    Goo's OK: each person's week as production had it (November's standing week: Monday to Thursday and Sunday, as
+    each one's days) carried on from December 1 through February 28, 2027 (191 days), leaving any day already set
+    alone. After that, carry them on again or the office uses Repeat weekly (`docs/TODO.md`).
 - **Contracts and admin-only folders (F4–F6, 2026-10-28):** every Drive folder and file carries `access` (`staff` or
   `admins`); coaches ask only for `staff` ones, and the rules refuse anything else. A document written without it (the
   phone builds in the stores write Drive documents without it) is read as staff, and a function fills it in; once the
-  phone writes it, the rules can require it. Existing documents are marked by a one-time script right after the
-  deploy (`scripts/drive-access.ts`); until then coaches see an empty Drive on the website. The enrollment contract is a
+  phone writes it, the rules can require it. Existing documents were marked by a one-time script right after the
+  deploy (`scripts/drive-access.ts`, 2026-10-28: everything the Drive held, in both academies, for everyone on staff). The enrollment contract is a
   PDF the office uploads (Settings → Enrollment contract); a student's page sends a signing link (30 days, one
   signature) by copy or email; the family signs on `/sign/:token` with no account (typed name, relationship, a drawn
   signature, consent); the server adds a signature page (the signer, the time in the academy's zone, the IP address and

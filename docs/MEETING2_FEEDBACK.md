@@ -132,7 +132,13 @@ To start a phase, paste this into Claude Code on the right computer:
 ### Phase 1: Mac mini · Foundation (backend + web admin)
 
 #### V: Schedule view options (first)
-- ✅ **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; waits for Goo's pick)
+- ✅ **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; round 2 the same day: `schedule-timeline-options.html`; waits for Goo's pick)
+  - **Round 2 (Goo, 2026-10-28):** option 1 is today's view, option 2 is out, and the timeline (option 3) is the one,
+    made like HyberCRM's: a row per coach whose background is their day (grey when not in, white for their hours, a
+    quiet band from clock-in to clock-out), with the classes on top, and clock times as clocked (no "late", no pay
+    rule). Four ways to do it: A · a row per coach with each class on every row it's taught in, B · each class drawn
+    once across its coaches' rows, C · slim rows with a dot per seat, D · time running down the page, a column per
+    coach.
   - *Plan:* **New work**, under way: `schedule-options.html` in the project folder, built from the current schedule's
     code.
   - **Why:** the manager likes the current view (Option 1) because it looks like their Google Sheet. Now that coaches
@@ -217,8 +223,9 @@ To start a phase, paste this into Claude Code on the right computer:
   covering, or turn off a coach who can't come. This is how coach emergencies are handled; no separate "cover another
   coach" feature. (#44)
   - *Plan:* **Already done** on the website: Employees → Calendar, and "Who's in" on the schedule.
-- [ ] **C4. Pre-fill each coach's fixed weekly schedule** before launch, so a coach's usual days are set when they
-  first open the app (for example Mon/Tue/Wed/Thu/Sun). They can still edit outside the lock.
+- ✅ **C4. Pre-fill each coach's fixed weekly schedule** before launch, so a coach's usual days are set when they
+  first open the app (for example Mon/Tue/Wed/Thu/Sun). They can still edit outside the lock. (carried on through
+  February 28, 2027, on 2026-10-28)
   - *Plan:* **Already done through November 30:** the import set each coach's usual days from August 31. **Small
     change:** carry them further before launch.
 
@@ -257,6 +264,11 @@ To start a phase, paste this into Claude Code on the right computer:
   - It is **not** "touching a higher ring = the higher score", which the app did, and why it scored a card **70** that
     the coach had scored **64**.
   - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**.
+  - **What the competition sheets show (2026-10-28, `scoring-proposal.html`, local):** matches score a shot by its
+    decimal and give the higher ring as soon as the pellet's hole touches the line (the app's rule today); "most of the
+    hole" would take about 50 points off a three-position match score. The coaches score practice cards a little more
+    strictly than matches (a hole has to cut about ¾ mm into the line). Recommended: keep the app's rule, so practice
+    and match scores mean the same; the manager decides on 2026-10-30 (the page's two questions).
 - ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule waits for the manager, `P1`)
   - *Plan:* **New work:** a local test on the manager's cards (38 paper cards, 8 competition sheets), never imported or
     committed; the results go to Goo.
