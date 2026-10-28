@@ -273,7 +273,7 @@ export function ClassDetails({
                       variant="outline"
                       onClick={() => {
                         onClose()
-                        onAsk({ studentId: s.studentId, kind: 'reschedule', forSessionId: s.id })
+                        onAsk({ studentId: s.studentId, kind: 'reschedule', forSessionId: s.id, forDateKey: s.dateKey })
                       }}
                       data-testid="class-move"
                     >
