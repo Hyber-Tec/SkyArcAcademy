@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, isPosition } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, SOURCE_LABELS, isPosition, kindOf } from '@shared/shooting/evaluation'
 import { formatDateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -11,11 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { type NewEvaluation, updateEvaluation } from '@/features/scores/api'
+import { ResultKindPicker } from '@/features/scores/kinds'
 
-/** A SIUS result's scores come from the PDF; what staff can change is the position and the note. */
+/** A SIUS result's (or a results sheet's) scores come from its file; what staff can change is what it was, the position and the note. */
 export function SiusEditDialog({ evaluation: e, onClose }: { evaluation: WithId<Evaluation>; onClose: () => void }) {
   const { branchId, actor } = useBranch()
   const [position, setPosition] = useState<Position>(e.position)
+  const [kind, setKind] = useState<ResultKind>(kindOf(e))
   const [note, setNote] = useState(e.note ?? '')
   const [busy, setBusy] = useState(false)
   async function save() {
@@ -23,7 +25,7 @@ export function SiusEditDialog({ evaluation: e, onClose }: { evaluation: WithId<
     try {
       const stamps = new Set(['id', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
       const data = Object.fromEntries(Object.entries(e).filter(([k]) => !stamps.has(k))) as NewEvaluation
-      await updateEvaluation(branchId, actor, e.id, e, { ...data, position, note: note.trim() })
+      await updateEvaluation(branchId, actor, e.id, e, { ...data, kind, position, note: note.trim() })
       toast.success('Saved')
       onClose()
     } catch (err) {
@@ -36,10 +38,16 @@ export function SiusEditDialog({ evaluation: e, onClose }: { evaluation: WithId<
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>SIUS result of {formatDateKey(e.dateKey, 'medium')}</DialogTitle>
-          <DialogDescription>The scores come from the PDF. The position and the note are yours to set.</DialogDescription>
+          <DialogTitle>
+            {e.match?.name || SOURCE_LABELS[e.source]} result of {formatDateKey(e.dateKey, 'medium')}
+          </DialogTitle>
+          <DialogDescription>The scores come from its file. What it was, the position and the note are yours to set.</DialogDescription>
         </DialogHeader>
         <FieldGroup>
+          <Field>
+            <FieldLabel>What it was</FieldLabel>
+            <ResultKindPicker value={kind} onChange={setKind} />
+          </Field>
           <Field>
             <FieldLabel>Position</FieldLabel>
             <Select value={position} onValueChange={(v) => isPosition(v) && setPosition(v)}>

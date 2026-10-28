@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { LuArrowRight, LuCircleAlert, LuFileSearch, LuInfo } from 'react-icons/lu'
 import type { DriveStudent } from '@shared/drive/model'
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition } from '@shared/shooting/evaluation'
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition, type ResultKind } from '@shared/shooting/evaluation'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import { OptionPicker } from '@/components/app/OptionPicker'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
+import { ResultKindPicker } from '@/features/scores/kinds'
 import type { SiusFile } from './sius'
 
 /** One dropped SIUS PDF, read and waiting for its student and position. */
@@ -85,10 +86,12 @@ export function AddResultsDialog({
   fixedStudentId: string | null
   /** Where a student's result is filed ("Mia Larkin’s folder"). */
   whereOf: (studentId: string) => string
-  onConfirm: (rows: ResultRow[]) => Promise<void>
+  /** The rows, and what they were (Practice, Competition or Evaluation, for every one). */
+  onConfirm: (rows: ResultRow[], kind: ResultKind) => Promise<void>
   onClose: () => void
 }) {
   const [rows, setRows] = useState(initial)
+  const [kind, setKind] = useState<ResultKind>('practice')
   const [busy, setBusy] = useState(false)
   // A finished student's folder can still take a result dropped into it.
   const options = useMemo(() => students.filter((s) => !s.finished || s.id === fixedStudentId).map((s) => ({ value: s.id, label: s.name })), [students, fixedStudentId])
@@ -103,7 +106,7 @@ export function AddResultsDialog({
   const confirm = async () => {
     setBusy(true)
     try {
-      await onConfirm(rows)
+      await onConfirm(rows, kind)
     } finally {
       setBusy(false)
     }
@@ -123,6 +126,10 @@ export function AddResultsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium">What {rows.length === 1 ? 'it was' : 'they were'}</span>
+            <ResultKindPicker value={kind} onChange={setKind} />
+          </div>
           <div className="rounded-lg border">
             {rows.length > 1 ? (
               // Kept in view over a long list, where there's the height for it.

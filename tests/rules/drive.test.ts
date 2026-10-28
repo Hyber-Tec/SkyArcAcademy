@@ -278,4 +278,12 @@ describe('evaluations', () => {
     await assertSucceeds(deleteDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/e4`)))
     await assertSucceeds(deleteDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e1`)))
   })
+
+  it('take a kind and a results sheet as their source (the second meeting, §23)', async () => {
+    const comp = { source: 'sheet', kind: 'competition', match: { name: 'Lakeside Fall 3P', course: '3x20 Air Rifle' }, total: 178, wholeTotal: 178, innerTens: 4 }
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/evaluations/c1`), evaluation(comp)))
+    await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/c2`), evaluation({ kind: 'evaluation' })))
+    await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/c3`), evaluation({ kind: 'match' })))
+    await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/c4`), evaluation({ source: 'photo' })))
+  })
 })

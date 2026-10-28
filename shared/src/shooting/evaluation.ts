@@ -1,5 +1,5 @@
 import type { DateKey } from '../time'
-import type { AuditStamp } from '../types'
+import type { AuditStamp, TimestampLike } from '../types'
 import { type ShotPoint, groupSizeMm, isInnerTen, meanPoint, shotPoint, wholeScore } from './target'
 
 /** Position = Standing / Kneeling / Prone (the academy's words). */
@@ -27,10 +27,28 @@ export function isPosition(value: unknown): value is Position {
   return typeof value === 'string' && (POSITIONS as readonly string[]).includes(value)
 }
 
-/** Where scores come from: a SIUS result (decimal scores) or a paper card (whole numbers, typed in or scanned by the phone app). */
-export type EvaluationSource = 'sius' | 'paper'
+/**
+ * Where scores come from: a SIUS result (decimal scores), a paper card (whole numbers, typed in or scanned by the phone
+ * app), or a match's results sheet (a competition's totals, typed in or read from a photo of the sheet).
+ */
+export type EvaluationSource = 'sius' | 'paper' | 'sheet'
 
-export const SOURCE_LABELS: Record<EvaluationSource, string> = { sius: 'SIUS', paper: 'Paper' }
+export const SOURCE_LABELS: Record<EvaluationSource, string> = { sius: 'SIUS', paper: 'Paper', sheet: 'Results sheet' }
+
+/**
+ * What a result was (the manager's second meeting, docs/DECISIONS.md §23): practice (the default), a competition (a
+ * match, apart from practice in graphs and reports), or an evaluation (the academy's assessments in each position,
+ * the most valuable history). Results saved before kinds existed are practice.
+ */
+export type ResultKind = 'practice' | 'competition' | 'evaluation'
+
+export const RESULT_KINDS: readonly ResultKind[] = ['practice', 'competition', 'evaluation']
+
+export const RESULT_KIND_LABELS: Record<ResultKind, string> = { practice: 'Practice', competition: 'Competition', evaluation: 'Evaluation' }
+
+export function kindOf(e: Pick<Evaluation, 'kind'>): ResultKind {
+  return e.kind && (RESULT_KINDS as readonly string[]).includes(e.kind) ? e.kind : 'practice'
+}
 
 export interface EvalShot {
   /** The score: decimal from SIUS (10.4), whole from a paper card (10). */
@@ -91,9 +109,28 @@ export interface Evaluation extends AuditStamp {
   problems: string[]
   /** SIUS only: the result's time as printed, the program, and the correction made for the computer's clock. */
   sius: { printed: string; event: string; clockFixMin: number } | null
+  /** Practice (when missing), a competition or an evaluation. */
+  kind?: ResultKind
+  /**
+   * A card the coach had already scored by hand: the written score is the official one, and `total` and `wholeTotal`
+   * hold it, so everyone (charts, reports, families) reads it. The app's own reading of the card stays here, for
+   * reference.
+   */
+  official?: { appTotal: number; by: string; at: TimestampLike } | null
+  /** A competition's match, as its results sheet names it ("Walton August 3P", "3x20 Air Rifle"). */
+  match?: { name: string; course: string } | null
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
+
+/**
+ * A total with its inner tens, as results sheets write it: "491-11" (11 inner tens, the tiebreaker), or the total alone
+ * when they aren't known (a paper card).
+ */
+export function totalWithTens(e: Pick<Evaluation, 'total' | 'innerTens' | 'source'>): string {
+  const total = e.source === 'paper' ? String(Math.round(e.total)) : Number.isInteger(e.total) ? String(e.total) : e.total.toFixed(1)
+  return e.innerTens === null || e.innerTens === undefined ? total : `${total}-${e.innerTens}`
+}
 
 /** The average of every 10 shots, so a 20-shot result and a 10-shot card compare (192.0 over 20 → 96.0). */
 export function per10(total: number, shots: number): number | null {

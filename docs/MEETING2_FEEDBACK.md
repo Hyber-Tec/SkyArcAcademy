@@ -252,7 +252,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - It is **not** "touching a higher ring = the higher score", which the app did, and why it scored a card **70** that
     the coach had scored **64**.
   - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**.
-- [ ] **P2. Test and tune the scoring with the real paper targets, locally only.**
+- [x] **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule waits for the manager, `P1`)
   - *Plan:* **New work:** a local test on the manager's cards (38 paper cards, 8 competition sheets), never imported or
     committed; the results go to Goo.
   - Goo has photos of the real paper cards and competition sheets the manager gave us (on the Mac mini). Use them **on
@@ -265,45 +265,45 @@ To start a phase, paste this into Claude Code on the right computer:
   lighter background if possible.
   - *Plan:* **Small change:** holes in the black show only when light is behind them, so a dark surface hides them. The
     tip "a light surface under the card" (the phone's scan tips, `M6`).
-- [ ] **P4. Official score override.** When entering a card that was already scored by hand (past data), the admin can
+- [x] **P4. Official score override.** When entering a card that was already scored by hand (past data), the admin can
   type the **written score as the official score**. The app's own score is kept for reference only: parents shouldn't
-  see their 74 turn into a 70.
+  see their 74 turn into a 70. (#48)
   - *Plan:* **New work:** the official score, typed by the admin; the app's own score kept for reference. Families,
     charts and reports use the official one.
-- [ ] **P5. Any number of shots.** Sessions can be **20, 30 or 60 shots** (any number). The maximum is shots × 10 for
+- [x] **P5. Any number of shots.** Sessions can be **20, 30 or 60 shots** (any number). The maximum is shots × 10 for
   whole-number scoring. With electronic decimal scoring a shot can be up to **10.9**, so **60 shots can total more than
-  600**. Never assume a fixed shot count or maximum.
+  600**. Never assume a fixed shot count or maximum. (#48)
   - *Plan:* **Already done** for SIUS, charts and reports (they count per 10 shots). **Small change:** a paper result of
     several cards (20, 30, 60 shots).
-- [ ] **P6. Inner-ten ("X") count.** Results show the **number of inner tens** (for example "491-11"). It's the
+- [x] **P6. Inner-ten ("X") count.** Results show the **number of inner tens** (for example "491-11"). It's the
   **tiebreaker**: same total, more inner tens wins. Store it and show it next to totals (from SIUS PDFs and competition
-  sheets).
+  sheets). (#48)
   - *Plan:* **Already done** for SIUS (stored and shown). **Small change:** "491-11" next to totals; competition results
     carry it too.
-- [ ] **P7. Competition results from a photo.** After a match, the match director gives a results sheet (paper or
+- [x] **P7. Competition results from a photo.** After a match, the match director gives a results sheet (paper or
   digital). The admin **takes a photo of it and gets it into the student's record** as a **Competition** result,
   separate from practice. Read the total and inner-ten count automatically if possible; otherwise the admin types them.
   Show competitions apart from practice in graphs and reports. Students see their whole competition history, bad days
-  included, to see their growth.
+  included, to see their growth. (#48)
   - *Plan:* **New work:** a Competition result from a photo of the results sheet. The total and inner tens are read with
     Google's text reader (Goo's pick, 2026-10-28), and the admin checks them before saving.
-- [ ] **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
-  (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history.
+- [x] **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
+  (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history. (#48)
   - *Plan:* **New work**, with `P9`: the Evaluation label.
-- [ ] **P9. Practice / Competition / Evaluation labels** on every result, used in filters, graphs, compare and reports.
+- [x] **P9. Practice / Competition / Evaluation labels** on every result, used in filters, graphs, compare and reports. (#48)
   - *Plan:* **New work:** results have no kind today. Practice, Competition or Evaluation on every result, in filters,
     graphs, compare and reports.
-- [ ] **P10. One position for a while.** Some students shoot only one position for weeks (for example, standing only
-  for a school tryout). Reports and compare handle periods with just one or two positions.
+- [x] **P10. One position for a while.** Some students shoot only one position for weeks (for example, standing only
+  for a school tryout). Reports and compare handle periods with just one or two positions. (#48)
   - *Plan:* **Already done:** reports and compare keep only the positions a period has. **Small change:** a report's
     change since the last one, compared per position.
-- [ ] **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
+- [x] **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
   reshoots, so a "20 shot" PDF may show 24 shots. **No feature to remove zeros**; the PDF reader handles these files
-  without breaking or mislabelling them.
+  without breaking or mislabelling them. (#48)
   - *Plan:* **Already done:** a 0.0 without an arrow isn't a shot. **Small change:** a test for reshoots, and the
     reader's note kept.
-- [ ] **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
-  aliases, so name matching (PDFs, scans) and display both work.
+- [x] **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
+  aliases, so name matching (PDFs, scans) and display both work. (#48)
   - *Plan:* **New work:** a preferred name and other names, used by the PDF matching and in searches.
 - [x] **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
   been a new file." Build the event here; push comes in Phase 3. (#46)

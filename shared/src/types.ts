@@ -207,6 +207,11 @@ export interface Student extends AuditStamp {
   program: string | null
   /** The rifle the academy gives the student, by its own code ("C9", "P", "JG"); null or missing when none is set. */
   rifle?: string | null
+  /**
+   * Other names the student goes by or is printed under (a nickname, an English name, the legal name when the app shows
+   * the one they use, another spelling): matched in SIUS reports and file names, and found by search (P12).
+   */
+  otherNames?: string[]
   status: StudentStatus
   statusSource: 'auto' | 'manual'
   signUpDate: DateKey | null

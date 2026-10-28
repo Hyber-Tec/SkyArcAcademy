@@ -56,6 +56,20 @@ describe('synthetic SIUS PDFs read back', () => {
     expect(reading?.notes).toEqual(expect.arrayContaining(['One 0.0 entry without a direction wasn’t counted as a shot.', '11 match shots, all counted.']))
   })
 
+  it('reads a 20-shot session whose target recorded sensor zeros, re-shot by the student (24 entries)', async () => {
+    // Target #3's sensor sometimes records a 0.0 with no direction; the student shoots again (the manager, 2026-10-27).
+    const zero = { v: 0, a: null }
+    const real = [9.8, 10.2, 9.5, 10.6, 9.1, 9.9, 10.4, 9.3, 10.0, 9.7, 9.6, 10.1, 9.2, 10.5, 9.8, 9.4, 10.3, 9.9, 9.0, 10.2]
+    const entries = [...shots(real.slice(0, 5)), zero, ...shots(real.slice(5, 9)), zero, zero, ...shots(real.slice(9, 16)), zero, ...shots(real.slice(16))]
+    const { reading } = await read({ printed, pcOffsetMin: -240, series: [{ shots: entries.slice(0, 12) }, { shots: entries.slice(12) }] })
+    expect(entries).toHaveLength(24)
+    expect(reading?.shots).toBe(20)
+    expect(reading?.total).toBe(Math.round(real.reduce((n, v) => n + v, 0) * 10) / 10)
+    expect(reading?.problems).toEqual([])
+    expect(reading?.notes).toContain('4 entries of 0.0 without a direction weren’t counted as shots.')
+    expect(reading?.notes.some((n) => n.includes('match shots, all counted'))).toBe(false)
+  })
+
   it('keeps the other words on the page, such as a name set on the lane, and nothing from the academy’s own layout', async () => {
     const plain = await read({ printed, pcOffsetMin: -240, series: [{ shots: shots([9.1, 9.4]) }] })
     expect(plain.result?.pageText).toEqual([])

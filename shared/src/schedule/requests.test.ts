@@ -136,5 +136,7 @@ describe('what families and the office are told', () => {
   it('tells a family of a new score', () => {
     expect(scoreAddedNotice({ studentName: 'Avery Stone', position: 'standing', total: 186.84, shots: 20, source: 'sius' }).body).toBe('Avery: Standing, 186.8 over 20 shots.')
     expect(scoreAddedNotice({ studentName: 'Avery Stone', position: 'prone', total: 76, wholeTotal: 76, shots: 10, source: 'paper' }).body).toBe('Avery: Prone, 76 over 10 shots.')
+    const comp = scoreAddedNotice({ studentName: 'Avery Stone', position: 'standing', total: 178, wholeTotal: 178, shots: 20, source: 'sheet', innerTens: 4, kind: 'competition', match: { name: 'Lakeside Fall 3P' } })
+    expect(comp).toMatchObject({ title: 'New competition result', body: 'Avery: Lakeside Fall 3P, Standing, 178-4 over 20 shots.' })
   })
 })

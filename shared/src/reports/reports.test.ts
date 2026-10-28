@@ -114,3 +114,26 @@ describe('report figures', () => {
     expect(a.startsWith('2-')).toBe(true)
   })
 })
+
+describe('competitions and positions in a report', () => {
+  it('lists competitions apart and leaves them out of the figures', () => {
+    const practice = paper('p1', '2026-09-03', 'standing', [9, 9, 8, 9, 10, 9, 8, 9, 9, 9])
+    const match = sius('c1', '2026-09-12', 'standing', [10.4, 9.8, 10.1, 9.6, 10.3, 9.9, 10.2, 9.7, 10.0, 9.5], { kind: 'competition', match: { name: 'Lakeside Fall', course: '10 Shots' } })
+    const { facts, series } = reportFacts([practice, match], [], null)
+    expect(series.map((p) => p.id)).toEqual(['p1'])
+    expect(facts.evaluations.total).toBe(1)
+    expect(facts.average).toBe(89)
+    expect(facts.competitions).toEqual([{ id: 'c1', dateKey: '2026-09-12', match: 'Lakeside Fall', position: 'standing', shots: 10, total: 99.5, innerTens: 3, decimal: true, wholePer10: 95 }])
+  })
+
+  it('measures the change since the last report over the positions both periods shot', () => {
+    const now = [paper('p1', '2026-10-03', 'prone', [10, 10, 9, 10, 9, 10, 10, 9, 10, 10])]
+    const before = { reportId: 'r0', periodLabel: 'September 2026', average: 80, evaluations: 4, positions: [{ position: 'standing' as const, average: 80 }] }
+    // Only standing last time, only prone now: nothing to compare.
+    expect(reportFacts(now, [], before).facts.deltaAverage).toBeNull()
+    const both = { ...before, positions: [...before.positions, { position: 'prone' as const, average: 95 }] }
+    expect(reportFacts(now, [], both).facts.deltaAverage).toBe(2)
+    // A report from before positions were kept: the averages, as before.
+    expect(reportFacts(now, [], { reportId: 'r0', periodLabel: 'September 2026', average: 90, evaluations: 3 }).facts.deltaAverage).toBe(7)
+  })
+})

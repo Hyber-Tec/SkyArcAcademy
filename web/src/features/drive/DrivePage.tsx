@@ -28,7 +28,7 @@ import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatB
 import { type DriveFile, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
-import { type Evaluation, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_LABELS, type Position, type ResultKind } from '@shared/shooting/evaluation'
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -270,7 +270,7 @@ export function DrivePage() {
     return `${path[0] ?? index.students.find((s) => s.id === studentId)?.name ?? 'the student'}’s folder`
   }
 
-  async function confirmResults(list: ResultRow[]) {
+  async function confirmResults(list: ResultRow[], kind: ResultKind) {
     if (!results) return
     const studentName = new Map(index.students.map((s) => [s.id, s.name]))
     // A result already in the Drive (the same printed time and total) isn't added twice.
@@ -293,6 +293,7 @@ export function DrivePage() {
               studentId,
               studentName: studentName.get(studentId) ?? '',
               source: 'sius' as const,
+              kind,
               position: r.position,
               dateKey: reading.dateKey,
               timeMin: reading.timeMin,

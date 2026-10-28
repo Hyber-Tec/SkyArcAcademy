@@ -24,6 +24,8 @@ export type IndexFile = WithId<DriveFile>
 export interface DriveStudent {
   id: string
   name: string
+  /** Other names they go by or are printed under (`Student.otherNames`). */
+  otherNames?: string[]
   /** Finished students keep their folder only if something is in it. */
   finished?: boolean
 }

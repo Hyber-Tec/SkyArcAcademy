@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { LuChartLine, LuFilePlus, LuPlus } from 'react-icons/lu'
+import { LuChartLine, LuFilePlus, LuPlus, LuTrophy } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toPoint } from '@shared/reports/facts'
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS, per10 } from '@shared/shooting/evaluation'
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type ResultKind, kindOf, per10 } from '@shared/shooting/evaluation'
 import { personalBestIds } from '@shared/shooting/progress'
 import { todayKey } from '@shared/time'
 import type { Student, WithId } from '@shared/types'
@@ -16,6 +16,8 @@ import { TrendChart } from '@/features/reports/charts'
 import { useStudentReports } from '@/features/reports/data'
 import { one, stateLabel, trendSeries } from '@/features/reports/model'
 import { useStudentEvaluations } from '@/features/scores/hooks'
+import { CompetitionDialog } from '@/features/scores/CompetitionDialog'
+import { ResultKindFilter } from '@/features/scores/kinds'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { CompareCard } from './scores/CompareCard'
 import { ResultsPanel } from './scores/ResultsPanel'
@@ -29,9 +31,13 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const { timezone } = useBranch()
   const navigate = useNavigate()
   const admin = mode === 'admin'
-  const { data: evaluations, loading } = useStudentEvaluations(student.id)
+  const { data: all, loading } = useStudentEvaluations(student.id)
+  // Practice, competitions or evaluations only, or everything (the manager's second meeting, §23).
+  const [kind, setKind] = useState<ResultKind | 'all'>('all')
+  const evaluations = useMemo(() => (kind === 'all' ? all : all.filter((e) => kindOf(e) === kind)), [all, kind])
   const { data: reports } = useStudentReports(student.id)
   const [adding, setAdding] = useState(false)
+  const [competing, setCompeting] = useState(false)
   const [creating, setCreating] = useState(false)
   // A link to one result (`?score=`, from Home's latest scores) shows it first; a pick in the list takes over.
   const [params] = useSearchParams()
@@ -59,12 +65,15 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             <div>
               <h2 className="text-base font-semibold">Scores</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                {scored.length ? `${scored.length} scored ${scored.length === 1 ? 'evaluation' : 'evaluations'}, per 10 shots in whole numbers (decimals for SIUS).` : 'No scores yet.'}
+                {scored.length ? `${scored.length} scored ${scored.length === 1 ? 'result' : 'results'}, per 10 shots in whole numbers (decimals for SIUS).` : 'No scores yet.'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
                 <LuPlus /> Add paper scores
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCompeting(true)} data-testid="add-competition">
+                <LuTrophy /> Add a competition
               </Button>
               {admin ? (
                 <Button size="sm" onClick={() => setCreating(true)} disabled={!scored.length}>
@@ -72,6 +81,9 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
                 </Button>
               ) : null}
             </div>
+          </div>
+          <div className="mt-3">
+            <ResultKindFilter list={all} value={kind} onChange={setKind} />
           </div>
           {summary.length ? (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -140,6 +152,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
       </section>
 
       {adding ? <PaperScoreDialog open onOpenChange={setAdding} studentId={student.id} /> : null}
+      <CompetitionDialog open={competing} onOpenChange={setCompeting} studentId={student.id} studentName={student.name} />
       {creating ? <NewReportDialog open onOpenChange={setCreating} studentId={student.id} reports={reports} /> : null}
     </div>
   )
