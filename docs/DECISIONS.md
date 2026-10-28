@@ -735,3 +735,13 @@ the main product: families do everything they need there, without calling or tex
   - **The schedule view (V2)** waits for Goo's pick of `schedule-options.html` (three options, local).
   - **Coaches' usual days after November 30 (C4):** the import set them through November 30; before launch, carry them
     on (with Goo's OK for the production write) or the office uses Repeat weekly.
+- **Contracts and admin-only folders (F4–F6, 2026-10-28):** every Drive folder and file carries `access` (`staff` or
+  `admins`); coaches ask only for `staff` ones, and the rules refuse anything else. A document written without it (the
+  phone builds in the stores write Drive documents without it) is read as staff, and a function fills it in; once the
+  phone writes it, the rules can require it. Existing documents are marked by a one-time script right after the
+  deploy (`scripts/drive-access.ts`); until then coaches see an empty Drive on the website. The enrollment contract is a
+  PDF the office uploads (Settings → Enrollment contract); a student's page sends a signing link (30 days, one
+  signature) by copy or email; the family signs on `/sign/:token` with no account (typed name, relationship, a drawn
+  signature, consent); the server adds a signature page (the signer, the time in the academy's zone, the IP address and
+  browser, the link, the blank contract's SHA-256) and files the PDF in Contracts, which only owners and admins see.
+  Signers' names are in English letters (the PDF's standard fonts).

@@ -334,17 +334,17 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **Already done.**
 - [x] **F3. Parent names are optional.** Without a name, show something like "Alex's parent." (#50)
   - *Plan:* **Small change:** a parent's name becomes optional ("Alex's parent").
-- [ ] **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
+- [x] **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
   without printing. A Google form tried before failed (parents couldn't sign), so it must be simple and reliable. The
-  signed copy is saved automatically. *(Needs the blank contract from the manager.)*
+  signed copy is saved automatically. *(Needs the blank contract from the manager.)* (#53)
   - *Plan:* **New work:** a link the office sends (Goo's pick, 2026-10-28). The family reads the contract on any phone,
     types their name and signs with a finger; no app or account needed. The signed PDF goes to the Contracts folder
     (`F5`). The text waits for the blank contract.
-- [ ] **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
-  **visible only to the manager and owners, not coaches.**
+- [x] **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
+  **visible only to the manager and owners, not coaches.** (#53)
   - *Plan:* **New work**, with `F6`: a Contracts folder only owners and admins see.
-- [ ] **F6. The Drive as general storage, "like a Google Drive":** any file type (PDFs, images, game sheets,
-  documents), folders, and **per-folder access** (some folders admin-only).
+- [x] **F6. The Drive as general storage, "like a Google Drive":** any file type (PDFs, images, game sheets,
+  documents), folders, and **per-folder access** (some folders admin-only). (#53)
   - *Plan:* **Already done** for file types (PDFs, pictures, documents, videos) and folders. **New work:** folders for
     owners and admins only.
 
