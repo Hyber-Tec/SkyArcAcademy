@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
-import { makeupLabel, makeupsOwed, takesSeat } from '@shared/schedule/classes'
+import { MAKEUP_LOOKBACK_DAYS, makeupLabel, makeupsOwed, takesSeat } from '@shared/schedule/classes'
 import { type DateKey, addDays, formatDateKey, formatTimeRange, todayKey } from '@shared/time'
 import type { AcademyClass, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -60,7 +60,7 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
   const seats = useQuery<Session>(seatsQ, `book-seats-${branchId}-${day}`)
   const theirs = useQuery<Session>(theirsQ, `book-theirs-${branchId}-${sid}`)
   const today = todayKey(timezone)
-  const owed = useMemo(() => makeupsOwed(theirs.data, addDays(today, -42)), [theirs.data, today])
+  const owed = useMemo(() => makeupsOwed(theirs.data, addDays(today, -MAKEUP_LOOKBACK_DAYS)), [theirs.data, today])
 
   const list = classes.data.filter((c) => !c.isDeleted).sort((a, b) => a.startMin - b.startMin)
   const taken = (c: WithId<AcademyClass>) => seats.data.filter((s) => s.classId === c.id && takesSeat(s))

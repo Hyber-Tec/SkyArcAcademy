@@ -67,6 +67,9 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.staff]: (id) => isSample(id),
   [COL.students]: (id) => isSample(id),
   [COL.classes]: (id) => isSample(id),
+  // Each sample class's seats taken (the server keeps them for every class), and families' requests for sample students.
+  [COL.classSeats]: (id) => isSample(id),
+  [COL.classRequests]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.sessions]: (id, d) => isSample(id) || isSample(d.studentId) || isSample(d.coachId),
   [COL.availability]: (id, d) => isSample(id) || isSample(d.staffId),
   [COL.clockShifts]: (id, d) => isSample(id) || isSample(d.staffId),
@@ -94,7 +97,7 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
 }
 
 /** The sample's schedule, which each run replaces with the weeks around its today. */
-const SCHEDULE = [COL.classes, COL.sessions, COL.availability, COL.clockShifts] as const
+const SCHEDULE = [COL.classes, COL.classSeats, COL.sessions, COL.availability, COL.clockShifts] as const
 
 /** Sub-collections that go with a removed document. */
 const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }

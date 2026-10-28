@@ -175,13 +175,13 @@ To start a phase, paste this into Claude Code on the right computer:
     the clock-out at the end of the last class.
 
 #### S: Scheduling, cancellations, makeups (backend + web)
-- [ ] **S1. Families can cancel a class.** Cutoff: **24 hours before class** (editable). After the cutoff, the cancel
-  button is disabled with a short note explaining why.
+- [x] **S1. Families can cancel a class.** Cutoff: **24 hours before class** (editable). After the cutoff, the cancel
+  button is disabled with a short note explaining why. (#46)
   - *Plan:* **New work:** families can't cancel today (the class says to contact the academy). A Cancel button until the
     class is confirmed, then disabled with the reason; the office and the coaches in are told.
-- [ ] **S2. Parents and students can both cancel**, with **no age or level limits**: any linked parent, or the student.
+- [x] **S2. Parents and students can both cancel**, with **no age or level limits**: any linked parent, or the student. (#46)
   - *Plan:* **New work**, with `S1`: any linked parent, or the student.
-- [ ] **S3. Families can request a class, a makeup or a reschedule.**
+- [x] **S3. Families can request a class, a makeup or a reschedule.** (#46)
   - *Plan:* **New work:** requests for a class, a makeup or a reschedule. Families see how many seats are open in each
     class, never who's in them; the admin approves or rejects.
   - Parents or students see the **open seats** for the week and **request** one. They don't change the schedule
@@ -189,18 +189,18 @@ To start a phase, paste this into Claude Code on the right computer:
   - The **admin approves or rejects**. If rejected, the family can request another slot.
   - The admin can still book anything directly.
   - Example: a student cancels today's 4 PM class and requests tomorrow's open 4:30 PM seat; the manager approves.
-- [ ] **S4. Everyone is notified.** Cancellations, changes, new requests, and approvals or rejections notify the right
+- [x] **S4. Everyone is notified.** Cancellations, changes, new requests, and approvals or rejections notify the right
   people: **parents, students, coaches and admins**. Build the notification **events** here; the phone's push and
-  notification settings come in Phase 3 (`M3`, `M4`).
+  notification settings come in Phase 3 (`M3`, `M4`). (#46)
   - *Plan:* **New work:** coaches' notices exist (announcements, class changes). New: notices for families and the
     office (cancellations, requests, decisions, class changes, new scores), a bell for them on the website, and each
     person's switches. The phone's push is `M3`, started early on the MacBook Pro (`docs/mobile-push.md`).
-- [ ] **S5. No-show (ghosting) policy.** A student who doesn't show up without telling anyone **still gets a makeup**. If
-  they **also miss that makeup**, they **lose the credit**. Track it and show it clearly to the admin.
+- [x] **S5. No-show (ghosting) policy.** A student who doesn't show up without telling anyone **still gets a makeup**. If
+  they **also miss that makeup**, they **lose the credit**. Track it and show it clearly to the admin. (#46)
   - *Plan:* **Small change:** makeups owed count canceled seats only; no-shows join them, and a missed makeup loses its
     credit. Shown on the student's page and when adding a student.
-- [ ] **S6. 24-hour confirmation.** Classes become **Confirmed** 24 hours before they start, so coaches see who's
-  confirmed. Consistent with the cancel cutoff.
+- [x] **S6. 24-hour confirmation.** Classes become **Confirmed** 24 hours before they start, so coaches see who's
+  confirmed. Consistent with the cancel cutoff. (#46)
   - *Plan:* **Already done:** classes confirm themselves 24 hours before (Settings → Schedule); a seat shows Confirmed.
     The cancel cutoff follows the same setting.
 
@@ -305,8 +305,8 @@ To start a phase, paste this into Claude Code on the right computer:
 - [ ] **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
   aliases, so name matching (PDFs, scans) and display both work.
   - *Plan:* **New work:** a preferred name and other names, used by the PDF matching and in searches.
-- [ ] **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
-  been a new file." Build the event here; push comes in Phase 3.
+- [x] **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
+  been a new file." Build the event here; push comes in Phase 3. (#46)
   - *Plan:* **Already done** for reports (a shared report notifies the family). **New work** for scores.
 
 #### N: Announcements and website news
@@ -352,11 +352,11 @@ To start a phase, paste this into Claude Code on the right computer:
 
 ### Phase 2: Mac mini · Family web portal + real data
 
-- [ ] **S7. The family side of `S1`–`S3` on the web portal:** parents and students cancel, see open seats, request a
-  class, makeup or reschedule, and see their requests' status.
+- [x] **S7. The family side of `S1`–`S3` on the web portal:** parents and students cancel, see open seats, request a
+  class, makeup or reschedule, and see their requests' status. (#46)
   - *Plan:* **New work.**
-- [ ] **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
-  or reject family requests.
+- [x] **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
+  or reject family requests. (#46)
   - *Plan:* **New work.**
 - [ ] **S9. Verify the imported schedule.** Some entries looked wrong in the demo (for example, a student marked
   canceled who actually came). Compare against the **latest schedule sheet** from the manager and fix the differences.

@@ -2,9 +2,11 @@ import type { Timestamp } from 'firebase-admin/firestore'
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { db, LIGHT } from './app'
 import { sendNotifications } from './notify'
+import { familyClassesLink, familyOf, noticesFor } from './recipients'
 import { dayHours } from '@shared/availability'
 import { COL, ROOT } from '@shared/paths'
 import { coachesIn } from '@shared/schedule/classes'
+import { familyClassNotice } from '@shared/schedule/familyNotices'
 import { type SessionNotice, type SessionSnapshot, inNoticeWindow, sessionChangeNotices } from '@shared/schedule/notify'
 import { resolveSettings } from '@shared/settings/resolve'
 import type { BranchSettings, DayHours } from '@shared/settings/defaults'
@@ -90,6 +92,20 @@ export async function deliverSessionNotices(branchId: string, sessionId: string,
 }
 
 /**
+ * The family hears when the academy changes their child's class (docs/DECISIONS.md §23): canceled, moved, removed, back
+ * on, or missed. A cancellation the family made, or a class moved by their own request, was told when it happened
+ * (requests.ts).
+ */
+async function tellFamily(branchId: string, sessionId: string, before: FirebaseFirestore.DocumentData, after: FirebaseFirestore.DocumentData, eventId: string) {
+  const via = (after.canceled as { via?: string } | null | undefined)?.via
+  if (before.status !== 'canceled' && after.status === 'canceled' && (via === 'family' || via === 'request')) return
+  const notice = familyClassNotice({ ...snapshotOf(before), note: String(before.note ?? '') }, { ...snapshotOf(after), note: String(after.note ?? '') }, Date.now())
+  if (!notice || !after.studentId) return
+  const family = await familyOf(branchId, String(after.studentId))
+  await sendNotifications(branchId, noticesFor(family, notice, (p) => familyClassesLink(p, String(after.dateKey)), { sessionId, dateKey: String(after.dateKey) }), `fam-${sessionId}-${eventId}`)
+}
+
+/**
  * Session changes inside the notification window reach the inboxes of the coaches who teach it (TE's decision table):
  * the coaches in at its time, or a session's own coach from before classes were taught together.
  */
@@ -100,6 +116,7 @@ export const onSessionUpdated = onDocumentUpdated({ document: 'branches/{branchI
   const { branchId, sessionId } = event.params
   const ctx = await branchContext(branchId)
   if (!ctx.active) return
+  await tellFamily(branchId, sessionId, before, after, event.id)
   const notice = { now: Date.now(), today: todayKey(ctx.timezone), windowHours: ctx.settings.notifications.sessionChangeWindowHours }
   const snaps = [snapshotOf(before), snapshotOf(after)]
   // Most changes (attendance, classes further off) notify nobody: who's in is read only when someone may hear.

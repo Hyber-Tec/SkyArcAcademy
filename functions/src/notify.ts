@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { db } from './app'
 import { pushItems } from './push'
-import type { NotificationType } from '@shared/comms'
+import type { AppNotification, NotificationType } from '@shared/comms'
 import { COL, ROOT } from '@shared/paths'
 import type { NotificationPrefs } from '@shared/types'
 
@@ -12,7 +12,7 @@ export interface Outgoing {
   body: string
   /** In-app path below the branch. */
   link: string
-  refs: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; reportId?: string | null; messageId?: string | null }
+  refs: AppNotification['refs']
 }
 
 export interface Recipient {

@@ -15,6 +15,7 @@ import type { WebsitePost } from '@shared/website/types'
 import { db, LIGHT } from './app'
 import { gmailAppPassword, sendMail } from './email'
 import { sendNotifications } from './notify'
+import { noticesFor, officeOf } from './recipients'
 
 // ------------------------------------------------------------------ messages
 
@@ -84,16 +85,12 @@ export const websiteMessage = onCall({ secrets: [gmailAppPassword], timeoutSecon
       ? `${lines.find((l) => l.label === 'Grade')?.value ?? ''} · ${m.days.length} ${m.days.length === 1 ? 'day' : 'days'} that suit them · ${m.name}`
       : `${lines.find((l) => l.label === 'About')?.value ?? ''} · ${m.message.slice(0, 120)}`
   try {
+    // Each owner and admin with "Messages from the website" on (shared/src/notices.ts).
     await sendNotifications(
       ACADEMY_ID,
-      office.map((key) => ({
-        recipientKey: key,
-        type: 'website_message' as const,
-        title: websiteMessageTitle(m),
-        body: summary,
-        link: `admin/settings/website/messages?m=${ref.id}`,
-        refs: { messageId: ref.id },
-      })),
+      noticesFor(await officeOf(ACADEMY_ID), { type: 'website_message', title: websiteMessageTitle(m), body: summary }, () => `admin/settings/website/messages?m=${ref.id}`, {
+        messageId: ref.id,
+      }),
       `site-${ref.id}`,
     )
   } catch (e) {

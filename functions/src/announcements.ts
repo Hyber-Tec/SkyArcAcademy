@@ -4,6 +4,7 @@ import { logger } from 'firebase-functions'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { db, LIGHT } from './app'
 import { sendNotifications, coachRecipients } from './notify'
+import { allFamilies, noticesFor } from './recipients'
 import { syncWebsitePost } from './website'
 import type { Announcement } from '@shared/comms'
 import { COL, ROOT } from '@shared/paths'
@@ -57,7 +58,16 @@ export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGH
       link: `coach/announcements/${announcementId}`,
       refs: { announcementId },
     }))
-  await sendNotifications(branchId, items, `ann-${announcementId}-${requested.toMillis()}`)
+  // Posts shown to families reach them too, with their "News from the academy" switch (docs/DECISIONS.md §23).
+  const families = after.families === true ? await allFamilies(branchId) : []
+  const forFamilies = noticesFor(
+    families,
+    { type: updated ? 'announcement_updated' : 'announcement', title: updated ? 'News updated' : 'News from the academy', body: after.title || 'There’s news from the academy.' },
+    (p) => `${p.role === 'student' ? 'student' : 'parent'}/news/${announcementId}`,
+    { announcementId },
+    after.authorKey ?? null,
+  )
+  await sendNotifications(branchId, [...items, ...forFamilies], `ann-${announcementId}-${requested.toMillis()}`)
 })
 
 /** Keeps `readCount` equal to the number of read receipts. */

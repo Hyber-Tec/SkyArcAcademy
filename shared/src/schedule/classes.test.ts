@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DayHours } from '../settings/defaults'
 import type { AcademyClass, Session, WithId } from '../types'
-import { cellsOf, classViews, coachesIn, makeupLabel, makeupsOwed, openSeats, seatKind, uncovered } from './classes'
+import { cellsOf, classViews, coachesIn, makeupLabel, makeupsLost, makeupsOwed, openSeats, seatKind, uncovered } from './classes'
 import { type ConflictSeat, seatConflicts } from './conflicts'
 
 const open: DayHours = { isOpen: true, openMin: 16 * 60, closeMin: 21 * 60 }
@@ -99,6 +99,23 @@ describe('classes taught together', () => {
       { studentId: 'drew', dateKey: '2026-10-01', status: 'canceled' as const, note: '', isDeleted: false },
     ]
     expect(makeupsOwed(seats, '2026-10-15').map((s) => s.studentId)).toEqual(['blake'])
+  })
+
+  it('owes a makeup for a no-show too, but missing the makeup loses it', () => {
+    const seats = [
+      // A no-show still gets a makeup.
+      { studentId: 'avery', dateKey: '2026-11-02', status: 'no_show' as const, note: '', isDeleted: false },
+      // Blake missed the makeup for 11/3: no new makeup, and 11/3 isn't owed anymore.
+      { studentId: 'blake', dateKey: '2026-11-03', status: 'canceled' as const, note: '', isDeleted: false },
+      { studentId: 'blake', dateKey: '2026-11-06', status: 'no_show' as const, note: 'MU for 11/3', isDeleted: false },
+      // Casey canceled the makeup itself: 11/4 is owed again, the canceled makeup isn't.
+      { studentId: 'casey', dateKey: '2026-11-04', status: 'canceled' as const, note: '', isDeleted: false },
+      { studentId: 'casey', dateKey: '2026-11-09', status: 'canceled' as const, note: 'MU for 11/4', isDeleted: false },
+      // Extra practice missed earns nothing.
+      { studentId: 'drew', dateKey: '2026-11-05', status: 'no_show' as const, note: 'Practice', isDeleted: false },
+    ]
+    expect(makeupsOwed(seats, '2026-10-15').map((s) => `${s.studentId} ${s.dateKey}`)).toEqual(['avery 2026-11-02', 'casey 2026-11-04'])
+    expect(makeupsLost(seats, '2026-10-15').map((s) => `${s.studentId} ${s.note}`)).toEqual(['blake MU for 11/3'])
   })
 
   it('warns about a seat: no coach in, more students than seats, the student elsewhere at the same time', () => {

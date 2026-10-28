@@ -1,4 +1,4 @@
-import { LuBookOpen, LuChevronRight, LuExternalLink, LuKeyRound, LuLifeBuoy, LuShieldCheck, LuSunMoon, LuUserRound } from 'react-icons/lu'
+import { LuBell, LuBookOpen, LuChevronRight, LuExternalLink, LuKeyRound, LuLifeBuoy, LuShieldCheck, LuSunMoon, LuUserRound } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { gradeLabel, initials } from '@shared/people'
 import { ROLE_LABELS } from '@shared/roles'
@@ -9,6 +9,7 @@ import { useBranch } from '@/branch/BranchProvider'
 import { useTheme } from '@/components/app/theme'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { NoticeSwitches } from '@/features/notifications/NoticeSwitches'
 import { ProfileLayout, SectionTitle } from '@/features/profile/ProfileLayout'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { type Family, useAcademyContactDetails, useFamily } from './data'
@@ -24,6 +25,7 @@ export function FamilyProfilePage() {
   const { theme } = useTheme()
   const base = `/${family.who}/profile`
   const account = { to: 'account', label: 'Account', icon: LuUserRound }
+  const notifications = { to: 'notifications', label: 'Notifications', icon: LuBell }
   const security = { to: 'security', label: 'Sign-in & security', icon: LuKeyRound }
   const appearance = { to: 'appearance', label: 'Appearance', icon: LuSunMoon, value: theme[0].toUpperCase() + theme.slice(1) }
   const help = { to: 'help', label: 'Contact & help', icon: LuLifeBuoy }
@@ -31,14 +33,24 @@ export function FamilyProfilePage() {
     <ProfileLayout
       base={base}
       header={<FamilyHeader family={family} />}
-      sections={[account, security, appearance, help]}
+      sections={[account, notifications, security, appearance, help]}
       groups={[
         { title: 'Your account', rows: [account] },
-        { title: 'Settings', rows: [security, appearance] },
+        { title: 'Settings', rows: [notifications, security, appearance] },
         // The section has the Help page and the privacy policy too.
         { title: 'Help', rows: [help] },
       ]}
     />
+  )
+}
+
+/** Profile → Notifications: what the family is told about (classes, answers, scores, reports, news). */
+export function FamilyNotificationsSection() {
+  return (
+    <div className="space-y-4">
+      <SectionTitle title="Notifications" description="What you're told about, in the bell and on your phone." />
+      <NoticeSwitches />
+    </div>
   )
 }
 

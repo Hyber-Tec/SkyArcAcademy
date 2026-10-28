@@ -13,6 +13,7 @@ import { useWebsiteMessages } from '@/features/website/api'
 import { ClockOutDialog } from './ClockOutDialog'
 import { InBuildingCard } from './InBuildingCard'
 import { LatestScoresCard } from './LatestScoresCard'
+import { RequestsCard } from '@/features/requests/OfficeRequests'
 import { MessagesCard } from './MessagesCard'
 import { NeedsYouCard } from './NeedsYouCard'
 import { TodayCard } from './TodayCard'
@@ -115,6 +116,7 @@ export function AdminHomePage() {
         </div>
         <div className="order-1 space-y-6 lg:order-2">
           <NeedsYouCard attention={attention} onFixClock={setFixing} />
+          <RequestsCard />
           <MessagesCard messages={messages.data} loading={messages.loading} />
           <InBuildingCard
             shifts={attention.shifts}
