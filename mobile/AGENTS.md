@@ -100,7 +100,8 @@ src/components/        the shared building blocks (Text `T`, Button, Card, ListS
                        TabHeader, SectionTitle,
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, TimeWheel, FactRow, SwitchRow,
                        DateField, ContactButtons, SwipeToDelete, ActionSheet, ToastHost, Hatch (an open seat's lines),
-                       DemoBadge (the demo academy's mark, beside the lockup and each tab's title),
+                       DemoBadge (the demo academy's mark, beside the lockup and each tab's title), Sheet (the edges
+                       a full-screen sheet pads),
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
@@ -218,6 +219,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   with only the fields the rules allow; coaches keep theirs on their staff record.
 - **A sheet's toasts**: a sheet is drawn above the app's toasts, so a sheet that shows one has its own `ToastHost`,
   beside its ScrollView (a fragment): a View wrapped around the ScrollView leaves an iPhone sheet blank when it grows.
+- **Full-screen sheets** (a `Modal` with `presentationStyle="pageSheet"`) pad `SHEET_EDGES` (`src/components/Sheet.ts`):
+  on Android the Modal fills the screen edge to edge, so a sheet that pads only its bottom puts its title and Done under
+  the status bar, where a tap doesn't reach them.
 - **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
   text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
   the phone's browser (or its mail and phone apps).

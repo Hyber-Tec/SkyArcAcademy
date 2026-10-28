@@ -12,6 +12,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { ListRow, ListSection } from "@/components/List";
+import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
 import { type Drag, ZoomCanvas } from "@/components/ZoomCanvas";
@@ -41,7 +42,7 @@ export function BullEditor({ image, review, n, onChange, onClose }: { image: SkI
     <Modal visible={!!bull} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       {/* A modal is outside the app's gesture root: it gets its own, or pinches and drags don't reach the picture. */}
       <GestureHandlerRootView style={styles.fill}>
-        <SafeAreaView style={[styles.fill, { backgroundColor: colors.background }]} edges={["bottom"]}>
+        <SafeAreaView style={[styles.fill, { backgroundColor: colors.background }]} edges={SHEET_EDGES}>
           {bull ? <EditorBody key={bull.n} image={image} review={review} bull={bull} onChange={onChange} onClose={onClose} /> : null}
         </SafeAreaView>
       </GestureHandlerRootView>
