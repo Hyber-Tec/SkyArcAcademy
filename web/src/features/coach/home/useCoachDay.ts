@@ -36,8 +36,6 @@ export interface WeekDay {
 
 export interface ClockState {
   open: WithId<ClockShift> | null
-  /** When the open shift's paid time starts, when that's after its clock-in (they came before the arrival window). */
-  paidFrom: number | null
   /** Today's finished shifts. */
   closed: WithId<ClockShift>[]
   /**
@@ -163,11 +161,10 @@ export function useCoachDay() {
       return Math.max(0, (p.endMs - p.startMs) / 60_000) + (s.status === 'open' ? 0 : extraMinutes(s))
     }
     const open = shifts.data.find((s) => s.status === 'open') ?? null
-    const openFrom = open ? paidOf(open).startMs : null
     const closed = shifts.data.filter((s) => s.status !== 'open' && s.dateKey === today).sort((a, b) => ms(a.clockInAt) - ms(b.clockInAt))
     const todayMinutes = [...closed, ...(open ? [open] : [])].reduce((m, s) => m + minutesOf(s), 0)
     const weekMinutes = shifts.data.filter((s) => s.dateKey >= weekStart).reduce((m, s) => m + minutesOf(s), 0)
-    return { open, paidFrom: open && openFrom !== null && openFrom > ms(open.clockInAt) ? openFrom : null, closed, todayMinutes, weekMinutes }
+    return { open, closed, todayMinutes, weekMinutes }
   }, [shifts.data, today, now, weekStart, settings, role, data.byDate, data.availability])
 
   return {

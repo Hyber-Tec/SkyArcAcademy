@@ -234,6 +234,10 @@ To start a phase, paste this into Claude Code on the right computer:
 - ✅ **K3. Automatic clock-out at the end of the last class** (for example 8:00 PM). A setting. (#44)
   - *Plan:* **Small change:** automatic clock-out exists at a fixed time (midnight); it moves to the end of the day's
     last class.
+  - **Changed (Goo, 2026-10-28):** no automatic clock-out at the last class. Coaches clock out themselves and the
+    clock-out is kept as clocked; **pay still ends at the end of the last class** (8:00, even for an 8:10 clock-out).
+    Anyone who forgets is clocked out at midnight. Home and a coach's clock card show the clock-in as clocked (3:21, no
+    "paid from 3:30"); the payroll shows the paid times; coming in after the arrival window opens isn't late.
 - ✅ **K4. Arrival minutes are editable** (30 now; might become 15). (#44)
   - *Plan:* **New work**, with `K2`: the arrival minutes setting.
 - ✅ **K5. Paid time comes only from the kiosk.** A coach who was scheduled but never clocked in (no-show) **isn't paid**
@@ -455,7 +459,7 @@ These wait until everything else is ready, some even after launch.
 | Pay rate | **One rate only**, no admin rate | — |
 | Early arrival | **30 minutes** before class, normal rate | Yes |
 | Clock-in before the window | Doesn't count | — |
-| Clock-out | **Automatic at the end of the last class** | Yes |
+| Clock-out | Coaches clock out themselves; **pay ends at the end of the last class** (a later clock-out is kept, not paid) | Yes |
 | Coach no-show | No clock-in = no pay | — |
 | A coach's travel time | +1 hour a week, added by hand | By hand |
 | Paper scoring | **"Most of the hole" rule**, whole numbers, 10 to 1 | — |

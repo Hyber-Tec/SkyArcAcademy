@@ -685,9 +685,15 @@ the main product: families do everything they need there, without calling or tex
 - **Coaches' availability:** the lock is 7 days (the notice period becomes 7 too); inside it coaches can add time,
   with an undo, but not remove it; the admin can always change any day (`C1`–`C3`).
 - **Pay: one rate, from the kiosk only** (`K1`–`K6`): no admin rate; paid time starts 30 minutes before the coach's first
-  class (editable), never earlier; clock-out is automatic at the end of the day's last class; no clock-in, no pay. The
+  class (editable), never earlier; pay ends at the end of the day's last class; no clock-in, no pay. The
   pay models other than Hourly go, since each needs the second rate or pays from the schedule. A coach's extra hour is
   added by hand. The final clock-out rule, the arrival minutes and the pay period wait on the academy's owner.
+- **Clock times stay as clocked (Goo, 2026-10-28):** nobody is clocked out at the end of the last class: coaches clock out
+  themselves, and the clock-out is kept as they clocked it (8:10 for a class that ended at 8:00), while their pay still
+  ends at 8:00 (`timeClock.payEndsAtLastClass`). Anyone who forgets is clocked out at midnight, and Home lists them. The
+  pay rule shows only in the payroll: Home, the schedule and a coach's clock card show a clock-in as clocked (3:21, with
+  no "paid from 3:30"), and a coach who comes in after the arrival window opens isn't late: Home calls a coach "not
+  clocked in" only once their first class has started.
 - **Paper cards are scored by "most of the hole"** (Goo; this answers A15): a hole scores the ring where most of it
   sits, so a hole mostly in the 9 is a 9 even if it touches the 10's line, and a clean bullseye is a 10. Whole numbers,
   10 to 1. A card the coach already scored keeps the written score as the official one (`P4`). The reader is checked on
@@ -710,8 +716,8 @@ the main product: families do everything they need there, without calling or tex
 - **Built on 2026-10-28** (Phase 1 on the Mac mini, merged the same day; the phone's side is Phase 3 on the MacBook Pro):
   - **Availability and pay (#44):** inside the lock the rules let a coach only add time, and undo an add for 15 seconds
     (the website offers it for 10). One hourly rate, written to both stored rate fields until the phone's update; Hourly
-    is the only pay model. A coach is paid from `max(clock-in, first class − arrival minutes)` to the clock-out, or to
-    the end of their last class when the automatic clock-out at the last class is on (the default); their first and
+    is the only pay model. A coach is paid from `max(clock-in, first class − arrival minutes)` to the clock-out, never
+    past the end of their last class (`payEndsAtLastClass`, on; Goo's change of the same day above); their first and
     last class are the ones they're in for (as on the schedule), else the class not over at their clock-in and the
     day's last. Owners and admins are paid as clocked. Extra time on a time entry needs a reason.
   - **Push on the phone (#45, MacBook Pro):** the phone registers for the notices the server already pushed.

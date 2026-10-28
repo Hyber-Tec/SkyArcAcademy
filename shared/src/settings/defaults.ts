@@ -93,11 +93,16 @@ export interface BranchSettings {
      * count, a later one counts from the clock-in (K2, K4; shared/src/pay/paidTime.ts).
      */
     arrivalMinutes: number
+    /**
+     * A coach's paid time ends at the end of their last class that day, even when they clock out later; the clock-out
+     * stays as they clocked it (K3). Off: paid until they clock out.
+     */
+    payEndsAtLastClass: boolean
     autoClockOut: {
       enabled: boolean
       /**
-       * At the end of the person's last class that day (K3), and a coach's pay ends there too, even when they clock out
-       * later; at `localTime` on a day without classes. Off: at `localTime` every day, and pay follows the clock-out.
+       * At the end of the person's last class that day, and at `localTime` on a day without classes. Off: coaches clock
+       * out themselves, and anyone still in at `localTime` is clocked out then.
        */
       atLastClass: boolean
       /** "HH:MM" in the academy's zone: the first one after the clock-in. */
@@ -186,10 +191,12 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     payPeriod: { type: 'biweekly', anchorDate: '2026-01-04' },
   },
   timeClock: {
-    // Coaches arrive 30 minutes before the first class to set up, and are clocked out when the last class ends (the
-    // manager, 2026-10-27: docs/DECISIONS.md §23). The academy's owner may still change both.
+    // Coaches arrive 30 minutes before the first class to set up, and are paid until the last class ends (the manager,
+    // 2026-10-27); they clock out themselves, and anyone who forgets is clocked out at midnight (Goo, 2026-10-28:
+    // docs/DECISIONS.md §23). The academy's owner may still change each.
     arrivalMinutes: 30,
-    autoClockOut: { enabled: true, atLastClass: true, localTime: '00:00' },
+    payEndsAtLastClass: true,
+    autoClockOut: { enabled: true, atLastClass: false, localTime: '00:00' },
     kiosk: { pinLength: 4, successReturnSeconds: 3 },
   },
   timeEntries: { stepMinutes: 5 },
