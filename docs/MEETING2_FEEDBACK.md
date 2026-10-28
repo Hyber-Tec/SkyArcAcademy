@@ -176,6 +176,8 @@ To start a phase, paste this into Claude Code on the right computer:
 
 #### ST: Settings
 - ✅ **ST1. A much simpler Settings page.** (#49)
+  - ✅ **Round 2 (Goo, 2026-10-28): the Settings home**, option 1 of three: tiles that say what each area is set to, a
+    search, and short pages with a worked example under the settings that need one and a save bar. (#72)
   - *Plan:* **Small change:** the sections regrouped with the most-used first, plain labels, a search box, and the
     strays moved (the Trash's days, the clock-out lookback, the first-class bell, seats per class).
   - When the manager asked a question during the meeting, even Goo had to scroll around to find the right setting. That

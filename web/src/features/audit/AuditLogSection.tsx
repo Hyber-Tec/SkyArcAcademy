@@ -38,7 +38,7 @@ const ROLE_LABEL: Record<string, string> = {
   system: 'System',
 }
 
-/** The academy's append-only audit log (Settings → Audit Log). */
+/** The academy's append-only audit log (Settings → Activity log). */
 export function AuditLogSection() {
   const { branchId, timezone } = useBranch()
   const [category, setCategory] = useState<AuditCategory | 'all'>('all')
@@ -63,7 +63,7 @@ export function AuditLogSection() {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="font-semibold">Audit Log</h2>
+        <h2 className="font-semibold">Activity log</h2>
         <p className="text-sm text-muted-foreground">Every change made in this academy, newest first. Entries can’t be edited or deleted.</p>
       </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
