@@ -28,7 +28,8 @@ manifests inside the App Store build, and Firebase's and Google Sign-In's own st
 | IP address (the general area it points to) | Signing in with Google; every request to the server | Google's sign-in uses it against fraud; the server's logs keep it for security and troubleshooting | Yes | Nobody; Google provides the sign-in and the hosting |
 | Device, system, app and Firebase versions | When the app talks to Firebase | Firebase's statistics on the versions in use ("never linked to a user or device identifier") | No | Google (Firebase) |
 | Firebase's installation id (Android) | When the app starts | Firebase's own identifier of the app's copy on a phone ("does not uniquely identify a user or physical device") | No | Google (Firebase) |
-| Nothing else | | No precise location, contacts, microphone, push notifications, analytics, advertising identifiers, crash reporting, or tracking across other apps or websites | | |
+| The phone's notification token, with the install's own id, the phone's model and the app's version (from the build with push notifications) | Once the person allows notifications | Sending them their notifications; removed when they sign out | Yes | Nobody; Google (Firebase Cloud Messaging) and, on iPhone, Apple deliver them |
+| Nothing else | | No precise location, contacts, microphone, analytics, advertising identifiers, crash reporting, or tracking across other apps or websites | | |
 
 Everything travels encrypted (HTTPS) and is stored with Google Firebase in the United States. People delete their
 account in the app (More → Delete my account) or by asking the academy; the academy's own records stay with it.
@@ -47,14 +48,16 @@ this app?** Yes. Tick these types, each *Used for tracking: No*:
 | User Content → **Photos or Videos** (paper targets, photos in students' folders, the Google profile picture) | Yes | App Functionality |
 | User Content → **Other User Content** (scores, staff comments, a coach's availability) | Yes | App Functionality |
 | Identifiers → **User ID** | Yes | App Functionality |
+| Identifiers → **Device ID** (the phone's notification token; from the build with push notifications) | Yes | App Functionality |
 | Usage Data → **Product Interaction** (which reports and announcements a person opened) | Yes | App Functionality |
 | Location → **Coarse Location** (the general area of the IP address: Google's sign-in, against fraud; the server's logs) | Yes | App Functionality |
 | Diagnostics → **Other Diagnostic Data** (device, system, app and Firebase versions) | No | Analytics |
 | Other Data → **Other Data Types** (a coach's date of birth; notification choices) | Yes | App Functionality |
 
 Not collected: Other User Contact Info, Health and Fitness, Financial Info, Precise Location, Sensitive Info, Contacts,
-Emails or Text Messages, Audio Data, Gameplay Content, Customer Support, Browsing History, Search History, Device ID,
-Purchases, Advertising Data, Other Usage Data, Crash Data, Performance Data, Surroundings, Body.
+Emails or Text Messages, Audio Data, Gameplay Content, Customer Support, Browsing History, Search History, Purchases,
+Advertising Data, Other Usage Data, Crash Data, Performance Data, Surroundings, Body (and Device ID, for a build without
+push notifications).
 
 **Tracking:** No. The app never links its data with other companies' data for advertising and never shares it with
 data brokers, so it never asks for tracking permission.
@@ -88,7 +91,7 @@ Play Console → **App content** → **Data safety**.
 | App activity → **App interactions** (reports and announcements opened) | Yes | No | Required | App functionality |
 | App activity → **Other user-generated content** (scores, staff comments, a coach's availability) | Yes | No | Optional | App functionality |
 | App info and performance → **Diagnostics** (Firebase's version statistics) | Yes | No | Required | Analytics |
-| Device or other IDs → **Device or other IDs** (Firebase's installation id) | Yes | No | Required | App functionality |
+| Device or other IDs → **Device or other IDs** (Firebase's installation id; the phone's notification token) | Yes | No | Required | App functionality |
 
 Everything else: not collected. Firebase's own list of what its Android code collects, for checking on the day:
 https://firebase.google.com/docs/android/play-data-disclosure. The families' part of the app collects only their names,
@@ -96,6 +99,8 @@ emails, account ids and what they opened; the camera and the photos are the staf
 
 ## When the app changes
 
-- **Push notifications:** Apple → Identifiers → **Device ID** (the phone's notification token; Linked: Yes; App
-  Functionality); Google → **Device or other IDs** already covers it.
+- **Push notifications** (built 2026-10-28, `docs/mobile-push.md`): in the answers above. Update Apple's App Privacy
+  (Identifiers → **Device ID**) when submitting the first build that has them; Google's **Device or other IDs** already
+  covers the token. The privacy policy already says it ("If you allow notifications on a device, we keep a
+  notification token for it").
 - **A new permission or form:** a new line here, in the privacy policy, and in both stores' forms.

@@ -89,16 +89,14 @@ export default function MoreScreen() {
       </ListSection>
 
       <ListSection title="Settings">
-        {isCoach ? (
-          <ListRow
-            icon={<Icon as={Bell} />}
-            title="Notifications"
-            subtitle="What you’re told about"
-            right={notificationsSummary(staff?.notificationPrefs)}
-            onPress={() => router.push("/more/notifications")}
-            testID="more-notifications"
-          />
-        ) : null}
+        <ListRow
+          icon={<Icon as={Bell} />}
+          title="Notifications"
+          subtitle={isCoach ? "On this phone, and what you’re told about" : "On this phone"}
+          right={isCoach ? notificationsSummary(staff?.notificationPrefs) : undefined}
+          onPress={() => router.push("/more/notifications")}
+          testID="more-notifications"
+        />
         <ListRow icon={<Icon as={KeyRound} />} title="Sign-in & security" subtitle="How you sign in, and your password" onPress={() => router.push("/more/security")} testID="more-security" />
       </ListSection>
 

@@ -1,6 +1,6 @@
 import { NOTIFICATION_SWITCHES, prefOn } from "@shared/profile";
 import type { NotificationPrefs } from "@shared/types";
-import { BellOff, Link2Off } from "lucide-react-native";
+import { Link2Off } from "lucide-react-native";
 import { useState } from "react";
 import { StyleSheet } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
@@ -9,15 +9,17 @@ import { Screen } from "@/components/Screen";
 import { SwitchRow } from "@/components/SwitchRow";
 import { T } from "@/components/Text";
 import { setMyNotificationPref } from "@/features/account/profile";
+import { PhoneNotifications } from "@/features/notifications/PhoneNotifications";
 import { errorMessage } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
 /**
- * More → Notifications: the four switches of the website's Profile → Notifications (`staff.notificationPrefs`), which
- * decide what the academy tells a coach about. Each saves as it's switched, with an audit entry; the switch shows its
- * new position at once. Notifications reach coaches only (functions/src/notify.ts), so owners and admins are told so.
+ * More → Notifications: this phone first (whether notifications reach it, and turning them on), then for a coach the
+ * four switches of the website's Profile → Notifications (`staff.notificationPrefs`), which decide what the academy
+ * tells them about. Each saves as it's switched, with an audit entry; the switch shows its new position at once. Owners
+ * and admins have no switches yet: they're told about the website's messages (functions/src/website.ts).
  */
 export default function NotificationsScreen() {
   const { branchId, actor, staff, isCoach, settings, name: academy } = useBranch();
@@ -29,18 +31,14 @@ export default function NotificationsScreen() {
   if (!isCoach) {
     return (
       <Screen testID="notifications-screen" typing={false}>
-        <EmptyState
-          icon={<BellOff size={26} color={colors.mutedForeground} />}
-          title="Notifications are for coaches"
-          text={`${academy}’s coaches are told about their new classes, class changes and cancellations, and the academy’s announcements, and each chooses which. Nothing is sent to owners and admins.`}
-          testID="notifications-office"
-        />
+        <PhoneNotifications />
       </Screen>
     );
   }
   if (!staff) {
     return (
       <Screen testID="notifications-screen" typing={false}>
+        <PhoneNotifications />
         <EmptyState
           icon={<Link2Off size={26} color={colors.mutedForeground} />}
           title="Your employee record isn’t linked yet"
@@ -67,6 +65,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen testID="notifications-screen" typing={false}>
+      <PhoneNotifications />
       <T tone="muted" style={styles.intro}>
         Choose what you’re told about. Turning one off stops it everywhere you’re signed in.
       </T>

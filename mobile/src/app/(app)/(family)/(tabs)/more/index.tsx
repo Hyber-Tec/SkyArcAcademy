@@ -3,7 +3,7 @@ import { ROLE_LABELS } from "@shared/roles";
 import { formatDateKey } from "@shared/time";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
+import { Bell, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
@@ -68,6 +68,17 @@ export default function FamilyMoreScreen() {
           subtitle={signInLine(methods)}
           onPress={() => router.push("/more/security")}
           testID="family-more-security"
+        />
+        <ListRow
+          icon={
+            <RowIcon>
+              <Bell size={17} color={colors.foreground} />
+            </RowIcon>
+          }
+          title="Notifications"
+          subtitle="On this phone"
+          onPress={() => router.push("/more/notifications")}
+          testID="family-more-notifications"
         />
       </ListSection>
 

@@ -226,6 +226,29 @@ The commands say in plain words what is wrong when they know it, and what to do.
 | "signed differently" when installing on an Android phone | Delete Sky Arc from the phone, then run `npm run android` again. |
 | "Generate app.config for prebuilt Constants.manifest" failed, "No such file or directory" and a path cut at a space | The iPhone build can't run from a folder whose path has a space (`Sky Arc Academy`): one of Expo's build scripts doesn't quote it. Clone the repository into a folder without spaces (`git clone … SkyArcAcademy`) and run the command there. |
 
+## Trying notifications
+
+Push notifications (`docs/mobile-push.md`) come from the server through Firebase Cloud Messaging, so where they can be
+tried depends on the copy and the device:
+
+- **The practice copy** gets none (its Firebase files carry no keys): More → Notifications says so. The app's question
+  ("Get notified?"), the phone's own, and More → Notifications can all be tried there.
+- **The iPhone Simulator** gets no token (React Native Firebase never registers it with Apple), but how a notification
+  looks and where tapping it leads can be tried with a push written by hand:
+
+  ```bash
+  cat > push.json <<'JSON'
+  { "aps": { "alert": { "title": "New announcement", "body": "Range day on Sunday" }, "sound": "default" },
+    "gcm.message_id": "try-1", "type": "announcement", "branchId": "skyarc", "notificationId": "try-1",
+    "link": "coach/announcements", "sessionId": "", "announcementId": "", "dateKey": "" }
+  JSON
+  xcrun simctl push "Sky Arc Practice" com.skyarcacademy.app push.json
+  ```
+
+- **The Android emulator on the real Sky Arc** (`npm run android:sim:live`) and **a real phone** get a token and real
+  pushes. An iPhone needs Apple's push key in Firebase first (`docs/mobile-push.md`, "What Goo does").
+- **The demo academy** sends no notifications: try them with an account of the real academy.
+
 ## What a simulator cannot do
 
 - **No camera in the iPhone Simulator.** Scan from the photo library instead (drag a photo onto the simulator first).

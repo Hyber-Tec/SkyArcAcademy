@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import { AndroidConfig, withAndroidManifest, withAppBuildGradle, withAppDelegate, withDangerousMod, withInfoPlist, type ConfigPlugin } from "expo/config-plugins";
+import { AndroidConfig, withAndroidManifest, withAppBuildGradle, withAppDelegate, withDangerousMod, withEntitlementsPlist, withInfoPlist, type ConfigPlugin } from "expo/config-plugins";
 
 /**
  * The phone app's native configuration, read when the native projects are generated (`npx expo run:ios`,
@@ -205,7 +205,20 @@ const withEmulatorCleartext: ConfigPlugin = (config) =>
   );
 
 /** All of the above, wrapped around the whole config so they run after every other plugin. */
-const withFinalTouches: ConfigPlugin = (config) => withEmulatorCleartext(withUploadKey(withoutDevMenuIntro(withSceneLifecycle(config))));
+/**
+ * A build for someone's own iPhone, signed by a free Apple team (Xcode's "Personal Team", APPLE_PERSONAL_TEAM=1): such
+ * a team can't sign push notifications, so that capability is left out. That build gets no pushes; everything else
+ * works (as HyberCRM's phone app does it).
+ */
+const withoutPushOnPersonalTeam: ConfigPlugin = (config) =>
+  process.env.APPLE_PERSONAL_TEAM === "1"
+    ? withEntitlementsPlist(config, (c) => {
+        delete c.modResults["aps-environment"];
+        return c;
+      })
+    : config;
+
+const withFinalTouches: ConfigPlugin = (config) => withoutPushOnPersonalTeam(withEmulatorCleartext(withUploadKey(withoutDevMenuIntro(withSceneLifecycle(config)))));
 
 export default ({ config }: ConfigContext): ExpoConfig =>
   withFinalTouches({
@@ -242,9 +255,16 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       },
       predictiveBackGestureEnabled: false,
       // Expo's template and the image picker's own manifest ask for the phone's shared storage and for drawing over
-      // other apps. The app uses neither (photos come through Android's photo picker, files stay in the app's own
-      // folders), so the only permission it asks people for is the camera.
-      blockedPermissions: ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.SYSTEM_ALERT_WINDOW"],
+      // other apps, and expo-notifications to start when the phone does (for notifications the app schedules itself).
+      // The app uses none of them (photos come through Android's photo picker, files stay in the app's own folders,
+      // every notification comes from the server), so the only permissions it asks people for are the camera and
+      // notifications.
+      blockedPermissions: [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+      ],
     },
     plugins: [
       "expo-router",
@@ -264,6 +284,11 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       ...(iosUrlScheme ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as [string, unknown]] : []),
+      // Push notifications from the server, through Firebase Cloud Messaging on both phones (src/lib/push.ts): the
+      // iPhone's push entitlement, Android's notification icon (the logo's one-colour layer, which Android shows in the
+      // status bar) in the logo's black.
+      ["expo-notifications", { color: "#0A0A0A", icon: "./assets/images/android-icon-monochrome.png" }],
+      "@react-native-firebase/messaging",
       // The Scan tab: the camera for a new photo of a paper target, the photo library for one taken before. Photos
       // only: no microphone, no video, no barcode scanner, nothing saved to the library.
       ["expo-camera", { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: false }],

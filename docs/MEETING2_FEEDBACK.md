@@ -394,10 +394,14 @@ from the app, without calling or texting the academy.
   and approve or reject family requests. **Only scheduling:** don't copy every web feature into the app.
   - *Plan:* **New work:** the phone marks attendance today. The website's schedule writes move to `shared/` in Phase 1,
     for the phone to use.
-- [ ] **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
-  rejections, new scores, new reports, announcements, for parents, students, coaches and admins.
+- [x] **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
+  rejections, new scores, new reports, announcements, for parents, students, coaches and admins. (#45)
   - *Plan:* **Started early** (Goo, 2026-10-28): the server already pushes every notice; the phone registers.
     `docs/mobile-push.md`.
+  - *Done (#45):* the phone keeps its token, asks once after sign-in, shows a push while open as a toast, opens a
+    tapped one (and marks it read), and keeps the badge; More → Notifications for every role. The notices `S4` and
+    `P13` add reach phones by themselves: their taps go in `appTargetOf`, their words in `pushReason`. Still: Apple's
+    push key in Firebase (Goo, `docs/mobile-push.md`), then a push to a real iPhone.
 - [ ] **M4. Notification settings in the app, for every role:** a list of notification types each person turns on or
   off, so nobody is flooded. Parents, students, coaches and admins each see the types that apply to them.
   - *Plan:* **Coaches already have four switches**; the rest come with `S4`.
