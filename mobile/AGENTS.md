@@ -169,8 +169,14 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.
 - **A coach's queries ask for what the rules give a coach** (every class, every seat and everyone's availability, so
   they see all the academy's classes and who's in with them; their own staff record only, so other people's names come
-  from who's in, `availability.staffName`; never `students/{id}/private`): a query the rules would refuse fails whole
-  (`src/features/data/hooks.ts`).
+  from who's in, `availability.staffName`; never `students/{id}/private`; the Drive's folders and files with
+  `where("access", "==", "staff")`): a query the rules would refuse fails whole (`src/features/data/hooks.ts`,
+  `src/features/drive/useDriveIndex.ts`).
+- **Who sees a Drive item** (`access`, `@shared/drive/types`, docs/DECISIONS.md §23, F6): everyone on staff, or owners
+  and admins only (shown with a lock and "Owners and admins"). What the phone makes takes its folder's access (a
+  scanned card and a student's folder are everyone's on staff), and a move follows where it lands (`planMove`); the
+  rules check each write against its folder, at most 10 folders a batch (`src/features/drive/api.ts`, as the website).
+  The Contracts folder (signed enrollment contracts) can't be renamed, moved, trashed or moved into.
 - **A coach's availability** is the website's: one record a day (`availability/{staffId}_{dateKey}`), holding times or
   "not available" (an answer: the day no longer counts as one to set), removed when the day is cleared, written through
   `@shared/availabilityWrites` with their name and role (`staffName`, `staffRole`: the other coaches see who's in with

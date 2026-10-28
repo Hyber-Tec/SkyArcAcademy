@@ -61,7 +61,8 @@ export function deleteInboxItem(branchId: string, id: string): void {
 /**
  * Where a staff member's notification leads: in the app a post, the news, a class (by its session), the schedule, a
  * family's request (to approve or decline); on the website a trial request or question sent from the public website
- * (answered in Settings → Website → Messages); null for nowhere.
+ * (answered in Settings → Website → Messages), and a signed enrollment contract (the student's page, where the office
+ * sees it); null for nowhere.
  */
 export type InboxTarget =
   | { kind: "post"; id: string }
@@ -75,8 +76,9 @@ export type InboxTarget =
 export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">): InboxTarget {
   // A class taken off the schedule, or now another coach's, has nothing left to open: its notice says it all.
   if (n.type === "session_deleted" || n.type === "session_reassigned_out") return null;
-  // The message itself, as the website's bell opens it (older notices name the page only).
-  if (n.type === "website_message") return n.link ? { kind: "website", path: n.link } : null;
+  // The message itself, as the website's bell opens it (older notices name the page only); a signed contract, the
+  // student's page on the website.
+  if (n.type === "website_message" || n.type === "contract_signed") return n.link ? { kind: "website", path: n.link } : null;
   // A family's request opens itself (a push carries it in its link only).
   const requestId = n.type === "class_requested" ? (n.refs?.requestId ?? queryParams(n.link ?? "").get("request") ?? null) : null;
   if (requestId) return { kind: "request", id: requestId };

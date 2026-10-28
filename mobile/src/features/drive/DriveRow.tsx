@@ -1,6 +1,7 @@
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemUpdated, updatedText } from "@shared/drive/model";
+import { DRIVE_ACCESS_LABELS, accessOf } from "@shared/drive/types";
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, per10 } from "@shared/shooting/evaluation";
-import { ChevronRight, Ellipsis, Folder } from "lucide-react-native";
+import { ChevronRight, Ellipsis, Folder, Lock } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { IconButton } from "@/components/IconButton";
 import { T } from "@/components/Text";
@@ -63,6 +64,8 @@ export function DriveRow({
   const { timezone } = useBranch();
   const isFolder = item.kind === "folder";
   const name = isFolder ? item.folder.name : item.file.name;
+  // Only owners and admins see it (a coach's lists never hold such a thing).
+  const adminsOnly = accessOf(isFolder ? item.folder : item.file) === "admins";
   const changed = itemUpdated(item, index);
   const when = updatedText(changed.at, changed.by, timezone);
 
@@ -88,7 +91,7 @@ export function DriveRow({
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={[isFolder ? `Folder ${name}` : name, score ? scoreText(score) : null, detail, where !== null ? `in ${where || "the Drive"}` : null].filter(Boolean).join(", ")}
+      accessibilityLabel={[isFolder ? `Folder ${name}` : name, adminsOnly ? DRIVE_ACCESS_LABELS.admins : null, score ? scoreText(score) : null, detail, where !== null ? `in ${where || "the Drive"}` : null].filter(Boolean).join(", ")}
       accessibilityHint="Hold for more"
       onPress={onPress}
       onLongPress={onMore}
@@ -120,6 +123,14 @@ export function DriveRow({
           <T variant="small" tone={tone} numberOfLines={2}>
             {detail}
           </T>
+        ) : null}
+        {adminsOnly ? (
+          <View style={styles.where} testID={testID ? `${testID}-admins` : undefined}>
+            <Lock size={12} color={colors.mutedForeground} />
+            <T variant="small" tone="muted" numberOfLines={1} style={styles.shrink}>
+              {DRIVE_ACCESS_LABELS.admins}
+            </T>
+          </View>
         ) : null}
         {progress !== null ? (
           <View style={[styles.track, { backgroundColor: colors.secondary }]}>

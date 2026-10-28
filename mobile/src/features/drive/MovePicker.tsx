@@ -1,4 +1,5 @@
 import { type DriveIndex, moveRefusal } from "@shared/drive/model";
+import { CONTRACTS_FOLDER_ID } from "@shared/drive/types";
 import { ChevronRight, HardDrive } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -35,7 +36,8 @@ export function MovePicker({
   const name = count === 1 ? (index.folderOf(folderIds[0])?.name ?? index.fileOf(fileIds[0])?.name ?? "it") : `${count} items`;
   const crumbs = index.pathOf(at);
   const refusal = moveRefusal(index, folderIds, fileIds, at);
-  const folders = index.foldersIn(at).filter((f) => !moving.has(f.id));
+  // Only signed contracts go in the Contracts folder (they land there by themselves).
+  const folders = index.foldersIn(at).filter((f) => !moving.has(f.id) && f.id !== CONTRACTS_FOLDER_ID);
   const here = at ? (index.folderOf(at)?.name ?? "this folder") : "the top of the Drive";
   const crumb = (id: string | null, label: string, last: boolean) => (
     <Pressable

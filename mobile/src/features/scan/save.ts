@@ -79,9 +79,10 @@ export async function saveCard(c: SaveCard): Promise<{ evaluationId: string; fil
   const data = cardEvaluation(c, fileRef.id);
 
   const batch = writeBatch(db);
-  // The student's folder exists as a stand-in until its first file: made now if it isn't there yet.
+  // The student's folder exists as a stand-in until its first file: made now if it isn't there yet. A student's folder,
+  // and everything in it, is everyone's on staff (coaches' lists ask for `access == 'staff'`).
   if (await knowFolder(c.branchId, c.student.id)) batch.update(folderRef, { updatedAt: serverTimestamp(), updatedBy: by });
-  else batch.set(folderRef, { name: c.student.name, parentId: null, studentId: c.student.id, createdAt: serverTimestamp(), createdBy: by, updatedAt: serverTimestamp(), updatedBy: by });
+  else batch.set(folderRef, { name: c.student.name, parentId: null, studentId: c.student.id, access: "staff", createdAt: serverTimestamp(), createdBy: by, updatedAt: serverTimestamp(), updatedBy: by });
   batch.set(fileRef, {
     name,
     size: c.file.size,
@@ -90,6 +91,7 @@ export async function saveCard(c: SaveCard): Promise<{ evaluationId: string; fil
     status: "uploading",
     folderId,
     studentId: c.student.id,
+    access: "staff",
     evaluationId: evaluationRef.id,
     uploadedAt: serverTimestamp(),
     uploadedBy: by,

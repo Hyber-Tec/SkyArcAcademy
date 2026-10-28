@@ -1,4 +1,4 @@
-import { collection, onSnapshot } from "@react-native-firebase/firestore";
+import { collection, onSnapshot, query, where } from "@react-native-firebase/firestore";
 import { type DriveIndex, type DriveStudent, buildDriveIndex } from "@shared/drive/model";
 import type { DriveFile, DriveFolder } from "@shared/drive/types";
 import { COL, ROOT } from "@shared/paths";
@@ -11,12 +11,17 @@ import { useBranch } from "@/state/BranchProvider";
 
 /**
  * The whole Drive, live, as one index shared by every Drive screen (the top, each folder, the Move picker), as the
- * website reads it (web/src/features/drive/useDriveIndex.ts): two live lists, every folder and every file, which the
- * rules give the staff (coaches too). A query reads every document it matches when it starts, so the lists belong to
- * the academy, not to a screen: the first reader opens them, later ones share them, and they stay open for a minute
- * after the last one leaves, so going in and out of folders never starts over. An empty answer from the phone's copy
- * waits for the server; a refused one refreshes the sign-in and listens again a few times (src/lib/firestore.ts).
+ * website reads it (web/src/features/drive/useDriveIndex.ts): two live lists, every folder and every file. Owners and
+ * admins read everything; a coach asks for what's everyone's on staff (`access == 'staff'`), the only lists the rules
+ * give coaches (they refuse a coach's query that could return anything else), so folders only owners and admins see,
+ * and what's in them, never reach a coach's phone. A query reads every document it matches when it starts, so the lists
+ * belong to the academy, not to a screen: the first reader opens them, later ones share them, and they stay open for a
+ * minute after the last one leaves, so going in and out of folders never starts over. An empty answer from the phone's
+ * copy waits for the server; a refused one refreshes the sign-in and listens again a few times (src/lib/firestore.ts).
  */
+
+/** Which lists: everything (owners and admins), or what's everyone's on staff (coaches). */
+type Scope = "all" | "staff";
 
 const KEEP_OPEN_MS = 60_000;
 
@@ -43,7 +48,7 @@ const stores = new Map<string, Store>();
 /** A server time not confirmed yet reads as the phone's estimate, so what was just made sorts with the newest. */
 const READ = { serverTimestamps: "estimate" } as const;
 
-function listen(branchId: string, store: Store): void {
+function listen(branchId: string, scope: Scope, store: Store): void {
   const publish = (patch: Partial<Lists>) => {
     store.lists = { ...store.lists, ...patch };
     for (const l of [...store.listeners]) l();
@@ -56,13 +61,16 @@ function listen(branchId: string, store: Store): void {
     store.retry = setTimeout(() => {
       store.retry = null;
       stopListening(store);
-      if (store.refs > 0) listen(branchId, store);
+      if (store.refs > 0) listen(branchId, scope, store);
     }, 2000 * store.attempts);
   };
-  const col = (name: string) => collection(db, ROOT.branches, branchId, name);
+  const list = (name: string) => {
+    const col = collection(db, ROOT.branches, branchId, name);
+    return scope === "staff" ? query(col, where("access", "==", "staff")) : col;
+  };
   store.stop = [
     onSnapshot(
-      col(COL.driveFolders),
+      list(COL.driveFolders),
       { includeMetadataChanges: true },
       (snap) => {
         if (snap.metadata.fromCache && snap.empty) return;
@@ -71,7 +79,7 @@ function listen(branchId: string, store: Store): void {
       fail,
     ),
     onSnapshot(
-      col(COL.driveFiles),
+      list(COL.driveFiles),
       { includeMetadataChanges: true },
       (snap) => {
         if (snap.metadata.fromCache && snap.empty) return;
@@ -87,24 +95,27 @@ function stopListening(store: Store): void {
   store.stop = [];
 }
 
-function close(branchId: string, store: Store): void {
+const keyOf = (branchId: string, scope: Scope) => `${branchId}|${scope}`;
+
+function close(key: string, store: Store): void {
   if (store.retry) clearTimeout(store.retry);
   store.retry = null;
   stopListening(store);
-  if (stores.get(branchId) === store) stores.delete(branchId);
+  if (stores.get(key) === store) stores.delete(key);
 }
 
-function acquire(branchId: string): Store {
-  let store = stores.get(branchId);
+function acquire(branchId: string, scope: Scope): Store {
+  const key = keyOf(branchId, scope);
+  let store = stores.get(key);
   // Lists a rule refused for good start fresh with the next reader after everyone left.
   if (store && store.lists.error && store.refs === 0 && !store.retry) {
-    close(branchId, store);
+    close(key, store);
     store = undefined;
   }
   if (!store) {
     store = { refs: 0, timer: null, retry: null, attempts: 0, listeners: new Set(), lists: IDLE, stop: [] };
-    stores.set(branchId, store);
-    listen(branchId, store);
+    stores.set(key, store);
+    listen(branchId, scope, store);
   }
   if (store.timer) clearTimeout(store.timer);
   store.timer = null;
@@ -112,39 +123,43 @@ function acquire(branchId: string): Store {
   return store;
 }
 
-function release(branchId: string, store: Store): void {
+function release(key: string, store: Store): void {
   store.refs = Math.max(0, store.refs - 1);
   if (store.refs > 0) return;
-  store.timer = setTimeout(() => store.refs === 0 && close(branchId, store), KEEP_OPEN_MS);
+  store.timer = setTimeout(() => store.refs === 0 && close(key, store), KEEP_OPEN_MS);
 }
 
 /** Listens again from the start when the lists failed (pull to refresh); otherwise they're live already. */
 export function reloadDrive(branchId: string): void {
-  const store = stores.get(branchId);
-  if (!store || !store.lists.error) return;
-  if (store.retry) clearTimeout(store.retry);
-  store.retry = null;
-  store.attempts = 0;
-  stopListening(store);
-  store.lists = IDLE;
-  for (const l of [...store.listeners]) l();
-  listen(branchId, store);
+  for (const scope of ["all", "staff"] as const) {
+    const store = stores.get(keyOf(branchId, scope));
+    if (!store || !store.lists.error) continue;
+    if (store.retry) clearTimeout(store.retry);
+    store.retry = null;
+    store.attempts = 0;
+    stopListening(store);
+    store.lists = IDLE;
+    for (const l of [...store.listeners]) l();
+    listen(branchId, scope, store);
+  }
 }
 
 function useDriveLists(): Lists {
-  const { branchId } = useBranch();
+  const { branchId, isAdmin } = useBranch();
+  const scope: Scope = isAdmin ? "all" : "staff";
+  const key = keyOf(branchId, scope);
   const subscribe = useCallback(
     (onChange: () => void) => {
-      const store = acquire(branchId);
+      const store = acquire(branchId, scope);
       store.listeners.add(onChange);
       return () => {
         store.listeners.delete(onChange);
-        release(branchId, store);
+        release(key, store);
       };
     },
-    [branchId],
+    [branchId, scope, key],
   );
-  const getSnapshot = useCallback(() => stores.get(branchId)?.lists ?? IDLE, [branchId]);
+  const getSnapshot = useCallback(() => stores.get(key)?.lists ?? IDLE, [key]);
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
