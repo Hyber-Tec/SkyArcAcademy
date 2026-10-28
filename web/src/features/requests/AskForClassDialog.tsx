@@ -26,6 +26,8 @@ export interface AskPreset {
   studentId?: string
   kind?: ClassRequestKind
   forSessionId?: string | null
+  /** The day of the class to move, so it's found however far ahead it is (choices stay within the horizon). */
+  forDateKey?: DateKey
 }
 
 const missedText = (s: Pick<Session, 'dateKey' | 'startMin' | 'status'>) =>
@@ -55,11 +57,14 @@ function AskForm({ family, preset, onDone }: { family: Family; preset?: AskPrese
   const since = addDays(today, -MAKEUP_LOOKBACK_DAYS)
   const [studentId, setStudentId] = useState(preset?.studentId ?? family.kids[0]?.id ?? '')
   const ids = useMemo(() => (studentId ? [studentId] : []), [studentId])
-  const seats = useFamilySessions(ids, since, horizon)
+  const seats = useFamilySessions(ids, since, preset?.forDateKey && preset.forDateKey > horizon ? preset.forDateKey : horizon)
   const requests = useFamilyRequests(ids)
   const classes = useClassSeats(today, horizon)
+  const pending = useMemo(() => requests.data.filter((r) => r.status === 'pending'), [requests.data])
 
-  const owed = useMemo(() => makeupsOwed(seats.data, since), [seats.data, since])
+  // Missed classes still to make up, less those a request is waiting for (the server would refuse a second one).
+  const missed = useMemo(() => makeupsOwed(seats.data, since), [seats.data, since])
+  const owed = useMemo(() => missed.filter((s) => !pending.some((r) => r.forSessionId === s.id)), [missed, pending])
   const moving = preset?.kind === 'reschedule' ? (seats.data.find((s) => s.id === preset.forSessionId) ?? null) : null
   const [kind, setKind] = useState<ClassRequestKind>(preset?.kind ?? 'makeup')
   const [forId, setForId] = useState<string | null>(preset?.kind === 'makeup' ? (preset.forSessionId ?? null) : null)
@@ -70,19 +75,20 @@ function AskForm({ family, preset, onDone }: { family: Family; preset?: AskPrese
   // A makeup needs one owed; with none, an extra class is what's left (a move comes only from a class).
   const kindNow: ClassRequestKind = kind === 'makeup' && !owed.length && !seats.loading ? 'extra' : kind
   const makeupFor = kindNow === 'makeup' ? (owed.find((s) => s.id === forId) ?? owed[0] ?? null) : null
-  const pending = useMemo(() => requests.data.filter((r) => r.status === 'pending'), [requests.data])
   const live = useMemo(() => seats.data.filter(takesSeat), [seats.data])
 
-  // Open classes the child can take: not one they're in or at the same time, nor one already asked for.
+  // Open classes the child can take: not one they're in or at the same time (the class being moved included), nor one
+  // already asked for.
   const choices = useMemo(
     () =>
       classes.data.filter(
         (c) =>
           isRequestable({ ...c, startMs: millis(c.startAt) }, now, horizon) &&
+          c.id !== moving?.classId &&
           !live.some((s) => s.id !== moving?.id && s.dateKey === c.dateKey && s.startMin < c.endMin && s.endMin > c.startMin) &&
           !pending.some((r) => r.classId === c.id),
       ),
-    [classes.data, live, pending, horizon, moving?.id, now],
+    [classes.data, live, pending, horizon, moving?.id, moving?.classId, now],
   )
   const byDay = useMemo(() => {
     const m = new Map<DateKey, WithId<(typeof choices)[number]>[]>()
@@ -157,7 +163,13 @@ function AskForm({ family, preset, onDone }: { family: Family; preset?: AskPrese
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">A makeup</span>
                   <span className="block text-muted-foreground">
-                    {seats.loading ? 'Looking for missed classes…' : owed.length ? `For a class ${who === 'you' ? 'you' : who} missed.` : 'No missed classes to make up.'}
+                    {seats.loading
+                      ? 'Looking for missed classes…'
+                      : owed.length
+                        ? `For a class ${who === 'you' ? 'you' : who} missed.`
+                        : missed.length
+                          ? 'Each missed class has a request waiting.'
+                          : 'No missed classes to make up.'}
                   </span>
                   {kindNow === 'makeup' && owed.length > 1 ? (
                     <Select value={makeupFor?.id ?? ''} onValueChange={setForId}>
