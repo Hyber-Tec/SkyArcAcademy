@@ -27,7 +27,9 @@ stays read-only for coaches).
 
 - **The rule** (`shared/src/pay/paidTime.ts`): everyone is paid their one hourly rate for clocked time; no clock-in, no
   pay. A coach's paid time starts `timeClock.arrivalMinutes` (30) before their first class of the day (an earlier
-  clock-in doesn't count) and, with the automatic clock-out at the last class on, ends at the end of their last class.
+  clock-in doesn't count) and ends at the end of their last class (`timeClock.payEndsAtLastClass`, on), whenever they
+  clock out: nobody is clocked out there any more (Goo, 2026-10-28), and a later clock-out stays as clocked. Anyone who
+  forgets is clocked out at midnight.
   Extra time an admin adds to a time entry (`extraMin`, with `extraNote`) is paid at the same rate. `describePay(settings)`
   says it in words.
 - **The rate:** `hourlyRate(rates)` (the teaching rate, or the admin rate on older records); a save writes both.
@@ -41,4 +43,8 @@ stays read-only for coaches).
     totals' `worked` and `extra`; `describePay(settings)` for the note.
   - `src/app/(app)/(staff)/(tabs)/more/account.tsx` (lines 1, 126, 208–209): one "Hourly rate" row.
   - `src/features/home/clock.ts` (lines 42–46) and `ClockCard.tsx` (lines 25, 33, 68): paid minutes with
-    `shiftPaidTime` plus `extraMinutes` (the week's classes and the coach's availability), and "Paid from …".
+    `shiftPaidTime` plus `extraMinutes` (the week's classes and the coach's availability).
+  - **Since 2026-10-28, no "Paid from …"** (Goo: the pay rule shows only in the payroll; the clock card shows the
+    clock-in as clocked): drop `paidFrom` from `src/features/home/clock.ts` (lines 19, 67–68) and its prefix from
+    `ClockCard.tsx` (line 29), and say "N paid so far" only once it's at least a minute, as the website's
+    `web/src/features/coach/home/ClockCard.tsx` does.

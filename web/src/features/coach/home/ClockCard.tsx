@@ -1,21 +1,20 @@
 import { LuClock } from 'react-icons/lu'
-import { formatDuration, formatInstantTime, formatMinutes } from '@shared/time'
-import { useBranch } from '@/branch/BranchProvider'
+import { formatDuration, formatMinutes } from '@shared/time'
 import { cn } from '@/lib/utils'
 import type { CoachDay } from './useCoachDay'
 
 type Tone = 'live' | 'warn' | 'muted'
 
 /**
- * Where the coach stands with the time clock today (shifts come from the kiosk; nothing is clocked here), and the time
- * it pays (from shortly before their first class to the end of their last).
+ * Where the coach stands with the time clock today (shifts come from the kiosk; nothing is clocked here), as they
+ * clocked in, and the time it pays so far (the pay rule's times are the payroll's: docs/DECISIONS.md §23).
  */
-function clockState(t: CoachDay, timezone: string): { tone: Tone; title: string; detail: string } {
+function clockState(t: CoachDay): { tone: Tone; title: string; detail: string } {
   const { clock, day, today } = t
   if (clock.open) {
     const since = clock.open.dateKey === today ? formatMinutes(clock.open.inMin) : `yesterday ${formatMinutes(clock.open.inMin)}`
-    const paid = clock.paidFrom !== null ? `Paid from ${formatInstantTime(clock.paidFrom, timezone)}: ` : ''
-    return { tone: 'live', title: `Clocked in since ${since}`, detail: `${paid}${formatDuration(clock.todayMinutes)} paid so far. Clock out at the kiosk when you leave.` }
+    const paid = clock.todayMinutes >= 1 ? `${formatDuration(clock.todayMinutes)} paid so far. ` : ''
+    return { tone: 'live', title: `Clocked in since ${since}`, detail: `${paid}Clock out at the kiosk when you leave.` }
   }
   const last = clock.closed[clock.closed.length - 1]
   const later = day.later[0]
@@ -47,8 +46,7 @@ const ICON: Record<Tone, string> = {
 
 /** Computers: the time clock card in the side column. */
 export function ClockCard({ t }: { t: CoachDay }) {
-  const { timezone } = useBranch()
-  const s = clockState(t, timezone)
+  const s = clockState(t)
   return (
     <section className="rounded-xl border bg-card p-4" data-testid="coach-clock">
       <div className="flex items-center justify-between gap-2">
@@ -71,8 +69,7 @@ export function ClockCard({ t }: { t: CoachDay }) {
 
 /** Phones: the same, as one line under the greeting. */
 export function ClockStrip({ t }: { t: CoachDay }) {
-  const { timezone } = useBranch()
-  const s = clockState(t, timezone)
+  const s = clockState(t)
   return (
     <div
       className={cn(
@@ -87,11 +84,9 @@ export function ClockStrip({ t }: { t: CoachDay }) {
         {s.tone === 'warn' ? <span className="mt-0.5 block text-xs text-amber-800/80 dark:text-amber-300/80">{s.detail}</span> : null}
       </span>
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-        {t.clock.open && t.clock.paidFrom !== null && t.clock.todayMinutes < 1
-          ? `paid from ${formatInstantTime(t.clock.paidFrom, timezone)}`
-          : t.clock.open || t.clock.closed.length
-            ? `${formatDuration(t.clock.todayMinutes)} paid today`
-            : `${formatDuration(t.clock.weekMinutes)} paid this week`}
+        {(t.clock.open || t.clock.closed.length) && t.clock.todayMinutes >= 1
+          ? `${formatDuration(t.clock.todayMinutes)} paid today`
+          : `${formatDuration(t.clock.weekMinutes)} paid this week`}
       </span>
     </div>
   )

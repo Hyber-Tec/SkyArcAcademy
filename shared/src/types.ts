@@ -366,8 +366,8 @@ export interface ClockShift {
   source: 'kiosk' | 'admin' | 'auto'
   autoClosed: boolean
   /**
-   * How the automatic clock-out picked its time: the end of the person's last class (the academy's rule, K3), or the
-   * set time (a day without classes, or with the rule off), which may need a look. Missing on older shifts.
+   * How the automatic clock-out picked its time: the end of the person's last class (when the academy turns that on),
+   * or the set time (someone who forgot to clock out), which may need a look. Missing on older shifts.
    */
   autoClosedBy?: 'last_class' | 'set_time'
   autoCorrected: boolean

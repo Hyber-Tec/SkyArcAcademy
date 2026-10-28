@@ -86,9 +86,15 @@ describe('paid time (K2, K3)', () => {
     expect(paid('17:30', '19:40', fromSix)).toEqual([t('17:30'), t('19:40')])
   })
 
+  it('ends with the last class whether or not anyone is clocked out there', () => {
+    // The default: coaches clock out themselves (no automatic clock-out at the last class).
+    expect(DEFAULT_SETTINGS.timeClock.autoClockOut.atLastClass).toBe(false)
+    expect(paid('17:30', '20:10', fromSix, payRule(DEFAULT_SETTINGS))).toEqual([t('17:30'), t('20:00')])
+    expect(paid('17:30', '20:20', fromSix, payRule(settings({}, { enabled: false })))).toEqual([t('17:30'), t('20:00')])
+  })
+
   it('follows the clock-out when pay doesn’t end with the last class', () => {
-    expect(paid('17:30', '20:20', fromSix, payRule(settings({}, { atLastClass: false })))).toEqual([t('17:30'), t('20:20')])
-    expect(paid('17:30', '20:20', fromSix, payRule(settings({}, { enabled: false })))).toEqual([t('17:30'), t('20:20')])
+    expect(paid('17:30', '20:20', fromSix, payRule(settings({ payEndsAtLastClass: false })))).toEqual([t('17:30'), t('20:20')])
   })
 
   it('is the clock times on a day without classes', () => {
@@ -117,7 +123,7 @@ describe('paid time (K2, K3)', () => {
   it('says how pay works, as set', () => {
     expect(describePay(DEFAULT_SETTINGS)).toContain('starts 30 minutes before their first class of the day')
     expect(describePay(DEFAULT_SETTINGS)).toContain('ends at the end of their last class')
-    expect(describePay(settings({ arrivalMinutes: 0 }, { atLastClass: false }))).toContain('starts at their first class of the day (an earlier clock-in doesn’t count) and ends when they clock out')
+    expect(describePay(settings({ arrivalMinutes: 0, payEndsAtLastClass: false }))).toContain('starts at their first class of the day (an earlier clock-in doesn’t count) and ends when they clock out')
   })
 })
 
@@ -125,10 +131,11 @@ describe('the automatic clock-out (K3)', () => {
   const shift = (staffId: string, inAt: string, dateKey = DAY) => ({ staffId, dateKey, inMin: min(inAt), clockInMs: t(inAt, dateKey) })
   const at = (s: ReturnType<typeof shift>, availability: ReturnType<typeof inFor>[], set = settings()) => autoClockOutAt({ shift: s, classes, availability, settings: set, timeZone: NY })
 
-  it('is at the end of their last class', () => {
-    expect(at(shift('pat', '16:00'), [inFor('pat', '16:00', '18:00')])).toEqual({ atMs: t('18:00'), by: 'last_class' })
+  it('is at the end of their last class, when the academy turns that on', () => {
+    const atLast = settings({}, { atLastClass: true })
+    expect(at(shift('pat', '16:00'), [inFor('pat', '16:00', '18:00')], atLast)).toEqual({ atMs: t('18:00'), by: 'last_class' })
     // In for no class: the day's last; the manager too.
-    expect(at(shift('ana', '15:00'), [inFor('ana', '15:00', '21:00', { staffRole: 'admin' })])).toEqual({ atMs: t('20:00'), by: 'last_class' })
+    expect(at(shift('ana', '15:00'), [inFor('ana', '15:00', '21:00', { staffRole: 'admin' })], atLast)).toEqual({ atMs: t('20:00'), by: 'last_class' })
   })
 
   it('is the set time on a day without classes, or after the last class', () => {
@@ -137,8 +144,8 @@ describe('the automatic clock-out (K3)', () => {
     expect(at(shift('pat', '10:00', '2026-10-21'), [], settings({}, { localTime: '21:30' }))).toEqual({ atMs: t('21:30', '2026-10-21'), by: 'set_time' })
   })
 
-  it('is the set time every day with the last class off, and never when it’s off', () => {
-    expect(at(shift('pat', '16:00'), [inFor('pat', '16:00', '18:00')], settings({}, { atLastClass: false }))).toEqual({ atMs: t('00:00', '2026-10-21'), by: 'set_time' })
+  it('is the set time every day with the last class off (the default), and never when it’s off', () => {
+    expect(at(shift('pat', '16:00'), [inFor('pat', '16:00', '18:00')])).toEqual({ atMs: t('00:00', '2026-10-21'), by: 'set_time' })
     expect(at(shift('pat', '16:00'), [], settings({}, { enabled: false }))).toBeNull()
     expect(at(shift('pat', '10:00', '2026-10-21'), [], settings({}, { localTime: 'soon' }))).toBeNull()
   })

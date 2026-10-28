@@ -6,9 +6,10 @@ import type { AcademyClass, StaffRole } from '../types'
 /**
  * When a coach is paid (docs/DECISIONS.md §23, the manager's K2 to K5): only for time the kiosk records (no clock-in, no
  * pay), from `timeClock.arrivalMinutes` before their first class of the day (an earlier clock-in doesn't count; a later
- * one counts from the clock-in), and, with the automatic clock-out at the end of the last class on, until the end of
- * their last class at the latest. The automatic clock-out (the scheduled function) closes a shift still open at that
- * moment too. Owners and admins, and days without classes, are paid from clock-in to clock-out.
+ * one counts from the clock-in), until the end of their last class at the latest (`timeClock.payEndsAtLastClass`): a
+ * later clock-out is kept as clocked, and doesn't count. The automatic clock-out (the scheduled function) closes a shift
+ * someone forgot, at the set time (or at the end of their last class, if the academy turns that on). Owners and admins,
+ * and days without classes, are paid from clock-in to clock-out.
  */
 
 /** A class as the pay reads it: its day, its time (for who's in) and its instants. */
@@ -18,7 +19,7 @@ export type PayClass = Pick<AcademyClass, 'dateKey' | 'startMin' | 'endMin' | 's
 export interface PayRule {
   /** Minutes before the first class that are paid. */
   arrivalMinutes: number
-  /** Pay ends at the end of the last class (the automatic clock-out at the last class, on). */
+  /** Pay ends at the end of the last class, whenever they clock out. */
   endsAtLastClass: boolean
 }
 
@@ -27,7 +28,7 @@ export function payRule(settings: Pick<BranchSettings, 'timeClock'>): PayRule {
   const arrival = Number(t.arrivalMinutes)
   return {
     arrivalMinutes: Number.isFinite(arrival) ? Math.max(0, arrival) : 0,
-    endsAtLastClass: t.autoClockOut.enabled && t.autoClockOut.atLastClass !== false,
+    endsAtLastClass: t.payEndsAtLastClass !== false,
   }
 }
 
