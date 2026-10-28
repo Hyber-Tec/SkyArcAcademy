@@ -297,9 +297,9 @@ To start a phase, paste this into Claude Code on the right computer:
   for a school tryout). Reports and compare handle periods with just one or two positions. (#48)
   - *Plan:* **Already done:** reports and compare keep only the positions a period has. **Small change:** a report's
     change since the last one, compared per position.
-- [ ] **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
+- [x] **P11. SIUS zero shots.** Electronic target #3 sometimes records a **0** because of a sensor problem; the student
   reshoots, so a "20 shot" PDF may show 24 shots. **No feature to remove zeros**; the PDF reader handles these files
-  without breaking or mislabelling them.
+  without breaking or mislabelling them. (#48)
   - *Plan:* **Already done:** a 0.0 without an arrow isn't a shot. **Small change:** a test for reshoots, and the
     reader's note kept.
 - [x] **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
