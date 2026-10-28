@@ -27,14 +27,13 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
-   each is merged. Phase 1 is merged except contracts (`F4`–`F6`); Phase 3 runs on the MacBook Pro. Yours:
-   - **Pick a schedule view (`V1`):** open `schedule-options.html` from the project folder; then `V2` and the phone's
-     `M5` follow.
-   - **Friday with the manager:** the paper scoring rule (`P1`) with `scoring-examples.html` (his own bulls, local).
+   each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
+   - **Pick a schedule view (`V1`, round 2):** open `schedule-timeline-options.html` from the project folder (A, B, C
+     or D); then `V2` and the phone's `M5` follow.
+   - **Friday with the manager:** the paper scoring rule (`P1`) with `scoring-proposal.html` (how matches score, from
+     his competition sheets, and two questions for him) and `scoring-examples.html` (his own bulls); both local.
    - **The manager's files**, when he sends them (Section 7): the SIUS folder, past schedules, the latest sheet, the
      blank contract, nicknames, the academy owner's email. No rush.
-   - **Before launch:** coaches' usual days after November 30 (`C4`): ask Claude Code to carry them on, or the office
-     uses Repeat weekly.
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
 
@@ -93,4 +92,6 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   4. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
      open a class. Android's build 3 already reads classes; once the iPhone's 1.1.0 is out, run
      `npx tsx scripts/lead-coach.ts --clear`. Until then, run `--apply` again after the office adds students.
+  5. **Coaches' usual days run through February 28, 2027** (carried on from November's on 2026-10-28, `C4`). In late
+     February, ask Claude Code to carry them on again, or the office uses Repeat weekly.
 - **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".
