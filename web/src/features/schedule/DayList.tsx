@@ -273,8 +273,8 @@ function DaySeat({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   )
 }
 
-/** A seat's other actions: open the class, cancel or restore, move to another class this week, take out. */
-export function SeatMenu({ seat, v, inSheet }: { seat: WithId<Session>; v: ClassView; inSheet?: boolean }) {
+/** A seat's other actions: open the class, cancel or restore, move to another class this week, take out. `compact`: a smaller button (the timeline's cards). */
+export function SeatMenu({ seat, v, inSheet, compact }: { seat: WithId<Session>; v: ClassView; inSheet?: boolean; compact?: boolean }) {
   const b = useBoard()
   const canceled = seat.status === 'canceled'
   // The rest of the week, from the seat's day: the classes the office can move it to.
@@ -286,8 +286,8 @@ export function SeatMenu({ seat, v, inSheet }: { seat: WithId<Session>; v: Class
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={`More for ${seat.studentName}`}>
-          <LuEllipsis />
+        <Button variant="ghost" size={compact ? 'icon-xs' : 'icon-sm'} aria-label={`More for ${seat.studentName}`} className={compact ? 'hover:bg-background/60' : undefined}>
+          <LuEllipsis className={compact ? 'size-4' : undefined} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
