@@ -13,7 +13,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 ### Branches & pull requests
 - `main` is reached **only through a pull request**: CI green, plus the code owner's approval wherever a shared file changed.
 - A session works on a **branch**, opens the pull request, and **says so**.
-- It **never pushes to `main`** and **never merges** unless the owner asks for exactly that.
+- It **never pushes to `main`** and **never merges** unless the owner asks for exactly that. Low-risk pull requests merge
+  themselves ("Small PRs: auto-merge", below: the owner's rule of 2026-10-28).
 
 ### Your accounts and local setup
 - Commit and push with **your own personal GitHub account**, never a shared or work account. If your global git identity is another account, set `user.name` and `user.email` in this repository's `.git/config`; never change another developer's setup.
@@ -57,6 +58,26 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - Small things join the commit they belong to.
 - **Never** commit per file, per review round, or per step of a session.
 - A day's work is **a handful of commits split by type and scope**, not by when the edits were made.
+
+---
+
+## Small PRs: auto-merge
+For low-risk changes, open the PR and enable auto-merge so it merges itself when CI passes. Don't wait for me.
+
+Low-risk means ONLY:
+- Docs, README, comments, typos
+- Config/tooling tweaks that don't change app behavior (lint, formatting, CI tweaks)
+- Dependency patch bumps
+
+Steps for low-risk changes:
+1. Create a branch, commit, push
+2. `gh pr create --fill`
+3. `gh pr merge --auto --squash`
+4. Tell me the PR link in one line
+
+Everything else (app code, logic, database, auth, deploy config, anything that changes behavior): open the PR normally and do NOT enable auto-merge. I'll review it.
+
+If you're unsure whether something is low-risk, treat it as not low-risk and ask me.
 
 ---
 
