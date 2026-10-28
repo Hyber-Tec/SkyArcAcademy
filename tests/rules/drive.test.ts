@@ -98,6 +98,8 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/other@a.test`), member('other@a.test', 'parent', { studentIds: ['s2'] }))
     await setDoc(doc(d, `branches/${B}/members/admin@b.test`), member('admin@b.test', 'admin'))
     await setDoc(doc(d, `branches/${A}/driveFolders/student-s1`), { name: 'Student One', parentId: null, studentId: 's1', createdAt: null, createdBy: actor('admin@a.test') })
+    // A file moves only into a folder that's there (the app writes a student's folder with its first file).
+    await setDoc(doc(d, `branches/${A}/driveFolders/student-s2`), { name: 'Student Two', parentId: null, studentId: 's2', createdAt: null, createdBy: actor('admin@a.test') })
     // f1 is e1's file (a score of s1); fnote sits in s1's folder without a score; fs2's score (es2) is s2's.
     await setDoc(doc(d, `branches/${A}/driveFiles/f1`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready', evaluationId: 'e1' })
     await setDoc(doc(d, `branches/${A}/driveFiles/fnote`), { ...fileRecord('admin@a.test'), uploadedAt: null, status: 'ready', name: 'Notes.pdf' })

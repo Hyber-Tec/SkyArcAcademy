@@ -1,9 +1,83 @@
 import { useState } from 'react'
+import { LuLock, LuUsers } from 'react-icons/lu'
+import { type DriveIndex, accessNote, accessRefusal } from '@shared/drive/model'
+import { DRIVE_ACCESS_LABELS, type DriveAccess, accessOf } from '@shared/drive/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Field, FieldError, FieldLabel } from '@/components/ui/field'
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldTitle } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
+
+const ACCESS_HELP: Record<DriveAccess, string> = {
+  staff: 'Owners, admins and coaches.',
+  admins: 'Coaches don’t see it, or anything in it.',
+}
+
+/**
+ * "Who can see it": everyone on staff, or owners and admins only (admins choose, for a folder; it covers everything in
+ * it). An option that can't be chosen says why; the choice says what it covers.
+ */
+export function AccessDialog({ index, folderId, onSave, onClose }: { index: DriveIndex; folderId: string; onSave: (access: DriveAccess) => Promise<void>; onClose: () => void }) {
+  const folder = index.folderOf(folderId)
+  const current = accessOf(folder)
+  const [choice, setChoice] = useState<DriveAccess>(current)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const refusal = (a: DriveAccess) => (a === current ? null : accessRefusal(index, folderId, a))
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onSave(choice)
+      onClose()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Who can see “{folder?.name ?? 'this folder'}”?</DialogTitle>
+          <DialogDescription>It covers everything in the folder, and what’s added to it later.</DialogDescription>
+        </DialogHeader>
+        <RadioGroup value={choice} onValueChange={(v) => setChoice(v as DriveAccess)} className="grid gap-2">
+          {(['staff', 'admins'] as const).map((a) => {
+            const why = refusal(a)
+            const Icon = a === 'admins' ? LuLock : LuUsers
+            return (
+              <FieldLabel key={a} htmlFor={`access-${a}`} className="has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted/40">
+                <Field orientation="horizontal" data-disabled={!!why || undefined}>
+                  <FieldContent>
+                    <FieldTitle>
+                      <Icon className="size-4" aria-hidden /> {DRIVE_ACCESS_LABELS[a]}
+                      {a === current ? <span className="text-xs font-normal text-muted-foreground">(now)</span> : null}
+                    </FieldTitle>
+                    <FieldDescription>{why ?? ACCESS_HELP[a]}</FieldDescription>
+                  </FieldContent>
+                  <RadioGroupItem value={a} id={`access-${a}`} disabled={!!why} />
+                </Field>
+              </FieldLabel>
+            )
+          })}
+        </RadioGroup>
+        {choice !== current && !refusal(choice) ? <p className="text-sm text-muted-foreground">{accessNote(index, folderId, choice)}</p> : null}
+        {error ? <FieldError>{error}</FieldError> : null}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => void save()} disabled={choice === current || !!refusal(choice) || busy}>
+            {busy ? <Spinner /> : null} Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 /** A name to type: a new folder, or renaming a folder or a file (the extension stays selected out). */
 export function NameDialog({

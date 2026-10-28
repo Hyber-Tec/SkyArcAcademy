@@ -44,12 +44,13 @@ service firebase.storage {
     }
 
     // The Drive's files (shared/src/drive): results and target photos of minors, read through these rules (getBlob),
-    // never through download links. Staff read them all; a family reads only a score's file in their own child's folder
-    // (a SIUS result's PDF, a paper card's picture), out of the Trash. The record says both: its `evaluationId` is
-    // cleared when the score is deleted or the file moves to another student (Storage rules may read only two
-    // documents, here the member and the record). Staff (coaches too) add files: each file's Firestore record is
-    // written first, and the bytes must match it and never replace a file. They're deleted only once the record is in
-    // the Trash (admins) or the upload failed (staff).
+    // never through download links. Staff read them all, except that only owners and admins read a file their record
+    // says is theirs (`access: 'admins'`, a folder only they see: signed contracts among them); a family reads only a
+    // score's file in their own child's folder (a SIUS result's PDF, a paper card's picture), out of the Trash. The
+    // record says it all: its `evaluationId` is cleared when the score is deleted or the file moves to another student
+    // (Storage rules may read only two documents, here the member and the record). Staff (coaches too) add files: each
+    // file's Firestore record is written first, and the bytes must match it and never replace a file. They're deleted
+    // only once the record is in the Trash (admins) or the upload failed (staff).
     function isStaff(b) {
       return isMember(b) && member(b).get('role', '') in ['owner', 'admin', 'coach'];
     }
@@ -59,24 +60,44 @@ service firebase.storage {
         return firestore.get(/databases/(default)/documents/branches/$(b)/driveFiles/$(fileId)).data;
       }
 
+      // Everyone on staff sees it (a record from before access existed is theirs).
+      function staffSees(f) {
+        return f.get('access', 'staff') == 'staff';
+      }
+
       function familyResult(f) {
         let me = member(b);
         let student = f.get('studentId', null);
         return f.get('evaluationId', null) is string && f.get('trashed', false) == false && f.status == 'ready'
-          && student is string
+          && student is string && staffSees(f)
           && ((me.get('role', '') == 'parent' && student in me.get('studentIds', []))
             || (me.get('role', '') == 'student' && student == me.get('studentId', null)));
       }
 
-      allow read: if isStaff(b) || (isMember(b) && familyResult(record()));
+      allow read: if isAdmin(b) || (isStaff(b) && staffSees(record())) || (isMember(b) && familyResult(record()));
       allow create: if isStaff(b)
         && request.resource.size <= 100 * 1024 * 1024
         && request.resource.contentType.matches('application/pdf|image/(jpeg|png|heic|heif|webp|gif)|text/(plain|csv)|application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint|vnd[.]openxmlformats-officedocument[.][a-z.]+)|video/(mp4|quicktime)')
         && record().status == 'uploading'
-        && record().size == request.resource.size;
+        && record().size == request.resource.size
+        && (isAdmin(b) || staffSees(record()));
       allow update: if false;
       allow delete: if (isAdmin(b) && record().get('trashed', false) == true)
-        || (isStaff(b) && record().status == 'error');
+        || (isStaff(b) && record().status == 'error' && (isAdmin(b) || staffSees(record())));
+    }
+
+    // The academy's blank enrollment contract (docs/DECISIONS.md §23, F4): a PDF each time owners or admins upload it
+    // (Settings → Enrollment contract), kept for the signed copies' history: never replaced or deleted. Only they read
+    // it; a family reads it through the signing link (functions/src/contracts.ts), and the signed copies are Drive files
+    // in the Contracts folder, which only owners and admins see.
+    match /branches/{b}/contracts/templates/{fileName} {
+      allow read: if isAdmin(b);
+      allow create: if isAdmin(b)
+        && resource == null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf'
+        && fileName.matches('[A-Za-z0-9]{20}[.]pdf');
+      allow update, delete: if false;
     }
   }
 }

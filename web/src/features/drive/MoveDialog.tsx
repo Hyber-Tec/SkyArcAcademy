@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { LuChevronRight, LuHardDrive } from 'react-icons/lu'
-import { type DriveIndex, moveRefusal } from '@shared/drive/model'
+import { LuChevronRight, LuHardDrive, LuLock, LuUsers } from 'react-icons/lu'
+import { type DriveIndex, moveAccessNote, moveRefusal } from '@shared/drive/model'
+import { accessOf } from '@shared/drive/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -31,6 +32,8 @@ export function MoveDialog({
   const name = count === 1 ? (index.folderOf(folderIds[0])?.name ?? index.fileOf(fileIds[0])?.name ?? 'the item') : `${count} items`
   const crumbs = index.pathOf(at)
   const refusal = moveRefusal(index, folderIds, fileIds, at)
+  // Into a folder only owners and admins see, or out of one: who sees it changes, and the dialog says so first.
+  const accessNote = moveAccessNote(index, folderIds, fileIds, at)
   const move = async () => {
     setBusy(true)
     setError(null)
@@ -69,8 +72,9 @@ export function MoveDialog({
             folders.map((f) => (
               <li key={f.id}>
                 <button type="button" className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60" onClick={() => setAt(f.id)}>
-                  <FolderGlyph student={!!f.studentId} className="size-6" />
+                  <FolderGlyph student={!!f.studentId} locked={accessOf(f) === 'admins'} className="size-6" />
                   <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                  {accessOf(f) === 'admins' ? <LuLock className="size-3.5 shrink-0 text-muted-foreground" aria-label="Only owners and admins see it" /> : null}
                   <LuChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               </li>
@@ -83,6 +87,12 @@ export function MoveDialog({
           )}
         </ul>
         {refusal || error ? <p className="text-sm text-muted-foreground">{error ?? refusal}</p> : null}
+        {accessNote && !error ? (
+          <p className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+            {index.accessIn(at) === 'admins' ? <LuLock className="mt-0.5 size-4 shrink-0" aria-hidden /> : <LuUsers className="mt-0.5 size-4 shrink-0" aria-hidden />}
+            {accessNote}
+          </p>
+        ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel

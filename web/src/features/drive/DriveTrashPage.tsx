@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { useStudentList } from '@/features/data/hooks'
 import { deleteForever, restoreItems } from './api'
-import { FileGlyph, FolderGlyph } from './parts'
+import { AccessBadge, FileGlyph, FolderGlyph } from './parts'
 import { useDriveLists } from './useDriveIndex'
 
 /**
@@ -101,9 +101,12 @@ export function DriveTrashPage() {
             return (
               <ContextMenuFor key={`${e.kind}-${e.id}`} entries={items}>
                 <div className="flex items-center gap-3 border-b border-border/60 px-4 py-2.5 last:border-0" data-testid="trash-row">
-                  {e.kind === 'folder' ? <FolderGlyph /> : <FileGlyph kind={e.name.split('.').pop()?.toLowerCase() ?? ''} />}
+                  {e.kind === 'folder' ? <FolderGlyph locked={e.access === 'admins'} /> : <FileGlyph kind={e.name.split('.').pop()?.toLowerCase() ?? ''} />}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">{e.name}</div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="truncate text-sm font-semibold">{e.name}</span>
+                      {e.access === 'admins' ? <AccessBadge /> : null}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {e.from ? `From ${e.from}` : 'From the top of the Drive'}
                       {e.kind === 'folder' ? ` · ${countLabel(e.files, 'file')}` : ''} · {formatBytes(e.bytes)}

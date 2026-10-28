@@ -270,5 +270,6 @@ export const OTHER_FINDS: { label: string; section: string; anchor?: string; key
   { label: 'Opening hours by date', section: 'schedule', anchor: 'date-hours', keywords: 'holiday closed date special hours' },
   { label: 'Website: messages, photos, pages, coaches, testimonials', section: 'website', keywords: 'website public site photos testimonials coaches messages trial instagram news' },
   { label: 'Sign-up link and QR code', section: 'signup', keywords: 'link qr share' },
+  { label: 'Enrollment contract', section: 'contract', keywords: 'contract enrollment sign signature agreement pdf' },
   { label: 'Activity log', section: 'audit-log', keywords: 'audit history changes who changed' },
 ]

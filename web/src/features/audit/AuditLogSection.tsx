@@ -22,6 +22,7 @@ const CATEGORIES: { value: AuditCategory | 'all'; label: string }[] = [
   { value: 'pay', label: 'Pay' },
   { value: 'announcements', label: 'Announcements' },
   { value: 'drive', label: 'Drive' },
+  { value: 'contracts', label: 'Contracts' },
   { value: 'reports', label: 'Reports' },
   { value: 'website', label: 'Website' },
   { value: 'settings', label: 'Settings' },

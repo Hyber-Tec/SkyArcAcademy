@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { SignupShareCard } from '@/features/access/SignupShare'
 import { AuditLogSection } from '@/features/audit/AuditLogSection'
+import { ContractSettings } from '@/features/contracts/ContractSettings'
 import { WebsiteSettings } from '@/features/website/WebsiteSettings'
 import { type AuditInput, addAudit } from '@/lib/audit'
 import { db } from '@/lib/firebase'
@@ -38,6 +39,8 @@ const SECTIONS = [
   ...SETTINGS_SECTIONS.filter((s) => s.key !== 'signup').map((s) => ({ key: s.key, title: s.title })),
   { key: 'website', title: 'Website' },
   { key: 'signup', title: 'Sign-up page' },
+  // The blank contract families sign from a link (docs/DECISIONS.md §23, F4).
+  { key: 'contract', title: 'Enrollment contract' },
   { key: 'audit-log', title: 'Activity log' },
 ]
 
@@ -155,6 +158,8 @@ export function SettingsPage() {
             </Card>
           ) : active === 'website' ? (
             <WebsiteSettings />
+          ) : active === 'contract' ? (
+            <ContractSettings />
           ) : active === 'academy' ? (
             <div className="space-y-4">
               <BranchProfileCard />

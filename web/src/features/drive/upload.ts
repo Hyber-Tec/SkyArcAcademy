@@ -1,16 +1,16 @@
-import { type WriteBatch, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import { serverTimestamp, updateDoc } from 'firebase/firestore'
 import { ref as storageRef, uploadBytesResumable } from 'firebase/storage'
 import { useSyncExternalStore } from 'react'
 import type { DriveIndex } from '@shared/drive/model'
-import { type DriveFile, driveObjectPath } from '@shared/drive/types'
+import { type DriveAccess, type DriveFile, driveObjectPath } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import type { Evaluation } from '@shared/shooting/evaluation'
 import type { AuditStamp } from '@shared/types'
 import { type Actor, addAudit } from '@/lib/audit'
-import { db, storage } from '@/lib/firebase'
+import { storage } from '@/lib/firebase'
 import { branchDocRef } from '@/lib/firestore'
 import { addEvaluation, newEvaluationId } from '@/features/scores/api'
-import { driveActor, folderWrites, newFileId } from './api'
+import { type DriveWrite, commitAll, driveActor, folderWrites, newFileId, readsFor } from './api'
 
 /**
  * Uploading: each file's record is written first (status "uploading", so it shows at once and the Storage rules can
@@ -95,14 +95,6 @@ export async function sendAll(branchId: string, ups: PlannedUpload[]): Promise<s
   return failures
 }
 
-async function commitAll(writes: ((b: WriteBatch) => void)[]) {
-  for (let i = 0; i < writes.length; i += 400) {
-    const batch = writeBatch(db)
-    for (const w of writes.slice(i, i + 400)) w(batch)
-    await batch.commit()
-  }
-}
-
 /** The record of a file about to be uploaded. */
 export function plannedFile(branchId: string, file: File, plan: { name: string; kind: string; mime: string }, folderId: string | null, studentId: string | null, extra: Partial<DriveFile> = {}): PlannedUpload {
   return {
@@ -112,12 +104,21 @@ export function plannedFile(branchId: string, file: File, plan: { name: string; 
   }
 }
 
+/**
+ * A record's write: it takes the access of the folder it lands in (unless it already says, e.g. in a folder made for a
+ * dropped one), so the rules and coaches' lists see it right.
+ */
+function recordWrite(branchId: string, index: DriveIndex, up: PlannedUpload, data: Record<string, unknown>): DriveWrite {
+  const access: DriveAccess = up.record.access ?? index.accessIn(up.record.folderId)
+  return { write: (b) => b.set(branchDocRef(branchId, COL.driveFiles, up.fileId), { ...up.record, access, ...data }), reads: readsFor(up.record.folderId, access) }
+}
+
 /** Writes the records of plain files (the folders they go in included) and the audit entry. */
 export async function writeRecords(branchId: string, actor: Actor, index: DriveIndex, ups: PlannedUpload[], folderIds: (string | null)[]) {
   const by = driveActor(actor)
-  const writes: ((b: WriteBatch) => void)[] = []
+  const writes: DriveWrite[] = []
   for (const id of new Set(folderIds)) writes.push(...folderWrites(branchId, index, id, actor))
-  for (const up of ups) writes.push((b) => b.set(branchDocRef(branchId, COL.driveFiles, up.fileId), { ...up.record, uploadedAt: serverTimestamp(), uploadedBy: by }))
+  for (const up of ups) writes.push(recordWrite(branchId, index, up, { uploadedAt: serverTimestamp(), uploadedBy: by }))
   if (ups.length) {
     const where = folderIds[0] ? index.pathOf(folderIds[0]).map((c) => c.name).join(' / ') : 'the top of the Drive'
     writes.push((b) =>
@@ -143,11 +144,11 @@ export interface ResultUpload {
 /** Writes each result's file record and evaluation together, then sends the files. */
 export async function saveResults(branchId: string, actor: Actor, index: DriveIndex, results: ResultUpload[]): Promise<string[]> {
   const by = driveActor(actor)
-  const writes: ((b: WriteBatch) => void)[] = []
+  const writes: DriveWrite[] = []
   for (const id of new Set(results.map((r) => r.up.record.folderId))) writes.push(...folderWrites(branchId, index, id, actor))
   for (const r of results) {
     const evaluationId = r.evaluation ? newEvaluationId(branchId) : null
-    writes.push((b) => b.set(branchDocRef(branchId, COL.driveFiles, r.up.fileId), { ...r.up.record, evaluationId, uploadedAt: serverTimestamp(), uploadedBy: by }))
+    writes.push(recordWrite(branchId, index, r.up, { evaluationId, uploadedAt: serverTimestamp(), uploadedBy: by }))
     if (r.evaluation && evaluationId) {
       const evaluation = { ...r.evaluation, fileId: r.up.fileId }
       writes.push((b) => addEvaluation(b, branchId, actor, evaluationId, evaluation))
@@ -177,10 +178,10 @@ export async function saveResults(branchId: string, actor: Actor, index: DriveIn
 export async function saveSheetResults(branchId: string, actor: Actor, index: DriveIndex, up: PlannedUpload | null, evaluations: Omit<Evaluation, keyof AuditStamp>[]): Promise<string[]> {
   const by = driveActor(actor)
   const ids = evaluations.map(() => newEvaluationId(branchId))
-  const writes: ((b: WriteBatch) => void)[] = []
+  const writes: DriveWrite[] = []
   if (up) {
     writes.push(...folderWrites(branchId, index, up.record.folderId, actor))
-    writes.push((b) => b.set(branchDocRef(branchId, COL.driveFiles, up.fileId), { ...up.record, evaluationId: ids[0] ?? null, uploadedAt: serverTimestamp(), uploadedBy: by }))
+    writes.push(recordWrite(branchId, index, up, { evaluationId: ids[0] ?? null, uploadedAt: serverTimestamp(), uploadedBy: by }))
   }
   evaluations.forEach((e, i) => writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...e, fileId: up?.fileId ?? null })))
   await commitAll(writes)

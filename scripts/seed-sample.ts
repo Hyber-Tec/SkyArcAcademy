@@ -178,6 +178,8 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
         status: 'ready',
         folderId: studentFolderId(e.studentId),
         studentId: e.studentId,
+        // A student's folder, and what's in it, is everyone's on staff (shared/src/drive/types.ts, DriveAccess).
+        access: 'staff',
         evaluationId: sc.evaluationId,
         ...(pdf ? { originalName: `${e.studentName.split(' ')[0]} 20 shot ${POSITION_LABELS[e.position].toLowerCase()}.pdf` } : {}),
         uploadedAt: sc.at,
@@ -188,7 +190,7 @@ async function sampleShooting(docs: SampleDoc[], academy: Record<string, unknown
   }
   if (pdfs + cards) process.stdout.write('\n')
   for (const [studentId, name] of folders) {
-    out.push({ path: `${base}/${COL.driveFolders}/${studentFolderId(studentId)}`, data: { name, parentId: null, studentId, createdAt: now, createdBy: manager } })
+    out.push({ path: `${base}/${COL.driveFolders}/${studentFolderId(studentId)}`, data: { name, parentId: null, studentId, access: 'staff', createdAt: now, createdBy: manager } })
   }
 
   // Reports for the last 30 days: shared with each family that can sign in (a parent or the student), and one draft.

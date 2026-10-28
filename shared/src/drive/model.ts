@@ -1,7 +1,7 @@
 import { formatInstant } from '../time'
 import type { WithId } from '../types'
 import { cleanFolderName } from './files'
-import { type DriveActor, type DriveFile, type DriveFolder, studentFolderId } from './types'
+import { CONTRACTS_FOLDER_ID, type DriveAccess, type DriveActor, type DriveFile, type DriveFolder, accessOf, studentFolderId } from './types'
 
 /**
  * The Drive read as one index: pure derivation over its two live lists (every folder, every file) plus the students,
@@ -92,11 +92,17 @@ export type DriveIndex = ReturnType<typeof buildDriveIndex>
 export function buildDriveIndex(rawFolders: readonly WithId<DriveFolder>[] | null, rawFiles: readonly WithId<DriveFile>[] | null, students: readonly DriveStudent[] = []) {
   const studentById = new Map(students.map((s) => [s.id, s]))
   const all = new Map<string, IndexFolder>()
+  // Everything as stored, by the folder it's in, the Trash included: what a change to a folder must reach (a folder
+  // in the Trash comes back with everything in it, so what's inside changes with it).
+  const rawKidFolders = new Map<string, WithId<DriveFolder>[]>()
+  const rawKidFiles = new Map<string, WithId<DriveFile>[]>()
   for (const f of rawFolders ?? []) {
     if (!f?.id) continue
     const student = f.studentId ? studentById.get(f.studentId) : null
     all.set(f.id, student ? { ...f, name: student.name, parentId: null } : f)
+    if (!f.studentId) push(rawKidFolders, f.parentId ?? '', f)
   }
+  for (const f of rawFiles ?? []) if (f?.id) push(rawKidFiles, f.folderId ?? '', f)
   const filesByStudent = new Set((rawFiles ?? []).filter((f) => f.studentId && !f.trashed).map((f) => f.studentId as string))
   for (const s of students) {
     const id = studentFolderId(s.id)
@@ -256,9 +262,34 @@ export function buildDriveIndex(rawFolders: readonly WithId<DriveFolder>[] | nul
     return false
   }
 
-  /** May these folders go into `targetId`? Never into themselves or anything inside them; students' folders stay put. */
+  /** May these folders go into `targetId`? Never into themselves or anything inside them; students' folders and the Contracts folder stay put. */
   const canMoveInto = (folderIds: readonly string[], targetId: string | null) =>
-    folderIds.every((fid) => !folderById.get(fid)?.studentId && (!targetId || !isInside(targetId, fid)))
+    folderIds.every((fid) => !folderById.get(fid)?.studentId && fid !== CONTRACTS_FOLDER_ID && (!targetId || !isInside(targetId, fid)))
+
+  /** Who sees what's in a folder (null: the top, everyone on staff's), whether the folder is in the Trash or not. */
+  const accessIn = (folderId: string | null): DriveAccess => (folderId ? accessOf(all.get(folderId)) : 'staff')
+
+  /**
+   * Every folder and file inside a folder, at any depth, as stored, the Trash included (what's in a trashed folder
+   * comes back with it), folders above what they hold. Not the folder itself.
+   */
+  const storedInside = (id: string): { folders: WithId<DriveFolder>[]; files: WithId<DriveFile>[] } => {
+    const folders: WithId<DriveFolder>[] = []
+    const files: WithId<DriveFile>[] = []
+    const seen = new Set([id])
+    const queue = [id]
+    while (queue.length) {
+      const cur = queue.shift()!
+      files.push(...(rawKidFiles.get(cur) ?? NO_FILES))
+      for (const f of rawKidFolders.get(cur) ?? []) {
+        if (seen.has(f.id)) continue
+        seen.add(f.id)
+        folders.push(f)
+        queue.push(f.id)
+      }
+    }
+    return { folders, files }
+  }
 
   /** Another folder beside it already has this name (case and spacing ignored)? */
   const nameTaken = (parentId: string | null, name: string, exceptId: string | null = null) => {
@@ -294,9 +325,13 @@ export function buildDriveIndex(rawFolders: readonly WithId<DriveFolder>[] | nul
     updatedOf,
     isInside,
     canMoveInto,
+    accessIn,
+    storedInside,
     nameTaken,
     /** A folder as stored, trashed or not (to say where something in the Trash came from). */
     storedFolder: (id: string | null) => (id ? (all.get(id) ?? null) : null),
+    /** A file as stored, trashed or not. */
+    storedFile: (id: string | null) => (id ? ((rawFiles ?? []).find((f) => f?.id === id) ?? null) : null),
     /** Search the whole Drive by name: folders then files, each A–Z. Every word must appear in the name. */
     search: (query: string): DriveHit[] => {
       const tokens = searchTokens(query)
@@ -321,6 +356,7 @@ export interface TrashEntry {
   /** For a folder: the files it holds, at every depth. */
   files: number
   bytes: number
+  access: DriveAccess
 }
 
 /**
@@ -369,11 +405,11 @@ export function trashEntries(rawFolders: readonly WithId<DriveFolder>[], rawFile
   const out: TrashEntry[] = []
   for (const f of rawFolders) {
     if (!f.trashed || insideTrashed(f.parentId)) continue
-    out.push({ kind: 'folder', id: f.id, name: nameOf(f), from: pathTo(f.parentId), trashedAt: f.trashedAt ?? null, trashedBy: f.trashedBy ?? null, ...below(f.id) })
+    out.push({ kind: 'folder', id: f.id, name: nameOf(f), from: pathTo(f.parentId), trashedAt: f.trashedAt ?? null, trashedBy: f.trashedBy ?? null, ...below(f.id), access: accessOf(f) })
   }
   for (const f of rawFiles) {
     if (!f.trashed || insideTrashed(f.folderId)) continue
-    out.push({ kind: 'file', id: f.id, name: f.name, from: pathTo(f.folderId), trashedAt: f.trashedAt ?? null, trashedBy: f.trashedBy ?? null, files: 1, bytes: Number(f.size) || 0 })
+    out.push({ kind: 'file', id: f.id, name: f.name, from: pathTo(f.folderId), trashedAt: f.trashedAt ?? null, trashedBy: f.trashedBy ?? null, files: 1, bytes: Number(f.size) || 0, access: accessOf(f) })
   }
   return out.sort((a, b) => tsMs(b.trashedAt) - tsMs(a.trashedAt) || compareNames(a.name, b.name))
 }
@@ -499,20 +535,58 @@ export function folderNameProblem(index: DriveIndex, parentId: string | null, na
 }
 
 /**
- * Why these can't be moved into `targetId` (null: the top of the Drive), or null when they can: a folder never goes
- * inside itself or anything inside it, a student's folder stays at the top, and there's no moving things to where they
- * already all are.
+ * Who sees a folder once it's moved into `targetId` (null: the top): inside a folder only owners and admins see, theirs;
+ * out of one, everyone's on staff again (with everything in it); anywhere else, what it was (a folder admins made
+ * theirs stays theirs).
  */
-export function moveRefusal(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): string | null {
-  if (!index.canMoveInto(folderIds, targetId)) return folderIds.some((id) => index.folderOf(id)?.studentId) ? 'A student’s folder stays at the top.' : 'A folder can’t go inside itself.'
-  const homes = new Set([...folderIds.map((id) => index.folderOf(id)?.parentId ?? null), ...fileIds.map((id) => index.fileOf(id)?.folderId ?? null)])
-  return homes.size === 1 && homes.has(targetId) ? 'It’s already here.' : null
+export function movedFolderAccess(index: DriveIndex, folder: Pick<DriveFolder, 'parentId' | 'access'>, targetId: string | null): DriveAccess {
+  if (index.accessIn(targetId) === 'admins') return 'admins'
+  if (index.accessIn(folder.parentId) === 'admins') return 'staff'
+  return accessOf(folder)
 }
 
-/** A file's fields that change when it moves (or when the folder it's in moves). */
+/** Would this folder, moved into `targetId`, keep anything only owners and admins see (itself, or something in it)? */
+function keepsAdminsOnly(index: DriveIndex, folderId: string, targetId: string | null): boolean {
+  const folder = index.folderOf(folderId)
+  if (!folder) return false
+  const after = movedFolderAccess(index, folder, targetId)
+  if (after === 'admins') return true
+  // Out of a folder only owners and admins see: it opens with everything in it.
+  if (after !== accessOf(folder)) return false
+  const inside = index.storedInside(folderId)
+  return inside.folders.some((f) => accessOf(f) === 'admins') || inside.files.some((f) => accessOf(f) === 'admins')
+}
+
+/**
+ * Why these can't be moved into `targetId` (null: the top of the Drive), or null when they can: a folder never goes
+ * inside itself or anything inside it, a student's folder and the Contracts folder stay at the top, a student's folder
+ * is everyone's on staff (so nothing only owners and admins see goes in it), and there's no moving things to where
+ * they already all are.
+ */
+export function moveRefusal(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): string | null {
+  if (!index.canMoveInto(folderIds, targetId)) {
+    if (folderIds.some((id) => index.folderOf(id)?.studentId)) return 'A student’s folder stays at the top.'
+    if (folderIds.includes(CONTRACTS_FOLDER_ID)) return 'The Contracts folder stays at the top.'
+    return 'A folder can’t go inside itself.'
+  }
+  const homes = new Set([...folderIds.map((id) => index.folderOf(id)?.parentId ?? null), ...fileIds.map((id) => index.fileOf(id)?.folderId ?? null)])
+  if (homes.size === 1 && homes.has(targetId)) return 'It’s already here.'
+  if (index.studentOf(targetId) && folderIds.some((id) => keepsAdminsOnly(index, id, targetId))) {
+    return 'A student’s folder is for everyone on staff, so a folder only owners and admins see (or one holding such a folder) can’t go in it.'
+  }
+  return null
+}
+
+/** A file's fields that change when it moves (or when the folder it's in moves, or changes who sees it). */
 export interface MovedFile {
   id: string
-  patch: { folderId?: string | null; studentId: string | null; evaluationId?: null }
+  patch: { folderId?: string | null; studentId?: string | null; evaluationId?: null; access?: DriveAccess }
+}
+
+/** A folder's fields that change when it moves (its parent), or when who sees it changes (with what's in a folder that changes). */
+export interface MovedFolder {
+  id: string
+  patch: { parentId?: string | null; access?: DriveAccess }
 }
 
 /** What moving folders and files into a folder changes, before it's written (moveItems on the website and the phone). */
@@ -521,33 +595,135 @@ export interface MovePlan {
   student: string | null
   /** The folders whose parent becomes the target. */
   folderIds: string[]
+  /** Every folder that changes: those moved (their parent, and who sees them) and those in them that change too, each above what it holds. */
+  folders: MovedFolder[]
   files: MovedFile[]
+  /** Who sees what moved once it's there, when that changes for any of it (null: it doesn't). */
+  access: DriveAccess | null
   /** For the audit log: "Moved “Old” to “Mia Larkin”". */
   summary: string
 }
 
 /**
- * Moving folders and files into `targetId` (null: the top). What moves stays as it was; files keep track of whose
- * folder they're in, at any depth, and a score's file that leaves its student stops being a score's file
- * (`evaluationId` cleared), so neither family sees it (storage.rules). Throws when a folder would go inside itself or a
- * student's folder would leave the top.
+ * Moving folders and files into `targetId` (null: the top). Files keep track of whose folder they're in, at any depth,
+ * and a score's file that leaves its student stops being a score's file (`evaluationId` cleared), so neither family sees
+ * it (storage.rules). Who sees them follows where they land (`movedFolderAccess`; a file takes its folder's), and a
+ * folder's whole content follows it, the Trash included. Throws when a folder would go inside itself, or a student's
+ * folder or the Contracts folder would leave the top.
  */
 export function planMove(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): MovePlan {
-  if (!index.canMoveInto(folderIds, targetId)) throw new Error('A folder can’t go inside itself, and a student’s folder stays where it is.')
+  if (!index.canMoveInto(folderIds, targetId)) throw new Error('A folder can’t go inside itself, and a student’s folder or the Contracts folder stays where it is.')
   const student = index.studentOf(targetId)
+  const into = index.accessIn(targetId)
   const unlinked = (f: Pick<DriveFile, 'evaluationId'>) => (f.evaluationId ? { evaluationId: null } : {})
+  const folderPatches = new Map<string, MovedFolder['patch']>()
+  const filePatches = new Map<string, MovedFile['patch']>()
+  const patchFolder = (id: string, patch: MovedFolder['patch']) => folderPatches.set(id, { ...folderPatches.get(id), ...patch })
+  const patchFile = (id: string, patch: MovedFile['patch']) => filePatches.set(id, { ...filePatches.get(id), ...patch })
+  let access: DriveAccess | null = null
   const folders = folderIds.filter((id) => id !== targetId)
-  const files: MovedFile[] = []
   for (const id of folders) {
-    for (const f of index.subtreeFiles(id)) if ((f.studentId ?? null) !== student) files.push({ id: f.id, patch: { studentId: student, ...unlinked(f) } })
+    patchFolder(id, { parentId: targetId })
+    const folder = index.folderOf(id)
+    const before = accessOf(folder)
+    const after = folder ? movedFolderAccess(index, folder, targetId) : before
+    if (after !== before) {
+      patchFolder(id, { access: after })
+      access = after
+    }
+    const inside = index.storedInside(id)
+    if (after !== before) for (const f of inside.folders) if (accessOf(f) !== after) patchFolder(f.id, { access: after })
+    for (const f of inside.files) {
+      if ((f.studentId ?? null) !== student) patchFile(f.id, { studentId: student, ...unlinked(f) })
+      if (after !== before && accessOf(f) !== after) patchFile(f.id, { access: after })
+    }
   }
   for (const id of fileIds) {
     const f = index.fileOf(id)
-    files.push({ id, patch: { folderId: targetId, studentId: student, ...(f && (f.studentId ?? null) !== student ? unlinked(f) : {}) } })
+    patchFile(id, { folderId: targetId, studentId: student, ...(f && (f.studentId ?? null) !== student ? unlinked(f) : {}) })
+    if (f && accessOf(f) !== into) {
+      patchFile(id, { access: into })
+      access = into
+    }
   }
   const names = [...folderIds.map((id) => index.folderOf(id)?.name), ...fileIds.map((id) => index.fileOf(id)?.name)].filter((n): n is string => !!n)
-  const into = targetId ? `“${index.folderOf(targetId)?.name ?? 'a folder'}”` : 'the top of the Drive'
-  return { student, folderIds: folders, files, summary: `Moved ${itemsLabel(names)} to ${into}` }
+  const where = targetId ? `“${index.folderOf(targetId)?.name ?? 'a folder'}”` : 'the top of the Drive'
+  return {
+    student,
+    folderIds: folders,
+    folders: [...folderPatches].map(([id, patch]) => ({ id, patch })),
+    files: [...filePatches].map(([id, patch]) => ({ id, patch })),
+    access,
+    summary: `Moved ${itemsLabel(names)} to ${where}`,
+  }
+}
+
+/**
+ * Why a folder can't be made `access`, or null when it can: a student's folder (and anything in it) is everyone's on
+ * staff, the Contracts folder is owners' and admins' only, and a folder inside one only owners and admins see is
+ * theirs too.
+ */
+export function accessRefusal(index: DriveIndex, folderId: string, access: DriveAccess): string | null {
+  const folder = index.folderOf(folderId)
+  if (!folder) return 'That folder isn’t in the Drive any more.'
+  if (folderId === CONTRACTS_FOLDER_ID && access !== 'admins') return 'The Contracts folder is for owners and admins only.'
+  if (access === 'admins' && (folder.studentId || index.studentOf(folderId))) return 'A student’s folder is for everyone on staff, and so is everything in it.'
+  const parent = folder.parentId ? index.folderOf(folder.parentId) : null
+  if (access === 'staff' && parent && accessOf(parent) === 'admins') return `It’s inside “${parent.name}”, which only owners and admins see.`
+  return null
+}
+
+/** What making a folder `access` changes: the folder and everything in it, the Trash included. */
+export interface AccessPlan {
+  folders: MovedFolder[]
+  files: MovedFile[]
+  /** For the audit log: "Made “Office” for owners and admins only". */
+  summary: string
+}
+
+/** Making a folder everyone's on staff, or owners' and admins' only: it and everything in it. Throws when it can't be. */
+export function planAccess(index: DriveIndex, folderId: string, access: DriveAccess): AccessPlan {
+  const refusal = accessRefusal(index, folderId, access)
+  if (refusal) throw new Error(refusal)
+  const folder = index.folderOf(folderId)!
+  const inside = index.storedInside(folderId)
+  const folders: MovedFolder[] = [folder, ...inside.folders].filter((f) => accessOf(f) !== access).map((f) => ({ id: f.id, patch: { access } }))
+  const files: MovedFile[] = inside.files.filter((f) => accessOf(f) !== access).map((f) => ({ id: f.id, patch: { access } }))
+  return { folders, files, summary: access === 'admins' ? `Made “${folder.name}” for owners and admins only` : `Made “${folder.name}” for everyone on staff` }
+}
+
+/**
+ * What choosing who sees a folder means, in a sentence under the choice: owners and admins only covers everything in it
+ * (and what's added later); everyone on staff opens it all, naming what only owners and admins see in it now.
+ */
+export function accessNote(index: DriveIndex, folderId: string, access: DriveAccess): string {
+  const c = index.countsOf(folderId)
+  const parts = [c.folders ? countLabel(c.folders, 'folder') : null, c.files ? countLabel(c.files, 'file') : null].filter(Boolean)
+  const what = parts.length ? `it and the ${parts.join(' and ')} in it` : 'it'
+  if (access === 'admins') return `Coaches won’t see ${what}. Anything added or moved into it later is for owners and admins only too.`
+  const closed = index
+    .subtreeFolderIds(folderId)
+    .slice(1)
+    .map((id) => index.folderOf(id))
+    .filter((f): f is IndexFolder => !!f && accessOf(f) === 'admins')
+  const names = closed.slice(0, 3).map((f) => `“${f.name}”`)
+  if (closed.length > 3) names.push(countLabel(closed.length - 3, 'more folder'))
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : (names[0] ?? '')
+  const including = closed.length ? ` That includes ${list}, which only owners and admins see now.` : ''
+  return `Everyone on staff, coaches too, will see ${what}.${including}`
+}
+
+/**
+ * A line for the Move dialog when moving changes who sees something: into a folder only owners and admins see, or out
+ * of one. Null when it doesn't.
+ */
+export function moveAccessNote(index: DriveIndex, folderIds: readonly string[], fileIds: readonly string[], targetId: string | null): string | null {
+  if (moveRefusal(index, folderIds, fileIds, targetId)) return null
+  const access = planMove(index, folderIds, fileIds, targetId).access
+  const one = folderIds.length + fileIds.length === 1
+  if (access === 'admins') return `Only owners and admins will see ${one ? 'it' : 'them'} there.`
+  if (access === 'staff') return `Everyone on staff, coaches too, will see ${one ? 'it' : 'them'} there.`
+  return null
 }
 
 /**

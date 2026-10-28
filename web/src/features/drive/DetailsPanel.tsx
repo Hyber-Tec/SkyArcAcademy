@@ -1,7 +1,8 @@
-import { LuHardDrive } from 'react-icons/lu'
+import { LuHardDrive, LuLock, LuUsers } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { categoryOf } from '@shared/drive/files'
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
+import { DRIVE_ACCESS_LABELS, type DriveAccess, accessOf, isFixedFolder } from '@shared/drive/types'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from '@shared/shooting/evaluation'
 import { canReplay } from '@shared/shooting/replay'
 import { formatDateKey, formatInstant, formatMinutes } from '@shared/time'
@@ -23,9 +24,45 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
+/** Who sees it, for owners and admins (coaches see only what's everyone's), with Change on a folder they can change. */
+function AccessRow({ access, note, onChange }: { access: DriveAccess; note?: string; onChange?: () => void }) {
+  const Icon = access === 'admins' ? LuLock : LuUsers
+  return (
+    <Row label="Who can see it">
+      <span className="flex items-start justify-between gap-2">
+        <span>
+          <span className="inline-flex items-center gap-1.5">
+            <Icon className="size-3.5 shrink-0" aria-hidden />
+            {DRIVE_ACCESS_LABELS[access]}
+          </span>
+          {note ? <span className="block text-xs text-muted-foreground">{note}</span> : null}
+        </span>
+        {onChange ? (
+          <button type="button" className="shrink-0 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" onClick={onChange}>
+            Change
+          </button>
+        ) : null}
+      </span>
+    </Row>
+  )
+}
+
 /** The details of the one selected item, else of the folder you're in, else of the Drive. */
-export function DetailsPanel({ index, folderId, selected, scoresByFile }: { index: DriveIndex; folderId: string | null; selected: DriveItem | null; scoresByFile: Map<string, WithId<Evaluation>> }) {
-  const { timezone, portal } = useBranch()
+export function DetailsPanel({
+  index,
+  folderId,
+  selected,
+  scoresByFile,
+  onAccess,
+}: {
+  index: DriveIndex
+  folderId: string | null
+  selected: DriveItem | null
+  scoresByFile: Map<string, WithId<Evaluation>>
+  /** Owners and admins: change who sees a folder. */
+  onAccess?: (folderId: string) => void
+}) {
+  const { timezone, portal, isAdmin } = useBranch()
   const { data: students } = useStudentList()
   const shown: DriveItem | null = selected ?? (folderId && index.folderOf(folderId) ? { kind: 'folder', id: folderId, folder: index.folderOf(folderId)! } : null)
   const when = (t: unknown) => {
@@ -51,11 +88,15 @@ export function DetailsPanel({ index, folderId, selected, scoresByFile }: { inde
     const student = f.studentId ? students.find((s) => s.id === f.studentId) : null
     const c = index.countsOf(f.id)
     const u = itemUpdated(shown, index)
+    // A student's folder (and what's in it) is everyone's on staff, and the Contracts folder the admins': no change.
+    const changeable = !isFixedFolder(f) && !index.studentOf(f.id)
+    const accessNote = f.studentId || index.studentOf(f.id) ? 'A student’s folder is for everyone on staff.' : isFixedFolder(f) ? 'Signed contracts stay with owners and admins.' : undefined
     body = (
       <>
-        <Header icon={<FolderGlyph student={!!f.studentId} />} name={f.name} />
+        <Header icon={<FolderGlyph student={!!f.studentId} locked={accessOf(f) === 'admins'} />} name={f.name} />
         <dl className="space-y-3">
           {student ? <Row label="Student">{[student.level, student.program, student.grade ? `Grade ${student.grade}` : null].filter(Boolean).join(' · ') || '—'}</Row> : null}
+          {isAdmin ? <AccessRow access={accessOf(f)} note={accessNote} onChange={changeable && onAccess ? () => onAccess(f.id) : undefined} /> : null}
           <Row label="Owner">{f.createdBy ? <PersonChip person={itemOwner(shown)} /> : f.studentId ? 'Made for the student' : ''}</Row>
           <Row label="Created">{when(f.createdAt)}</Row>
           <Row label="Updated">{updatedText(u.at, u.by, timezone)}</Row>
@@ -96,6 +137,7 @@ export function DetailsPanel({ index, folderId, selected, scoresByFile }: { inde
         ) : null}
         <dl className="space-y-3">
           <Row label="Type">{`${CATEGORY[categoryOf(f.kind)]} · ${formatBytes(f.size)}`}</Row>
+          {isAdmin ? <AccessRow access={accessOf(f)} note={f.folderId ? 'Like the folder it’s in.' : undefined} /> : null}
           <Row label="Uploaded">{[when(f.uploadedAt), f.uploadedBy?.name].filter(Boolean).join(' by ')}</Row>
           {f.originalName && f.originalName !== f.name ? <Row label="Original name">{f.originalName}</Row> : null}
         </dl>

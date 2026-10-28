@@ -13,6 +13,7 @@ import { SessionStatusBadge } from '@/components/app/SessionStatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { StudentContractCard } from '@/features/contracts/StudentContractCard'
 import { useDayConfigs } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
@@ -152,6 +153,9 @@ export function IdentityColumn({
       </div>
 
       {isAdmin ? <FamilyCard student={student} priv={priv} onEdit={() => onTab('info', '?edit=family')} /> : null}
+
+      {/* The enrollment contract (F4): owners and admins send it from here and see where it stands. */}
+      {isAdmin ? <StudentContractCard student={student} priv={priv} /> : null}
     </aside>
   )
 }
