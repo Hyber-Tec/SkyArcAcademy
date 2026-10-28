@@ -131,7 +131,7 @@ To start a phase, paste this into Claude Code on the right computer:
 ### Phase 1: Mac mini · Foundation (backend + web admin)
 
 #### V: Schedule view options (first)
-- [ ] **V1. A clickable HTML demo with 3 schedule view options.**
+- [x] **V1. A clickable HTML demo with 3 schedule view options.** (ready 2026-10-28: `schedule-options.html`; waits for Goo's pick)
   - *Plan:* **New work**, under way: `schedule-options.html` in the project folder, built from the current schedule's
     code.
   - **Why:** the manager likes the current view (Option 1) because it looks like their Google Sheet. Now that coaches
