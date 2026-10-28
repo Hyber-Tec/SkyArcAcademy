@@ -6,5 +6,8 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['shared/src/**/*.test.ts', 'scripts/**/*.test.ts', 'functions/src/**/*.test.ts'],
+    // A scan of a made-up card photo takes seconds, more in CI, where the typecheck runs beside the tests
+    // (scripts/ci-checks.sh): 5 seconds, the default, failed main once.
+    testTimeout: 30_000,
   },
 })
