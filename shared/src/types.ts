@@ -321,6 +321,19 @@ export interface Availability extends AuditStamp {
   /** First instant of the day; rules use it for the coach lock window. */
   dayStartAt: TimestampLike
   updatedVia: 'coach' | 'admin'
+  /** Set by a coach's add inside the lock: what it replaced, so the add can be undone for a few seconds. */
+  undo?: AvailabilityUndo
+}
+
+/**
+ * What a coach's add inside the lock replaced (docs/DECISIONS.md §23, C2): the day's times and mark as they were, and
+ * when the add was saved. The rules let the coach put exactly this back for 15 seconds (`UNDO_SECONDS` on screen).
+ */
+export interface AvailabilityUndo {
+  ranges: AvailabilityRange[]
+  unavailable: boolean
+  /** When the add was saved (the server's time). */
+  at: TimestampLike
 }
 
 export interface DayConfig extends AuditStamp {

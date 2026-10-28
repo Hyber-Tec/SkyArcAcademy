@@ -19,7 +19,7 @@ import { useLoadWindow } from '@/lib/useLoadWindow'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/components/app/useConfirm'
-import { type DayWrite, classesLeftWithoutCoach, describeRanges, noCoachWarning, writeAvailability } from './api'
+import { type DayWrite, UNDO_SECONDS, addTimeInLock, classesLeftWithoutCoach, describeRanges, noCoachWarning, writeAvailability } from './api'
 import { DayEditorDialog, type DayEditorState } from './DayEditorDialog'
 
 /** What is selected: one time range, or a run of days (Shift-click extends it). */
@@ -38,6 +38,13 @@ const DRAG_THRESHOLD = 5
 const LONG_PRESS_MS = 350
 
 const SKIP_REASON = { closed: 'closed', outside: 'outside opening hours', too_many: 'too many ranges', locked: 'locked' } as const
+
+/** What a coach is told when a change would remove time from locked days. */
+function lockedNote(days: number) {
+  toast.info(days === 1 ? 'That day is locked' : 'Those days are locked', {
+    description: 'You can open a locked day to add time, not remove it. Ask an admin to remove time.',
+  })
+}
 
 /** Lets a page open a day of the calendar (Home's and the status line's "Set" links), or mark days not available. */
 export interface AvailabilityCalendarHandle {
@@ -143,6 +150,32 @@ export function AvailabilityCalendar({
   )
 
   /**
+   * A coach adds times to a locked day (they can add time there, not remove it), then gets a few seconds to undo it:
+   * the Undo puts the day back exactly as it was.
+   */
+  const addInLock = useCallback(
+    async (d: DateKey, added: AvailabilityRange[]) => {
+      const undo = await addTimeInLock({ branchId, actor, timezone, staffId, staffName, recordName, staffRole, dateKey: d, saved: availability.get(d) ?? null, added })
+      toast.success(`Added to ${formatDateKey(d, 'weekdayMedium')}`, {
+        description: describeRanges(normalizeRanges(added)),
+        duration: UNDO_SECONDS * 1000,
+        action: {
+          label: 'Undo',
+          onClick: () =>
+            void undo()
+              .then(() => toast.success('Undone', { description: `${formatDateKey(d, 'weekdayMedium')} is back as it was.` }))
+              .catch((e) =>
+                toast.error('Couldn’t undo', {
+                  description: (e as Error).message.includes('permission') ? 'It’s too late to undo. Ask an admin to remove the time.' : (e as Error).message,
+                }),
+              ),
+        },
+      })
+    },
+    [branchId, actor, timezone, staffId, staffName, recordName, staffRole, availability],
+  )
+
+  /**
    * Writes a plan of day → times or not available, skipping closed and locked
    * days and fitting each day to its opening hours; reports what was skipped.
    * A day planned without times is cleared (its not available mark too).
@@ -179,6 +212,7 @@ export function AvailabilityCalendar({
       }
       const notes = Object.entries(skipped).map(([why, n]) => `${n} ${SKIP_REASON[why as keyof typeof SKIP_REASON]}`)
       if (writes.length) toast.success(done, notes.length ? { description: `Skipped: ${notes.join(', ')}.` } : undefined)
+      else if (notes.length === 1 && skipped.locked) lockedNote(skipped.locked)
       else if (notes.length) toast.info('Nothing changed', { description: `Skipped: ${notes.join(', ')}.` })
     },
     [locked, hoursOf, rangesOf, markOf, a, write],
@@ -187,7 +221,10 @@ export function AvailabilityCalendar({
   /** Marks days not available; asks first when some of them have times. */
   const markNotAvailable = useCallback(
     async (dates: DateKey[]) => {
-      const targets = dates.filter((d) => markOf(d) === 'available' || markOf(d) === 'unset')
+      const markable = dates.filter((d) => markOf(d) === 'available' || markOf(d) === 'unset')
+      // Inside the lock a coach can only add time: those days are left as they are.
+      const targets = markable.filter((d) => !locked(d))
+      if (!targets.length && markable.length) return lockedNote(markable.length)
       if (!targets.length) return toast.info(dates.some((d) => markOf(d) === 'unavailable') ? 'Already marked not available.' : 'Nothing to mark: the academy is closed.')
       const timed = targets.filter((d) => markOf(d) === 'available').length
       if (
@@ -205,7 +242,7 @@ export function AvailabilityCalendar({
         targets.length === 1 ? `Not available on ${formatDateKey(targets[0], 'weekdayMedium')}` : `Not available on ${targets.length} days`,
       )
     },
-    [markOf, confirm, applyPlan, staffName],
+    [markOf, locked, confirm, applyPlan, staffName],
   )
 
   const openEditor = useCallback(
@@ -222,11 +259,13 @@ export function AvailabilityCalendar({
         unavailable: mark === 'unavailable',
         exists: mark === 'available' || mark === 'unavailable',
         locked: locked(d),
+        // Inside the lock a coach can still add time, until the day is over.
+        addOnly: locked(d) && d >= today,
         leadWarning: mode === 'coach' && a.leadTimeEnforcement === 'warn' && isInsideLeadTime(d, timezone, leadDays) && !locked(d),
         hours,
       })
     },
-    [hoursOf, rangesOf, markOf, locked, mode, a.leadTimeEnforcement, timezone, leadDays],
+    [hoursOf, rangesOf, markOf, locked, mode, a.leadTimeEnforcement, timezone, leadDays, today],
   )
 
   // A day asked for before the availability loaded opens once it has.
@@ -306,7 +345,12 @@ export function AvailabilityCalendar({
       const range = rangesOf(source.date)[source.index]
       if (!range || (target === source.date && !asCopy)) return
       if (!asCopy && locked(source.date)) return toast.error(`${formatDateKey(source.date, 'weekdayMedium')} is locked, so its time can’t be moved. Please contact an admin.`)
-      if (locked(target)) return toast.error(`${formatDateKey(target, 'weekdayMedium')} is locked. Please contact an admin.`)
+      if (locked(target)) {
+        return toast.error(
+          `${formatDateKey(target, 'weekdayMedium')} is locked`,
+          target >= today ? { description: 'Open the day to add time there. Ask an admin to change it otherwise.' } : { description: 'The day is over.' },
+        )
+      }
       const fit = fitRangesToDay([...rangesOf(target), range], hoursOf(target), a)
       if (!fit.ok) {
         return toast.error(
@@ -331,7 +375,7 @@ export function AvailabilityCalendar({
         })
         .catch((e) => toast.error((e as Error).message.includes('permission') ? 'That day is locked. Please contact an admin.' : (e as Error).message))
     },
-    [rangesOf, locked, hoursOf, a, write, staffName],
+    [rangesOf, locked, hoursOf, a, write, staffName, today],
   )
 
   /** The day cell under a point, if it belongs to this calendar. */
@@ -641,7 +685,7 @@ export function AvailabilityCalendar({
         {isMobile ? 'Tap a day to set availability. ' : 'Hold Alt/Option while dragging to copy instead of move. '}
         Times follow each day’s opening hours; closed days take no availability.
         {mode === 'coach'
-          ? ` Days within ${a.lockWindowDays} days are locked; amber days are inside the ${leadDays}-day notice window and still need an answer: your times, or not available.`
+          ? ` Days within ${lockDays} days are locked: open one to add time, but ask an admin to remove time. Amber days are inside the ${leadDays}-day notice window and still need an answer: your times, or not available.`
           : ''}
       </p>
 
@@ -652,6 +696,11 @@ export function AvailabilityCalendar({
           if (!editor) return false
           if (!(await write([{ dateKey: editor.dateKey, ...day }]))) return false
           toast.success(day.unavailable ? 'Marked not available' : day.ranges.length ? 'Availability saved' : 'Day cleared')
+          return true
+        }}
+        onAdd={async (added) => {
+          if (!editor) return false
+          await addInLock(editor.dateKey, added)
           return true
         }}
       />

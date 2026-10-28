@@ -1,5 +1,19 @@
-import { getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
-import { type DayWrite, type UncoveredClass, availabilityRecord, availabilitySummary, classesLeftUncovered, shrinkingDays } from '@shared/availabilityWrites'
+import { deleteField, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
+import type { SavedDay } from '@shared/availability'
+import {
+  type DayWrite,
+  type UncoveredClass,
+  addedTimeSummary,
+  availabilityRecord,
+  availabilitySummary,
+  classesLeftUncovered,
+  describeRanges,
+  shrinkingDays,
+  undoKeepsRecord,
+  undoOf,
+  undoneSummary,
+  withAddedTime,
+} from '@shared/availabilityWrites'
 import { COL, availabilityDocId } from '@shared/paths'
 import type { DayHours } from '@shared/settings/defaults'
 import type { DateKey } from '@shared/time'
@@ -9,7 +23,7 @@ import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef } from '@/lib/firestore'
 
 export type { DayWrite, UncoveredClass } from '@shared/availabilityWrites'
-export { describeRanges, noCoachWarning } from '@shared/availabilityWrites'
+export { describeRanges, noCoachWarning, onlyAddsTime, UNDO_SECONDS } from '@shared/availabilityWrites'
 
 /**
  * Classes still ahead, with students, that a change to a coach's hours would leave with no coach in for all or part of
@@ -94,5 +108,54 @@ export async function writeAvailability(opts: {
       })
     }
     await batch.commit()
+  }
+}
+
+/**
+ * A coach adds times to a day inside the lock (docs/DECISIONS.md §23, C2: they can add time there, not remove it). The
+ * day keeps every time it had, as saved, with the new ones merged in, and keeps what it was (`undo`, stamped by the
+ * server) so the add can be undone for a few seconds: the rules allow exactly that. Returns the undo.
+ */
+export async function addTimeInLock(opts: {
+  branchId: string
+  actor: Actor
+  timezone: string
+  staffId: string
+  /** Their name in the audit log. */
+  staffName: string
+  recordName?: string
+  staffRole?: StaffRole
+  dateKey: DateKey
+  /** The day's record as saved (null when it has none). */
+  saved: SavedDay | null
+  added: AvailabilityRange[]
+}): Promise<() => Promise<void>> {
+  const { branchId, actor, timezone, staffId, staffName, dateKey, saved } = opts
+  const ref = branchDocRef(branchId, COL.availability, availabilityDocId(staffId, dateKey))
+  const ranges = withAddedTime(saved, opts.added)
+  const before = undoOf(saved)
+  const record = availabilityRecord(staffId, { dateKey, ranges }, timezone, 'coach', opts.recordName || undefined, opts.staffRole)
+  if (!record) throw new Error('Choose the times to add.')
+  const audit = { category: 'availability' as const, entityType: 'availability', entityId: ref.id, coachId: staffId, coachName: staffName, dateKey }
+  const batch = writeBatch(db)
+  batch.set(ref, { ...record, undo: { ...before, at: serverTimestamp() }, updatedAt: serverTimestamp(), updatedBy: actor.email })
+  addAudit(batch, branchId, actor, {
+    ...audit,
+    action: 'availability.add',
+    summary: addedTimeSummary(staffName, dateKey, opts.added),
+    changes: [{ field: 'ranges', label: 'Times', from: before.unavailable ? 'Not available' : describeRanges(before.ranges), to: describeRanges(ranges) }],
+  })
+  await batch.commit()
+  return async () => {
+    const undo = writeBatch(db)
+    if (undoKeepsRecord(before)) undo.update(ref, { ranges: before.ranges, unavailable: before.unavailable, undo: deleteField(), updatedAt: serverTimestamp(), updatedBy: actor.email })
+    else undo.delete(ref)
+    addAudit(undo, branchId, actor, {
+      ...audit,
+      action: 'availability.undo',
+      summary: undoneSummary(staffName, dateKey),
+      changes: [{ field: 'ranges', label: 'Times', from: describeRanges(ranges), to: before.unavailable ? 'Not available' : describeRanges(before.ranges) }],
+    })
+    await undo.commit()
   }
 }

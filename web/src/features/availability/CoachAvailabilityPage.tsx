@@ -78,7 +78,7 @@ export function CoachAvailabilityPage() {
             ) : null}
             {lockDays > 0 ? (
               <>
-                Changes within <span className="font-medium text-foreground">{lockDays} days</span> need an admin.
+                Within <span className="font-medium text-foreground">{lockDays} days</span> you can add time, not remove it.
               </>
             ) : asksNotice ? null : (
               'Past days can’t be changed.'
@@ -116,8 +116,8 @@ export function CoachAvailabilityPage() {
                   : gaps.length
                   ? `${gaps.length} open ${gaps.length === 1 ? 'day' : 'days'} in the next ${span(a.leadTimeDays)} ${gaps.length === 1 ? 'isn’t' : 'aren’t'} set yet: give your times, or mark ${gaps.length === 1 ? 'it' : 'them'} not available.`
                   : lockDays >= a.leadTimeDays
-                    ? `The next ${span(a.leadTimeDays)} are locked. Ask an admin to change them.`
-                    : `The next ${span(a.leadTimeDays)} are set. Days within ${lockDays} days are locked.`}
+                    ? `The next ${span(lockDays)} ${lockDays === 7 ? 'is' : 'are'} locked: you can add time, but ask an admin to remove time.`
+                    : `The next ${span(a.leadTimeDays)} are set. Days within ${lockDays} days are locked: you can add time there, not remove it.`}
             </p>
           </div>
         </div>

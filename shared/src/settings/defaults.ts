@@ -57,7 +57,10 @@ export interface BranchSettings {
     /** Coaches are reminded to enter availability at least this many days ahead. */
     leadTimeDays: number
     leadTimeEnforcement: LeadTimeEnforcement
-    /** Coaches can't create, change or delete availability that starts within this many days. 0 = no lock. */
+    /**
+     * Inside this many days, coaches can add availability but not remove or shorten it (docs/DECISIONS.md §23, C2);
+     * admins change anything. 0 = only past days are locked.
+     */
     lockWindowDays: number
     stepMinutes: number
     minBlockMinutes: number
@@ -140,7 +143,8 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   },
   trash: { retentionDays: 14 },
   availability: {
-    leadTimeDays: 14,
+    // A week's notice and a week's lock (the manager, 2026-10-27: docs/DECISIONS.md §23, C1).
+    leadTimeDays: 7,
     leadTimeEnforcement: 'warn',
     lockWindowDays: 7,
     stepMinutes: 30,

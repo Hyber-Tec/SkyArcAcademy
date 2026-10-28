@@ -100,7 +100,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         options: [
           { value: 'off', label: 'Do nothing' },
           { value: 'warn', label: 'Show a warning' },
-          { value: 'block', label: 'Block the change' },
+          { value: 'block', label: 'Lock those days too (time can only be added)' },
         ],
       },
       {
@@ -110,7 +110,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         min: 0,
         max: 60,
         suffix: 'days',
-        help: 'Coaches can’t add, change or remove availability inside this window. Admins always can. 0 turns the lock off.',
+        help: 'Inside this window coaches can add time but not remove or shorten it. Admins can always change it. 0 locks only today and past days.',
       },
       { kind: 'number', path: 'availability.maxRangesPerDay', label: 'Time ranges per day', min: 1, max: 6 },
       { kind: 'number', path: 'availability.stepMinutes', label: 'Picker step', min: 5, max: 60, step: 5, suffix: 'min' },
