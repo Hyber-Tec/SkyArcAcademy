@@ -19,7 +19,7 @@ export function BullTiles({ review, onBull, plain = false }: { review: CardRevie
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {review.bulls.map((b) => {
-        const state = bullState(b, review.shotsPerBull);
+        const state = bullState(b, review.shotsPerBull, review);
         const values = b.shots.map((s) => s.value);
         if (plain) {
           const shown = values.length ? values : [0];
