@@ -4,7 +4,7 @@ import { POSITION_LABELS, type Evaluation } from "@shared/shooting/evaluation";
 import { formatDateKey } from "@shared/time";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Camera, Images } from "lucide-react-native";
+import { Camera, Images, Trophy } from "lucide-react-native";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
@@ -20,7 +20,8 @@ import { space, useColors } from "@/theme";
 
 /**
  * The Scan tab: a paper card's photo, from the camera or the library (several at once are read one after the other),
- * scored and filed in the student's Drive. Below, the latest paper cards saved, from the app or the website.
+ * scored and filed in the student's Drive; a competition's results from a photo of its results sheet (/scan/sheet).
+ * Below, the latest paper cards saved, from the app or the website.
  */
 export default function ScanScreen() {
   const colors = useColors();
@@ -64,8 +65,25 @@ export default function ScanScreen() {
           </Button>
         </View>
       </Card>
+      <ListSection title="After a match">
+        <ListRow
+          icon={<Trophy size={20} color={colors.foreground} />}
+          title="Add a competition result"
+          subtitle="Photograph the results sheet: its numbers fill the form, and it’s filed in the student’s Drive."
+          onPress={() => router.push("/scan/sheet")}
+          testID="scan-competition"
+        />
+      </ListSection>
       <ListSection title="For a good scan">
         <ListRow title="The whole card in the photo" subtitle="Fill the frame with it, from straight above." />
+        <ListRow
+          title="On something light, on its own"
+          subtitle={
+            <T variant="small" tone="muted">
+              A white table or sheet, not the pile of cards: holes in the black show only where light comes through. Nothing over the bulls.
+            </T>
+          }
+        />
         <ListRow title="Flat, in even light" subtitle="No glare on the black, no shadow across it." />
         <ListRow title="Several cards?" subtitle="Choose them all from Photos: they’re read one after the other." />
       </ListSection>

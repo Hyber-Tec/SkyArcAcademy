@@ -27,7 +27,7 @@ Thanks for testing Sky Arc, the app of Sky Arc Sports Academy.
 
 BEFORE YOU START
 - Sign in with the email the academy has for you (Google, or email and password), as on the website.
-- Coaches: when Scan asks for the camera, allow it (it's only for paper targets).
+- Coaches: when Scan asks for the camera, allow it (it's only for paper targets and match results sheets).
 
 PLEASE TRY
 Families:

@@ -44,7 +44,8 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        academy's announcements (the list, news/[id] a post with its comments, news/attachment a post's
                        file), inbox the person's notifications (Home's bell), drive/ the Drive (the top, drive/[id] a
                        folder), reports/ every progress report and report/[id] one, with sharing a draft, and the Scan
-                       screens). Its layout anchors (tabs), so a link straight to one of these has the tabs beneath.
+                       screens: a card's camera and review, and scan/sheet, a competition from its results sheet's
+                       photo). Its layout anchors (tabs), so a link straight to one of these has the tabs beneath.
                        Addresses the family's part also has ("/reports") are named with their group from inside a tab
                        ("/(app)/(staff)/reports"): from there the router would pick the family's.
   (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
@@ -68,7 +69,9 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        the office's requests waiting (data.ts), a request's row and Home's card), students, drive
                        (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
                        and the family's), scan
-                       (reading a card, the card and bull views, saving), scores (a score's changes, its shots played
+                       (reading a card, the card and bull views, saving: what it was, the score written on it, a total
+                       over any number of shots; sheet.ts, a results sheet read on the server and its results saved),
+                       scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
                        target), access, account (deleting an account), family (what a family reads: their students,
@@ -215,7 +218,8 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
   text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
   the phone's browser (or its mail and phone apps).
-- **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`), and
+- **Permissions:** the camera and the photo library, for the Scan tab only (paper targets and match results sheets;
+  texts in `app.config.ts`), and
   notifications. On Android the photo library is the system's photo picker, which needs no permission, and the
   storage, draw-over-other-apps and start-with-the-phone permissions Expo's template and libraries add are blocked
   (`android.blockedPermissions`). A new permission means new questions from both stores (docs/publishing.md).

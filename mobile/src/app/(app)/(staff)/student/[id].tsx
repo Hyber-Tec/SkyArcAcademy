@@ -1,7 +1,8 @@
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { CalendarDays, ExternalLink, FileImage, FileText, Folder, UserRoundX } from "lucide-react-native";
+import { CalendarDays, ExternalLink, FileImage, FileText, Folder, Trophy, UserRoundX } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { categoryOf } from "@shared/drive/files";
+import { totalWithTens } from "@shared/shooting/evaluation";
 import { formatBytes } from "@shared/drive/model";
 import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel } from "@shared/people";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
@@ -23,7 +24,8 @@ import { T } from "@/components/Text";
 import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useStudentEvaluations, useStudentFiles, useStudentPrivate } from "@/features/data/hooks";
 import { timeRange } from "@/features/schedule/format";
 import { deleteEvaluation } from "@/features/scores/api";
-import { deleteScoreMessage, scorePer10, scoreTitle, scoreTotal } from "@/features/scores/format";
+import { ResultKindChip } from "@/features/scores/kinds";
+import { deleteScoreMessage, scorePer10, scoreTitle } from "@/features/scores/format";
 import { studentLine } from "@/features/students/format";
 import { openWebsite } from "@/lib/links";
 import { toast } from "@/lib/toast";
@@ -166,7 +168,7 @@ export default function StudentScreen() {
         >
           {scores.data.slice(0, SCORES_SHOWN).map((e) => {
             const title = scoreTitle(e);
-            const subtitle = `${formatDateKey(e.dateKey, "medium")} · ${e.shots} shots · total ${scoreTotal(e)}`;
+            const subtitle = `${formatDateKey(e.dateKey, "medium")} · ${e.shots} shots · total ${totalWithTens(e)}`;
             const open = () => router.push({ pathname: "/score/[id]", params: { id: e.id } });
             return (
               <SwipeToDelete
@@ -184,7 +186,14 @@ export default function StudentScreen() {
                 testID={`student-score-${e.id}`}
               >
                 <ListRow
-                  title={title}
+                  title={
+                    <View style={styles.scoreTitle}>
+                      <T variant="label" numberOfLines={1} style={styles.shrink}>
+                        {title}
+                      </T>
+                      <ResultKindChip e={e} />
+                    </View>
+                  }
                   subtitle={subtitle}
                   right={
                     <View style={styles.per10}>
@@ -200,6 +209,13 @@ export default function StudentScreen() {
             );
           })}
           {!scores.loading && !scores.data.length ? <ListRow title="No scores yet" subtitle="Scan a paper target, or add SIUS results on the website." /> : null}
+          <ListRow
+            icon={<Trophy size={18} color={colors.foreground} />}
+            title="Add a competition"
+            subtitle="From a photo of the results sheet"
+            onPress={() => router.push({ pathname: "/scan/sheet", params: { studentId: s.id } })}
+            testID="student-add-competition"
+          />
         </ListSection>
 
         <ListSection title="Drive" detail={files.data.length > FILES_SHOWN ? `Newest ${FILES_SHOWN} of ${files.data.length}` : undefined} testID="student-files">
@@ -251,4 +267,6 @@ const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", gap: space.md },
   grow: { flex: 1, gap: 2 },
   per10: { alignItems: "flex-end" },
+  scoreTitle: { flexDirection: "row", alignItems: "center", gap: 6 },
+  shrink: { flexShrink: 1 },
 });

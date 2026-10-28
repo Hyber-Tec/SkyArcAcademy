@@ -19,8 +19,8 @@ const APP_ID = process.env.APP_ID || "com.skyarcacademy.app";
 const APP_NAME = APP_ID === "com.skyarcacademy.app" ? "Sky Arc" : "Sky Arc Dev";
 
 /** What the phone asks before the Scan tab uses the camera or opens the photo library (the only two permissions). */
-const CAMERA_PERMISSION = "Sky Arc uses the camera to photograph paper targets and score them.";
-const PHOTOS_PERMISSION = "Sky Arc opens the photos of paper targets you choose, to score them.";
+const CAMERA_PERMISSION = "Sky Arc uses the camera to photograph paper targets and match results sheets, to score them.";
+const PHOTOS_PERMISSION = "Sky Arc opens the photos of paper targets and match results sheets you choose, to score them.";
 
 /**
  * The version people see and the build number the stores count up, from mobile/release.json: one line to bump for a
