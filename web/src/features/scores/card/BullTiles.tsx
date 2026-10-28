@@ -7,7 +7,7 @@ export function BullTiles({ review, selected, onBull }: { review: CardReview; se
   return (
     <div className="grid grid-cols-5 gap-2" role="group" aria-label="The bulls">
       {review.bulls.map((b) => {
-        const state = bullState(b, review.shotsPerBull)
+        const state = bullState(b, review.shotsPerBull, review)
         const values = b.shots.map((s) => s.value)
         const label = scoreLabel(values)
         return (

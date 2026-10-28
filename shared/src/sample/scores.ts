@@ -3,7 +3,7 @@ import type { Evaluation } from '../shooting/evaluation'
 import { radiusFromScore } from '../shooting/target'
 import { CARD_EDGES_MM } from '../targets/card'
 import { FLAT, FLAT_SIZE, flatPoint } from '../targets/flat'
-import { scoreAt } from '../targets/score'
+import { scoreHole } from '../targets/score'
 import type { SyntheticCard, SyntheticShot } from '../targets/synthetic'
 import { type DateKey, addDays, diffDays, toInstant, tzOffsetMinutes } from '../time'
 import type { AuditStamp } from '../types'
@@ -66,9 +66,10 @@ const CARD_REACH_MM = 24
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 /**
- * A card scanned with the phone: its holes, and what the scan saved for them, each hole as its shot scored by ISSF's
- * rule (shared/src/targets/score.ts). Now and then the scan missed a hole (the bull saved as a 0 without a place) or
- * put a shot a little off its hole: the card's page on the website is where the office puts that right.
+ * A card scanned with the phone: its holes, and what the scan saved for them, each hole as its shot scored by the
+ * matches' rule at the hole's own size (shared/src/targets/score.ts), a made-up size for the card's holes a little
+ * under the pellet's. Now and then the scan missed a hole (the bull saved as a 0 without a place) or put a shot a
+ * little off its hole: the card's page on the website is where the office puts that right.
  */
 function scannedCard(points: { x: number; y: number }[], r: () => number): { card: SampleCardSpec; shots: PaperShot[] } {
   const holes: SyntheticShot[] = points.map((p, i) => {
@@ -80,13 +81,16 @@ function scannedCard(points: { x: number; y: number }[], r: () => number): { car
   const which = Math.floor(r() * holes.length)
   const turn = r() * Math.PI * 2
   const by = 0.7 + r() * 0.6
+  const ink = r() < 0.5
+  const seed = Math.floor(r() * 1e9)
+  const size = round2(1.95 + r() * 0.3)
   const shots = holes.map((h, i): PaperShot => {
     if (i === which && slip < 0.25) return { v: 0 }
     const x = i === which && slip < 0.6 ? round2(h.x + by * Math.cos(turn)) : h.x
     const y = i === which && slip < 0.6 ? round2(h.y + by * Math.sin(turn)) : h.y
-    return { v: scoreAt(Math.hypot(x, y)).value, x, y }
+    return { v: scoreHole(Math.hypot(x, y), size).value, x, y, r: size }
   })
-  return { card: { holes, ink: r() < 0.5, seed: Math.floor(r() * 1e9) }, shots }
+  return { card: { holes: holes.map((h) => ({ ...h, radiusMm: size })), ink, seed }, shots }
 }
 
 /** A small deterministic random generator per key (mulberry32), giving numbers from 0 up to 1. */

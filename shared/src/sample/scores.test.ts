@@ -4,7 +4,7 @@ import { per10 } from '../shooting/evaluation'
 import { CARD_BULLS, bullCentreMm } from '../targets/card'
 import { FLAT_SIZE, flatBull, savedReview, wasScanned } from '../targets/flat'
 import { applyH } from '../targets/geometry'
-import { scoreAt } from '../targets/score'
+import { scoreHole } from '../targets/score'
 import { syntheticCardToImage } from '../targets/synthetic'
 import { buildSampleData } from './data'
 import { buildSampleScores, sampleCardPicture } from './scores'
@@ -53,8 +53,9 @@ describe('sample scores', () => {
       const shots = e.series[0].shots
       expect(shots).toHaveLength(10)
       expect(e.total).toBe(shots.reduce((n, t) => n + t.v, 0))
-      // Each shot scored by ISSF's rule where it was saved; each hole on its bull's close-up, and the saved shot on
-      // it but for the scan's odd slip (a hole missed, or a shot put a little off it).
+      // Each shot scored by the rule where it was saved, at its hole's size (the card's holes all one made-up size a
+      // little under the pellet's); each hole on its bull's close-up, and the saved shot on it but for the scan's odd
+      // slip (a hole missed, or a shot put a little off it).
       file.card.holes.forEach((h, i) => {
         const t = shots[i]
         expect(h.bull).toBe(i + 1)
@@ -64,7 +65,10 @@ describe('sample scores', () => {
           slips++
           return
         }
-        expect(t.v).toBe(scoreAt(Math.hypot(t.x, t.y)).value)
+        expect(t.r).toBe(h.radiusMm)
+        expect(t.r).toBeGreaterThanOrEqual(1.95)
+        expect(t.r).toBeLessThanOrEqual(2.25)
+        expect(t.v).toBe(scoreHole(Math.hypot(t.x, t.y), t.r!).value)
         const off = Math.hypot(t.x - h.x, t.y - h.y)
         if (off > 0.01) slips++
         expect(off).toBeLessThan(1.4)

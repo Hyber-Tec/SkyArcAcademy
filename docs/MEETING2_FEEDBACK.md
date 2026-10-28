@@ -56,8 +56,8 @@ work started: *already done*, *small change* or *new work*.
   4. **One pay rate only** (no admin rate). Paid time comes from the kiosk: 30 minutes early, automatic clock-out at
      class end, and no clock-in means no pay.
   5. **New schedule view options** that show clock-in/out (Goo chooses one from a clickable demo).
-  6. **Fix the paper scoring rule** to Sky Arc's "most of the hole" rule. Support competition results, 20/30/60-shot
-     sessions, and the inner-ten count.
+  6. **Fix the paper scoring rule** to Sky Arc's "most of the hole" rule (Goo later chose the matches' rule, each hole
+     at its real size: `P1`). Support competition results, 20/30/60-shot sessions, and the inner-ten count.
   7. **One composer for announcements and website news**, with rich text and images, posting internally, publicly, or
      both.
   8. **The admin can edit the schedule from the phone.**
@@ -267,20 +267,22 @@ To start a phase, paste this into Claude Code on the right computer:
     field (+1 hour), so the clock times stay true.
 
 #### P: Scores, paper scanner, competitions
-- [ ] **P1. Fix the paper scoring rule: Sky Arc's "most of the hole" rule** (Goo's decision).
-  - *Plan:* **New work:** the reader scores a hole by the gauge rule today (touching a line = the higher ring). It will
-    score the ring the hole's centre is in (where most of the hole sits), and 10 when the hole covers the centre.
-  - A shot scores the ring where **most of the hole** sits. A hole mostly inside the 9 ring is a **9**, even if it
-    touches the 10 line. A clean bullseye is a 10.
-  - It is **not** "touching a higher ring = the higher score", which the app did, and why it scored a card **70** that
-    the coach had scored **64**.
-  - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**.
-  - **What the competition sheets show (2026-10-28, `scoring-proposal.html`, local):** matches score a shot by its
-    decimal and give the higher ring as soon as the pellet's hole touches the line (the app's rule today); "most of the
-    hole" would take about 50 points off a three-position match score. The coaches score practice cards a little more
-    strictly than matches (a hole has to cut about ¾ mm into the line). Recommended: keep the app's rule, so practice
-    and match scores mean the same; the manager decides on 2026-10-30 (the page's two questions).
-- ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule waits for the manager, `P1`)
+- ✅ **P1. The paper scoring rule: the matches' rule, each hole at its real size** (Goo's decision, 2026-10-28). (#68)
+  - *Plan:* **Small change:** the reader already scored by the matches' rule (touching a line = the higher ring), with
+    every hole taken at the 4.5 mm pellet's size. It now measures each hole in the photo and scores it at that size.
+  - **The rule:** a shot scores the highest ring whose line its hole touches, as matches do. The competition sheets
+    show it (`docs/proposals/scoring-rule-2026-10-28.html`): a shot that sits mostly in the 3 but whose edge reaches the
+    4 line is a 4, and "most of the hole" would have taken about 50 points off a three-position score.
+  - **The hole as it really is:** a pellet tears a hole about 4.2 mm across, not 4.5, so the pellet's circle reached
+    lines the real hole doesn't, where the coaches saw the lower ring. Each hole is measured on the photo; one that
+    can't be read cleanly takes the card's usual hole, and the pellet's size when too few holes could be read. The
+    website's card page draws each hole at its size (the phone's: `docs/mobile-scores.md`).
+  - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**. A card the coach already scored
+    keeps the written score (`P4`).
+  - *Done (#68):* on the manager's 36 hand-scored cards (local only), the app's totals went from 2.6 points per 10
+    shots over his coaches' to 1.7, and the shots scored as the coach wrote from 68% to 76% (cards within 3 points: 26
+    to 28 of 36; within 5: 32 to 33). The manager isn't asked; "most of the hole" is dropped.
+- ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule: `P1`)
   - *Plan:* **New work:** a local test on the manager's cards (38 paper cards, 8 competition sheets), never imported or
     committed; the results go to Goo.
   - Goo has photos of the real paper cards and competition sheets the manager gave us (on the Mac mini). Use them **on
@@ -445,14 +447,15 @@ from the app, without calling or texting the academy.
 - ✅ **M5. The chosen schedule view (`V1`) in the app**, for admins and coaches, with clock-in/out. (decided 2026-10-28: the phone keeps today's Schedule tab)
   - *Plan:* **Nothing to build (Goo, 2026-10-28):** the phone keeps its Schedule tab as it is ("Option 1 on a phone":
     who's in with their clock, then each class with its seats two across). Option B is for the website.
-- [ ] **M6. The scanner in the app:** the new scoring rule (`P1`), photo tips (`P3`), the official score (`P4`), labels
+- [ ] **M6. The scanner in the app:** the holes at their size (`P1`), photo tips (`P3`), the official score (`P4`), labels
   (`P9`), and the **competition sheet photo** (`P7`).
   - *Plan:* **Partly done:** the phone scans with the shared reader and shows tips. New: `P1`, `P3`'s tip, `P4`, `P7`,
     `P9`.
   - *Done (#66), all but `P1`:* the scanner asks what a card was (`P9`), takes the score written on it as the official
     one (`P4`), types a total over any number of shots (`P5`), says to lay the card on something light (`P3`), and
     finds a student by another name (`P12`); "Add a competition" reads a photo of the results sheet (`P7`); the score
-    lists show the kinds. **Still:** the scoring rule (`P1`), which waits for the manager; then M6 gets its ✅.
+    lists show the kinds. **Still:** `P1`, whose scoring comes with the shared code (#68); drawing each hole at its
+    size is in `docs/mobile-scores.md`. Then M6 gets its ✅.
 - ✅ **M7. Coach availability in the app:** the 7-day lock, add-only with undo (`C1`, `C2`). (#54)
   - *Plan:* **Already done** for the lock; new: add-only with Undo (`C2`).
   - *Done (#54):* inside the lock a coach's day sheet keeps the saved times and adds new ones ("Add time"), with Undo
@@ -499,7 +502,7 @@ These wait until everything else is ready, some even after launch.
 | Clock-out | Coaches clock out themselves; **pay ends at the end of the last class** (a later clock-out is kept, not paid) | Yes |
 | Coach no-show | No clock-in = no pay | — |
 | A coach's travel time | +1 hour a week, added by hand | By hand |
-| Paper scoring | **"Most of the hole" rule**, whole numbers, 10 to 1 | — |
+| Paper scoring | **The matches' rule** (a hole touching a ring's line counts it), each hole at its real size; whole numbers, 10 to 1 | — |
 | Acceptable scan difference | Up to about 3–5 points | — |
 | Past hand-scored cards | The written score is official | — |
 | Shot counts | Any (20, 30, 60…) | — |
@@ -536,7 +539,7 @@ imports them automatically, and they're **never committed**.
 - [ ] **Past schedules** (Google Sheets, September on) → `D1`
 - [ ] **The latest weekly schedule sheet** (this week) → `S9`
 - [ ] **A short rules summary** (scoring, practice vs. competition) the manager offered to write, plus the rules email
-  mentioned → `P1`, `P9`
+  mentioned → `P9`
 - [ ] **The blank enrollment contract (PDF)** → `F4`
 - [ ] **The signed contracts** (the academy's Google Drive folder) → `F5`
 - [ ] **Parents' names and second parents' emails** (optional) → `F1`, `F3`

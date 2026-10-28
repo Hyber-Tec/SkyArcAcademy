@@ -2,13 +2,14 @@ import { BULL_RADIUS_MM, type BullKind, CARD_BULLS, CARD_COLS, CARD_ROWS, STEP_M
 import { type Ellipse, type Mat3, type Vec, applyH, ellipseOffset, fitEllipse, fitHomography, jacobianH } from './geometry'
 import { type HoleMark, findHoles } from './holes'
 import { type Plane, type RgbaImage, blobs, downscaleLuma, medianOf, otsu, sampleRgb, samplePlane } from './image'
-import { scoreAt } from './score'
+import { PELLET_RADIUS_MM, scoreHole } from './score'
 
 /**
  * Reads a photo of the academy's paper card (card.ts): finds its twelve bulls, works out which is which from the grid
  * and the header, measures each bull's black edge to know its centre and scale in millimetres (and the photo's tilt),
- * then finds the pellet holes in each record bull and scores them by ISSF's rule. What it finds is a suggestion: the
- * phone app shows it over the photo and a person confirms or corrects every bull before anything is saved.
+ * then finds the pellet holes in each record bull, measures each one and scores it by the matches' rule (its edge
+ * touching a ring's line counts that ring). What it finds is a suggestion: the phone app shows it over the photo and a
+ * person confirms or corrects every bull before anything is saved.
  */
 
 export interface ScanOptions {
@@ -16,15 +17,21 @@ export interface ScanOptions {
   shotsPerBull?: number | 'auto'
 }
 
+/** Where a hole's size comes from: the hole itself, the card's other holes, or the pellet's (none could be read). */
+export type HoleSizeFrom = 'hole' | 'card' | 'pellet'
+
 export interface ScannedShot {
   /** Millimetres from the bull's centre, x right and y up (as shooting/target.ts). */
   x: number
   y: number
-  /** Whole score (the hole touching a ring counts it) and the electronic decimal for the same point. */
+  /** Whole score (the hole touching a ring counts it) and the same in tenths (score.ts, `scoreHole`). */
   value: number
   decimal: number
   /** How sure the scan is that this is a pellet hole, 0 to 1 (1 for one a person placed). */
   confidence: number
+  /** The hole's radius (mm) it is scored with: its own as the photo shows it, or else the card's usual one. */
+  radius: number
+  radiusFrom: HoleSizeFrom
 }
 
 export interface ScannedBull {
@@ -54,13 +61,19 @@ export interface CardScan {
   reason: string | null
   bulls: ScannedBull[]
   shotsPerBull: number
+  /**
+   * The card's usual hole radius (mm): the middle of the holes measured on it, or the pellet's when fewer than
+   * `CARD_HOLES` could be. A hole that can't be measured, or one a person adds, is taken at this size.
+   */
+  holeRadius: number
+  holeRadiusFrom: Exclude<HoleSizeFrom, 'hole'>
   /** Card millimetres (from the top-left bull's centre, x right, y down) to photo pixels. */
   cardToImage: Mat3 | null
 }
 
 const COARSE_SIDE = 640
 
-const failed = (reason: string): CardScan => ({ ok: false, reason, bulls: [], shotsPerBull: 1, cardToImage: null })
+const failed = (reason: string): CardScan => ({ ok: false, reason, bulls: [], shotsPerBull: 1, holeRadius: PELLET_RADIUS_MM, holeRadiusFrom: 'pellet', cardToImage: null })
 
 export function scanCard(img: RgbaImage, opts: ScanOptions = {}): CardScan {
   const coarseF = Math.max(1, Math.round(Math.max(img.width, img.height) / COARSE_SIDE))
@@ -112,15 +125,22 @@ export function scanCard(img: RgbaImage, opts: ScanOptions = {}): CardScan {
   }
 
   const shotsPerBull = opts.shotsPerBull === undefined || opts.shotsPerBull === 'auto' ? countShotsPerBull(reads) : Math.max(1, Math.round(opts.shotsPerBull))
+  const picked = reads.map((read) => (read ? pickShots(read, shotsPerBull) : null))
+  // The card's usual hole: the middle of the counted holes that measured cleanly (same card, same pellets, same photo).
+  const holeSizes = picked.flatMap((p) => (p ? p.shots : [])).flatMap((s) => (s.radius === null ? [] : [s.radius]))
+  const usual = holeSizes.length >= CARD_HOLES ? { radius: Math.round(medianOf(holeSizes) * 100) / 100, from: 'card' as const } : { radius: PELLET_RADIUS_MM, from: 'pellet' as const }
+  const scored = (s: Found): ScannedShot => toShot(s.x, s.y, s.strength, s.radius === null ? usual.radius : s.radius, s.radius === null ? usual.from : 'hole')
   bulls.forEach((b, i) => {
-    const read = reads[i]
-    if (!read) return
-    const { shots, extra } = pickShots(read, shotsPerBull)
-    b.shots = shots
-    b.extra = extra
+    const p = picked[i]
+    if (!p) return
+    b.shots = p.shots.map(scored)
+    b.extra = p.extra.map(scored)
   })
-  return { ok: true, reason: null, bulls, shotsPerBull, cardToImage }
+  return { ok: true, reason: null, bulls, shotsPerBull, holeRadius: usual.radius, holeRadiusFrom: usual.from, cardToImage }
 }
+
+/** Holes a card needs measured for their middle to stand for its other holes. */
+export const CARD_HOLES = 3
 
 // ---------------------------------------------------------------------------------------------------------------
 // The bulls: dark discs of one size.
@@ -460,19 +480,27 @@ function countShotsPerBull(reads: (HoleMark[] | null)[]): number {
   return twoOrMore >= Math.max(3, counts.length * 0.5) ? 2 : 1
 }
 
-function toShot(xDown: number, yDown: number, strength: number, confidence?: number): ScannedShot {
+/** A mark taken as a hole, before its score: where it is (mm, y down), how strong, and its own size if it was read. */
+interface Found {
+  x: number
+  y: number
+  strength: number
+  radius: number | null
+}
+
+function toShot(xDown: number, yDown: number, strength: number, radius: number, radiusFrom: HoleSizeFrom): ScannedShot {
   const x = Math.round(xDown * 100) / 100
   const y = Math.round(-yDown * 100) / 100
-  const { value, decimal } = scoreAt(Math.sqrt(x * x + y * y))
-  return { x, y, value, decimal, confidence: confidence ?? Math.max(0, Math.min(1, (strength - WEAK) / (STRONG - WEAK))) }
+  const { value, decimal } = scoreHole(Math.sqrt(x * x + y * y), radius)
+  return { x, y, value, decimal, confidence: Math.max(0, Math.min(1, (strength - WEAK) / (STRONG - WEAK))), radius, radiusFrom }
 }
 
 /** A hole looks round and stands alone; printed numbers, pen strokes and paper edges look thin or run on. */
 const holeLike = (m: HoleMark) => m.l2 >= 0.45 && (m.contained >= 0.75 || (m.bounded >= 0.85 && m.l1 >= 2.5))
 
-function pickShots(read: HoleMark[], expected: number): { shots: ScannedShot[]; extra: ScannedShot[] } {
+function pickShots(read: HoleMark[], expected: number): { shots: Found[]; extra: Found[] } {
   const marks = read.filter((c) => c.strength >= WEAK && holeLike(c))
-  const shots: ScannedShot[] = []
+  const shots: Found[] = []
   const used = new Set<HoleMark>()
   for (const c of marks) {
     if (shots.length >= expected) break
@@ -481,16 +509,17 @@ function pickShots(read: HoleMark[], expected: number): { shots: ScannedShot[]; 
     const missing = expected - shots.length
     const others = marks.filter((m) => !used.has(m) && m.strength >= STRONG).length
     if (missing >= 2 && others < missing && c.l1 > 1.6 * c.l2 && c.l1 - c.l2 > 0.8) {
+      // Two holes read as one: neither's own size can be told, so both take the card's usual one.
       const half = Math.sqrt(c.l1 - c.l2)
-      shots.push(toShot(c.x + c.dir.x * half, c.y + c.dir.y * half, c.strength))
-      shots.push(toShot(c.x - c.dir.x * half, c.y - c.dir.y * half, c.strength))
+      shots.push({ x: c.x + c.dir.x * half, y: c.y + c.dir.y * half, strength: c.strength, radius: null })
+      shots.push({ x: c.x - c.dir.x * half, y: c.y - c.dir.y * half, strength: c.strength, radius: null })
       continue
     }
-    shots.push(toShot(c.x, c.y, c.strength))
+    shots.push({ x: c.x, y: c.y, strength: c.strength, radius: c.radius })
   }
   // A mark overlapping a counted hole (closer than a pellet across) is its torn edge, not another shot.
-  const apart = (m: HoleMark) => shots.every((s) => (s.x - m.x) ** 2 + (-s.y - m.y) ** 2 > 4 * 4)
-  const extra = marks.filter((m) => !used.has(m) && m.strength >= STRONG && apart(m)).map((m) => toShot(m.x, m.y, m.strength))
+  const apart = (m: HoleMark) => shots.every((s) => (s.x - m.x) ** 2 + (s.y - m.y) ** 2 > 4 * 4)
+  const extra = marks.filter((m) => !used.has(m) && m.strength >= STRONG && apart(m)).map((m) => ({ x: m.x, y: m.y, strength: m.strength, radius: m.radius }))
   return { shots, extra }
 }
 
