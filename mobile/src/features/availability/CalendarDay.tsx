@@ -59,7 +59,9 @@ export const CalendarDay = memo(function CalendarDay({
       testID={`day-${date}`}
       style={({ pressed }) => [styles.cell, { width, height }, pressed && mark !== "closed" && styles.pressed]}
     >
-      <View style={[styles.circle, { width: size, height: size, backgroundColor: fill }, faded && styles.faded]}>
+      {/* Made again when its fill changes (a day's times load after it's drawn): on Android a fill that comes after a
+          circle is first drawn is drawn square. */}
+      <View key={fill} style={[styles.circle, { width: size, height: size, backgroundColor: fill }, faded && styles.faded]}>
         <Text style={[styles.number, { color }, isToday && styles.today]} allowFontScaling={false}>
           {Number(date.slice(8))}
         </Text>
@@ -83,7 +85,6 @@ export function LegendMark({ mark }: { mark: "available" | "unavailable" | "need
 const styles = StyleSheet.create({
   cell: { alignItems: "center", justifyContent: "center", paddingTop: DOT_ROOM / 2 },
   pressed: { opacity: 0.6 },
-  // A full radius: with exactly half the size as the radius, Android drew the days' fills as squares.
   circle: { alignItems: "center", justifyContent: "center", borderRadius: radius.full },
   faded: { opacity: 0.45 },
   number: { fontSize: 17, fontWeight: "500", fontVariant: ["tabular-nums"] },

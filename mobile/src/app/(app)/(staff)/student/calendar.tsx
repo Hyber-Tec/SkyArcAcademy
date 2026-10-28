@@ -283,7 +283,8 @@ function MonthDay({
       testID={`student-calendar-day-${date}`}
       style={({ pressed }) => [styles.cell, { width, height }, pressed && !on && styles.pressed]}
     >
-      <View style={[styles.circle, { width: circle, height: circle, borderRadius: radius.full, backgroundColor: fill }]}>
+      {/* Made again when the day is chosen: on Android a fill that comes after a circle is first drawn is drawn square. */}
+      <View key={fill} style={[styles.circle, { width: circle, height: circle, borderRadius: radius.full, backgroundColor: fill }]}>
         <Text allowFontScaling={false} style={[styles.number, { color: fg }, (on || isToday) && styles.bold, closed && !on && styles.faded]}>
           {Number(date.slice(8))}
         </Text>
