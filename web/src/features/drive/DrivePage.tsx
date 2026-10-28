@@ -11,6 +11,7 @@ import {
   LuHardDrive,
   LuLayoutGrid,
   LuList,
+  LuLock,
   LuPencilLine,
   LuPlus,
   LuSearch,
@@ -24,8 +25,8 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
 import { studentNamedIn } from '@shared/drive/suggest'
-import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, sortDriveItems } from '@shared/drive/model'
-import { type DriveFile, studentFolderId } from '@shared/drive/types'
+import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, moveAccessNote, moveRefusal, sortDriveItems } from '@shared/drive/model'
+import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
 import { type Evaluation, POSITION_LABELS, type Position, type ResultKind } from '@shared/shooting/evaluation'
@@ -44,14 +45,14 @@ import { useStudentEvaluations } from '@/features/scores/hooks'
 import { branchCol } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { AddResultsDialog, type ResultRow } from './AddResultsDialog'
-import { createFolder, ensureFolderPaths, moveItems, removeFailedUpload, renameFile, renameFolder, trashItems } from './api'
+import { createFolder, ensureFolderPaths, moveItems, removeFailedUpload, renameFile, renameFolder, setFolderAccess, trashItems } from './api'
 import { DetailsPanel } from './DetailsPanel'
-import { NameDialog, RefusedDialog } from './dialogs'
+import { AccessDialog, NameDialog, RefusedDialog } from './dialogs'
 import { DriveCard, DriveListHead, DriveRow, type ListApi, dropHandlers } from './DriveList'
 import { type DroppedEntry, useFileDropZone, useWindowDropGuard } from './dropzone'
 import { FilePreview, downloadFile } from './FilePreview'
 import { MoveDialog } from './MoveDialog'
-import { FolderGlyph } from './parts'
+import { AccessBadge, FolderGlyph } from './parts'
 import { ResultsDropArea } from './ResultsDropArea'
 import { readSiusFiles } from './sius'
 import { type ResultUpload, plannedFile, saveResults, sendAll, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
@@ -64,6 +65,7 @@ type Dialog =
   | { kind: 'renameFolder'; id: string }
   | { kind: 'renameFile'; id: string }
   | { kind: 'move'; folderIds: string[]; fileIds: string[] }
+  | { kind: 'access'; id: string }
   | { kind: 'paper'; studentId: string | null; fileId: string | null; position: Position | null }
   | { kind: 'refused'; refused: { name: string; reason: string }[]; added: number }
 
@@ -78,7 +80,8 @@ function resultName(dateKey: string, position: Position | null, total: number | 
  * they're read on the spot; whoever adds them confirms whose result each is and its position, and each is filed in
  * the student's folder, named by its date, with its scores saved for the reports. Admins and coaches add,
  * rename, move and trash alike (the owner's call, 2026-10-17); only admins open the Trash, to restore or delete for
- * good. Families never see the Drive.
+ * good. Admins choose who sees a folder (F6): everyone on staff, or owners and admins only, which coaches never see
+ * (the Contracts folder is one); the page lists what the viewer's role may read. Families never see the Drive.
  */
 export function DrivePage() {
   // The address: /drive, /drive/f/{folderId} or /drive/file/{fileId} (one route, so the page stays put between folders).
@@ -239,9 +242,12 @@ export function DrivePage() {
     const key = (path: string[]) => path.map(cleanFolderName).join('/')
     try {
       const chains = new Map(items.filter((a) => a.entry.path.length).map((a) => [key(a.entry.path), a.entry.path]))
-      const made = chains.size ? await ensureFolderPaths(branchId, actor, index, baseId, [...chains.values()]) : new Map<string, string | null>([['', baseId]])
+      const made = chains.size ? await ensureFolderPaths(branchId, actor, index, baseId, [...chains.values()]) : { folders: new Map<string, string | null>([['', baseId]]), accessIn: index.accessIn }
       const student = index.studentOf(baseId)
-      const ups = items.map((a) => plannedFile(branchId, a.entry.file, a.plan, made.get(key(a.entry.path)) ?? baseId, student))
+      const ups = items.map((a) => {
+        const folderId = made.folders.get(key(a.entry.path)) ?? baseId
+        return plannedFile(branchId, a.entry.file, a.plan, folderId, student, { access: made.accessIn(folderId) })
+      })
       await writeRecords(branchId, actor, index, ups, chains.size ? [] : [baseId])
       const failures = await sendAll(branchId, ups)
       if (failures.length) toast.error(failures.length === 1 ? 'One file didn’t upload' : `${failures.length} files didn’t upload`, { description: failures.slice(0, 3).join(' ') })
@@ -354,12 +360,15 @@ export function DrivePage() {
     if (targetId && !index.folderOf(targetId)) return false
     const from = homeOf(itemId)
     if (from === undefined || from === targetId) return false
-    return !index.folderOf(itemId) || index.canMoveInto([itemId], targetId)
+    const isFolder = !!index.folderOf(itemId)
+    return !moveRefusal(index, isFolder ? [itemId] : [], isFolder ? [] : [itemId], targetId)
   }
   const moveInto = (itemId: string, targetId: string | null) => {
     const isFolder = !!index.folderOf(itemId)
+    // Dropped into (or out of) a folder only owners and admins see: who sees it changes, and the message says so.
+    const note = moveAccessNote(index, isFolder ? [itemId] : [], isFolder ? [] : [itemId], targetId) ?? undefined
     void moveItems(branchId, actor, index, isFolder ? [itemId] : [], isFolder ? [] : [itemId], targetId)
-      .then(() => toast.success(`Moved to ${targetId ? `“${index.folderOf(targetId)?.name}”` : 'the top of the Drive'}`))
+      .then(() => toast.success(`Moved to ${targetId ? `“${index.folderOf(targetId)?.name}”` : 'the top of the Drive'}`, { description: note }))
       .catch((e: Error) => toast.error('Couldn’t move it', { description: e.message }))
   }
 
@@ -393,13 +402,16 @@ export function DrivePage() {
   const menuOf = (it: DriveItem): MenuEntry[] => {
     if (it.kind === 'folder') {
       const f = it.folder
+      const fixed = isFixedFolder(f)
       return menu(
         { label: 'Open', icon: LuChevronRight, onSelect: () => go(f.id) },
         f.studentId ? { label: 'Student’s page', icon: LuUserRound, onSelect: () => navigate(`/${portal}/students/${f.studentId}`) } : null,
         f.studentId ? { label: 'Scores', icon: LuTarget, onSelect: () => navigate(`/${portal}/students/${f.studentId}/scores`) } : null,
-        canWrite && !f.studentId && { label: 'Rename…', icon: LuPencilLine, onSelect: () => setDialog({ kind: 'renameFolder', id: f.id }) },
-        canWrite && !f.studentId && { label: 'Move to…', icon: LuFolderInput, onSelect: () => setDialog({ kind: 'move', folderIds: [f.id], fileIds: [] }) },
-        canWrite && !f.studentId && { label: 'Move to Trash', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void trash([f.id], []) },
+        canWrite && !fixed && { label: 'Rename…', icon: LuPencilLine, onSelect: () => setDialog({ kind: 'renameFolder', id: f.id }) },
+        canWrite && !fixed && { label: 'Move to…', icon: LuFolderInput, onSelect: () => setDialog({ kind: 'move', folderIds: [f.id], fileIds: [] }) },
+        // Who sees it: admins choose, for any folder but a student's (or one in it) and the Contracts folder.
+        isAdmin && !fixed && !index.studentOf(f.id) && { label: 'Who can see it…', icon: LuLock, onSelect: () => setDialog({ kind: 'access', id: f.id }) },
+        canWrite && !fixed && { label: 'Move to Trash', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void trash([f.id], []) },
       )
     }
     const f = it.file
@@ -521,9 +533,10 @@ export function DrivePage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
-            {folder ? <FolderGlyph student={!!folder.studentId} className="size-6" /> : <LuHardDrive className="size-5" />}
+            {folder ? <FolderGlyph student={!!folder.studentId} locked={accessOf(folder) === 'admins'} className="size-6" /> : <LuHardDrive className="size-5" />}
           </span>
           <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+          {folder && accessOf(folder) === 'admins' ? <AccessBadge /> : null}
           {folder?.studentId ? (
             <Button variant="outline" size="sm" asChild>
               <Link to={`/${portal}/students/${folder.studentId}/scores`}>
@@ -661,7 +674,15 @@ export function DrivePage() {
             </>
           )}
         </div>
-        {details && ready ? <DetailsPanel index={index} folderId={cwd} selected={selectedRows.length === 1 ? selectedRows[0] : null} scoresByFile={scoresByFile} /> : null}
+        {details && ready ? (
+          <DetailsPanel
+            index={index}
+            folderId={cwd}
+            selected={selectedRows.length === 1 ? selectedRows[0] : null}
+            scoresByFile={scoresByFile}
+            onAccess={isAdmin ? (id) => setDialog({ kind: 'access', id }) : undefined}
+          />
+        ) : null}
       </div>
 
       {preview ? (
@@ -689,6 +710,7 @@ export function DrivePage() {
       {dialog?.kind === 'newFolder' ? (
         <NameDialog
           title="New folder"
+          description={index.accessIn(dialog.parentId) === 'admins' ? 'Only owners and admins will see it, like the folder it’s in.' : undefined}
           confirmLabel="Make folder"
           initial="Untitled folder"
           onSubmit={async (name) => {
@@ -717,9 +739,21 @@ export function DrivePage() {
           fileIds={dialog.fileIds}
           startAt={cwd}
           onMove={async (target) => {
+            const note = moveAccessNote(index, dialog.folderIds, dialog.fileIds, target) ?? undefined
             await moveItems(branchId, actor, index, dialog.folderIds, dialog.fileIds, target)
             setSelected(new Set())
-            toast.success(`Moved to ${target ? `“${index.folderOf(target)?.name}”` : 'the top of the Drive'}`)
+            toast.success(`Moved to ${target ? `“${index.folderOf(target)?.name}”` : 'the top of the Drive'}`, { description: note })
+          }}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {dialog?.kind === 'access' ? (
+        <AccessDialog
+          index={index}
+          folderId={dialog.id}
+          onSave={async (access) => {
+            await setFolderAccess(branchId, actor, index, dialog.id, access)
+            toast.success(access === 'admins' ? `Only owners and admins see “${index.folderOf(dialog.id)?.name}” now` : `Everyone on staff sees “${index.folderOf(dialog.id)?.name}” now`)
           }}
           onClose={() => setDialog(null)}
         />

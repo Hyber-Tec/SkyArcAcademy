@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LuArrowDown, LuArrowUp, LuFolder } from 'react-icons/lu'
 import { isViewableImage } from '@shared/drive/files'
 import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
+import { accessOf, isFixedFolder } from '@shared/drive/types'
 import { POSITION_COLORS, POSITION_LABELS, type Evaluation, per10 } from '@shared/shooting/evaluation'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -12,8 +13,13 @@ import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { DropTargetWrapper, type DroppedEntry } from './dropzone'
 import { fileBlob } from './FilePreview'
-import { FileGlyph, FolderGlyph, PersonChip } from './parts'
+import { AccessBadge, FileGlyph, FolderGlyph, PersonChip } from './parts'
 import { flightOf } from './upload'
+
+/** Only owners and admins see it (coaches never get it at all). */
+const adminsOnly = (it: DriveItem) => accessOf(it.kind === 'folder' ? it.folder : it.file) === 'admins'
+/** A student's folder or the Contracts folder: it stays put, so it isn't picked up or selected. */
+const fixed = (it: DriveItem) => it.kind === 'folder' && isFixedFolder(it.folder)
 
 /**
  * The Drive's list and grid. Rows are CSS-grid rows, not a table, so a folder's row can take files dropped on it and
@@ -125,7 +131,7 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
   const uploading = file?.status === 'uploading'
   const score = file ? api.scoresByFile.get(file.id) : undefined
   const changed = itemUpdated(it, api.index)
-  const draggable = api.canWrite && !uploading && !(isFolder && it.folder.studentId)
+  const draggable = api.canWrite && !uploading && !fixed(it)
   const size = isFolder ? api.index.countsOf(it.id).bytes : (file?.size ?? 0)
   const updatedCell = uploading ? (
     <span className="flex items-center gap-2">
@@ -155,19 +161,21 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
       )}
     >
       <span onClick={(e) => e.stopPropagation()} className="flex items-center">
-        {api.canWrite && !uploading && !(isFolder && it.folder.studentId) ? (
+        {api.canWrite && !uploading && !fixed(it) ? (
           <Checkbox checked={api.selected.has(it.id)} onCheckedChange={() => api.toggle(it.id)} aria-label={`Select ${isFolder ? it.folder.name : file?.name}`} className={cn(!api.selected.size && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} />
         ) : null}
       </span>
       <span className="flex min-w-0 items-center gap-3">
-        {isFolder ? <FolderGlyph student={!!it.folder.studentId} /> : <FileGlyph kind={file!.kind} />}
+        {isFolder ? <FolderGlyph student={!!it.folder.studentId} locked={adminsOnly(it)} /> : <FileGlyph kind={file!.kind} />}
         <span className="min-w-0 flex-1">
-          {/* The score goes under the name when both don't fit on one line; on phones a long name takes two lines. */}
+          {/* The score (or "Owners and admins") goes under the name when both don't fit on one line; on phones a long
+              name takes two lines. */}
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="line-clamp-2 max-w-full text-sm font-semibold wrap-anywhere @xl:line-clamp-1" title={isFolder ? it.folder.name : file!.name}>
               {isFolder ? it.folder.name : file!.name}
             </span>
             {score ? <ScoreChip e={score} /> : null}
+            {adminsOnly(it) ? <AccessBadge /> : null}
           </span>
           {where !== null ? (
             <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
@@ -227,12 +235,12 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
   const score = file ? api.scoresByFile.get(file.id) : undefined
   const uploading = file?.status === 'uploading'
   const flight = file ? flightOf(file.id) : null
-  const draggable = api.canWrite && !uploading && !(isFolder && it.folder.studentId)
+  const draggable = api.canWrite && !uploading && !fixed(it)
   const c = isFolder ? api.index.countsOf(it.id) : null
   const where = api.whereOf(it)
   const meta = where !== null ? where || 'Drive' : isFolder ? `${c!.folders + c!.files} ${c!.folders + c!.files === 1 ? 'item' : 'items'}` : score ? `${POSITION_LABELS[score.position]} · ${score.source === 'sius' ? score.total.toFixed(1) : score.total}` : formatBytes(file!.size)
   const picture = isFolder ? (
-    <FolderGlyph student={!!it.folder.studentId} className="size-14" />
+    <FolderGlyph student={!!it.folder.studentId} locked={adminsOnly(it)} className="size-14" />
   ) : score && score.source === 'sius' ? (
     <TargetPlot shots={score.series.flatMap((s) => s.shots)} size={104} color={POSITION_COLORS[score.position]} showMpi={false} />
   ) : file && isViewableImage(file.kind) && file.status === 'ready' && file.size < 15 * 1024 * 1024 ? (
@@ -249,7 +257,10 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
       {...(isFolder ? dropHandlers(api, it.id, setHot) : {})}
       className={cn('group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card transition hover:shadow-sm', api.selected.has(it.id) && 'ring-2 ring-brand/40', hot && 'ring-2 ring-brand/60')}
     >
-      <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted/40">{picture}</div>
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted/40">
+        {picture}
+        {adminsOnly(it) ? <AccessBadge className="absolute right-2 bottom-2 bg-amber-50/95 dark:bg-amber-950/80" /> : null}
+      </div>
       {uploading ? <Progress value={Math.round((flight?.progress ?? 0) * 100)} className="h-1 rounded-none" /> : null}
       <div className="flex items-center gap-2 px-3 py-2">
         <div className="min-w-0 flex-1">
@@ -262,7 +273,7 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
           <ItemMenuButton entries={menu} className="text-muted-foreground" />
         </span>
       </div>
-      {api.canWrite && !uploading && !(isFolder && it.folder.studentId) ? (
+      {api.canWrite && !uploading && !fixed(it) ? (
         <span className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
           <Checkbox checked={api.selected.has(it.id)} onCheckedChange={() => api.toggle(it.id)} aria-label="Select" className={cn('bg-background', !api.selected.has(it.id) && 'opacity-0 group-hover:opacity-100')} />
         </span>

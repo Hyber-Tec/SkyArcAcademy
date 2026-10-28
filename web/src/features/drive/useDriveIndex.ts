@@ -1,4 +1,4 @@
-import { type FirestoreError, onSnapshot } from 'firebase/firestore'
+import { type FirestoreError, onSnapshot, query, where } from 'firebase/firestore'
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { type DriveIndex, type DriveStudent, buildDriveIndex } from '@shared/drive/model'
 import type { DriveFile, DriveFolder } from '@shared/drive/types'
@@ -13,7 +13,14 @@ import { branchCol } from '@/lib/firestore'
  * The Drive is two live lists, every folder and every file; a query reads every document it matches when it starts,
  * so the lists belong to the academy, not to a component: the first reader opens them, later readers share them,
  * and they stay open for a minute after the last one leaves, so moving between folders never starts over.
+ *
+ * Owners and admins read everything; a coach (or an admin looking as one) asks for what's everyone's on staff
+ * (`access == 'staff'`), the only lists the rules give coaches: folders only owners and admins see, and what's in
+ * them, never reach their screen.
  */
+
+/** Which lists: everything (owners and admins), or what's everyone's on staff (coaches). */
+type Scope = 'all' | 'staff'
 
 const KEEP_OPEN_MS = 60_000
 
@@ -38,36 +45,38 @@ const stores = new Map<string, Store>()
 /** Pending server stamps read as estimates, so a folder just made sorts with the newest. */
 const READ = { serverTimestamps: 'estimate' } as const
 
-function open(branchId: string): Store {
+function open(branchId: string, scope: Scope): Store {
   const store: Store = { refs: 0, timer: null, listeners: new Set(), snapshot: IDLE, stop: [] }
   const publish = (patch: Partial<Snapshot>) => {
     store.snapshot = { ...store.snapshot, ...patch }
     for (const l of [...store.listeners]) l()
   }
   const fail = (error: FirestoreError) => publish({ error })
+  const list = (col: typeof COL.driveFolders | typeof COL.driveFiles) => (scope === 'staff' ? query(branchCol(branchId, col), where('access', '==', 'staff')) : branchCol(branchId, col))
   store.stop = [
-    onSnapshot(branchCol(branchId, COL.driveFolders), (snap) => publish({ folders: snap.docs.map((d) => ({ id: d.id, ...(d.data(READ) as DriveFolder) })) }), fail),
-    onSnapshot(branchCol(branchId, COL.driveFiles), (snap) => publish({ files: snap.docs.map((d) => ({ id: d.id, ...(d.data(READ) as DriveFile) })) }), fail),
+    onSnapshot(list(COL.driveFolders), (snap) => publish({ folders: snap.docs.map((d) => ({ id: d.id, ...(d.data(READ) as DriveFolder) })) }), fail),
+    onSnapshot(list(COL.driveFiles), (snap) => publish({ files: snap.docs.map((d) => ({ id: d.id, ...(d.data(READ) as DriveFile) })) }), fail),
   ]
   return store
 }
 
-function close(branchId: string, store: Store) {
+function close(key: string, store: Store) {
   for (const stop of store.stop) stop()
   store.stop = []
-  if (stores.get(branchId) === store) stores.delete(branchId)
+  if (stores.get(key) === store) stores.delete(key)
 }
 
-function acquire(branchId: string): Store {
-  let store = stores.get(branchId)
+function acquire(branchId: string, scope: Scope): Store {
+  const key = `${branchId}|${scope}`
+  let store = stores.get(key)
   // A refused listener isn't retried by Firestore: the next reader after everyone left starts fresh.
   if (store && store.snapshot.error && store.refs === 0) {
-    close(branchId, store)
+    close(key, store)
     store = undefined
   }
   if (!store) {
-    store = open(branchId)
-    stores.set(branchId, store)
+    store = open(branchId, scope)
+    stores.set(key, store)
   }
   if (store.timer) clearTimeout(store.timer)
   store.timer = null
@@ -75,28 +84,30 @@ function acquire(branchId: string): Store {
   return store
 }
 
-function release(branchId: string, store: Store) {
+function release(key: string, store: Store) {
   store.refs = Math.max(0, store.refs - 1)
   if (store.refs > 0) return
-  store.timer = setTimeout(() => store.refs === 0 && close(branchId, store), KEEP_OPEN_MS)
+  store.timer = setTimeout(() => store.refs === 0 && close(key, store), KEEP_OPEN_MS)
 }
 
-/** The raw lists (the Trash reads them; everything else reads the index). */
+/** The raw lists (the Trash reads them; everything else reads the index): what the viewer's role may read. */
 export function useDriveLists(enabled = true) {
-  const { branchId } = useBranch()
+  const { branchId, isAdmin } = useBranch()
+  const scope: Scope = isAdmin ? 'all' : 'staff'
+  const key = `${branchId}|${scope}`
   const subscribe = useCallback(
     (onChange: () => void) => {
       if (!enabled) return () => undefined
-      const store = acquire(branchId)
+      const store = acquire(branchId, scope)
       store.listeners.add(onChange)
       return () => {
         store.listeners.delete(onChange)
-        release(branchId, store)
+        release(key, store)
       }
     },
-    [branchId, enabled],
+    [branchId, scope, key, enabled],
   )
-  const getSnapshot = useCallback(() => (enabled ? (stores.get(branchId)?.snapshot ?? IDLE) : IDLE), [branchId, enabled])
+  const getSnapshot = useCallback(() => (enabled ? (stores.get(key)?.snapshot ?? IDLE) : IDLE), [key, enabled])
   return useSyncExternalStore(subscribe, getSnapshot)
 }
 

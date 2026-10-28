@@ -584,65 +584,109 @@ service cloud.firestore {
       // never browse it: they read only a score's file in their own child's folder (a SIUS result's PDF, a paper card's
       // picture), out of the Trash, as storage.rules lets them read its bytes. A file stops being a score's file
       // (`evaluationId` cleared) when the score is deleted or the file moves to another student.
+      //
+      // Who sees each folder and file (`access`, docs/DECISIONS.md §23, F6): everyone on staff ('staff'), or owners and
+      // admins only ('admins'), which coaches never read, list or change. Only admins make something theirs, and
+      // whatever is in a folder of theirs is theirs too. Coaches list with `access == 'staff'` (or one student's files,
+      // all of which are everyone's on staff). A document without `access` (from before, or the phone app until it
+      // writes it) is everyone's on staff, and never lands in a folder of the admins'; a function writes it in
+      // (functions/src/drive.ts). The Contracts folder (signed enrollment contracts) is theirs, at the top, for good.
       function byMe(actor) {
         return actor is map && actor.email == emailKey();
       }
 
+      function driveAccess(d) {
+        return d.get('access', 'staff');
+      }
+
+      function seesDriveItem(d) {
+        return isAdmin(b) || (isCoach(b) && driveAccess(d) == 'staff');
+      }
+
+      // The access of the folder something is in once the write is done ('staff' at the top). A folder that isn't there
+      // fails the check: nothing lands in it.
+      function folderAccessAfter(folderId) {
+        return folderId == null
+          ? 'staff'
+          : getAfter(/databases/$(database)/documents/branches/$(b)/driveFolders/$(folderId)).data.get('access', 'staff');
+      }
+
+      // Only admins make something theirs, and what's in a folder of theirs is theirs.
+      function accessFits(d, folderId) {
+        return (driveAccess(d) == 'staff' || isAdmin(b))
+          && (driveAccess(d) == 'admins' || folderAccessAfter(folderId) == 'staff');
+      }
+
       function validFolder(folderId, d) {
-        return d.keys().hasOnly(['name', 'parentId', 'studentId', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-                                 'trashed', 'trashedAt', 'trashedBy'])
+        return d.keys().hasOnly(['name', 'parentId', 'studentId', 'access', 'createdAt', 'createdBy', 'updatedAt',
+                                 'updatedBy', 'trashed', 'trashedAt', 'trashedBy'])
           && d.name is string && d.name.size() > 0 && d.name.size() <= 120
           && (d.parentId == null || (d.parentId is string && d.parentId != folderId))
-          // A student's folder is named after the student, sits at the top and can't be trashed.
+          && driveAccess(d) in ['staff', 'admins']
+          // A student's folder is named after the student, sits at the top, can't be trashed, and is everyone's on
+          // staff, as is a folder right in it.
           && (d.studentId == null
               || (d.studentId is string && folderId == 'student-' + d.studentId && d.parentId == null
-                  && d.get('trashed', false) == false));
+                  && d.get('trashed', false) == false && driveAccess(d) == 'staff'))
+          && (d.parentId == null || !d.parentId.matches('student-.*') || driveAccess(d) == 'staff')
+          && (folderId != 'contracts'
+              || (d.parentId == null && d.studentId == null && driveAccess(d) == 'admins' && d.get('trashed', false) == false));
       }
 
       match /driveFolders/{folderId} {
-        allow read: if isStaff(b);
+        // A coach asking for a folder that isn't there is told so.
+        allow get: if isAdmin(b) || (isCoach(b) && (resource == null || driveAccess(resource.data) == 'staff'));
+        allow list: if isAdmin(b) || (isCoach(b) && resource.data.access == 'staff');
         allow create: if isStaff(b) && validFolder(folderId, request.resource.data)
           && request.resource.data.get('trashed', false) == false
-          && byMe(request.resource.data.createdBy);
-        allow update: if isStaff(b) && validFolder(folderId, request.resource.data)
+          && byMe(request.resource.data.createdBy)
+          && accessFits(request.resource.data, request.resource.data.parentId);
+        allow update: if isStaff(b) && seesDriveItem(resource.data) && validFolder(folderId, request.resource.data)
           && request.resource.data.studentId == resource.data.studentId
-          && request.resource.data.createdBy == resource.data.createdBy;
+          && request.resource.data.createdBy == resource.data.createdBy
+          && (!changed().hasAny(['parentId', 'access']) || accessFits(request.resource.data, request.resource.data.parentId));
         allow delete: if isAdmin(b) && resource.data.get('trashed', false) == true;
       }
 
       function validFile(d) {
         return d.keys().hasOnly(['name', 'size', 'kind', 'mime', 'status', 'error', 'folderId', 'studentId', 'evaluationId',
-                                 'originalName', 'uploadedAt', 'uploadedBy', 'updatedAt', 'updatedBy', 'trashed', 'trashedAt',
-                                 'trashedBy'])
+                                 'access', 'originalName', 'uploadedAt', 'uploadedBy', 'updatedAt', 'updatedBy', 'trashed',
+                                 'trashedAt', 'trashedBy'])
           && d.name is string && d.name.size() > 0 && d.name.size() <= 200
           && d.size is int && d.size > 0 && d.size <= 100 * 1024 * 1024
           && d.kind is string && d.mime is string
           && d.status in ['uploading', 'ready', 'error']
           && (d.folderId == null || d.folderId is string)
-          && (d.studentId == null || d.studentId is string);
+          && (d.studentId == null || d.studentId is string)
+          // A file in a student's folder (at any depth) is everyone's on staff.
+          && driveAccess(d) in ['staff', 'admins']
+          && (d.studentId == null || driveAccess(d) == 'staff');
       }
 
       match /driveFiles/{fileId} {
         function familyResult(d) {
           return d.get('evaluationId', null) is string && d.get('trashed', false) == false && d.status == 'ready'
-            && d.get('studentId', null) is string && isFamilyOf(b, d.studentId);
+            && d.get('studentId', null) is string && driveAccess(d) == 'staff' && isFamilyOf(b, d.studentId);
         }
 
         // A family opens one record by its ID (never a list: a query could leave the Trash check unasked).
-        allow get: if isStaff(b) || familyResult(resource.data);
-        allow list: if isStaff(b);
+        allow get: if isAdmin(b) || (isCoach(b) && (resource == null || driveAccess(resource.data) == 'staff'))
+          || familyResult(resource.data);
+        allow list: if isAdmin(b) || (isCoach(b) && (resource.data.access == 'staff' || resource.data.studentId is string));
         // The record comes first (status uploading), then the bytes (storage.rules checks the record).
         allow create: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.status == 'uploading'
           && request.resource.data.get('trashed', false) == false
-          && byMe(request.resource.data.uploadedBy);
-        allow update: if isStaff(b) && validFile(request.resource.data)
+          && byMe(request.resource.data.uploadedBy)
+          && accessFits(request.resource.data, request.resource.data.folderId);
+        allow update: if isStaff(b) && seesDriveItem(resource.data) && validFile(request.resource.data)
           && request.resource.data.size == resource.data.size
           && request.resource.data.kind == resource.data.kind
           && request.resource.data.mime == resource.data.mime
-          && request.resource.data.uploadedBy == resource.data.uploadedBy;
+          && request.resource.data.uploadedBy == resource.data.uploadedBy
+          && (!changed().hasAny(['folderId', 'access']) || accessFits(request.resource.data, request.resource.data.folderId));
         allow delete: if (isAdmin(b) && resource.data.get('trashed', false) == true)
-          || (isStaff(b) && resource.data.status == 'error');
+          || (isStaff(b) && seesDriveItem(resource.data) && resource.data.status == 'error');
       }
 
       // ------------------------------------------------------ scores and reports
