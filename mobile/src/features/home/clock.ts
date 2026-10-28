@@ -15,8 +15,6 @@ export type ShiftDoc = ClockShift & { id: string };
 export interface MyClock {
   /** The shift they're clocked in on, if any (it may have started yesterday). */
   open: ShiftDoc | null;
-  /** When the open shift's paid time starts, when that's after the clock-in (an early arrival); otherwise null. */
-  paidFrom: number | null;
   /** Today's finished shifts, in order. */
   closed: ShiftDoc[];
   /** Minutes paid today (the open shift counts up to now). */
@@ -60,11 +58,9 @@ export function useMyClock(): MyClock {
       return Math.max(0, (p.endMs - p.startMs) / 60_000) + (s.status === "open" ? 0 : extraMinutes(s));
     };
     const open = shifts.data.find((s) => s.status === "open") ?? null;
-    const openFrom = open ? paidOf(open).startMs : null;
     const closed = shifts.data.filter((s) => s.status !== "open" && s.dateKey === today).sort((a, b) => ms(a.clockInAt) - ms(b.clockInAt));
     const todayMinutes = [...closed, ...(open ? [open] : [])].reduce((m, s) => m + minutesOf(s), 0);
     const weekMinutes = shifts.data.filter((s) => s.dateKey >= weekStart).reduce((m, s) => m + minutesOf(s), 0);
-    const paidFrom = open && openFrom !== null && openFrom > ms(open.clockInAt) ? openFrom : null;
-    return { open, paidFrom, closed, todayMinutes, weekMinutes, loading: shifts.loading || classes.loading || availability.loading };
+    return { open, closed, todayMinutes, weekMinutes, loading: shifts.loading || classes.loading || availability.loading };
   }, [shifts.data, shifts.loading, classes.data, classes.loading, availability.data, availability.loading, role, settings, now, today, weekStart]);
 }
