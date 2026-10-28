@@ -694,10 +694,14 @@ the main product: families do everything they need there, without calling or tex
   pay rule shows only in the payroll: Home, the schedule and a coach's clock card show a clock-in as clocked (3:21, with
   no "paid from 3:30"), and a coach who comes in after the arrival window opens isn't late: Home calls a coach "not
   clocked in" only once their first class has started.
-- **Paper cards are scored by "most of the hole"** (Goo; this answers A15): a hole scores the ring where most of it
-  sits, so a hole mostly in the 9 is a 9 even if it touches the 10's line, and a clean bullseye is a 10. Whole numbers,
-  10 to 1. A card the coach already scored keeps the written score as the official one (`P4`). The reader is checked on
-  the manager's real cards on the Mac mini only; they're never imported or committed (`P2`).
+- **Paper cards are scored by the matches' rule, each hole at its real size** (Goo, 2026-10-28; this answers A15 and
+  `P1`): a hole touching a ring's line counts that ring, as the competition sheets show matches score (a hole whose
+  edge only reaches the 4 line is a 4, even sitting mostly in the 3). The reader measures each hole as the card shows
+  it (a 4.5 mm pellet tears a hole about 4.2 mm across) and scores it at that size; a hole it can't read cleanly takes
+  the card's usual size, and the pellet's when too few could be read (#68). Whole numbers, 10 to 1. A card the coach
+  already scored keeps the written score as the official one (`P4`). The reader is checked on the manager's real cards
+  on the Mac mini only; they're never imported or committed (`P2`). "Most of the hole", the meeting's first answer, is
+  dropped: no match scores that way.
 - **Results have a kind:** Practice, Competition or Evaluation (`P7`–`P9`). Sessions have any number of shots, and an
   electronic shot reaches 10.9; the inner-ten count breaks ties and shows next to totals. **"Bench"** (a new student's
   first week or two) is not a position.
@@ -723,7 +727,8 @@ the main product: families do everything they need there, without calling or tex
     that ring, as the competition sheets show matches do. The manager isn't asked. One change: the reader measures each
     hole at its real size in the photo instead of drawing every hole at the pellet's 4.5 mm (paper closes up around the
     hole, so the fixed circle reached lines the real hole doesn't, where coaches saw the lower ring). "Most of the hole"
-    (`fix/paper-scoring`) is dropped.
+    (`fix/paper-scoring`) is dropped. Built in #68; the page that led to it, without the academy's names or photos:
+    `docs/proposals/scoring-rule-2026-10-28.html`.
 - **Built on 2026-10-28** (Phase 1 on the Mac mini, merged the same day; the phone's side is Phase 3 on the MacBook Pro):
   - **Availability and pay (#44):** inside the lock the rules let a coach only add time, and undo an add for 15 seconds
     (the website offers it for 10). One hourly rate, written to both stored rate fields until the phone's update; Hourly
@@ -752,12 +757,10 @@ the main product: families do everything they need there, without calling or tex
     grow to fit; the Week stacks the days at one scale. The panel's open or closed is kept per browser. Phones and
     narrow windows keep the sheets' layout (§21).
 - **Waiting:**
-  - **The paper scoring rule (P1)** waits for the manager (2026-10-30). On his 36 hand-scored cards, strict "most of
-    the hole" scores 6.4 points under his coaches on average, and the app's rule (touching counts) 2.6 over: his coaches
-    give the higher ring until about 90% of the hole is past the line. Goo shows him `scoring-examples.html` (local, his
-    own bulls); the app's rule stays meanwhile, and the strict rule waits on a local branch (`fix/paper-scoring`).
-    The competition sheets (2026-10-28, `scoring-proposal.html`, local) show that matches give the higher ring when
-    the hole touches the line, the app's rule; the recommendation is to keep it, and the manager decides.
+  - **The paper scoring rule (P1):** decided by Goo on 2026-10-28 ("Goo's picks" above), without the manager: the
+    matches' rule, each hole at its real size (#68). On his 36 hand-scored cards it brings the app from 2.6 points
+    over his coaches per 10 shots to 1.7, and the shots scored as the coach wrote from 68% to 76%; his coaches still
+    give the lower ring to a hole that only just touches a line, where matches give the higher.
   - **Coaches' usual days after November 30 (C4):** the import set them through November 30. Done 2026-10-28 with
     Goo's OK: each person's week as production had it (November's standing week: Monday to Thursday and Sunday, as
     each one's days) carried on from December 1 through February 28, 2027 (191 days), leaving any day already set

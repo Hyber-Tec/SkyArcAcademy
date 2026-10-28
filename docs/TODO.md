@@ -29,7 +29,7 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
    - **The schedule (`V2`) and the hole sizes (`P1`)** are being built (Goo's picks of 2026-10-28): review their pull
-     requests when they're up. The manager isn't asked about the scoring rule.
+     requests when they're up (the hole sizes: #68). The manager isn't asked about the scoring rule.
    - **The manager's files**, when he sends them (Section 7): the SIUS folder, past schedules, the latest sheet, the
      blank contract, nicknames, the academy owner's email. No rush.
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
