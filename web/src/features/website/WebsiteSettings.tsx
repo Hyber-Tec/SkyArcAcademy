@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { LuExternalLink, LuImages, LuInbox, LuPanelsTopLeft, LuQuote, LuUsers } from 'react-icons/lu'
+import { LuExternalLink, LuImages, LuInbox, LuNewspaper, LuPanelsTopLeft, LuQuote, LuUsers } from 'react-icons/lu'
 import { useNavigate, useParams } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ const TABS: { key: Tab; label: string; icon: IconType }[] = [
 /**
  * Settings → Website (docs/DECISIONS.md §18; under Settings since 2026-10-27): the academy's public website, filled from
  * here. Messages sent from it (trial requests and questions, also on Home), its photo library, what its pages show, the
- * coach cards and the families' quotes. The address keeps the tab (`/admin/settings/website/photos`), so links and the
+ * coach cards and the families' quotes. Its News is written as announcements ("Write news" starts one for the website). The address keeps the tab (`/admin/settings/website/photos`), so links and the
  * notifications open the right one.
  */
 export function WebsiteSettings() {
@@ -45,11 +45,17 @@ export function WebsiteSettings() {
           <h2 className="text-lg font-semibold tracking-tight">Website</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">What the academy’s public website shows, and the messages people send from it.</p>
         </div>
-        <Button variant="outline" asChild>
-          <a href="/" target="_blank" rel="noreferrer">
-            <LuExternalLink /> View website
-          </a>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* The website's News comes from announcements: one editor for both (docs/DECISIONS.md §23). */}
+          <Button variant="outline" onClick={() => navigate('/admin/announcements/new?where=public')} data-testid="write-news">
+            <LuNewspaper /> Write news
+          </Button>
+          <Button variant="outline" asChild>
+            <a href="/" target="_blank" rel="noreferrer">
+              <LuExternalLink /> View website
+            </a>
+          </Button>
+        </div>
       </div>
       <Tabs value={active} onValueChange={(v) => navigate(`/admin/settings/website/${v}`, { replace: true })}>
         {/* Phones: the tabs share the width on two rows, rather than run off the screen. */}

@@ -310,7 +310,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **Already done** for reports (a shared report notifies the family). **New work** for scores.
 
 #### N: Announcements and website news
-- [ ] **N1. One composer for announcements and website news.**
+- [x] **N1. One composer for announcements and website news.** (#47)
   - *Plan:* **Already done:** one editor writes to coaches, families and/or the website (its News page, linked in the
     site's menu). **Small change:** one clear "Where it goes: Internal / Public / Both", and "Write news" in Settings →
     Website.
@@ -321,8 +321,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - Fun activity posts belong here too, for example "here's the air rifle bingo game your kids played today" with a
     photo and no scores.
   - Make the website's news page easy to find.
-- [ ] **N2. A rich text editor** for posts: formatting (headings, bold, lists, links) and **images inside the post**.
-  Posts look good on the website, the portal and the app.
+- [x] **N2. A rich text editor** for posts: formatting (headings, bold, lists, links) and **images inside the post**.
+  Posts look good on the website, the portal and the app. (#47)
   - *Plan:* **Already done:** rich text with pictures, shown on the website, in the portal and in the phone app.
 
 #### F: Families, contracts, Drive

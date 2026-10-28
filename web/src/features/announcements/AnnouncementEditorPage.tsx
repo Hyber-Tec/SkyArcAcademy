@@ -1,7 +1,7 @@
 import { getDoc } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { LuArrowLeft, LuFileText, LuPaperclip, LuSearch, LuX } from 'react-icons/lu'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { type Announcement, type AnnouncementAttachment, type AnnouncementAudience, announcementCategories } from '@shared/comms'
 import type { AnnouncementWebsite } from '@shared/website/types'
@@ -63,13 +63,30 @@ const EMPTY: Draft = {
   notify: true,
 }
 
+/** A post for the website's News only: nobody on the staff picked, families off (admins see it in the CRM). */
+const PUBLIC_DRAFT: Draft = { ...EMPTY, audienceType: 'members', audienceKeys: [], website: { on: true, category: 'announcements', cover: null, slug: '' }, notify: false }
+
+/**
+ * Where a post goes (the manager's second meeting, docs/DECISIONS.md §23): inside the academy (coaches and, if chosen,
+ * families), on the website's News where anyone reads it, or both. One choice over the fields it sets.
+ */
+type Where = 'internal' | 'public' | 'both'
+
+function whereOf(d: Pick<Draft, 'audienceType' | 'audienceKeys' | 'families' | 'website'>): Where {
+  const inside = d.families || !(d.audienceType === 'members' && d.audienceKeys.length === 0)
+  if (!d.website?.on) return 'internal'
+  return inside ? 'both' : 'public'
+}
+
 /** Admin → Announcements → New / Edit: a two-step wizard (True Education layout). */
 export function AnnouncementEditorPage() {
   const { announcementId } = useParams()
   const { branchId } = useBranch()
   const editing = !!announcementId
   const [id] = useState(() => announcementId ?? newAnnouncementId(branchId))
-  const [initial, setInitial] = useState<Draft | null>(editing ? null : EMPTY)
+  const [params] = useSearchParams()
+  // "Write news" (Settings → Website) starts a post for the website only.
+  const [initial, setInitial] = useState<Draft | null>(editing ? null : params.get('where') === 'public' ? PUBLIC_DRAFT : EMPTY)
   const [missing, setMissing] = useState(false)
 
   useEffect(() => {
@@ -118,6 +135,27 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
     setDraft((d) => ({ ...d, website: { ...(d.website ?? { on: false, category: 'announcements', cover: null, slug: '' }), ...patch } }))
   const cover = useCoverUpload(branchId, id, (img) => setWebsite({ cover: img }))
   const onWebsite = draft.website?.on === true
+  const where = whereOf(draft)
+  function setWhere(next: Where) {
+    if (next === 'public') {
+      setDraft((d) => ({
+        ...d,
+        audienceType: 'members',
+        audienceKeys: [],
+        families: false,
+        notify: false,
+        website: { ...(d.website ?? { on: false, category: 'announcements', cover: null, slug: '' }), on: true },
+      }))
+      return
+    }
+    // Inside the academy needs someone to see it there: all coaches when nobody was picked.
+    setDraft((d) => {
+      const inside = d.families || !(d.audienceType === 'members' && d.audienceKeys.length === 0)
+      const audience = inside ? {} : { audienceType: 'all' as const, audienceKeys: [] }
+      const website = d.website ? { ...d.website, on: next === 'both' } : next === 'both' ? { on: true, category: 'announcements' as const, cover: null, slug: '' } : null
+      return { ...d, ...audience, website }
+    })
+  }
   // With nobody on the staff picked, a post for families or the website is still allowed: in the CRM, admins see it.
   const nobody = draft.audienceType === 'members' && draft.audienceKeys.length === 0
 
@@ -305,82 +343,100 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-          <Card className="gap-4 p-5 sm:p-6">
-            <div>
-              <h2 className="text-sm font-semibold">Audience</h2>
-              <p className="text-sm text-muted-foreground">Who sees this in the coach portal. Admins always see every announcement.</p>
-            </div>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={draft.audienceType}
-              onValueChange={(v) => v && set({ audienceType: v as AnnouncementAudience })}
-              className="w-full sm:w-auto"
-            >
-              <ToggleGroupItem value="all" className="flex-1 px-4">
-                All coaches ({coaches.length})
-              </ToggleGroupItem>
-              <ToggleGroupItem value="members" className="flex-1 px-4">
-                Select people
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {draft.audienceType === 'all' ? (
-              <p className="text-sm text-muted-foreground">This announcement will be visible to all {coaches.length} active coaches, including coaches added later.</p>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <InputGroup className="max-w-xs">
-                    <InputGroupAddon>
-                      <LuSearch />
-                    </InputGroupAddon>
-                    <InputGroupInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search coaches…" />
-                  </InputGroup>
-                  <span className="text-sm text-muted-foreground">
-                    Selected: <span className="font-semibold text-foreground">{draft.audienceKeys.length}</span>
-                  </span>
-                </div>
-                {nobody && (draft.families || onWebsite) ? (
-                  <p className="text-sm text-muted-foreground">Nobody selected: in the CRM, only admins see this announcement.</p>
-                ) : null}
-                <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">
-                  {shownCoaches.map((t) => {
-                    const checked = draft.audienceKeys.includes(t.key)
-                    return (
-                      <label key={t.key} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50">
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(on) =>
-                            set({ audienceKeys: on ? [...draft.audienceKeys, t.key] : draft.audienceKeys.filter((k) => k !== t.key) })
-                          }
-                        />
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">{t.name}</div>
-                          <div className="truncate text-xs text-muted-foreground">{t.email}</div>
-                        </div>
-                      </label>
-                    )
-                  })}
-                  {shownCoaches.length === 0 ? <div className="px-3 py-6 text-center text-sm text-muted-foreground">No coaches match.</div> : null}
-                </div>
+          <div className="space-y-4">
+            <Card className="gap-3 p-5 sm:p-6" data-testid="post-where">
+              <div>
+                <h2 className="text-sm font-semibold">Where it goes</h2>
+                <p className="text-sm text-muted-foreground">Inside the academy is the coaches’ (and, if you choose, families’) announcements; the website is its News page, where anyone can read it.</p>
               </div>
-            )}
-          </Card>
+              <ToggleGroup type="single" variant="outline" value={where} onValueChange={(v) => v && setWhere(v as Where)} className="w-full sm:w-auto">
+                <ToggleGroupItem value="internal" className="flex-1 px-4">
+                  Inside the academy
+                </ToggleGroupItem>
+                <ToggleGroupItem value="public" className="flex-1 px-4">
+                  Website only
+                </ToggleGroupItem>
+                <ToggleGroupItem value="both" className="flex-1 px-4">
+                  Both
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {where === 'public' ? <p className="text-sm text-muted-foreground">In the CRM, only admins see it. Families and coaches read it on the website.</p> : null}
+            </Card>
+            {where !== 'public' ? (
+              <Card className="gap-4 p-5 sm:p-6">
+                <div>
+                  <h2 className="text-sm font-semibold">Audience</h2>
+                  <p className="text-sm text-muted-foreground">Who sees this in the coach portal. Admins always see every announcement.</p>
+                </div>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={draft.audienceType}
+                  onValueChange={(v) => v && set({ audienceType: v as AnnouncementAudience })}
+                  className="w-full sm:w-auto"
+                >
+                  <ToggleGroupItem value="all" className="flex-1 px-4">
+                    All coaches ({coaches.length})
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="members" className="flex-1 px-4">
+                    Select people
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                {draft.audienceType === 'all' ? (
+                  <p className="text-sm text-muted-foreground">This announcement will be visible to all {coaches.length} active coaches, including coaches added later.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <InputGroup className="max-w-xs">
+                        <InputGroupAddon>
+                          <LuSearch />
+                        </InputGroupAddon>
+                        <InputGroupInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search coaches…" />
+                      </InputGroup>
+                      <span className="text-sm text-muted-foreground">
+                        Selected: <span className="font-semibold text-foreground">{draft.audienceKeys.length}</span>
+                      </span>
+                    </div>
+                    {nobody && (draft.families || onWebsite) ? (
+                      <p className="text-sm text-muted-foreground">Nobody selected: in the CRM, only admins see this announcement.</p>
+                    ) : null}
+                    <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">
+                      {shownCoaches.map((t) => {
+                        const checked = draft.audienceKeys.includes(t.key)
+                        return (
+                          <label key={t.key} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(on) =>
+                                set({ audienceKeys: on ? [...draft.audienceKeys, t.key] : draft.audienceKeys.filter((k) => k !== t.key) })
+                              }
+                            />
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium">{t.name}</div>
+                              <div className="truncate text-xs text-muted-foreground">{t.email}</div>
+                            </div>
+                          </label>
+                        )
+                      })}
+                      {shownCoaches.length === 0 ? <div className="px-3 py-6 text-center text-sm text-muted-foreground">No coaches match.</div> : null}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            ) : null}
+          </div>
           <Card className="gap-4 p-5">
             <h2 className="text-sm font-semibold">Publishing options</h2>
-            <OptionRow
-              id="ann-families"
-              label="Families too"
-              description="Parents and students also see it, on their Home in the portal and the app. Comments stay with staff."
-              checked={draft.families}
-              onChange={(families) => set({ families })}
-            />
-            <OptionRow
-              id="ann-website"
-              label="On the website"
-              description="Shown on the website’s News, where anyone can read it. Only include children’s names or photos with their parents’ permission."
-              checked={onWebsite}
-              onChange={(on) => setWebsite({ on })}
-            />
+            {where !== 'public' ? (
+              <OptionRow
+                id="ann-families"
+                label="Families too"
+                description="Parents and students also see it, on their Home in the portal and the app. Comments stay with staff."
+                checked={draft.families}
+                onChange={(families) => set({ families })}
+              />
+            ) : null}
+            {onWebsite ? <p className="text-xs text-muted-foreground">On the website, anyone can read it: include children’s names or photos only with their parents’ permission.</p> : null}
             {onWebsite && draft.website ? (
               <WebsiteOptions value={draft.website} onChange={setWebsite} title={draft.title} announcementId={id} html={draft.contentHtml} cover={cover} />
             ) : null}
@@ -391,17 +447,19 @@ function Wizard({ id, editing, initial }: { id: string; editing: boolean; initia
               checked={draft.commentsEnabled}
               onChange={(commentsEnabled) => set({ commentsEnabled })}
             />
-            <OptionRow
-              id="ann-notify"
-              label={editing ? 'Notify again' : 'Notify coaches'}
-              description={
-                editing
-                  ? 'Off by default. Turn on only to re-notify the audience about this update.'
-                  : 'Adds it to their notifications. Phones get a push once the phone app is installed.'
-              }
-              checked={draft.notify}
-              onChange={(notify) => set({ notify })}
-            />
+            {where !== 'public' ? (
+              <OptionRow
+                id="ann-notify"
+                label={editing ? 'Notify again' : draft.families ? 'Notify coaches and families' : 'Notify coaches'}
+                description={
+                  editing
+                    ? 'Off by default. Turn on only to re-notify the audience about this update.'
+                    : 'Adds it to their notifications, and their phones’ when they have the app. Each person can turn news off.'
+                }
+                checked={draft.notify}
+                onChange={(notify) => set({ notify })}
+              />
+            ) : null}
             {editing && draft.notify ? (
               <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
                 The audience will be notified when you save these changes.
