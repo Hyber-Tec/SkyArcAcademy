@@ -136,3 +136,8 @@ export function nextGrade(grade: string): string | null {
   if (!/^\d+$/.test(grade.trim())) return null
   return String(Number(grade) + 1)
 }
+
+/** A parent's name, or "Avery’s parent" when the academy has none (names are optional, the manager's F3). */
+export function parentLabel(name: string | null | undefined, childFirstName: string): string {
+  return name?.trim() || `${childFirstName}’s parent`
+}

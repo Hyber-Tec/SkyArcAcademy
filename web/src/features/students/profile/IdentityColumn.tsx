@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useDayConfigs } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
+import { FamilyCard } from './FamilyCard'
 import { initialsOf, timeSpan } from './model'
 import type { StudentActivity } from './useStudentActivity'
 
@@ -150,37 +151,7 @@ export function IdentityColumn({
         )}
       </div>
 
-      {isAdmin ? (
-        <div className="hidden rounded-xl border bg-card p-4 lg:block">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Family</h2>
-            <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => onTab('info', '?edit=family')}>
-              Edit
-            </button>
-          </div>
-          {priv?.parents.length ? (
-            <ul className="space-y-3">
-              {priv.parents.map((p, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <Avatar name={p.name || p.email || '?'} />
-                  <div className="min-w-0 flex-1">
-                    {/* A parent known only by email (as the academy's spreadsheet gives them) shows by it. */}
-                    <div className="truncate text-sm font-medium">{p.name || p.email || 'Parent'}</div>
-                    <div className="truncate text-xs text-muted-foreground">{[p.relation, p.phone ? formatPhone(p.phone) : null].filter(Boolean).join(' · ') || (p.name ? p.email : '')}</div>
-                  </div>
-                  {p.email ? (
-                    <a className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" href={`mailto:${p.email}`} aria-label={`Email ${p.name || p.email}`}>
-                      <LuMail className="size-4" />
-                    </a>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No parents or guardians yet.</p>
-          )}
-        </div>
-      ) : null}
+      {isAdmin ? <FamilyCard student={student} priv={priv} onEdit={() => onTab('info', '?edit=family')} /> : null}
     </aside>
   )
 }

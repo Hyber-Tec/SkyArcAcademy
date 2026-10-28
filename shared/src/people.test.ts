@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { autoStudentStatus, initials } from './people'
+import { autoStudentStatus, initials, parentLabel } from './people'
 
 const on = { enabled: true, inactivityPauseDays: 20, respectManual: true }
 const today = '2026-10-01'
@@ -34,5 +34,13 @@ describe('initials', () => {
     expect(initials('')).toBe('?')
     expect(initials('Reviewer (App Store)')).toBe('RA')
     expect(initials('(…)')).toBe('?')
+  })
+})
+
+describe('a parent without a name', () => {
+  it('is their child’s parent', () => {
+    expect(parentLabel('', 'Avery')).toBe('Avery’s parent')
+    expect(parentLabel(null, 'Avery')).toBe('Avery’s parent')
+    expect(parentLabel('Jordan Stone', 'Avery')).toBe('Jordan Stone')
   })
 })
