@@ -22,6 +22,16 @@ describe('the student a text names', () => {
     expect(studentNamedIn('Name: Blake Rivers Lane 4', students)).toBe('b')
   })
 
+  it('knows a student by their other names: a nickname, or a full name they’re printed under', () => {
+    const more = [...students, { id: 'e', name: 'Jiwoo Han', otherNames: ['Jay', 'Ji Woo Han'] }, { id: 'f', name: 'Jay Brooks' }]
+    expect(studentNamedIn('Jiwoo 20 shot', more)).toBe('e')
+    // "Jay" is two students' first name: the last name settles it.
+    expect(studentNamedIn('Jay 20 shot', more)).toBeNull()
+    expect(studentNamedIn('Jay Han standing', more)).toBe('e')
+    expect(studentNamedIn('Jay Brooks standing', more)).toBe('f')
+    expect(studentNamedIn('Name: Ji Woo Han', more)).toBe('e')
+  })
+
   it('leaves out finished students, and finds nothing in a text without a name', () => {
     expect(studentNamedIn('Casey prone', students)).toBeNull()
     expect(studentNamedIn('', students)).toBeNull()

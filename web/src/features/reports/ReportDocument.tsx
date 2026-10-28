@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { LuArrowRight, LuCheck, LuCrosshair, LuFlag, LuGitCompareArrows, LuMessageSquareQuote, LuTable2, LuTarget, LuTrendingUp } from 'react-icons/lu'
+import { LuArrowRight, LuCheck, LuCrosshair, LuFlag, LuGitCompareArrows, LuMessageSquareQuote, LuTable2, LuTarget, LuTrendingUp, LuTrophy } from 'react-icons/lu'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
 import { formatDateKey, formatInstant } from '@shared/time'
@@ -293,6 +293,43 @@ export function ReportDocument({
               <PositionTable positions={f.positions} />
             </div>
           </div>
+
+          {f.competitions?.length ? (
+            <div className="mt-9 break-inside-avoid print:mt-6" data-testid="report-competitions">
+              <Heading icon={LuTrophy} accent={ACCENT}>
+                Competitions
+              </Heading>
+              <table className="mt-4 w-full text-[13px]">
+                <thead>
+                  <tr className="text-left text-[11px]" style={{ color: INK.muted }}>
+                    <th className="pb-1.5 font-medium">Date</th>
+                    <th className="pb-1.5 font-medium">Match</th>
+                    <th className="pb-1.5 font-medium">Position</th>
+                    <th className="pb-1.5 text-right font-medium">Score</th>
+                    <th className="pb-1.5 text-right font-medium">Per 10</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {f.competitions.map((c) => (
+                    <tr key={c.id} className="border-t" style={{ borderColor: INK.hairline }}>
+                      <td className="py-1.5 whitespace-nowrap">{formatDateKey(c.dateKey, 'monthDay')}</td>
+                      <td className="py-1.5">{c.match || 'Competition'}</td>
+                      <td className="py-1.5">{POSITION_LABELS[c.position]}</td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        {c.decimal ? c.total.toFixed(1) : c.total}
+                        {c.innerTens !== null ? `-${c.innerTens}` : ''}
+                        <span style={{ color: INK.muted }}> / {c.shots}</span>
+                      </td>
+                      <td className="py-1.5 text-right font-semibold tabular-nums">{c.wholePer10.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[11px]" style={{ color: INK.muted }}>
+                Matches are listed apart from practice; the figures above are from practice and evaluations. The score is the total, then the inner tens.
+              </p>
+            </div>
+          ) : null}
 
           {o.showComparison && compare.length >= 2 && main ? (
             <div className="mt-9 break-inside-avoid print:mt-6">

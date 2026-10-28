@@ -95,9 +95,26 @@ export function decidedNotice(r: Pick<ClassRequest, 'kind' | 'studentName' | 'da
   }
 }
 
-/** A new score, as its family hears of it: "Standing, 186.8 over 20 shots". */
-export function scoreAddedNotice(e: { studentName: string; position: string; total: number; wholeTotal?: number; shots: number; source: string }): Notice {
+/** A new score, as its family hears of it: "Standing, 186.8 over 20 shots", a competition with its match and inner tens. */
+export function scoreAddedNotice(e: {
+  studentName: string
+  position: string
+  total: number
+  wholeTotal?: number
+  shots: number
+  source: string
+  innerTens?: number | null
+  kind?: string
+  match?: { name: string } | null
+}): Notice {
   const pos = e.position ? `${e.position[0].toUpperCase()}${e.position.slice(1)}, ` : ''
-  const total = e.source === 'paper' ? String(e.wholeTotal ?? Math.round(e.total)) : Number(e.total).toFixed(1)
-  return { type: 'score_added', title: 'New score', body: `${first(e.studentName)}: ${pos}${total} over ${e.shots} shot${e.shots === 1 ? '' : 's'}.` }
+  const whole = e.source === 'paper' || (e.source === 'sheet' && Number.isInteger(e.total))
+  const total = whole ? String(e.wholeTotal ?? Math.round(e.total)) : Number(e.total).toFixed(1)
+  const tens = e.kind === 'competition' && e.innerTens != null ? `-${e.innerTens}` : ''
+  const match = e.kind === 'competition' ? `${e.match?.name || 'A competition'}, ` : ''
+  return {
+    type: 'score_added',
+    title: e.kind === 'competition' ? 'New competition result' : 'New score',
+    body: `${first(e.studentName)}: ${match}${pos}${total}${tens} over ${e.shots} shot${e.shots === 1 ? '' : 's'}.`,
+  }
 }

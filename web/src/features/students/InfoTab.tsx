@@ -9,7 +9,7 @@ import { useBranch } from '@/branch/BranchProvider'
 import { DatePicker } from '@/components/app/DatePicker'
 import { StudentStatusBadge } from '@/components/app/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
@@ -18,7 +18,7 @@ import { EMPTY_PRIVATE, resumeAutoStatus, saveStudentInfo } from './api'
 import { Avatar } from './profile/IdentityColumn'
 import { ageOn } from './profile/model'
 
-type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'level' | 'program' | 'rifle' | 'school' | 'status' | 'signUpDate'>
+type PublicForm = Pick<Student, 'firstName' | 'lastName' | 'grade' | 'level' | 'program' | 'rifle' | 'school' | 'status' | 'signUpDate'> & { otherNames: string }
 
 const pickPublic = (s: Student): PublicForm => ({
   firstName: s.firstName ?? '',
@@ -30,6 +30,7 @@ const pickPublic = (s: Student): PublicForm => ({
   school: s.school ?? '',
   status: s.status,
   signUpDate: s.signUpDate ?? null,
+  otherNames: (s.otherNames ?? []).join(', '),
 })
 
 /** A Select can't hold an empty value, so "none" has its own. */
@@ -74,7 +75,8 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
     if (!form.firstName.trim()) return toast.error('Enter the first name.')
     setBusy(true)
     try {
-      const patch: Partial<Student> = { ...form, firstName: form.firstName.trim(), lastName: form.lastName.trim(), rifle: form.rifle?.trim() || null }
+      const otherNames = [...new Set(form.otherNames.split(',').map((n) => n.trim().replace(/\s+/g, ' ')).filter(Boolean))].slice(0, 10)
+      const patch: Partial<Student> = { ...form, otherNames, firstName: form.firstName.trim(), lastName: form.lastName.trim(), rifle: form.rifle?.trim() || null }
       await saveStudentInfo(branchId, actor, student, patch, readOnly ? null : { ...pform, parents: pform.parents.filter((p) => p.name || p.email || p.phone) })
       toast.success('Saved')
       setEditing(false)
@@ -126,6 +128,7 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
             <Item label="First name">{student.firstName || '—'}</Item>
             <Item label="Last name">{student.lastName || '—'}</Item>
+            <Item label="Other names">{student.otherNames?.length ? student.otherNames.join(', ') : '—'}</Item>
             <Item label="Grade">{student.grade ? gradeLabel(student.grade) : '—'}</Item>
             <Item label="Level">{student.level || '—'}</Item>
             <Item label="Program">{student.program || '—'}</Item>
@@ -262,6 +265,11 @@ export function InfoTab({ student, readOnly, priv, privLoading }: { student: Wit
             <Field>
               <FieldLabel htmlFor="si-last">Last name</FieldLabel>
               <Input id="si-last" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="si-other">Other names</FieldLabel>
+              <Input id="si-other" value={form.otherNames} onChange={(e) => set('otherNames', e.target.value)} placeholder="Jay, Ji-woo" />
+              <FieldDescription>Nicknames or other spellings, separated by commas. SIUS reports and search find the student by them.</FieldDescription>
             </Field>
             <Field>
               <FieldLabel>Grade</FieldLabel>

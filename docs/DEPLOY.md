@@ -114,7 +114,9 @@ Set up on 2026-10-15. HyberTec's organization shapes three things here:
   run as their own account, **`functions@skyarcacademy.iam.gserviceaccount.com`** (`setGlobalOptions` in
   `functions/src/app.ts`), with only what they use: Cloud Datastore User, Firebase Authentication Admin, Firebase Cloud
   Messaging Admin, Eventarc Event Receiver, Cloud Run Invoker, Logs Writer, Storage Object Admin on the default
-  bucket, and Secret Accessor on `GMAIL_APP_PASSWORD`.
+  bucket, Secret Accessor on `GMAIL_APP_PASSWORD`, and Service Usage Consumer, to call Google's text reader (Cloud
+  Vision, `readResultsSheet`: a competition's results sheet read from its photo; switched on with Goo's OK on
+  2026-10-28).
 - **Builds run as the Compute Engine default account** (`cloudbuild.useComputeServiceAccount`), which therefore holds
   Cloud Build Service Account. It also holds Cloud Run Invoker and Eventarc Event Receiver, which the Firebase CLI
   checks for before it creates event-triggered functions; nothing runs as it.
@@ -149,10 +151,11 @@ P=skyarcacademy; N=1025403274020
 DEPLOY=github-deploy@$P.iam.gserviceaccount.com; RUNTIME=functions@$P.iam.gserviceaccount.com
 COMPUTE=$N-compute@developer.gserviceaccount.com
 gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com \
-  eventarc.googleapis.com secretmanager.googleapis.com compute.googleapis.com orgpolicy.googleapis.com --project $P
+  eventarc.googleapis.com secretmanager.googleapis.com compute.googleapis.com orgpolicy.googleapis.com \
+  vision.googleapis.com --project $P
 gcloud iam service-accounts create functions --project $P --display-name "Cloud Functions runtime"
 for role in roles/datastore.user roles/firebaseauth.admin roles/firebasecloudmessaging.admin \
-  roles/eventarc.eventReceiver roles/run.invoker roles/logging.logWriter; do
+  roles/eventarc.eventReceiver roles/run.invoker roles/logging.logWriter roles/serviceusage.serviceUsageConsumer; do
   gcloud projects add-iam-policy-binding $P --member serviceAccount:$RUNTIME --role $role --condition=None
 done
 gcloud storage buckets add-iam-policy-binding gs://$P.firebasestorage.app --member serviceAccount:$RUNTIME \

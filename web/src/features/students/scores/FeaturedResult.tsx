@@ -16,6 +16,7 @@ import { dartView, placedShots } from '@/features/scores/playback'
 import { SeriesDarts, ShotDialog } from '@/features/scores/ShotDarts'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { cn } from '@/lib/utils'
+import { ResultKindChip } from '@/features/scores/kinds'
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
   return (
@@ -123,7 +124,8 @@ export function FeaturedResult({
               <span className="size-2 rounded-full" style={{ background: color }} />
               {POSITION_LABELS[e.position]}
             </Badge>
-            <Badge variant="outline">{SOURCE_LABELS[e.source]}</Badge>
+            <Badge variant="outline">{e.match?.name || SOURCE_LABELS[e.source]}</Badge>
+            <ResultKindChip e={e} className="h-5 px-2 text-[11px]" />
             {best ? <BestBadge position={e.position} /> : null}
             {staff && e.problems?.length ? (
               <Badge variant="outline" className="border-amber-300 text-amber-800 dark:text-amber-300">
@@ -164,7 +166,13 @@ export function FeaturedResult({
         ) : (
           <div className="flex aspect-square w-full max-w-[16rem] flex-col items-center justify-center gap-2 rounded-full border border-dashed p-10 text-center text-sm text-balance text-muted-foreground">
             <LuPencilLine className="size-5" />
-            {e.series.length ? 'Typed in from the paper card, so where the shots landed isn’t recorded.' : 'Only the card’s total was typed in.'}
+            {e.source === 'sheet'
+              ? e.series.length
+                ? 'From the results sheet: every shot’s score, but not where it landed.'
+                : 'From the results sheet: its total only.'
+              : e.series.length
+                ? 'Typed in from the paper card, so where the shots landed isn’t recorded.'
+                : 'Only the card’s total was typed in.'}
           </div>
         )}
       </div>

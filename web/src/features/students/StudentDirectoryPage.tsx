@@ -89,7 +89,8 @@ export function StudentDirectoryPage({ mode = 'admin' }: { mode?: 'admin' | 'coa
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = students
-      .filter((s) => !q || s.nameLower.includes(q))
+      // A student's other names find them too (a nickname, the name on their SIUS reports).
+      .filter((s) => !q || s.nameLower.includes(q) || (s.otherNames ?? []).some((n) => n.toLowerCase().includes(q)))
       .filter((s) => statuses.length === 0 || statuses.includes(s.status))
       .filter((s) => levels.length === 0 || levels.includes(s.level ?? NONE))
     const dir = sort.dir === 'asc' ? 1 : -1

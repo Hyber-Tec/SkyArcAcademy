@@ -1,7 +1,8 @@
+import { type Timestamp, serverTimestamp } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { studentLabel } from '@shared/people'
-import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, isPosition, paperEvaluation } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition, kindOf, paperEvaluation } from '@shared/shooting/evaluation'
 import { type DateKey, todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -17,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useStudentList } from '@/features/data/hooks'
 import { createEvaluation, updateEvaluation } from './api'
+import { ResultKindPicker } from './kinds'
 
 const BULLS = 10
 
@@ -57,6 +59,11 @@ export function PaperScoreDialog({
   const [bulls, setBulls] = useState<string[]>(firstShots.length === slots ? firstShots : Array.from({ length: slots }, () => ''))
   const [total, setTotal] = useState(existing && !firstShots.length ? String(existing.total) : '')
   const [note, setNote] = useState(existing?.note ?? '')
+  const [kind, setKind] = useState<ResultKind>(existing ? kindOf(existing) : 'practice')
+  // Any number of shots (the manager: 20, 30, 60…): a total alone says how many, for its average per 10.
+  const [shotCount, setShotCount] = useState(existing && !firstShots.length ? String(existing.shots) : '10')
+  // A card the coach scored by hand: the written score is the official one (the app's reading is kept for reference).
+  const [written, setWritten] = useState(existing?.official ? String(existing.total) : '')
   const [busy, setBusy] = useState(false)
 
   const student = students.find((s) => s.id === studentId)
@@ -64,8 +71,14 @@ export function PaperScoreDialog({
   const bullsOk = values.every((v) => v !== null && Number.isInteger(v) && v >= 0 && v <= 10)
   const bullsTotal = values.reduce<number>((n, v) => n + (v ?? 0), 0)
   const totalNumber = Number(total)
-  const totalOk = total.trim() !== '' && Number.isInteger(totalNumber) && totalNumber >= 0 && totalNumber <= 100
-  const ready = !!studentId && !!student && !!position && !!dateKey && (mode === 'bulls' ? bullsOk : totalOk)
+  const shotsNumber = Number(shotCount)
+  const shotsOk = Number.isInteger(shotsNumber) && shotsNumber >= 1 && shotsNumber <= 200
+  const totalOk = shotsOk && total.trim() !== '' && Number.isInteger(totalNumber) && totalNumber >= 0 && totalNumber <= shotsNumber * 10
+  const writtenNumber = Number(written)
+  const writtenOk = written.trim() === '' || (Number.isInteger(writtenNumber) && writtenNumber >= 0 && writtenNumber <= slots * 10)
+  // The official score matters for a card read by the app (scanned): a typed card's own scores are the coach's already.
+  const scanned = existingShots.some((t) => typeof t.x === 'number')
+  const ready = !!studentId && !!student && !!position && !!dateKey && (mode === 'bulls' ? bullsOk && writtenOk : totalOk)
   const options = useMemo(() => students.filter((s) => s.status !== 'finished' || s.id === studentId).map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade) })), [students, studentId])
 
   async function save() {
@@ -85,9 +98,18 @@ export function PaperScoreDialog({
               })
             : null,
         total: mode === 'total' ? totalNumber : null,
+        shotCount: mode === 'total' ? shotsNumber : undefined,
         fileId: existing?.fileId ?? fileId,
         note: note.trim(),
       })
+      data.kind = kind
+      // The written score, when it differs from the app's reading, is what everyone sees (totals, charts, reports).
+      const official = mode === 'bulls' && scanned && written.trim() !== '' && writtenNumber !== data.total ? writtenNumber : null
+      data.official = official === null ? null : { appTotal: data.total, by: actor.email, at: serverTimestamp() as unknown as Timestamp }
+      if (official !== null) {
+        data.total = official
+        data.wholeTotal = official
+      }
       let id = existing?.id ?? ''
       if (existing) await updateEvaluation(branchId, actor, existing.id, existing, data)
       else id = await createEvaluation(branchId, actor, data)
@@ -160,13 +182,40 @@ export function PaperScoreDialog({
                 <FieldDescription>
                   Whole numbers, 0 to 10, one per {slots > BULLS ? 'shot' : 'bull'}. {bullsOk ? `Total ${bullsTotal} out of ${slots * 10}.` : `Fill in all ${slots === BULLS ? 'ten' : slots}.`}
                 </FieldDescription>
+                {scanned ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <FieldLabel htmlFor="paper-official" className="font-normal">
+                      Score written on the card (official)
+                    </FieldLabel>
+                    <Input
+                      id="paper-official"
+                      inputMode="numeric"
+                      value={written}
+                      placeholder={bullsOk ? String(bullsTotal) : ''}
+                      onChange={(e) => setWritten(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                      className="w-24 tabular-nums"
+                    />
+                    <FieldDescription className="w-full">
+                      For a card the coach already scored: families, charts and reports show the written score; the app’s reading is kept for reference.
+                    </FieldDescription>
+                  </div>
+                ) : null}
               </>
             ) : (
               <>
-                <Input inputMode="numeric" aria-label="Total" placeholder="e.g. 87" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-32 tabular-nums" />
-                <FieldDescription>The card’s total, out of 100 (10 shots).</FieldDescription>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <Input inputMode="numeric" aria-label="Total" placeholder="e.g. 87" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} className="w-28 tabular-nums" />
+                  <span className="text-muted-foreground">over</span>
+                  <Input inputMode="numeric" aria-label="Shots" value={shotCount} onChange={(e) => setShotCount(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-20 tabular-nums" />
+                  <span className="text-muted-foreground">shots</span>
+                </div>
+                <FieldDescription>{shotsOk ? `The total, out of ${shotsNumber * 10} (${shotsNumber} shots, whole numbers).` : 'How many shots: 10 a card, 20, 30, 60…'}</FieldDescription>
               </>
             )}
+          </Field>
+          <Field>
+            <FieldLabel>What it was</FieldLabel>
+            <ResultKindPicker value={kind} onChange={setKind} />
           </Field>
           <Field>
             <FieldLabel htmlFor="paper-note">Coach’s note (optional)</FieldLabel>

@@ -70,7 +70,15 @@ export function previousReport(reports: readonly Report[], from: DateKey): Previ
   const prev = reports
     .filter((r) => r.status === 'shared' && r.endDate < from)
     .sort((a, b) => b.endDate.localeCompare(a.endDate))[0]
-  return prev ? { reportId: prev.id, periodLabel: prev.period.label, average: prev.facts?.average ?? null, evaluations: prev.evaluationCount ?? 0 } : null
+  return prev
+    ? {
+        reportId: prev.id,
+        periodLabel: prev.period.label,
+        average: prev.facts?.average ?? null,
+        evaluations: prev.evaluationCount ?? 0,
+        positions: prev.facts?.positions?.map((p) => ({ position: p.position, average: p.average })),
+      }
+    : null
 }
 
 /** Everything a report is composed from, read fresh (so a new or updated report never uses stale lists). */

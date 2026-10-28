@@ -1,8 +1,8 @@
-import { type Evaluation, POSITIONS, type Position, inOrder, per10 } from '../shooting/evaluation'
+import { type Evaluation, POSITIONS, type Position, inOrder, kindOf, per10 } from '../shooting/evaluation'
 import { type ShotPoint, meanPoint, wholeScore } from '../shooting/target'
 import type { SessionStatus } from '../settings/defaults'
 import type { DateKey } from '../time'
-import type { EvaluationPoint, PositionFacts, ReportFacts, TrendLevel } from './types'
+import type { CompetitionFact, EvaluationPoint, PositionFacts, ReportFacts, TrendLevel } from './types'
 
 /** The figures a report is built from, all computed here (never typed in, never written by AI). */
 
@@ -89,6 +89,22 @@ export interface PreviousReport {
   periodLabel: string
   average: number | null
   evaluations: number
+  /** Its positions' averages, to compare like with like (missing for reports from before). */
+  positions?: { position: Position; average: number | null }[]
+}
+
+/**
+ * The change since the previous report, over the positions both periods shot (each weighted by this period's shots):
+ * a standing-only month isn't measured against a prone-only one (P10). Without the previous positions, the averages.
+ */
+export function deltaSince(positions: readonly PositionFacts[], average: number | null, previous: PreviousReport | null): number | null {
+  if (!previous || average === null) return null
+  if (!previous.positions) return previous.average != null ? round1(average - previous.average) : null
+  const before = new Map(previous.positions.filter((p) => p.average !== null).map((p) => [p.position, p.average as number]))
+  const both = positions.filter((p) => p.average !== null && before.has(p.position) && p.shots > 0)
+  const shots = both.reduce((n, p) => n + p.shots, 0)
+  if (!shots) return null
+  return round1(both.reduce((n, p) => n + ((p.average as number) - (before.get(p.position) as number)) * p.shots, 0) / shots)
 }
 
 /**
@@ -109,7 +125,22 @@ export function attendanceFacts(sessions: readonly FactsSession[]): ReportFacts[
 
 /** The period's figures from its evaluations (already in the period), its classes and the last shared report. */
 export function reportFacts(evaluations: readonly (Evaluation & { id: string })[], sessions: readonly FactsSession[], previous: PreviousReport | null): { facts: ReportFacts; series: EvaluationPoint[] } {
-  const series = inOrder(evaluations).map(toPoint)
+  // Competitions stand apart from practice (§23): listed on their own, left out of the figures and the charts.
+  const ordered = inOrder(evaluations)
+  const competitions: CompetitionFact[] = ordered
+    .filter((e) => kindOf(e) === 'competition')
+    .map((e) => ({
+      id: e.id,
+      dateKey: e.dateKey,
+      match: e.match?.name ?? '',
+      position: e.position,
+      shots: e.shots,
+      total: e.total,
+      innerTens: e.innerTens,
+      decimal: e.source !== 'paper' && !Number.isInteger(e.total),
+      wholePer10: per10(e.wholeTotal, e.shots) ?? 0,
+    }))
+  const series = ordered.filter((e) => kindOf(e) !== 'competition').map(toPoint)
   const positions = POSITIONS.map((pos) => positionFacts(pos, series.filter((p) => p.position === pos))).filter((p) => p.evaluations > 0)
   const shots = series.reduce((n, p) => n + p.shots, 0)
   const sius = series.filter((p) => p.source === 'sius')
@@ -132,8 +163,9 @@ export function reportFacts(evaluations: readonly (Evaluation & { id: string })[
     },
     attendance: attendanceFacts(sessions),
     trend: trendOf(positions),
-    previous,
-    deltaAverage: previous?.average != null && average !== null ? round1(average - previous.average) : null,
+    previous: previous ? { reportId: previous.reportId, periodLabel: previous.periodLabel, average: previous.average, evaluations: previous.evaluations } : null,
+    deltaAverage: deltaSince(positions, average, previous),
+    competitions,
   }
   return { facts, series }
 }

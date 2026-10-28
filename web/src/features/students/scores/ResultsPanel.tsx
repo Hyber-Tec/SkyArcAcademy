@@ -2,7 +2,7 @@ import { type ReactNode, useMemo, useRef, useState } from 'react'
 import { LuFileText, LuMessageSquareQuote, LuPencil, LuPencilLine, LuScanSearch, LuTrash2 } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10 } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10, totalWithTens } from '@shared/shooting/evaluation'
 import { wasScanned } from '@shared/targets/flat'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -17,6 +17,7 @@ import { cardPath } from '@/features/scores/card/parts'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { prefersReducedMotion } from '@/features/scores/playback'
 import { MiniTarget } from '@/features/scores/TargetPlot'
+import { ResultKindChip } from '@/features/scores/kinds'
 import { cn } from '@/lib/utils'
 import { BestBadge, FeaturedResult } from './FeaturedResult'
 import { SiusEditDialog } from './SiusEditDialog'
@@ -161,7 +162,7 @@ export function ResultsPanel({
       </div>
 
       {editing?.source === 'paper' ? <PaperScoreDialog open onOpenChange={(o) => !o && setEditing(null)} existing={editing} /> : null}
-      {editing?.source === 'sius' ? <SiusEditDialog evaluation={editing} onClose={() => setEditing(null)} /> : null}
+      {editing?.source === 'sius' || editing?.source === 'sheet' ? <SiusEditDialog evaluation={editing} onClose={() => setEditing(null)} /> : null}
       {dialog}
     </>
   )
@@ -215,8 +216,14 @@ function ResultRow({
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
             <span className="truncate">
-              {POSITION_LABELS[e.position]} · {SOURCE_LABELS[e.source]}
+              {POSITION_LABELS[e.position]} · {e.match?.name || SOURCE_LABELS[e.source]}
             </span>
+            <ResultKindChip e={e} />
+            {!family && e.official ? (
+              <span className="shrink-0 text-[10px] font-medium text-muted-foreground" title={`The written score is official; the app read ${e.official.appTotal}.`}>
+                Official
+              </span>
+            ) : null}
             {best ? <BestBadge position={e.position} size="sm" words="wide" /> : null}
             {family && e.note ? <LuMessageSquareQuote className="size-3.5 shrink-0" aria-hidden /> : null}
             {!family && e.problems?.length ? (
@@ -231,7 +238,7 @@ function ResultRow({
           {decimal !== null ? <span className="ml-1.5 text-xs text-muted-foreground">{one(decimal)}</span> : null}
         </span>
         <span className="hidden text-right tabular-nums @xl:block">
-          {e.source === 'sius' ? e.total.toFixed(1) : e.total} <span className="text-xs text-muted-foreground">/ {e.shots}</span>
+          {totalWithTens(e)} <span className="text-xs text-muted-foreground">/ {e.shots}</span>
         </span>
         <span className="hidden text-right tabular-nums @2xl:block">{e.innerTens ?? '—'}</span>
         <span className="hidden text-right tabular-nums @2xl:block">{e.groupMm !== null ? `${one(e.groupMm)} mm` : '—'}</span>

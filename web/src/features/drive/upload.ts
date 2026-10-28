@@ -169,3 +169,20 @@ export async function saveResults(branchId: string, actor: Actor, index: DriveIn
   await commitAll(writes)
   return sendAll(branchId, results.map((r) => r.up))
 }
+
+/**
+ * A match's results sheet (its photo or PDF, if one was chosen) and its results, one per position, written together:
+ * the file is filed in the student's folder and points at the first result; then its bytes are sent.
+ */
+export async function saveSheetResults(branchId: string, actor: Actor, index: DriveIndex, up: PlannedUpload | null, evaluations: Omit<Evaluation, keyof AuditStamp>[]): Promise<string[]> {
+  const by = driveActor(actor)
+  const ids = evaluations.map(() => newEvaluationId(branchId))
+  const writes: ((b: WriteBatch) => void)[] = []
+  if (up) {
+    writes.push(...folderWrites(branchId, index, up.record.folderId, actor))
+    writes.push((b) => b.set(branchDocRef(branchId, COL.driveFiles, up.fileId), { ...up.record, evaluationId: ids[0] ?? null, uploadedAt: serverTimestamp(), uploadedBy: by }))
+  }
+  evaluations.forEach((e, i) => writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...e, fileId: up?.fileId ?? null })))
+  await commitAll(writes)
+  return up ? sendAll(branchId, [up]) : []
+}

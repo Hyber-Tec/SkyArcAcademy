@@ -82,8 +82,29 @@ export interface ReportFacts {
   attendance: { attended: number; missed: number; canceled: number; unmarked: number; percent: number | null }
   trend: { level: TrendLevel | null; change: number | null }
   previous: { reportId: string; periodLabel: string; average: number | null; evaluations: number } | null
-  /** Difference from the previous report's average (whole per 10). */
+  /**
+   * Difference from the previous report's average (whole per 10), over the positions both periods have, so a prone-only
+   * month isn't measured against a standing-only one.
+   */
   deltaAverage: number | null
+  /**
+   * The period's competitions, apart from practice (the manager's second meeting, docs/DECISIONS.md §23): the figures
+   * above leave them out. Missing on reports made before.
+   */
+  competitions?: CompetitionFact[]
+}
+
+/** One competition result in a report. */
+export interface CompetitionFact {
+  id: string
+  dateKey: DateKey
+  match: string
+  position: Position
+  shots: number
+  total: number
+  innerTens: number | null
+  decimal: boolean
+  wholePer10: number
 }
 
 export interface ReportGoal {

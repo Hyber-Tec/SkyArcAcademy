@@ -653,8 +653,9 @@ service cloud.firestore {
       match /evaluations/{evaluationId} {
         function validEvaluation(d) {
           return d.studentId is string && d.studentName is string
-            && d.source in ['sius', 'paper']
+            && d.source in ['sius', 'paper', 'sheet']
             && d.position in ['standing', 'kneeling', 'prone']
+            && (!('kind' in d) || d.kind in ['practice', 'competition', 'evaluation'])
             && d.dateKey is string && d.dateKey.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
             && d.shots is int && d.shots >= 0 && d.shots <= 200
             && d.total is number && d.wholeTotal is number

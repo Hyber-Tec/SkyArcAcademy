@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { LuArrowDownRight, LuArrowRight, LuArrowUpRight, LuTarget, LuTrophy } from 'react-icons/lu'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
-import { type Evaluation, POSITION_LABELS, wholePer10 } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_LABELS, wholePer10, type ResultKind, kindOf } from '@shared/shooting/evaluation'
 import { personalBestIds, positionProgress } from '@shared/shooting/progress'
 import { todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { plural } from '@/features/home/parts'
 import { one } from '@/features/reports/model'
 import { CompareCard } from '@/features/students/scores/CompareCard'
+import { ResultKindFilter } from '@/features/scores/kinds'
 import { ResultsPanel } from '@/features/students/scores/ResultsPanel'
 import { prefersReducedMotion } from '@/features/scores/playback'
 import { cn } from '@/lib/utils'
@@ -44,7 +45,11 @@ export function FamilyScoresPage() {
   const childParam = params.get('child')
   // The child of the result in the address, the one picked, or the one who shot last.
   const kid = fromScore?.studentId ?? (childParam && kids.some((k) => k.id === childParam) ? childParam : (linked[linked.length - 1]?.studentId ?? kids[0]?.id ?? null))
-  const mine = useMemo(() => linked.filter((e) => e.studentId === kid), [linked, kid])
+  const theirs = useMemo(() => linked.filter((e) => e.studentId === kid), [linked, kid])
+  // Practice, competitions (a student's whole competition history, bad days too) or evaluations (§23).
+  const kindParam = params.get('kind')
+  const kind: ResultKind | 'all' = kindParam === 'practice' || kindParam === 'competition' || kindParam === 'evaluation' ? kindParam : 'all'
+  const mine = useMemo(() => (kind === 'all' ? theirs : theirs.filter((e) => kindOf(e) === kind)), [theirs, kind])
   const progress = useMemo(() => positionProgress(mine), [mine])
   const bests = useMemo(() => personalBestIds(mine), [mine])
   const ready = !loading && !family.loading
@@ -134,6 +139,11 @@ export function FamilyScoresPage() {
           <KidFilter family={family} value={kid ?? ''} onChange={pickKid} everyone={false} />
         </div>
       ) : null}
+      {ready ? (
+        <div className="mb-4">
+          <ResultKindFilter list={theirs} value={kind} onChange={(k) => set({ kind: k === 'all' ? null : k, score: null, original: null })} />
+        </div>
+      ) : null}
 
       {!ready ? (
         <div className="space-y-5" aria-busy="true" aria-label="Loading the scores">
@@ -144,7 +154,7 @@ export function FamilyScoresPage() {
           </div>
           <Skeleton className="h-[28rem] w-full rounded-xl" />
         </div>
-      ) : !mine.length ? (
+      ) : !theirs.length ? (
         <Empty className="border bg-card py-12" data-testid="no-scores">
           <EmptyHeader>
             <EmptyMedia variant="icon">

@@ -106,7 +106,7 @@ export type LiveDriveIndex = DriveIndex & { loading: boolean; error: FirestoreEr
 export function useDriveIndex(): LiveDriveIndex {
   const snapshot = useDriveLists()
   const { data: studentList, loading: studentsLoading } = useStudentList()
-  const students = useMemo<DriveStudent[]>(() => studentList.map((s) => ({ id: s.id, name: s.name, finished: s.status === 'finished' })), [studentList])
+  const students = useMemo<DriveStudent[]>(() => studentList.map((s) => ({ id: s.id, name: s.name, otherNames: s.otherNames ?? [], finished: s.status === 'finished' })), [studentList])
   return useMemo(() => {
     const index = buildDriveIndex(snapshot.folders, snapshot.files, students)
     const loading = !snapshot.error && (snapshot.folders === null || snapshot.files === null || studentsLoading)
