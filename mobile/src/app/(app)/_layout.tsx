@@ -2,13 +2,14 @@ import { Stack } from "expo-router";
 import { Loading } from "@/components/Loading";
 import { PausedAccess } from "@/features/access/PausedAccess";
 import { BranchProvider, useBranch } from "@/state/BranchProvider";
+import { PushProvider } from "@/state/PushProvider";
 import { useColors } from "@/theme";
 
 /**
  * The signed-in app. The academy's member doc for the person's email decides (BranchProvider): none yet → No access;
  * paused → paused; otherwise the part of their one role. Owners, admins and coaches get the staff's tabs (each sees what
  * the rules give their role); parents and students get the family's (their children's or their own classes and shared
- * progress reports).
+ * progress reports). Push notifications (PushProvider) work in both.
  */
 export default function AppLayout() {
   const colors = useColors();
@@ -27,7 +28,9 @@ export default function AppLayout() {
       }
       paused={(why) => <PausedAccess why={why} />}
     >
-      <PortalStack />
+      <PushProvider>
+        <PortalStack />
+      </PushProvider>
     </BranchProvider>
   );
 }

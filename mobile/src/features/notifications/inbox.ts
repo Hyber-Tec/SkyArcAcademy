@@ -78,10 +78,11 @@ export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">):
 /**
  * Opens what a notification is about, and marks it read: a post opens on its own page; a class opens its sheet, the
  * class the student's seat is in now (its time or day may have changed since); a seat no longer there says so; a
- * message from the public website opens on the website.
+ * message from the public website opens on the website. A tapped push opens the same way (its inbox item's id, when it
+ * names one).
  */
-export async function openInboxItem(branchId: string, n: InboxItem): Promise<void> {
-  markInboxRead(branchId, n);
+export async function openInboxItem(branchId: string, n: Pick<InboxItem, "type" | "link" | "refs"> & { id: string | null; readAt?: InboxItem["readAt"] }): Promise<void> {
+  if (n.id) markInboxRead(branchId, { id: n.id, readAt: n.readAt ?? null });
   const target = inboxTarget(n);
   if (!target) return;
   if (target.kind === "website") return openWebsite(target.path);

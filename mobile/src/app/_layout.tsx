@@ -10,6 +10,8 @@ import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { T } from "@/components/Text";
 import { ToastHost } from "@/components/ToastHost";
 import { setupProblem } from "@/lib/env";
+// At launch: what a push does while the app is open, and Android's channels (src/lib/notify.ts).
+import "@/lib/notify";
 import { AppearanceProvider } from "@/state/AppearanceProvider";
 import { AuthProvider, useAuth } from "@/state/AuthProvider";
 import { useColors, useIsDark } from "@/theme";

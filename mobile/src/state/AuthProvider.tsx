@@ -18,6 +18,7 @@ import { callable } from "@/lib/api";
 import { env } from "@/lib/env";
 import { auth } from "@/lib/firebase";
 import { signInWithGoogle, signOutOfGoogle } from "@/lib/googleSignIn";
+import { forgetThisDevice } from "@/lib/push";
 import { forgetLocalFiles } from "@/lib/localFiles";
 
 export type VerificationResult = "sent" | "throttled" | "verified";
@@ -132,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // This phone stops getting the person's notifications, while they're still signed in (the rules need it).
+    await forgetThisDevice();
     await signOutOfGoogle();
     await fbSignOut(auth);
     forgetLocalFiles();

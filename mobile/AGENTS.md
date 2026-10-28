@@ -53,7 +53,8 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy, or the demo
                        one (`isDemo`): settings, rules, time zone, member, staff record, the actor for the audit log),
-                       AppearanceProvider
+                       PushProvider (push notifications: this phone's token, taps, the toast while open, the badge, the
+                       one question after sign-in), AppearanceProvider
 src/features/<area>/   each area's data and components: data (live Firestore hooks, asking for what the person's role
                        may read; useClassesBetween, a range's classes with their students and the coaches in;
                        useEventsBetween, the academy's events; useClockedIn, who's clocked in for the office), schedule
@@ -74,9 +75,10 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        (html.ts) and drawn with the app's own text (RichText); its dates and what it holds; PostParts,
                        a post as both portals show it; the staff's posts and what they've read (staffNews.ts) and a
                        post's comments (comments.ts, PostComments)), notifications (the person's inbox and Home's
-                       bell), home (a coach's to-do and time clock on Home), availability (a coach's days: the clean
-                       month calendar's day (CalendarDay), the day sheet (DayEditor: available or not, the time wheels,
-                       Repeat), Copy last week, and the writes with the website's checks (api.ts, from
+                       bell; what a tapped push opens, pushOpen.ts; More → Notifications' "This phone",
+                       PhoneNotifications), home (a coach's to-do and time clock on Home), availability (a coach's
+                       days: the clean month calendar's day (CalendarDay), the day sheet (DayEditor: available or not,
+                       the time wheels, Repeat), Copy last week, and the writes with the website's checks (api.ts, from
                        `@shared/availabilityWrites`)), pay (a coach's pay lines from `@shared/pay/lines`, the period
                        chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
                        reports (also the staff's list, a report's staff card and sharing), account (also a coach's
@@ -90,7 +92,8 @@ src/components/        the shared building blocks (Text `T`, Button, Card, ListS
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
                        call/text/email, a link the website saved as the practice copy's phones reach it), toast, Google
-                       sign-in, env
+                       sign-in, env, push (the token and this install's device record), notify (the phone's permission,
+                       Android's channels, the badge), device (the install's id and label), pushBackground
 src/theme/             the website's neutral palette in light and dark with Sky Arc's red, status colors, spacing, type
 ../shared/src          the business logic the website and the Cloud Functions use, imported as @shared/...
 ```
@@ -182,7 +185,18 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
   text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
   the phone's browser (or its mail and phone apps).
-- **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`). On Android the
-  photo library is the system's photo picker, which needs no permission, and the storage and draw-over-other-apps
-  permissions Expo's template and libraries add are blocked (`android.blockedPermissions`). A new permission means new
-  questions from both stores (docs/publishing.md).
+- **Permissions:** the camera and the photo library, for the Scan tab only (texts in `app.config.ts`), and
+  notifications. On Android the photo library is the system's photo picker, which needs no permission, and the
+  storage, draw-over-other-apps and start-with-the-phone permissions Expo's template and libraries add are blocked
+  (`android.blockedPermissions`). A new permission means new questions from both stores (docs/publishing.md).
+- **Push notifications** (`docs/mobile-push.md`): the server pushes every inbox item through Firebase Cloud Messaging.
+  The app keeps this install's token in `users/{uid}/devices/{deviceId}` (`DeviceDoc`, `@shared/push`; written again
+  when it changes, and deleted at sign-out before signing out), through React Native Firebase's messaging
+  (`src/lib/push.ts`); expo-notifications gives the phone's permission, Android's channels (`PUSH_CHANNELS`) and the
+  badge (the unread inbox count) (`src/lib/notify.ts`). A tap opens what `appTargetOf` says, as the inbox does (a
+  family's in their own screens), and Home for the other academy; while the app is open a push is a toast, never also
+  the phone's banner. Both libraries' events are listened to, and each push opens or shows once
+  (`src/state/PushProvider.tsx`). The app asks once after sign-in, saying what notifications bring (`pushReason`), and
+  More → Notifications turns them on later: never a condition for using the app (Apple's guideline 4.5.4). The demo
+  academy pushes nothing, so the app registers nothing there. The iPhone Simulator gets no token (try taps with
+  `xcrun simctl push`, docs/running-the-apps.md).
