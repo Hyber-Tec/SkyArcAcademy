@@ -16,6 +16,8 @@ export interface SyntheticShot {
   y: number
   /** What shows through the hole: the wall behind (bright) or the card behind (dark, with torn fibres at its rim). */
   look?: 'wall' | 'fibres'
+  /** The hole's radius in the card (mm): a 4.5 mm pellet's is usually a little under 2.25. */
+  radiusMm?: number
 }
 
 export interface SyntheticCard {
@@ -38,6 +40,9 @@ export interface SyntheticCard {
   coveredBulls?: number[]
   seed?: number
 }
+
+/** A made-up hole's radius unless a shot gives its own: a 4.5 mm pellet's hole as card usually shows it. */
+export const SYNTHETIC_HOLE_MM = 2.05
 
 const WALL = [206, 213, 226]
 const PAPER = [233, 214, 172]
@@ -82,14 +87,14 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
   const noise = spec.noise ?? 6
   const data = new Uint8ClampedArray(width * height * 4)
   // Shots by bull, in card millimetres (y down), with their look.
-  const holes = new Map<string, { x: number; y: number; look: 'wall' | 'fibres'; tears: number[] }[]>()
+  const holes = new Map<string, { x: number; y: number; r: number; look: 'wall' | 'fibres'; tears: number[] }[]>()
   for (const s of spec.shots) {
     const b = CARD_BULLS.find((cb) => cb.kind === 'record' && cb.n === s.bull)
     if (!b) continue
     const key = `${b.col},${b.row}`
     const list = holes.get(key) ?? []
     // Torn fibres: which twelfths of the rim show them.
-    list.push({ x: s.x, y: -s.y, look: s.look ?? 'wall', tears: Array.from({ length: 12 }, () => (rand() < 0.6 ? 1 : 0)) })
+    list.push({ x: s.x, y: -s.y, r: s.radiusMm ?? SYNTHETIC_HOLE_MM, look: s.look ?? 'wall', tears: Array.from({ length: 12 }, () => (rand() < 0.6 ? 1 : 0)) })
     holes.set(key, list)
   }
   const covered = new Set((spec.coveredBulls ?? []).map((n) => CARD_BULLS.find((cb) => cb.kind === 'record' && cb.n === n)).filter(Boolean).map((b) => `${b!.col},${b!.row}`))
@@ -136,13 +141,14 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
           if (spec.ink && X > -4 && X < 4 && Y > -29 && Y < -25 && Math.abs(X - (Y + 27) * 0.4) < 0.35) color = INK
           for (const h of holes.get(key) ?? []) {
             const hd = Math.hypot(X - h.x, Y - h.y)
-            if (hd > 2.4) continue
-            const inside = clamp01((2.05 - hd) / pix + 0.5)
+            if (hd > h.r + 0.4) continue
+            const inside = clamp01((h.r - hd) / pix + 0.5)
             if (h.look === 'wall') color = mix(color, WALL, inside)
             else {
+              // Torn fibres over the rim, from half a millimetre inside it to just past it.
               const tear = h.tears[Math.floor(((Math.atan2(Y - h.y, X - h.x) + Math.PI) / (2 * Math.PI)) * 12) % 12]
-              const rim = tear && hd > 1.55 && hd < 2.2 ? FIBRE : BEHIND
-              color = mix(color, rim, hd < 1.55 ? inside : tear ? clamp01((2.2 - hd) / pix + 0.5) : inside)
+              const rim = tear && hd > h.r - 0.5 && hd < h.r + 0.15 ? FIBRE : BEHIND
+              color = mix(color, rim, hd < h.r - 0.5 ? inside : tear ? clamp01((h.r + 0.15 - hd) / pix + 0.5) : inside)
             }
           }
           if (covered.has(key) && X > -20 && X < 30 && Y > -26 && Y < 24) color = NOTE

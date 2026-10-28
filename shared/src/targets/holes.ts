@@ -9,7 +9,9 @@ import { MISS_BEYOND_MM } from './score'
  * ring), and a hole is a 4 mm patch that differs from it: brighter than the black (the wall or torn white fibres
  * showing), or bluer or darker than the paper. The printed ring lines and the centre dot are left out, and so is red
  * ink (coaches write the scores in red). Each mark's centre is then fitted with the shape of a hole: a rim of about
- * 2 mm radius, often only partly visible as torn fibres, and sometimes a bright inside.
+ * 2 mm radius, often only partly visible as torn fibres, and sometimes a bright inside. Last, each hole's own edge is
+ * found along rays from that centre, for its size as the card shows it and the centre of that edge (`measureHole`):
+ * scores take the hole at its real size (docs/DECISIONS.md §23, P1).
  */
 
 /** Millimetres around the centre that are read, and the spacing of the samples. */
@@ -43,6 +45,8 @@ export interface HoleMark {
   bounded: number
   /** How well the hole's shape fits the mark (the fit's score per mm² of rim). */
   fit: number
+  /** The hole's radius as the card shows it (mm), measured on the photo; null when it couldn't be read cleanly. */
+  radius: number | null
 }
 
 const toIndex = (mm: number) => Math.round((mm + HALF) / STEP)
@@ -261,7 +265,185 @@ export function readBull(img: RgbaImage, center: Vec, axes: [number, number, num
     if (marks.some((o) => (o.x - m.x) ** 2 + (o.y - m.y) ** 2 < 1.8 * 1.8)) continue
     marks.push(m)
   }
-  return { A, S, marks: marks.sort((p, q) => q.strength - p.strength) }
+
+  // Each mark's size: how far it differs from the print, measured straight from the photo along rays from its centre.
+  const look = (xm: number, ym: number): number => {
+    const r = Math.sqrt(xm * xm + ym * ym)
+    // The centre dot, the black's edge and the printed lines look like holes; there the size can't be read.
+    if (r < 0.5 || Math.abs(r - BLACK_EDGE) < 0.4) return NaN
+    for (const line of LINES) if (Math.abs(r - line) < 0.32) return NaN
+    if (!sampleRgb(img, center.x + xm * ax + ym * bx, center.y + xm * ay + ym * by, rgb)) return NaN
+    const y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+    const rg = rgb[0] - rgb[1]
+    if ((rg > 40 && rg > 0.28 * y) || rg - expected(profR, r) > 14) return NaN
+    const dy = y - expected(profY, r)
+    if (r < BLACK_EDGE) return dy / sBlack
+    return Math.max(Math.abs(dy) / sPaper, (rgb[2] - rgb[0] - expected(profC, r)) / sBlue)
+  }
+  for (const m of marks) {
+    const edge = measureHole(look, m.x, m.y, T)
+    if (!edge) continue
+    // The hole is where its edge says, at the size it shows.
+    m.x = Math.round(edge.x * 1000) / 1000
+    m.y = Math.round(edge.y * 1000) / 1000
+    m.radius = Math.round(edge.radius * 100) / 100
+  }
+  // Two marks whose edges turn out to be one hole's (its torn rim read apart): the stronger stays.
+  marks.sort((p, q) => q.strength - p.strength)
+  const holes = marks.filter((m, i) => !marks.slice(0, i).some((o) => (o.x - m.x) ** 2 + (o.y - m.y) ** 2 < 1.8 * 1.8))
+  return { A, S, marks: holes }
+}
+
+/** Rays from a hole's centre, the step along them and how far out they read (mm). */
+const RAYS = 48
+const RAY_STEP = 0.05
+const RAY_FROM = 0.6
+const RAY_TO = 3.8
+/** A hole's possible size: a 4.5 mm pellet can't leave a hole much smaller or larger in card. */
+const HOLE_RADIUS_LIMITS = [1.3, 3.0] as const
+/** How far from round a hole's edge may be (mm, its typical deviation) and still give its size. */
+const ROUND_ENOUGH = 0.2
+
+/** A hole as the photo shows it: the centre of its edge (mm from the bull's centre, y down) and its radius. */
+interface HoleEdge {
+  x: number
+  y: number
+  radius: number
+}
+
+/**
+ * Where each ray from (cx, cy) crosses the hole's edge (mm), for the rays that show it. The hole reaches out to where
+ * the card is printed again: the last sample still clearly off the print (a fifth of the hole's strength, so a shadow
+ * inside the hole counts and the photo's grain doesn't) before 0.3 mm of print. The edge is that last step down to
+ * the print, at half its own height, so blur moves it neither way. A ray whose step falls on a printed line or ink
+ * (unread samples) gives nothing.
+ */
+function rayEdges(look: (xm: number, ym: number) => number, cx: number, cy: number, floor: number): { x: number; y: number }[] {
+  const n = Math.round((RAY_TO - RAY_FROM) / RAY_STEP) + 1
+  const h = new Float32Array(n)
+  const out: { x: number; y: number }[] = []
+  for (let j = 0; j < RAYS; j++) {
+    const a = (2 * Math.PI * j) / RAYS
+    const ux = Math.cos(a)
+    const uy = Math.sin(a)
+    let peak = -Infinity
+    for (let k = 0; k < n; k++) {
+      const t = RAY_FROM + k * RAY_STEP
+      h[k] = look(cx + t * ux, cy + t * uy)
+      if (t <= 2.8 && h[k] > peak) peak = h[k]
+    }
+    if (!(peak >= 2 * floor)) continue
+    const low = Math.max(floor, peak / 5)
+    let lastIn = -1
+    let below = 0
+    for (let k = 0; k < n; k++) {
+      const v = h[k]
+      if (Number.isNaN(v)) continue
+      if (v >= low) {
+        lastIn = k
+        below = 0
+      } else if (lastIn >= 0 && ++below >= 6) break
+    }
+    if (lastIn < 0 || below < 6) continue
+    let top = -1
+    for (let k = Math.max(0, lastIn - 6); k <= lastIn; k++) if (!Number.isNaN(h[k]) && (top < 0 || h[k] > h[top])) top = k
+    const outside: number[] = []
+    for (let k = lastIn + 2; k <= Math.min(n - 1, lastIn + 10); k++) if (!Number.isNaN(h[k])) outside.push(h[k])
+    if (top < 0 || outside.length < 4) continue
+    const level = Math.max(floor, (h[top] + medianOf(outside)) / 2)
+    let prev = -1
+    let next = -1
+    for (let k = top; k < n; k++) {
+      if (Number.isNaN(h[k])) continue
+      if (h[k] < level) {
+        next = k
+        break
+      }
+      prev = k
+    }
+    if (prev < 0 || next < 0 || next - prev > 3) continue
+    const f = h[prev] > h[next] ? (h[prev] - level) / (h[prev] - h[next]) : 0.5
+    const t = RAY_FROM + (prev + f * (next - prev)) * RAY_STEP
+    out.push({ x: cx + t * ux, y: cy + t * uy })
+  }
+  return out
+}
+
+/** The circle through edge points (least squares, algebraic), the points taken with their weights; null if degenerate. */
+function fitCircle(pts: readonly { x: number; y: number }[], w: readonly number[], ox: number, oy: number): HoleEdge | null {
+  // Sums for the least squares fit, of x, y and z = x² + y² (relative to (ox, oy), for small numbers).
+  let sxx = 0
+  let sxy = 0
+  let syy = 0
+  let sx = 0
+  let sy = 0
+  let sn = 0
+  let sxz = 0
+  let syz = 0
+  let sz = 0
+  for (let i = 0; i < pts.length; i++) {
+    if (!w[i]) continue
+    const x = pts[i].x - ox
+    const y = pts[i].y - oy
+    const z = x * x + y * y
+    sxx += x * x
+    sxy += x * y
+    syy += y * y
+    sx += x
+    sy += y
+    sn += 1
+    sxz += x * z
+    syz += y * z
+    sz += z
+  }
+  // [sxx sxy sx; sxy syy sy; sx sy n] [D E F]ᵀ = −[sxz syz sz]ᵀ, by Cramer's rule.
+  const det = (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+  const M = det(sxx, sxy, sx, sxy, syy, sy, sx, sy, sn)
+  if (!(Math.abs(M) > 1e-9)) return null
+  const D = det(-sxz, sxy, sx, -syz, syy, sy, -sz, sy, sn) / M
+  const E = det(sxx, -sxz, sx, sxy, -syz, sy, sx, -sz, sn) / M
+  const F = det(sxx, sxy, -sxz, sxy, syy, -syz, sx, sy, -sz) / M
+  const r2 = (D * D + E * E) / 4 - F
+  return r2 > 0 ? { x: ox - D / 2, y: oy - E / 2, radius: Math.sqrt(r2) } : null
+}
+
+/**
+ * A hole's edge as the card shows it: a circle fitted to where rays from its centre cross the edge, the odd points
+ * (a tear, a flap, a neighbouring hole) left out; the rays cast again from that circle's centre when it moved. Null
+ * when it can't be read cleanly: too little of the edge shows (printed lines, ink, a faint mark), or it isn't round
+ * enough (two holes that touch, a big tear).
+ */
+function measureHole(look: (xm: number, ym: number) => number, x0: number, y0: number, floor: number): HoleEdge | null {
+  let cx = x0
+  let cy = y0
+  let fit: HoleEdge | null = null
+  let kept = 0
+  let spread = Infinity
+  for (let pass = 0; pass < 2; pass++) {
+    const pts = rayEdges(look, cx, cy, floor)
+    if (pts.length < RAYS * 0.4) return null
+    const w = pts.map(() => 1)
+    fit = fitCircle(pts, w, cx, cy)
+    for (let round = 0; round < 3 && fit; round++) {
+      const c = fit
+      const res = pts.map((p) => Math.hypot(p.x - c.x, p.y - c.y) - c.radius)
+      spread = 1.4826 * medianOf(res.map(Math.abs))
+      const limit = Math.max(0.12, 2.5 * spread)
+      res.forEach((r, i) => (w[i] = Math.abs(r) <= limit ? 1 : 0))
+      fit = fitCircle(pts, w, cx, cy)
+    }
+    if (!fit) return null
+    const f = fit
+    const res = pts.map((p, i) => (w[i] ? Math.abs(Math.hypot(p.x - f.x, p.y - f.y) - f.radius) : NaN)).filter((r) => !Number.isNaN(r))
+    kept = res.length
+    spread = 1.4826 * medianOf(res)
+    if (Math.hypot(fit.x - cx, fit.y - cy) < 0.15) break
+    cx = fit.x
+    cy = fit.y
+  }
+  if (!fit || kept < RAYS * 0.4 || spread > ROUND_ENOUGH || Math.hypot(fit.x - x0, fit.y - y0) > 1) return null
+  if (fit.radius < HOLE_RADIUS_LIMITS[0] || fit.radius > HOLE_RADIUS_LIMITS[1]) return null
+  return { x: fit.x, y: fit.y, radius: fit.radius }
 }
 
 /** The flat bull's size and spacing, for anything drawing its maps. */
@@ -414,5 +596,16 @@ function fitHole(A: Plane, S: Plane, x0: number, y0: number): HoleMark {
   const gx = Math.min(N - 1, Math.max(0, toIndex(best.x)))
   const gy = Math.min(N - 1, Math.max(0, toIndex(best.y)))
   const rimArea = 2 * Math.PI * RIM * 0.8
-  return { x: best.x, y: best.y, strength: S.data[gy * N + gx], l1, l2, dir, contained: around > 0 ? within / around : 0, bounded: far > 0 ? near / far : 0, fit: (best.s * STEP * STEP) / rimArea }
+  return {
+    x: best.x,
+    y: best.y,
+    strength: S.data[gy * N + gx],
+    l1,
+    l2,
+    dir,
+    contained: around > 0 ? within / around : 0,
+    bounded: far > 0 ? near / far : 0,
+    fit: (best.s * STEP * STEP) / rimArea,
+    radius: null,
+  }
 }

@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { LuChevronLeft, LuChevronRight, LuMinus, LuPlus, LuX } from 'react-icons/lu'
-import { PELLET_MM, ringRadiusMm } from '@shared/shooting/target'
+import { ringRadiusMm } from '@shared/shooting/target'
 import type { Vec } from '@shared/targets/geometry'
-import { type BullState, type CardReview, type ReviewBull, SURE, bullState, closeCall, placeShot, removeShot, typeScores } from '@shared/targets/review'
-import { scoreAt } from '@shared/targets/score'
+import { type BullState, type CardReview, type ReviewBull, SURE, bullState, closeCall, holeRadiusOf, placeShot, removeShot, typeScores } from '@shared/targets/review'
+import { scoreHole } from '@shared/targets/score'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MOVING_COLOR, RING_LINE, SHOT_COLOR, STATE_COLORS, drawPill, useTouchScreen } from './parts'
@@ -11,7 +11,6 @@ import { type ZoomDrag, type ZoomInfo, ZoomCanvas } from './ZoomCanvas'
 
 /** How much of the bull the close-up shows around its centre, in millimetres: ring 1 and a little beyond (the phone's). */
 const VIEW_MM = 26
-const PELLET_R = PELLET_MM / 2
 /** How far beyond a circle's edge a press still picks it up (view pixels): a finger needs more room than a mouse. */
 const REACH_PX = { mouse: 4, other: 12 }
 
@@ -38,7 +37,8 @@ const inView = (mm: number) => Math.max(-VIEW_MM, Math.min(VIEW_MM, mm))
 
 /**
  * One bull up close, to check and correct what was found: the flattened card's photo around it with the ring lines 1
- * to 9 drawn thin over it, and each counted shot as a pellet-sized green circle. Press a circle and drag it: it
+ * to 9 drawn thin over it, and each counted shot as a green circle the size of its hole (as the scan measured it, or
+ * the card's usual hole for one placed by hand), which is what it's scored with. Press a circle and drag it: it
  * follows the pointer (held where it was grabbed) and its score follows it; let go to move the shot. Clicking the
  * paper places a missing shot; the arrow keys nudge the chosen shot by 0.1 mm (Shift: 0.5 mm). It zooms like the card.
  * Below: the shots with how each was counted (and why a close call is one), Remove, and typed scores for a bull the
@@ -71,7 +71,7 @@ export function BullCloseUp({
 }) {
   const touch = useTouchScreen()
   const bull = review.bulls.find((b) => b.n === n)!
-  const state = bullState(bull, review.shotsPerBull)
+  const state = bullState(bull, review.shotsPerBull, review)
   const short = bull.shots.length < review.shotsPerBull
   const pictured = bull.found && !!image
   const [chosen, setChosen] = useState<number | null>(() => firstPlaced(bull))
@@ -80,14 +80,16 @@ export function BullCloseUp({
   const hovered = useRef<number | null>(null)
   const dragging = useRef<{ i: number; dx: number; dy: number; x: number; y: number; tenth: number } | null>(null)
 
-  /** The shots' places on the close-up (mm from its top-left, y down); null for typed scores. */
+  /** The shots' places on the close-up (mm from its top-left, y down); null for typed scores. Each hole's radius (mm). */
   const places = bull.shots.map((s) => (s.x === null || s.y === null ? null : { x: VIEW_MM + s.x, y: VIEW_MM - s.y }))
-  const shotAt = (c: Vec, reach: number) => {
+  const radii = bull.shots.map((s) => holeRadiusOf(s, review))
+  /** The shot whose circle is at `c`, or within `beyond` mm of its edge. */
+  const shotAt = (c: Vec, beyond: number) => {
     let best: number | null = null
     let bestD = Infinity
     places.forEach((p, i) => {
       const d = p ? Math.hypot(p.x - c.x, p.y - c.y) : Infinity
-      if (d <= reach && d < bestD) {
+      if (d <= radii[i] + beyond && d < bestD) {
         best = i
         bestD = d
       }
@@ -97,7 +99,7 @@ export function BullCloseUp({
 
   const drag: ZoomDrag = {
     start: (c, z, pointerType) => {
-      const i = shotAt(c, PELLET_R + (pointerType === 'mouse' ? REACH_PX.mouse : REACH_PX.other) / z.s)
+      const i = shotAt(c, (pointerType === 'mouse' ? REACH_PX.mouse : REACH_PX.other) / z.s)
       if (i === null) return false
       const p = places[i]!
       dragging.current = { i, dx: p.x - c.x, dy: p.y - c.y, x: p.x, y: p.y, tenth: -1 }
@@ -162,13 +164,13 @@ export function BullCloseUp({
       if (i === selected && !moved) {
         // The chosen shot (the arrow keys move it): a light edge around it.
         ctx.beginPath()
-        ctx.arc(at.x, at.y, PELLET_R + 3 * px, 0, Math.PI * 2)
+        ctx.arc(at.x, at.y, radii[i] + 3 * px, 0, Math.PI * 2)
         ctx.lineWidth = 1.5 * px
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
         ctx.stroke()
       }
       ctx.beginPath()
-      ctx.arc(at.x, at.y, PELLET_R, 0, Math.PI * 2)
+      ctx.arc(at.x, at.y, radii[i], 0, Math.PI * 2)
       ctx.lineWidth = (strong ? 3 : 2) * px
       ctx.strokeStyle = color
       ctx.stroke()
@@ -180,8 +182,8 @@ export function BullCloseUp({
     ctx.restore()
     if (d) {
       // The score where it is now, over the circle.
-      const s = scoreAt(Math.hypot(d.x - VIEW_MM, VIEW_MM - d.y))
-      const top = z.toView({ x: d.x, y: d.y - PELLET_R })
+      const s = scoreHole(Math.hypot(d.x - VIEW_MM, VIEW_MM - d.y), radii[d.i])
+      const top = z.toView({ x: d.x, y: d.y - radii[d.i] })
       drawPill(ctx, top.x, top.y - 6, `${s.value} · ${s.decimal.toFixed(1)}`, MOVING_COLOR, 'above')
     }
   }
@@ -198,7 +200,7 @@ export function BullCloseUp({
   }
 
   // The list shows a shot being dragged where it is now, with its score there.
-  const shown = bull.shots.map((s, i) => (moving && moving.i === i ? { ...s, x: moving.x, y: moving.y, ...scoreAt(Math.hypot(moving.x, moving.y)) } : s))
+  const shown = bull.shots.map((s, i) => (moving && moving.i === i ? { ...s, x: moving.x, y: moving.y, ...scoreHole(Math.hypot(moving.x, moving.y), radii[i]) } : s))
   const typedOnly = bull.shots.length > 0 && !bull.shots.some(placed)
   const text = pictured
     ? typedOnly
@@ -243,12 +245,12 @@ export function BullCloseUp({
               if (short && Math.hypot(c.x - VIEW_MM, c.y - VIEW_MM) <= VIEW_MM) add(c.x - VIEW_MM, VIEW_MM - c.y)
             }}
             onHover={(c) => {
-              const i = c ? shotAt(c, PELLET_R) : null
+              const i = c ? shotAt(c, 0) : null
               if (i === hovered.current) return false
               hovered.current = i
               return true
             }}
-            cursorAt={(c, z) => (shotAt(c, PELLET_R + REACH_PX.mouse / z.s) !== null ? 'grab' : short ? 'crosshair' : null)}
+            cursorAt={(c, z) => (shotAt(c, REACH_PX.mouse / z.s) !== null ? 'grab' : short ? 'crosshair' : null)}
             onKey={onKey}
             label={`Bull ${n}, up close. Drag a green circle to move its shot; the arrow keys nudge the chosen shot, with Shift further.`}
             keyShortcuts="+ - 0 ArrowLeft ArrowRight ArrowUp ArrowDown"
@@ -272,7 +274,8 @@ export function BullCloseUp({
         {shown.length ? (
           <ul className="space-y-1.5">
             {shown.map((s, i) => {
-              const close = closeCall(s)
+              const close = closeCall(s, review)
+              const size = s.x !== null ? ` · hole ${(2 * radii[i]).toFixed(1)} mm across` : ''
               const how =
                 moving?.i === i
                   ? 'Moving'
@@ -303,7 +306,7 @@ export function BullCloseUp({
                       {s.decimal !== null ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">({s.decimal.toFixed(1)})</span> : null}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {close ? `${how} · close call: the hole touches the ${close.ring} ring’s line by ${close.byMm.toFixed(2)} mm, so ISSF counts ${close.ring}; by eye it may look like ${close.ring - 1}` : how}
+                      {close ? `${how}${size} · close call: its edge reaches the ${close.ring} ring’s line by only ${close.byMm.toFixed(2)} mm, so it counts ${close.ring}` : `${how}${size}`}
                     </span>
                   </button>
                   <Button type="button" variant="ghost" size="sm" onClick={() => onChange(removeShot(review, n, i))} aria-label={`Remove shot ${i + 1}`}>

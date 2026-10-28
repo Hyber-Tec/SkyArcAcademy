@@ -6,9 +6,9 @@ import { categoryOf, isViewableImage } from '@shared/drive/files'
 import type { DriveFile } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { type Evaluation, POSITION_LABELS } from '@shared/shooting/evaluation'
-import { PELLET_MM, ringRadiusMm } from '@shared/shooting/target'
+import { ringRadiusMm } from '@shared/shooting/target'
 import { FLAT, FLAT_SIZE, isFlatCard, savedReview, wasScanned } from '@shared/targets/flat'
-import type { ReviewBull } from '@shared/targets/review'
+import { type ReviewBull, holeRadiusOf } from '@shared/targets/review'
 import { formatDateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -238,7 +238,7 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
         </section>
         <div ref={closeUp} className="scroll-mb-3">
           {chosen ? (
-            <BullUpClose image={image} bull={chosen} perBull={review.shotsPerBull} />
+            <BullUpClose image={image} bull={chosen} perBull={review.shotsPerBull} holeRadius={review.holeRadius} />
           ) : (
             <p className="flex items-start gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               <LuScanSearch className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -255,8 +255,8 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
 const CLOSE_MM = ringRadiusMm(1) + 2.5
 const CLOSE_PX = 168
 
-/** One bull up close, from the card's picture: its shot ringed where the scan (or a coach) placed it, and its score. */
-function BullUpClose({ image, bull, perBull }: { image: CanvasImageSource; bull: ReviewBull; perBull: number }) {
+/** One bull up close, from the card's picture: its shot ringed where the scan (or a coach) placed it, at its hole's size, and its score. */
+function BullUpClose({ image, bull, perBull, holeRadius }: { image: CanvasImageSource; bull: ReviewBull; perBull: number; holeRadius?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
@@ -276,12 +276,12 @@ function BullUpClose({ image, bull, perBull }: { image: CanvasImageSource; bull:
       const x = bull.center.x + shot.x * FLAT.pxPerMm
       const y = bull.center.y - shot.y * FLAT.pxPerMm
       ctx.beginPath()
-      ctx.arc(x, y, (PELLET_MM / 2) * FLAT.pxPerMm, 0, Math.PI * 2)
+      ctx.arc(x, y, holeRadiusOf(shot, { holeRadius }) * FLAT.pxPerMm, 0, Math.PI * 2)
       ctx.lineWidth = (2.5 * dpr) / s
       ctx.strokeStyle = SHOT_COLOR
       ctx.stroke()
     }
-  }, [image, bull])
+  }, [image, bull, holeRadius])
 
   const values = bull.shots.map((s) => s.value)
   const missing = Math.max(0, perBull - bull.shots.length)

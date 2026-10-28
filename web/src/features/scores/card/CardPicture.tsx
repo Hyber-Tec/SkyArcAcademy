@@ -1,19 +1,19 @@
 import { type CSSProperties, useRef } from 'react'
-import { PELLET_MM, ringRadiusMm } from '@shared/shooting/target'
+import { ringRadiusMm } from '@shared/shooting/target'
 import { CARD_BULLS, bullCentreMm } from '@shared/targets/card'
 import { FLAT, FLAT_SIZE, flatPoint } from '@shared/targets/flat'
 import type { Vec } from '@shared/targets/geometry'
-import { type CardReview, bullState } from '@shared/targets/review'
+import { type CardReview, bullState, holeRadiusOf } from '@shared/targets/review'
 import { SHOT_COLOR, STATE_COLORS, drawPill, scoreLabel } from './parts'
 import { type ZoomInfo, ZoomCanvas } from './ZoomCanvas'
 
 const RING1 = ringRadiusMm(1) * FLAT.pxPerMm
-const PELLET = (PELLET_MM / 2) * FLAT.pxPerMm
 
 /**
  * The scanned card as the Drive keeps it (the flattened card, shared/src/targets/flat.ts) with what was found drawn
  * on it, as the phone app draws it: each record bull's outer ring in its state's colour with a badge of its score, and
- * every counted shot as a pellet-sized circle. It zooms and moves (ZoomCanvas); clicking a bull opens it up close.
+ * every counted shot as a circle the size of its hole. It zooms and moves (ZoomCanvas); clicking a bull opens it up
+ * close.
  */
 export function CardPicture({
   image,
@@ -40,8 +40,8 @@ export function CardPicture({
     return {
       b,
       at: flatPoint(centre.x, centre.y),
-      state: bullState(b, review.shotsPerBull),
-      shots: b.shots.filter((t) => t.x !== null && t.y !== null).map((t) => flatPoint(centre.x + (t.x as number), centre.y - (t.y as number))),
+      state: bullState(b, review.shotsPerBull, review),
+      shots: b.shots.filter((t) => t.x !== null && t.y !== null).map((t) => ({ ...flatPoint(centre.x + (t.x as number), centre.y - (t.y as number)), r: holeRadiusOf(t, review) * FLAT.pxPerMm })),
     }
   })
   const bullAt = (c: Vec) => bulls.find(({ at }) => (at.x - c.x) ** 2 + (at.y - c.y) ** 2 <= RING1 * RING1)?.b.n ?? null
@@ -69,7 +69,7 @@ export function CardPicture({
       ctx.stroke()
       for (const p of shots) {
         ctx.beginPath()
-        ctx.arc(p.x, p.y, PELLET, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
         ctx.lineWidth = 2 * px
         ctx.strokeStyle = SHOT_COLOR
         ctx.stroke()

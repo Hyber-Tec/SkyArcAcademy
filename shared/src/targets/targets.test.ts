@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { ringRadiusMm } from '../shooting/target'
 import { type Mat3, applyH, fitEllipse, fitHomography } from './geometry'
-import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
-import { scanCard } from './scan'
-import { MISS_BEYOND_MM, scoreAt } from './score'
+import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, holeRadiusOf, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
+import { CARD_HOLES, scanCard } from './scan'
+import { MISS_BEYOND_MM, PELLET_RADIUS_MM, scoreAt, scoreHole } from './score'
 import { type SyntheticShot, drawSyntheticCard } from './synthetic'
 
 describe('scoreAt (ISSF: the hole touching a ring counts it)', () => {
@@ -20,6 +21,34 @@ describe('scoreAt (ISSF: the hole touching a ring counts it)', () => {
   it('gives the electronic decimal for the same point', () => {
     expect(scoreAt(0.3).decimal).toBe(10.8)
     expect(scoreAt(6).decimal).toBe(8.6)
+  })
+})
+
+describe('scoreHole (the same rule with the hole’s own size)', () => {
+  it('is scoreAt with the pellet’s size', () => {
+    for (let d = 0; d <= MISS_BEYOND_MM + 1; d += 0.013) expect(scoreHole(d, PELLET_RADIUS_MM)).toEqual(scoreAt(d))
+  })
+
+  it('counts a ring when the hole’s own edge reaches its line', () => {
+    // Ring 8's line is at 5.25 mm: a 2 mm hole touches it with its centre up to 7.25 mm out, a pellet's up to 7.5.
+    expect(scoreHole(ringRadiusMm(8) + 2, 2).value).toBe(8)
+    expect(scoreHole(ringRadiusMm(8) + 2.01, 2).value).toBe(7)
+    expect(scoreHole(7.4, 2).value).toBe(7)
+    expect(scoreAt(7.4).value).toBe(8)
+    // A bigger hole reaches further.
+    expect(scoreHole(ringRadiusMm(8) + 2.4, 2.4).value).toBe(8)
+    expect(scoreHole(ringRadiusMm(1) + 1.9, 1.9).value).toBe(1)
+    expect(scoreHole(ringRadiusMm(1) + 1.91, 1.9)).toEqual({ value: 0, decimal: 0 })
+  })
+
+  it('keeps the tenths and the whole score in step', () => {
+    let seed = 7
+    const next = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    for (let k = 0; k < 2000; k++) {
+      const s = scoreHole(next() * 26, 1.5 + next())
+      expect(Math.floor(s.decimal + 1e-9)).toBe(s.value)
+    }
+    expect(scoreHole(0, 2).decimal).toBe(10.9)
   })
 })
 
@@ -91,8 +120,65 @@ describe('scanCard on a made-up photo of the card', () => {
       expect(b.shots, `bull ${b.n}`).toHaveLength(1)
       const got = b.shots[0]
       expect(Math.hypot(got.x - want.x, got.y - want.y), `bull ${b.n}`).toBeLessThan(0.4)
-      expect(got.value, `bull ${b.n}`).toBe(scoreAt(Math.hypot(want.x, want.y)).value)
+      expect(got.value, `bull ${b.n}`).toBe(scoreHole(Math.hypot(want.x, want.y), got.radius).value)
     }
+  })
+
+  it('measures each hole’s size, and scores it with that size', () => {
+    // Clean holes of three sizes on one card, some near a ring's line: 0.15 mm short of it with their own edge (where a
+    // pellet-sized circle would touch it), or 0.15 mm over it.
+    const sized: SyntheticShot[] = [
+      { bull: 1, x: 0, y: ringRadiusMm(8) + 1.95, radiusMm: 1.8 },
+      { bull: 2, x: ringRadiusMm(7) + 2.15, y: 0, radiusMm: 2.3 },
+      { bull: 3, x: -3.1, y: 2.2, radiusMm: 2.05 },
+      { bull: 4, x: 0, y: -(ringRadiusMm(6) + 1.95), radiusMm: 1.8 },
+      { bull: 6, x: 4.2, y: 4.2, radiusMm: 2.3 },
+      { bull: 8, x: -1.2, y: -0.8, radiusMm: 2.05 },
+    ]
+    const scan = scanCard(drawSyntheticCard({ width: 1500, height: 2000, shots: sized }))
+    expect(scan.ok).toBe(true)
+    for (const want of sized) {
+      const got = scan.bulls.find((b) => b.kind === 'record' && b.n === want.bull)!.shots[0]
+      expect(got.radiusFrom, `bull ${want.bull}`).toBe('hole')
+      expect(Math.abs(got.radius - want.radiusMm!), `bull ${want.bull}`).toBeLessThan(0.08)
+      expect(Math.hypot(got.x - want.x, got.y - want.y), `bull ${want.bull}`).toBeLessThan(0.15)
+      expect(got.value, `bull ${want.bull}`).toBe(scoreHole(Math.hypot(want.x, want.y), want.radiusMm).value)
+    }
+    // The small holes reach no further than their own edge: a pellet-sized circle would have touched the next ring.
+    const one = scan.bulls.find((b) => b.kind === 'record' && b.n === 1)!.shots[0]
+    expect(one.value).toBe(7)
+    expect(scoreAt(Math.hypot(one.x, one.y)).value).toBe(8)
+    expect(scan.holeRadiusFrom).toBe('card')
+    expect(scan.holeRadius).toBeGreaterThan(1.8)
+    expect(scan.holeRadius).toBeLessThan(2.3)
+  })
+
+  it('takes the card’s usual hole for one it can’t measure, and the pellet’s when too few were', () => {
+    // Bull 7's two holes touch: read as one long mark and split, neither's size can be told.
+    const touching: SyntheticShot[] = [...SHOTS.filter((s) => s.bull !== 7), { bull: 7, x: -4, y: 6 }, { bull: 7, x: -1.5, y: 6.3 }]
+    const two = SHOTS.map((s) => ({ ...s, x: -s.y * 0.8 + 1.5, y: s.x * 0.8 - 2.5 }))
+    const scan = scanCard(drawSyntheticCard({ width: 1000, height: 1333, shots: [...touching, ...two.filter((s) => s.bull !== 7)] }), { shotsPerBull: 2 })
+    const seven = scan.bulls.find((b) => b.kind === 'record' && b.n === 7)!.shots
+    expect(seven).toHaveLength(2)
+    expect(seven.map((s) => s.radiusFrom)).toEqual(['card', 'card'])
+    expect(seven.map((s) => s.radius)).toEqual([scan.holeRadius, scan.holeRadius])
+    expect(scan.holeRadiusFrom).toBe('card')
+    // Fewer than CARD_HOLES holes measured on the whole card: the pellet's size stands in.
+    const few = scanCard(
+      drawSyntheticCard({
+        width: 1000,
+        height: 1333,
+        shots: [
+          { bull: 7, x: -4, y: 6 },
+          { bull: 7, x: -1.5, y: 6.3 },
+        ],
+      }),
+      { shotsPerBull: 2 },
+    )
+    expect(CARD_HOLES).toBeGreaterThan(2)
+    expect(few.holeRadius).toBe(PELLET_RADIUS_MM)
+    expect(few.holeRadiusFrom).toBe('pellet')
+    expect(few.bulls.find((b) => b.kind === 'record' && b.n === 7)!.shots.map((s) => s.radiusFrom)).toEqual(['pellet', 'pellet'])
   })
 
   it('knows which bull is which with the phone held sideways or the card upside down', () => {
@@ -146,11 +232,20 @@ describe('the review of a scanned card', () => {
     expect(totals.shots).toBe(10)
   })
 
+  it('carries the scan’s hole sizes', () => {
+    expect(review.holeRadius).toBe(scan.holeRadius)
+    expect(review.bulls[0].shots[0].radius).toBe(scan.bulls.find((b) => b.kind === 'record' && b.n === 1)!.shots[0].radius)
+  })
+
   it('places, moves and removes shots, scored by the rule', () => {
-    let r = placeShot(review, 3, null, 0, 4.9)
-    expect(r.bulls[2].shots).toEqual([{ x: 0, y: 4.9, value: 9, decimal: 9, confidence: 1, manual: true }])
-    r = placeShot(r, 3, 0, 0, 5.1)
-    expect(r.bulls[2].shots[0].value).toBe(8)
+    // An added shot takes the card's usual hole: 2 mm here, so the 9's line (2.75 mm) is touched up to 4.75 mm out.
+    let r = placeShot({ ...review, holeRadius: 2 }, 3, null, 0, 4.7)
+    expect(r.bulls[2].shots).toEqual([{ x: 0, y: 4.7, value: 9, decimal: 9, confidence: 1, manual: true, radius: 2 }])
+    r = placeShot(r, 3, 0, 0, 4.8)
+    expect(r.bulls[2].shots[0]).toMatchObject({ value: 8, radius: 2 })
+    // A moved shot keeps its own hole's size, whatever the card's.
+    const own: CardReview = { ...r, bulls: r.bulls.map((b) => (b.n === 3 ? { ...b, shots: [{ ...b.shots[0], radius: 2.3 }] } : b)) }
+    expect(placeShot(own, 3, 0, 0, 5.0).bulls[2].shots[0]).toMatchObject({ value: 9, radius: 2.3 })
     r = removeShot(r, 3, 0)
     expect(bullState(r.bulls[2], 1)).toBe('missing')
   })
@@ -162,7 +257,7 @@ describe('the review of a scanned card', () => {
     expect(shots).toHaveLength(10)
     expect(shots[2]).toEqual({ v: 0 })
     expect(shots[4]).toEqual({ v: 7 })
-    expect(shots[0]).toMatchObject({ v: 10, x: expect.any(Number), y: expect.any(Number) })
+    expect(shots[0]).toMatchObject({ v: 10, x: expect.any(Number), y: expect.any(Number), r: review.bulls[0].shots[0].radius })
     expect(reviewTotals(r).total).toBe(shots.reduce((n, s) => n + s.v, 0))
   })
 
@@ -187,11 +282,16 @@ describe('the review of a scanned card', () => {
 })
 
 describe('close calls and saved cards', () => {
-  it('flags a hole that only just touches its ring’s line', () => {
-    // Ring 8's line is touched with the hole's centre up to 7.5 mm out.
+  it('flags a hole that only just touches its ring’s line, at the hole’s own size', () => {
+    // Ring 8's line is touched with a pellet-sized hole's centre up to 7.5 mm out, with a 2 mm hole's up to 7.25.
     expect(closeCall(placedShot(0, 7.3))).toEqual({ ring: 8, byMm: 0.2 })
     expect(closeCall(placedShot(0, 7.15))).toEqual({ ring: 8, byMm: 0.35 })
     expect(closeCall(placedShot(0, 6.9))).toBeNull()
+    expect(closeCall(placedShot(0, 7.05, 2))).toEqual({ ring: 8, byMm: 0.2 })
+    expect(closeCall(placedShot(0, 6.8, 2))).toBeNull()
+    // Without a size of its own, the card's usual one.
+    expect(closeCall({ x: 0, y: 7.05, value: 8 }, { holeRadius: 2 })).toEqual({ ring: 8, byMm: 0.2 })
+    expect(holeRadiusOf({}, null)).toBe(PELLET_RADIUS_MM)
     expect(closeCall({ x: null, y: null, value: 8 })).toBeNull()
   })
 
@@ -216,5 +316,18 @@ describe('close calls and saved cards', () => {
     expect(two.bulls[9].shots.map((s) => s.value)).toEqual([7, 8])
     expect(two.bulls[0].found).toBe(false)
     expect(reviewTotals(two).total).toBe(150)
+  })
+
+  it('reopens a card with the sizes its holes were saved with, and keeps older cards’ scores', () => {
+    const ys = [7.1, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19]
+    const saved = reviewFromShots(ys.map((y, i) => ({ v: 8, x: 0, y, r: i < 6 ? 2 : 2.2 })), () => ({ center: { x: 5, y: 5 }, axes: [6, 0, 0, 6] }))
+    expect(saved.holeRadius).toBe(2)
+    expect(saved.bulls[0].shots[0]).toMatchObject({ value: 8, radius: 2, decimal: scoreHole(7.1, 2).decimal })
+    expect(reviewShots(saved)[9]).toEqual({ v: 8, x: 0, y: 7.19, r: 2.2 })
+    // Saved before holes were measured: the saved score stays, the hole is taken at the pellet's size.
+    const older = reviewFromShots(Array.from({ length: 10 }, () => ({ v: 8, x: 0, y: 7.4 })), () => null)
+    expect(older.holeRadius).toBe(PELLET_RADIUS_MM)
+    expect(older.bulls[0].shots[0]).toMatchObject({ value: 8, radius: null, decimal: scoreAt(7.4).decimal })
+    expect(reviewTotals(older).total).toBe(80)
   })
 })

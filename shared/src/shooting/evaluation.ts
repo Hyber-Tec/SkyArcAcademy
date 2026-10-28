@@ -58,6 +58,11 @@ export interface EvalShot {
   /** A scanned card's shot: where it is, in millimetres from the centre (x right, y up). */
   x?: number | null
   y?: number | null
+  /**
+   * A scanned card's shot: the radius (mm) of its hole as the card showed it, which its score was taken with. Missing
+   * on cards scanned before holes were measured (taken at the pellet's size) and on SIUS shots (the pellet's).
+   */
+  r?: number | null
 }
 
 /** Where a shot sits: measured on a scanned card, or rebuilt from its score and direction (SIUS). */
@@ -152,11 +157,12 @@ export function evaluationPoints(e: Pick<Evaluation, 'series'>): ShotPoint[] {
   return e.series.flatMap((s) => s.shots.map(pointOf).filter((p): p is ShotPoint => p !== null))
 }
 
-/** A paper card's shot: its whole score, and where it is when the card was scanned (mm, x right, y up). */
+/** A paper card's shot: its whole score, and where it is when the card was scanned (mm, x right, y up) with its hole's radius. */
 export interface PaperShot {
   v: number
   x?: number | null
   y?: number | null
+  r?: number | null
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -183,7 +189,8 @@ export function paperEvaluation(input: {
     if (!placed) return { v, a: null }
     const x = round2(s.x as number)
     const y = round2(s.y as number)
-    return { v, a: Math.round(((Math.atan2(y, x) * 180) / Math.PI + 360) % 360 * 10) / 10, x, y }
+    const a = Math.round(((Math.atan2(y, x) * 180) / Math.PI + 360) % 360 * 10) / 10
+    return typeof s.r === 'number' && s.r > 0 ? { v, a, x, y, r: round2(s.r) } : { v, a, x, y }
   })
   const shots = evalShots.map((t) => t.v)
   const total = shots.length ? shots.reduce((n, v) => n + v, 0) : Math.max(0, Math.round(input.total ?? 0))
