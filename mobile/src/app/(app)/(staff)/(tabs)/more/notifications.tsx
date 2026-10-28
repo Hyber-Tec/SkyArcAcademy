@@ -9,6 +9,7 @@ import { Screen } from "@/components/Screen";
 import { SwitchRow } from "@/components/SwitchRow";
 import { T } from "@/components/Text";
 import { setMyNotificationPref } from "@/features/account/profile";
+import { NoticeSwitches } from "@/features/notifications/NoticeSwitches";
 import { PhoneNotifications } from "@/features/notifications/PhoneNotifications";
 import { errorMessage } from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -19,7 +20,8 @@ import { space, useColors } from "@/theme";
  * More → Notifications: this phone first (whether notifications reach it, and turning them on), then for a coach the
  * four switches of the website's Profile → Notifications (`staff.notificationPrefs`), which decide what the academy
  * tells them about. Each saves as it's switched, with an audit entry; the switch shows its new position at once. Owners
- * and admins have no switches yet: they're told about the website's messages (functions/src/website.ts).
+ * and admins have the office's switches instead (families' cancellations and requests, the website's messages:
+ * NoticeSwitches, as the website's account menu has them).
  */
 export default function NotificationsScreen() {
   const { branchId, actor, staff, isCoach, settings, name: academy } = useBranch();
@@ -32,6 +34,7 @@ export default function NotificationsScreen() {
     return (
       <Screen testID="notifications-screen" typing={false}>
         <PhoneNotifications />
+        <NoticeSwitches />
       </Screen>
     );
   }

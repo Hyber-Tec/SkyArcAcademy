@@ -387,14 +387,21 @@ To start a phase, paste this into Claude Code on the right computer:
 The phone app is what parents, students and coaches actually use. Families must be able to do everything they need
 from the app, without calling or texting the academy.
 
-- [ ] **M1. Families in the app:** cancel (the 24-hour rule), see open seats, request a class, makeup or reschedule, and
-  see their requests' status. The same rules as `S1`–`S3`.
+- ✅ **M1. Families in the app:** cancel (the 24-hour rule), see open seats, request a class, makeup or reschedule, and
+  see their requests' status. The same rules as `S1`–`S3`. (#58)
   - *Plan:* **New work** (the rules and functions come from `S1`–`S3`).
-- [ ] **M2. The admin edits the schedule in the app.** Today the admin's app only cancels and marks attendance. Add the
+  - *Done (#58):* a class's sheet cancels (until the cutoff) and asks to move it; "Ask for a class" (a makeup or an
+    extra class, in the open seats); the makeups to book and the requests with their answers at the top of Classes,
+    with Withdraw; and an inbox for families (Home's bell), whose notices open their class, score, report or post.
+- ✅ **M2. The admin edits the schedule in the app.** Today the admin's app only cancels and marks attendance. Add the
   main **schedule** edits: add or remove a student, move a student to another class or day, book a makeup or trial,
-  and approve or reject family requests. **Only scheduling:** don't copy every web feature into the app.
+  and approve or reject family requests. **Only scheduling:** don't copy every web feature into the app. (#58)
   - *Plan:* **New work:** the phone marks attendance today. The website's schedule writes move to `shared/` in Phase 1,
     for the phone to use.
+  - *Done (#58):* the requests on Home and the schedule, each approved or declined with a note; on a class's sheet,
+    "Add a student" (make-ups owed first, Practice, Trial, Evaluation), and each student's ⋯ to move them to another
+    class that week or take them out. The writes are the website's `classApi.ts`, mirrored in the phone (they're not in
+    `shared/`). The class itself (time, seats, note, who's in) stays on the website.
 - ✅ **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
   rejections, new scores, new reports, announcements, for parents, students, coaches and admins. (#45)
   - *Plan:* **Started early** (Goo, 2026-10-28): the server already pushes every notice; the phone registers.
@@ -403,9 +410,11 @@ from the app, without calling or texting the academy.
     tapped one (and marks it read), and keeps the badge; More → Notifications for every role. The notices `S4` and
     `P13` add reach phones by themselves: their taps go in `appTargetOf`, their words in `pushReason`. Still: Apple's
     push key in Firebase (Goo, `docs/mobile-push.md`), then a push to a real iPhone.
-- [ ] **M4. Notification settings in the app, for every role:** a list of notification types each person turns on or
-  off, so nobody is flooded. Parents, students, coaches and admins each see the types that apply to them.
+- ✅ **M4. Notification settings in the app, for every role:** a list of notification types each person turns on or
+  off, so nobody is flooded. Parents, students, coaches and admins each see the types that apply to them. (#58)
   - *Plan:* **Coaches already have four switches**; the rest come with `S4`.
+  - *Done (#58):* More → Notifications for parents, students, owners and admins (`noticeSwitchesFor`); coaches keep
+    their four.
 - [ ] **M5. The chosen schedule view (`V1`) in the app**, for admins and coaches, with clock-in/out.
   - *Plan:* **Small change** once `V2` is built: the phone's schedule already matches the website's.
 - [ ] **M6. The scanner in the app:** the new scoring rule (`P1`), photo tips (`P3`), the official score (`P4`), labels

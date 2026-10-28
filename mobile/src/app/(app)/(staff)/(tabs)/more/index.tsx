@@ -92,7 +92,7 @@ export default function MoreScreen() {
         <ListRow
           icon={<Icon as={Bell} />}
           title="Notifications"
-          subtitle={isCoach ? "On this phone, and what you’re told about" : "On this phone"}
+          subtitle="On this phone, and what you’re told about"
           right={isCoach ? notificationsSummary(staff?.notificationPrefs) : undefined}
           onPress={() => router.push("/more/notifications")}
           testID="more-notifications"

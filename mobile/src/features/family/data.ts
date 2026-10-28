@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type DocumentData, type Query, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "@react-native-firebase/firestore";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { ProgressReportDoc } from "@shared/reports/types";
+import type { ClassRequest } from "@shared/schedule/requests";
 import { type Evaluation, inOrder } from "@shared/shooting/evaluation";
 import type { DateKey } from "@shared/time";
 import type { BranchContact, BranchPublicProfile, Session, Student } from "@shared/types";
@@ -162,6 +163,20 @@ export function useFamilyEvaluations(ids: readonly string[]) {
   );
   // The reverse of the charts' order (shared/src/shooting/evaluation.ts), so ties read the same way everywhere.
   const data = useMemo<EvaluationDoc[]>(() => inOrder(state.data).reverse(), [state.data]);
+  return { ...state, data };
+}
+
+/**
+ * The given students' requests for classes (makeups, moves, extra classes) with the academy's answers, newest first:
+ * one query per student, as the rules require. Only the server writes them.
+ */
+export function useFamilyRequests(ids: readonly string[]) {
+  const { branchId } = useBranch();
+  const list = stable(ids);
+  const state = useMerged<ClassRequest>(list.length ? `family-requests-${branchId}-${list.join(",")}` : null, () =>
+    list.map((id) => ({ kind: "query", ref: query(col(branchId, COL.classRequests), where("studentId", "==", id)) })),
+  );
+  const data = useMemo(() => [...state.data].sort((a, b) => millis(b.createdAt) - millis(a.createdAt)), [state.data]);
   return { ...state, data };
 }
 

@@ -1,4 +1,5 @@
 import { Timestamp, collection, deleteDoc, doc, getDoc, limit, orderBy, query, updateDoc, where, writeBatch } from "@react-native-firebase/firestore";
+import { queryParams } from "@shared/auth";
 import type { AppNotification } from "@shared/comms";
 import { COL, ROOT } from "@shared/paths";
 import { appTargetOf } from "@shared/push";
@@ -13,10 +14,11 @@ import { useBranch } from "@/state/BranchProvider";
 
 /**
  * The person's notifications (the inbox the website's bell opens: web/src/features/notifications/NotificationBell.tsx):
- * the items Cloud Functions write for them (`branches/{b}/notifications`, by `recipientKey`), a coach's class changes
- * and new announcements. People read, mark read and delete their own, and nothing else (the rules). Marking read stamps
- * the phone's time, so a row and the bell's count change at once, offline too (only whether it's set counts; the
- * server's push count reads it the same way).
+ * the items Cloud Functions write for them (`branches/{b}/notifications`, by `recipientKey`): a coach's class changes
+ * and new announcements; the office's requests and cancellations from families and messages from the website; a
+ * family's class changes, answers to their requests, new scores and reports, and the academy's news. People read, mark
+ * read and delete their own, and nothing else (the rules). Marking read stamps the phone's time, so a row and the bell's
+ * count change at once, offline too (only whether it's set counts; the server's push count reads it the same way).
  */
 
 export type InboxItem = AppNotification & { id: string };
@@ -57,16 +59,27 @@ export function deleteInboxItem(branchId: string, id: string): void {
 }
 
 /**
- * Where a notification leads: in the app a post, the news, a class (by its session), the schedule; on the website a
- * trial request or question sent from the public website (answered in Settings → Website → Messages); null for nowhere.
+ * Where a staff member's notification leads: in the app a post, the news, a class (by its session), the schedule, a
+ * family's request (to approve or decline); on the website a trial request or question sent from the public website
+ * (answered in Settings → Website → Messages); null for nowhere.
  */
-export type InboxTarget = { kind: "post"; id: string } | { kind: "news" } | { kind: "class"; sessionId: string } | { kind: "schedule" } | { kind: "website"; path: string } | null;
+export type InboxTarget =
+  | { kind: "post"; id: string }
+  | { kind: "news" }
+  | { kind: "class"; sessionId: string }
+  | { kind: "schedule" }
+  | { kind: "request"; id: string }
+  | { kind: "website"; path: string }
+  | null;
 
 export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">): InboxTarget {
   // A class taken off the schedule, or now another coach's, has nothing left to open: its notice says it all.
   if (n.type === "session_deleted" || n.type === "session_reassigned_out") return null;
   // The message itself, as the website's bell opens it (older notices name the page only).
   if (n.type === "website_message") return n.link ? { kind: "website", path: n.link } : null;
+  // A family's request opens itself (a push carries it in its link only).
+  const requestId = n.type === "class_requested" ? (n.refs?.requestId ?? queryParams(n.link ?? "").get("request") ?? null) : null;
+  if (requestId) return { kind: "request", id: requestId };
   const t = appTargetOf(n.link ?? "", n.refs ?? undefined);
   if (t.screen === "announcement") return { kind: "post", id: t.announcementId };
   if (t.screen === "announcements") return { kind: "news" };
@@ -89,6 +102,7 @@ export async function openInboxItem(branchId: string, n: Pick<InboxItem, "type" 
   if (target.kind === "post") return void router.push({ pathname: "/news/[id]", params: { id: target.id } });
   if (target.kind === "news") return void router.push("/news");
   if (target.kind === "schedule") return void router.navigate("/schedule");
+  if (target.kind === "request") return void router.push({ pathname: "/request/[id]", params: { id: target.id } });
   try {
     const snap = await getDoc(doc(db, ROOT.branches, branchId, COL.sessions, target.sessionId));
     const s = snap.exists() ? (snap.data() as Session) : null;
@@ -98,6 +112,48 @@ export async function openInboxItem(branchId: string, n: Pick<InboxItem, "type" 
   } catch {
     toast.error("Couldn’t open the class", { description: "Check your connection, then try again." });
   }
+}
+
+/**
+ * Where a family's notification leads, in their own screens: a post or the news, a class's sheet (by its seat) or
+ * Classes (a class taken off the schedule, a request declined), a score or Scores, a progress report or Reports; null
+ * for a kind the app doesn't know yet (read here, not opened).
+ */
+export type FamilyTarget =
+  | { kind: "post"; id: string }
+  | { kind: "news" }
+  | { kind: "class"; sessionId: string }
+  | { kind: "classes" }
+  | { kind: "score"; id: string }
+  | { kind: "scores" }
+  | { kind: "report"; id: string }
+  | { kind: "reports" }
+  | null;
+
+export function familyTarget(n: Pick<AppNotification, "type" | "link" | "refs">): FamilyTarget {
+  const t = appTargetOf(n.link ?? "", n.refs ?? undefined);
+  if (t.screen === "announcement") return { kind: "post", id: t.announcementId };
+  if (t.screen === "announcements") return { kind: "news" };
+  if (t.screen === "report") return { kind: "report", id: t.reportId };
+  if (t.screen === "scores") return t.evaluationId ? { kind: "score", id: t.evaluationId } : { kind: "scores" };
+  if (t.screen === "classes" || t.screen === "schedule") return t.sessionId && n.type !== "session_deleted" ? { kind: "class", sessionId: t.sessionId } : { kind: "classes" };
+  if (n.type === "report_shared") return { kind: "reports" };
+  return null;
+}
+
+/** Opens what a family's notification is about, as a tapped push does, and marks it read. */
+export function openFamilyItem(branchId: string, n: Pick<InboxItem, "type" | "link" | "refs"> & { id: string | null; readAt?: InboxItem["readAt"] }): void {
+  if (n.id) markInboxRead(branchId, { id: n.id, readAt: n.readAt ?? null });
+  const t = familyTarget(n);
+  if (!t) return;
+  if (t.kind === "post") return void router.push({ pathname: "/news/[id]", params: { id: t.id } });
+  if (t.kind === "news") return void router.push("/news");
+  if (t.kind === "class") return void router.push({ pathname: "/session/[id]", params: { id: t.sessionId } });
+  if (t.kind === "classes") return void router.navigate("/classes");
+  if (t.kind === "score") return void router.push({ pathname: "/score/[id]", params: { id: t.id } });
+  if (t.kind === "scores") return void router.navigate("/scores");
+  if (t.kind === "report") return void router.push({ pathname: "/report/[id]", params: { id: t.id } });
+  router.navigate("/reports");
 }
 
 /**

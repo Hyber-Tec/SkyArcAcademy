@@ -18,6 +18,7 @@ import { FamilyClassRow } from "@/features/family/ClassCards";
 import { FamilyClassMonth } from "@/features/family/ClassMonth";
 import { useFamilySessions } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
+import { AskButton, RequestsPanel } from "@/features/family/RequestsPanel";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { type FamilyClass, familyClasses } from "@/features/family/classes";
 import { dayHeading, hasEnded } from "@/features/family/format";
@@ -38,8 +39,9 @@ const MAX_BACK_WEEKS = 52;
  * The family's classes, as a list or on the months (List / Month, by the title, as on the website). The list goes day
  * by day: what's coming (earliest first) or what's past (latest first), each with its status in plain words and the
  * class's note. The months scroll vertically, each day marked with its classes (FamilyClassMonth), and the day
- * tapped shows its classes under them. A parent with several children picks All or one child. A class opens its sheet.
- * Read-only: the academy books and changes classes.
+ * tapped shows its classes under them. A parent with several children picks All or one child. A class opens its sheet
+ * (where it's canceled or moved). At the top, "Ask for a class", then the makeups still to book and the family's requests
+ * with the academy's answers (RequestsPanel); the academy books and changes everything else.
  */
 export default function FamilyClassesScreen() {
   const family = useFamily();
@@ -105,6 +107,7 @@ export default function FamilyClassesScreen() {
         <View style={[styles.top, { paddingTop: insets.top + space.lg }]}>
           <TabHeader title="Classes" right={switcher} testID="family-classes-title" />
           <ChildSwitcher />
+          <AskButton testID="family-ask-month" />
         </View>
         <FamilyClassMonth selected={day ?? today} onSelect={setDay} today={today} nowMin={nowMin} hour12={hour12} />
       </View>
@@ -119,6 +122,10 @@ export default function FamilyClassesScreen() {
         <>
           <View style={styles.controls}>
             <ChildSwitcher />
+            <AskButton />
+          </View>
+          <RequestsPanel />
+          <View style={styles.controls}>
             <SegmentedControl<Show>
               value={show}
               onChange={setShow}
@@ -165,7 +172,7 @@ export default function FamilyClassesScreen() {
               testID="family-classes-empty"
               icon={upcoming ? <CalendarX2 size={26} color={colors.mutedForeground} /> : <History size={26} color={colors.mutedForeground} />}
               title={upcoming ? "Nothing booked" : "No past classes"}
-              text={upcoming ? `No classes ${span}. The academy books them, and they show here.` : `No classes ${span}.`}
+              text={upcoming ? `No classes ${span}. The academy books them, and they show here; ask for one above.` : `No classes ${span}.`}
             />
           )}
 

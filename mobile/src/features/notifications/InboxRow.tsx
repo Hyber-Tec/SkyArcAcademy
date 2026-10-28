@@ -1,12 +1,31 @@
 import { notificationMeta } from "@shared/comms";
 import { minutesOf } from "@shared/time";
-import { Bell, CalendarCheck, CalendarDays, CalendarMinus, CalendarPlus, CalendarX2, ChartLine, ChevronRight, Clock, type LucideIcon, Mail, Megaphone, UserMinus, UserPlus, UserX } from "lucide-react-native";
+import {
+  Bell,
+  CalendarCheck,
+  CalendarDays,
+  CalendarMinus,
+  CalendarPlus,
+  CalendarX2,
+  ChartLine,
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  Clock,
+  type LucideIcon,
+  Mail,
+  Megaphone,
+  Target,
+  UserMinus,
+  UserPlus,
+  UserX,
+} from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
 import { clock } from "@/features/schedule/format";
 import { space, useColors } from "@/theme";
-import { type InboxItem, inboxTarget } from "./inbox";
+import type { InboxItem } from "./inbox";
 
 /** A picture for each kind of notification (its colour is the website's: `notificationMeta`). */
 const ICONS: Record<string, LucideIcon> = {
@@ -23,6 +42,11 @@ const ICONS: Record<string, LucideIcon> = {
   session_no_show: UserX,
   report_shared: ChartLine,
   website_message: Mail,
+  class_canceled_by_family: CalendarX2,
+  class_requested: CalendarPlus,
+  request_approved: CircleCheck,
+  request_rejected: CircleX,
+  score_added: Target,
 };
 
 const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? null;
@@ -41,6 +65,7 @@ export function InboxRow({
   timezone,
   hour12,
   divider = false,
+  leads,
   onOpen,
   onLongPress,
   onDelete,
@@ -51,6 +76,8 @@ export function InboxRow({
   hour12: boolean;
   /** Set by ListSection on every row after the first. */
   divider?: boolean;
+  /** Tapping it opens something (a chevron says so). */
+  leads: boolean;
   onOpen: () => void;
   onLongPress: () => void;
   onDelete: () => void;
@@ -62,7 +89,6 @@ export function InboxRow({
   const ms = millis(n.createdAt);
   const time = ms === null ? "Just now" : clock(minutesOf(ms, timezone), hour12);
   const unread = !n.readAt;
-  const leads = inboxTarget(n) !== null;
   const label = [unread ? "Unread" : null, sentence(meta.label), n.title, n.body, time].filter(Boolean).join(", ");
   return (
     <SwipeToDelete divider={divider} onPress={onOpen} onLongPress={onLongPress} onDelete={onDelete} accessibilityLabel={label} testID={testID}>
