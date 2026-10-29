@@ -117,7 +117,8 @@ appId: com.skyarcacademy.app
           visible:
             id: "family-scores"
           timeout: 15000
-# Classes: what's coming, then what's past, and a class's sheet.
+# Classes: what's coming, then what's past, and a class's sheet. Times the academy suggests and requests come first, so
+# each control is scrolled to before it's tapped (a family with several requests has them further down).
 - runFlow:
     file: steps/family-tab.yaml
     env:
@@ -127,12 +128,22 @@ appId: com.skyarcacademy.app
     visible:
       id: "family-classes"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "family-classes-show-past"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "family-classes-show-past"
 - extendedWaitUntil:
     visible:
       id: "family-classes-list"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "family-class-.*"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "family-class-.*"
     index: 0
@@ -142,10 +153,19 @@ appId: com.skyarcacademy.app
     timeout: 15000
 - tapOn:
     id: "family-session-close"
+- scrollUntilVisible:
+    element:
+      id: "family-classes-show-upcoming"
+    direction: UP
+    centerElement: true
 - tapOn:
     id: "family-classes-show-upcoming"
 # The months: each day marked with the children's classes and the day chosen under them (today, or the next day with a
 # class), a class's sheet opened from it, then the list again.
+- scrollUntilVisible:
+    element:
+      id: "family-classes-view-month"
+    direction: UP
 - tapOn:
     id: "family-classes-view-month"
 - extendedWaitUntil:
@@ -175,9 +195,10 @@ appId: com.skyarcacademy.app
           id: "family-session-close"
 - tapOn:
     id: "family-classes-view-list"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "family-classes-show"
+    direction: DOWN
     timeout: 10000
 # Scores: each child's figures (All), then one child's with the scores over time and where the shots went, and a result
 # opened: its shots played back as it opens, how it compares, and its original (a SIUS result's PDF or a card's photo)
