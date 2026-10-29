@@ -77,7 +77,6 @@ export function DateHoursCard() {
   }
 
   const onDayClick = (d: DateKey, shift: boolean) => {
-    if (d < today) return toast.info('Past dates can’t change.')
     // Phones: a tap opens the date; runs of dates go through “Apply to a range”.
     if (isMobile) return setEditing([d])
     if (shift && selection) {
@@ -86,7 +85,8 @@ export function DateHoursCard() {
     } else setSelection(selection && selection.anchor === d && selection.focus === d ? null : { anchor: d, focus: d })
   }
 
-  const editable = selected.filter((d) => d >= today)
+  // Any date, a past one too: owners and admins put the record right (the owner, 2026-10-28).
+  const editable = selected
   const anyCustom = editable.some((d) => dayConfigs.has(d))
 
   async function save(dates: DateKey[], value: DateHoursValue, summaryRange: string, trashSessionIds: string[] = []) {
@@ -167,10 +167,10 @@ export function DateHoursCard() {
                   tabIndex={-1}
                   aria-label={`${formatDateKey(d, 'weekdayLong')}: ${h.isOpen ? formatTimeRange(h.openMin, h.closeMin) : 'closed'}${custom ? ' (custom)' : ''}`}
                   onClick={(e) => onDayClick(d, e.shiftKey)}
-                  onDoubleClick={() => d >= today && setEditing([d])}
+                  onDoubleClick={() => setEditing([d])}
                   className={cn(
                     'flex h-20 flex-col gap-1 p-1 select-none sm:p-1.5',
-                    past ? 'cursor-default opacity-45' : 'cursor-pointer hover:bg-muted/40',
+                    past ? 'cursor-pointer opacity-60 hover:bg-muted/40' : 'cursor-pointer hover:bg-muted/40',
                     !h.isOpen && 'bg-muted/70 text-muted-foreground',
                     custom && 'bg-indigo-50 text-indigo-950 dark:bg-indigo-950/40 dark:text-indigo-100',
                     selectedSet.has(d) && 'bg-sky-50 ring-2 ring-sky-500 ring-inset dark:bg-sky-950/30',

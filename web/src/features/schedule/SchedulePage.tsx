@@ -184,7 +184,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
         },
         { replace: true },
       ),
-    canEdit: (d) => admin && d >= today,
+    // Owners and admins change any day, a day that's over too, to put the record right (the owner, 2026-10-28).
+    canEdit: () => admin,
     openClass: setClassId,
     openDay: (d) => route.go({ view: 'day', date: d }),
     addSeat: setSeatFor,

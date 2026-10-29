@@ -14,8 +14,9 @@ import type { Actor } from "@/state/BranchProvider";
  * The office's changes to a class, written as the website writes them (web/src/features/schedule/classApi.ts): a
  * student's mark (`setSeatStatus`), a student added (`addSeat`), moved to another class (`moveSeat`) or taken out
  * (`removeSeat`), with the same fields and the same audit entry in the same batch (`via: app`). The rules let only
- * owners and admins change a seat, and only until its day is over. Each returns at once: the phone shows the change
- * straight away and the server confirms it in the background; a refusal says so, and the change goes back.
+ * owners and admins change a seat, on any day (a day that's over too, to put the record right). Each returns at once:
+ * the phone shows the change straight away and the server confirms it in the background; a refusal says so, and the
+ * change goes back.
  */
 
 /** "Mon, Nov 2 · 4:30 PM – 6:00 PM": a class, as the audit log names it. */
@@ -35,7 +36,7 @@ const stamps = (actor: Actor) => ({ updatedAt: serverTimestamp(), updatedBy: act
 /** A refused write in words: the rules refuse a day that's over, or someone without access. */
 function refused(e: unknown): string {
   const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
-  return /permission-denied/.test(code) ? "This class can’t be changed any more (its day is over), or you don’t have access." : "Check your connection, then try again.";
+  return /permission-denied/.test(code) ? "You don’t have access to change this class." : "Check your connection, then try again.";
 }
 
 function auditSeat(
