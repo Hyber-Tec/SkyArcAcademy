@@ -21,7 +21,7 @@ export interface NoticeSwitch {
 
 export const FAMILY_SWITCHES: readonly NoticeSwitch[] = [
   { key: 'classChanges', label: 'Class changes', help: 'A class canceled, moved, removed or missed' },
-  { key: 'requests', label: 'Answers to requests', help: 'When the academy approves or declines a class you asked for' },
+  { key: 'requests', label: 'Answers to requests', help: 'When the academy approves or declines a class you asked for, or suggests another time' },
   { key: 'scores', label: 'New scores', help: 'When a new score is saved' },
   { key: 'reports', label: 'Progress reports', help: 'When the academy shares a progress report' },
   { key: 'announcements', label: 'News from the academy', help: 'Posts the academy shares with families' },
@@ -29,7 +29,7 @@ export const FAMILY_SWITCHES: readonly NoticeSwitch[] = [
 
 export const OFFICE_SWITCHES: readonly NoticeSwitch[] = [
   { key: 'classChanges', label: 'Cancellations from families', help: 'When a parent or student cancels a class' },
-  { key: 'requests', label: 'Requests from families', help: 'A makeup, a moved class or an extra class to approve' },
+  { key: 'requests', label: 'Requests from families', help: 'A makeup, a moved class or an extra class to answer, and families’ answers to the times you suggest' },
   { key: 'websiteMessages', label: 'Messages from the website', help: 'Trial requests and questions sent from the public website' },
 ]
 
@@ -43,7 +43,7 @@ export function noticeSwitchesFor(role: Role): readonly NoticeSwitch[] {
 /** Which switch a notice to a family or the office follows (null: always sent). */
 export function noticeKeyOf(type: NotificationType): NoticeKey | null {
   if (type.startsWith('session_') || type === 'class_canceled_by_family') return 'classChanges'
-  if (type === 'class_requested' || type === 'request_approved' || type === 'request_rejected') return 'requests'
+  if (type === 'class_requested' || type.startsWith('request_')) return 'requests'
   if (type === 'score_added') return 'scores'
   if (type === 'report_shared') return 'reports'
   if (type.startsWith('announcement')) return 'announcements'

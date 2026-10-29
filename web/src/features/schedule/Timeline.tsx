@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { LuArrowRight, LuCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
+import { LuArrowRight, LuCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSend, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { seatKind } from '@shared/schedule/classes'
 import { type ClassRequest, REQUEST_KIND_LABELS } from '@shared/schedule/requests'
@@ -265,7 +265,7 @@ function WeekStrip({ days, width }: { days: DateKey[]; width: number }) {
         const classes = b.byDate.get(d) ?? []
         const open = b.isOpen(d) || classes.length > 0
         const seats = classes.reduce((n, v) => n + Math.max(0, v.c.seats - v.taken), 0)
-        const requests = classes.reduce((n, v) => n + b.requestsFor(v.c.id).length, 0)
+        const requests = classes.reduce((n, v) => n + b.requestsFor(v.c.id).filter((r) => r.status === 'pending').length, 0)
         const noCoach = classes.some((v) => !v.coaches.length)
         const today = d === b.today
         return (
@@ -559,6 +559,8 @@ function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
   const now = c.dateKey === b.today && b.nowMin >= c.startMin && b.nowMin < c.endMin
   const notMine = !!b.me && !v.coaches.some((k) => k.staffId === b.me)
   const requests = b.requestsFor(c.id)
+  // Those waiting on the office (a class suggested to a family shows too, but waits on them).
+  const waiting = requests.filter((r) => r.status === 'pending').length
   const { cells, open, overflow } = cellsOf(v.seats, c.seats)
   return (
     <div
@@ -584,10 +586,10 @@ function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
       >
         <span className="text-[15px] font-semibold whitespace-nowrap tabular-nums group-hover/head:underline group-hover/head:underline-offset-4">{classRange(c.startMin, c.endMin)}</span>
         {now ? <NowPill /> : null}
-        {requests.length ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-1.5 text-[11px] leading-5 font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900" title={`${requests.length} request${requests.length > 1 ? 's' : ''} waiting`}>
+        {waiting ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-1.5 text-[11px] leading-5 font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900" title={`${waiting} request${waiting > 1 ? 's' : ''} waiting`}>
             <LuInbox className="size-3" />
-            {requests.length}
+            {waiting}
           </span>
         ) : null}
         <SeatCount used={v.taken} of={c.seats} className="ml-auto shrink-0" />
@@ -734,21 +736,30 @@ function requestWhat(r: Pick<ClassRequest, 'kind' | 'forDateKey'>): string {
   return REQUEST_KIND_LABELS[r.kind]
 }
 
-/** A family's request for this class, waiting for the office: open it to approve or decline. */
+/**
+ * A family's request for this class, waiting for the office: open it to approve, decline or suggest another class. Or
+ * this class suggested to a family, waiting for their answer (its seat isn't held for them).
+ */
 function RequestCard({ r }: { r: WithId<ClassRequest> }) {
   const b = useBoard()
+  const offered = r.status === 'offered'
   return (
     <button
       type="button"
       onClick={() => b.openRequest(r.id)}
-      className="flex h-[48px] min-w-0 items-center gap-2 rounded-lg border border-dashed border-amber-400 bg-amber-50/80 px-2.5 text-left text-amber-900 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70"
-      title="A family's request: open it to approve or decline"
+      className={cn(
+        'flex h-[48px] min-w-0 items-center gap-2 rounded-lg border border-dashed px-2.5 text-left transition-colors',
+        offered
+          ? 'border-sky-300 bg-sky-50/70 text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70'
+          : 'border-amber-400 bg-amber-50/80 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70',
+      )}
+      title={offered ? 'Suggested to this family: waiting for their answer' : 'A family’s request: open it to approve, decline or suggest another class'}
       data-testid="request-card"
     >
-      <LuInbox className="size-4 shrink-0" />
+      {offered ? <LuSend className="size-4 shrink-0" /> : <LuInbox className="size-4 shrink-0" />}
       <span className="min-w-0 leading-tight">
         <span className="block truncate text-[13px] font-semibold">{r.studentName}</span>
-        <span className="block truncate text-[11.5px] opacity-80">{requestWhat(r)} · waiting</span>
+        <span className="block truncate text-[11.5px] opacity-80">{offered ? 'Suggested · waiting on the family' : `${requestWhat(r)} · waiting`}</span>
       </span>
     </button>
   )

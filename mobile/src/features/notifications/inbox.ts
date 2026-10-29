@@ -1,8 +1,7 @@
 import { Timestamp, collection, deleteDoc, doc, getDoc, limit, orderBy, query, updateDoc, where, writeBatch } from "@react-native-firebase/firestore";
-import { queryParams } from "@shared/auth";
 import type { AppNotification } from "@shared/comms";
 import { COL, ROOT } from "@shared/paths";
-import { appTargetOf } from "@shared/push";
+import { appTargetOf, requestNoticeId } from "@shared/push";
 import type { Session } from "@shared/types";
 import { router } from "expo-router";
 import { useEffect } from "react";
@@ -79,8 +78,8 @@ export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">):
   // The message itself, as the website's bell opens it (older notices name the page only); a signed contract, the
   // student's page on the website.
   if (n.type === "website_message" || n.type === "contract_signed") return n.link ? { kind: "website", path: n.link } : null;
-  // A family's request opens itself (a push carries it in its link only).
-  const requestId = n.type === "class_requested" ? (n.refs?.requestId ?? queryParams(n.link ?? "").get("request") ?? null) : null;
+  // A family's request, or their answer to a time suggested, opens the request itself (a push carries it in its link only).
+  const requestId = requestNoticeId(n);
   if (requestId) return { kind: "request", id: requestId };
   const t = appTargetOf(n.link ?? "", n.refs ?? undefined);
   if (t.screen === "announcement") return { kind: "post", id: t.announcementId };

@@ -65,6 +65,19 @@ export type AppTarget =
   | { screen: 'report'; reportId: string }
   | { screen: 'today' }
 
+/**
+ * The office's notices about a family's request (asked, a suggestion accepted, asked for another time) open the request
+ * itself: its id, from the notice's refs or its link's `request=` (a push carries only the link). Null for any other
+ * notice. A family's notices about their requests (answered, another time suggested) lead to their Classes
+ * (`appTargetOf`), where their requests are.
+ */
+export const OFFICE_REQUEST_NOTICES: readonly NotificationType[] = ['class_requested', 'request_accepted', 'request_asked_again']
+
+export function requestNoticeId(n: { type: string; link?: string | null; refs?: { requestId?: string | null } | null }): string | null {
+  if (!(OFFICE_REQUEST_NOTICES as readonly string[]).includes(n.type)) return null
+  return n.refs?.requestId || queryParams(n.link ?? '').get('request') || null
+}
+
 export function appTargetOf(
   link: string,
   refs?: { sessionId?: string | null; announcementId?: string | null; dateKey?: string | null; evaluationId?: string | null; reportId?: string | null },

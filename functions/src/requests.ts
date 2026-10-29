@@ -1,4 +1,4 @@
-import { FieldValue, type Timestamp } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions/v2'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { type CallableRequest, HttpsError, onCall } from 'firebase-functions/v2/https'
@@ -8,17 +8,39 @@ import { familyClassesLink, familyOf, noticesFor, officeOf } from './recipients'
 import { snapshotOf } from './sessionNotify'
 import { COL, ROOT } from '@shared/paths'
 import { MAKEUP_LOOKBACK_DAYS, takesSeat } from '@shared/schedule/classes'
-import { decidedNotice, familyCanceledNotice, familyClassNotice, requestedNotice } from '@shared/schedule/familyNotices'
-import { type ClassRequest, type ClassRequestKind, type ClassSeats, familyCancelCheck, requestCheck, seatLabelFor } from '@shared/schedule/requests'
+import { acceptedNotice, askedAgainNotice, decidedNotice, familyCanceledNotice, familyClassNotice, offeredNotice, requestedNotice } from '@shared/schedule/familyNotices'
+import {
+  type ClassOffer,
+  type ClassRequest,
+  type ClassRequestKind,
+  type ClassSeats,
+  type RequestActor,
+  type RequestClass,
+  type RequestSeat,
+  acceptCheck,
+  anotherCheck,
+  closedMessage,
+  familyCancelCheck,
+  isOpenRequest,
+  isStaleRequest,
+  offerCheck,
+  requestCheck,
+  requestStep,
+  seatLabelFor,
+  withStep,
+} from '@shared/schedule/requests'
 import { resolveSettings } from '@shared/settings/resolve'
 import { addDays, dayEndInstant, toInstant, todayKey, weekdayOf } from '@shared/time'
 import type { AcademyClass, AuditEntry, Branch, Member, Session, Student } from '@shared/types'
 
 /**
- * Families cancel and ask for classes; the office answers (docs/DECISIONS.md §23). Families never write the schedule:
- * these callables check each step on the server with the shared rules (shared/src/schedule/requests.ts), write it with
- * its audit entry, and tell whoever needs to know. The office also books anything itself on the schedule, as before.
- * `classSeats` keeps each class's seats taken, without names, for families to see where seats are open.
+ * Families cancel and ask for classes; the office answers (docs/DECISIONS.md §23): it approves, declines, or suggests
+ * another class, which the family accepts or answers by asking for another, back and forth until it's booked. Families
+ * never write the schedule: these callables check each step on the server with the shared rules
+ * (shared/src/schedule/requests.ts), write it with its audit entry, and tell whoever needs to know. A seat is booked
+ * in a transaction that counts the class's seats again, so two families after its last seat can't both get it. The
+ * office also books anything itself on the schedule, as before. `classSeats` keeps each class's seats taken, without
+ * names, for families to see where seats are open.
  */
 
 interface Caller {
@@ -50,8 +72,14 @@ function idOf(v: unknown, what: string): string {
   if (!s || s.includes('/')) throw new HttpsError('invalid-argument', `Missing ${what}.`)
   return s
 }
+/** An ID that may be left out (null), but not malformed. */
+function optionalId(v: unknown, what: string): string | null {
+  return v === undefined || v === null || v === '' ? null : idOf(v, what)
+}
 const viaOf = (v: unknown): Via => (v === 'app' ? 'app' : 'web')
 const ms = (t: unknown) => (t as Timestamp | null | undefined)?.toMillis?.() ?? 0
+const actorOf = (c: Caller): RequestActor => ({ email: c.email, name: c.name, role: c.role })
+const refuse = (message: string) => new HttpsError('failed-precondition', message)
 
 async function academyOf(branchId: string) {
   const snap = await db.doc(`${ROOT.branches}/${branchId}`).get()
@@ -149,6 +177,138 @@ export const cancelClass = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req) 
   return { ok: true }
 })
 
+// ----------------------------------------------------------------- reading
+
+type Snap = FirebaseFirestore.QueryDocumentSnapshot
+
+/** A student's seats from six weeks back on: the makeups they're owed and the classes ahead. */
+const studentSeatsQuery = (b: string, studentId: string, today: string) =>
+  db.collection(`${b}/${COL.sessions}`).where('studentId', '==', studentId).where('dateKey', '>=', addDays(today, -MAKEUP_LOOKBACK_DAYS))
+/** A student's requests; the open ones are picked in code (a student has few, and this needs no index of its own). */
+const studentRequestsQuery = (b: string, studentId: string) => db.collection(`${b}/${COL.classRequests}`).where('studentId', '==', studentId)
+
+function seatLite(d: Snap): RequestSeat {
+  const s = d.data() as Session
+  return { id: d.id, classId: s.classId, studentId: s.studentId, dateKey: s.dateKey, startMin: s.startMin, endMin: s.endMin, status: s.status, note: s.note, isDeleted: s.isDeleted, startMs: ms(s.startAt) }
+}
+
+/** The student's other requests still open (waiting on the office or on them). */
+const openOthers = (docs: Snap[], exceptId: string | null) => docs.filter((d) => d.id !== exceptId).map((d) => d.data() as ClassRequest).filter(isOpenRequest)
+
+/** A class as the checks read it, its seats taken counted from its seats as they are now. */
+function classLite(id: string, c: AcademyClass | undefined, inClass: FirebaseFirestore.QuerySnapshot): RequestClass | null {
+  if (!c) return null
+  return { id, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, seats: c.seats, isDeleted: c.isDeleted, startMs: ms(c.startAt), taken: inClass.docs.filter((d) => takesSeat(d.data() as Session)).length }
+}
+
+/**
+ * Reads, in a transaction, what checking a request for `classId` needs: the class and its seats now, the student's
+ * seats, and their other open requests.
+ */
+async function readForCheck(tx: Transaction, b: string, r: ClassRequest, requestId: string, classId: string, today: string) {
+  const [classSnap, inClass, seatSnap, reqSnap] = await Promise.all([
+    tx.get(db.doc(`${b}/${COL.classes}/${classId}`)),
+    tx.get(db.collection(`${b}/${COL.sessions}`).where('classId', '==', classId)),
+    tx.get(studentSeatsQuery(b, r.studentId, today)),
+    tx.get(studentRequestsQuery(b, r.studentId)),
+  ])
+  const c = classSnap.data() as AcademyClass | undefined
+  return { c, inClass, target: classLite(classId, c, inClass), seats: seatSnap.docs.map(seatLite), sessions: seatSnap.docs, pending: openOthers(reqSnap.docs, requestId) }
+}
+
+// ----------------------------------------------------------------- booking
+
+interface SeatPlan {
+  /** The request, with the class it books. */
+  r: ClassRequest
+  c: AcademyClass
+  /** The class's seats, read in the same transaction. */
+  inClass: FirebaseFirestore.QuerySnapshot
+  /** The class a move replaces, read in the same transaction. */
+  moved: Session | undefined
+  student: Student | undefined
+}
+
+/**
+ * Books a request's seat in the transaction that checked it: the seat, labeled in the sheets' words ("MU for 10/26",
+ * "Practice"); the class a move replaces, canceled; each with its audit entry; and the class's seats taken. The
+ * transaction has read the class's seats and its `classSeats` (which it writes here), so two bookings of a class's last
+ * seat can't both go through: the second one is checked again, and finds the class full.
+ */
+function bookSeat(tx: Transaction, b: string, who: Caller, via: Via, tz: string, p: SeatPlan, why: string): { seatId: string; label: string } {
+  const { r, c } = p
+  const seatRef = db.collection(`${b}/${COL.sessions}`).doc()
+  const label = seatLabelFor(r.kind, r.forDateKey)
+  tx.create(seatRef, {
+    classId: r.classId,
+    coachId: '',
+    coachName: '',
+    studentId: r.studentId,
+    studentName: p.student?.name ?? r.studentName,
+    studentGrade: p.student?.grade ?? '',
+    note: label,
+    status: 'confirmed',
+    dateKey: c.dateKey,
+    weekday: weekdayOf(c.dateKey),
+    startMin: c.startMin,
+    endMin: c.endMin,
+    startAt: toInstant(c.dateKey, c.startMin, tz),
+    endAt: toInstant(c.dateKey, c.endMin, tz),
+    dayEndAt: dayEndInstant(c.dateKey, tz),
+    visualOrder: p.inClass.size,
+    confirmedAt: null,
+    confirmedBy: null,
+    source: 'request',
+    isDeleted: false,
+    deletedAt: null,
+    deletedBy: null,
+    createdAt: FieldValue.serverTimestamp(),
+    createdBy: who.email,
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: who.email,
+  })
+  const log = db.collection(`${b}/${COL.auditLog}`)
+  tx.create(
+    log.doc(),
+    audit(who, via, {
+      action: 'session.create',
+      entityType: 'session',
+      entityId: seatRef.id,
+      summary: `Added ${r.studentName} to the class (${label}), ${why}`,
+      dateKey: c.dateKey,
+      studentId: r.studentId,
+      studentName: r.studentName,
+      changes: [{ field: 'status', label: 'Status', from: null, to: 'Confirmed' }],
+    }),
+  )
+  const moved = p.moved
+  if (r.kind === 'reschedule' && moved && r.forSessionId) {
+    tx.update(db.doc(`${b}/${COL.sessions}/${r.forSessionId}`), {
+      status: 'canceled',
+      canceled: { at: FieldValue.serverTimestamp(), by: who.email, via: 'request' },
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: who.email,
+    })
+    tx.create(
+      log.doc(),
+      audit(who, via, {
+        action: 'session.status',
+        entityType: 'session',
+        entityId: r.forSessionId,
+        summary: `Canceled ${r.studentName}’s class: moved to ${label === 'Practice' ? 'another time' : 'its makeup'}, ${why}`,
+        dateKey: moved.dateKey,
+        studentId: r.studentId,
+        studentName: r.studentName,
+        changes: [{ field: 'status', label: 'Status', from: moved.status === 'confirmed' ? 'Confirmed' : 'Pending', to: 'Canceled' }],
+      }),
+    )
+  }
+  const taken = p.inClass.docs.filter((d) => takesSeat(d.data() as Session)).length + 1
+  const seats: ClassSeats = { dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, startAt: c.startAt, seats: c.seats, taken, isDeleted: false, updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp }
+  tx.set(db.doc(`${b}/${COL.classSeats}/${r.classId}`), seats)
+  return { seatId: seatRef.id, label }
+}
+
 // ----------------------------------------------------------------- request
 
 const KINDS: readonly ClassRequestKind[] = ['makeup', 'reschedule', 'extra']
@@ -168,24 +328,24 @@ export const requestClass = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req)
   const now = Date.now()
 
   const b = base(branchId)
-  const [classSnap, taken, seatSnap, pendingSnap, studentSnap] = await Promise.all([
+  const [classSnap, taken, seatSnap, requestSnap, studentSnap] = await Promise.all([
     db.doc(`${b}/${COL.classes}/${classId}`).get(),
     db.collection(`${b}/${COL.sessions}`).where('classId', '==', classId).get(),
-    db.collection(`${b}/${COL.sessions}`).where('studentId', '==', studentId).where('dateKey', '>=', addDays(today, -MAKEUP_LOOKBACK_DAYS)).get(),
-    db.collection(`${b}/${COL.classRequests}`).where('studentId', '==', studentId).where('status', '==', 'pending').get(),
+    studentSeatsQuery(b, studentId, today).get(),
+    studentRequestsQuery(b, studentId).get(),
     db.doc(`${b}/${COL.students}/${studentId}`).get(),
   ])
   const c = classSnap.data() as AcademyClass | undefined
-  const target = c
-    ? { id: classId, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, seats: c.seats, isDeleted: c.isDeleted, startMs: ms(c.startAt), taken: taken.docs.filter((d) => takesSeat(d.data() as Session)).length }
-    : null
-  const seats = seatSnap.docs.map((d) => {
-    const s = d.data() as Session
-    return { id: d.id, classId: s.classId, studentId: s.studentId, dateKey: s.dateKey, startMin: s.startMin, endMin: s.endMin, status: s.status, note: s.note, isDeleted: s.isDeleted, startMs: ms(s.startAt) }
+  const check = requestCheck({
+    draft: { kind, classId, forSessionId },
+    target: classLite(classId, c, taken),
+    seats: seatSnap.docs.map(seatLite),
+    pending: openOthers(requestSnap.docs, null),
+    nowMs: now,
+    today,
+    settings,
   })
-  const pending = pendingSnap.docs.map((d) => d.data() as ClassRequest)
-  const check = requestCheck({ draft: { kind, classId, forSessionId }, target, seats, pending, nowMs: now, today, settings })
-  if (!check.ok || !c) throw new HttpsError('failed-precondition', check.ok ? 'That class can’t be asked for anymore.' : check.message)
+  if (!check.ok || !c) throw refuse(check.ok ? 'That class can’t be asked for anymore.' : check.message)
 
   const student = studentSnap.data() as Student | undefined
   const ref = db.collection(`${b}/${COL.classRequests}`).doc()
@@ -209,6 +369,8 @@ export const requestClass = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req)
     decidedBy: null,
     decisionNote: '',
     sessionId: null,
+    offer: null,
+    history: [requestStep('asked', Timestamp.now(), actorOf(who), { classId, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin }, message)],
   }
   await ref.create(request)
 
@@ -217,7 +379,7 @@ export const requestClass = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req)
   return { requestId: ref.id }
 })
 
-/** The family takes back a request still waiting. */
+/** The family takes back a request still open: waiting for the office, or for their answer to a time suggested. */
 export const withdrawClassRequest = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req) => {
   const branchId = idOf(req.data?.branchId, 'academy')
   const requestId = idOf(req.data?.requestId, 'request')
@@ -226,137 +388,213 @@ export const withdrawClassRequest = onCall({ timeoutSeconds: 30, ...LIGHT }, asy
   await db.runTransaction(async (tx) => {
     const r = (await tx.get(ref)).data() as ClassRequest | undefined
     if (!r || !familyOfStudent(who, r.studentId)) throw new HttpsError('not-found', 'Request not found.')
-    if (r.status !== 'pending') throw new HttpsError('failed-precondition', 'The academy has already answered this request.')
-    tx.update(ref, { status: 'withdrawn', updatedAt: FieldValue.serverTimestamp() })
+    if (!isOpenRequest(r)) throw refuse(closedMessage(r.status, 'family'))
+    tx.update(ref, { status: 'withdrawn', offer: null, history: withStep(r.history, requestStep('withdrawn', Timestamp.now(), actorOf(who))), updatedAt: FieldValue.serverTimestamp() })
   })
   return { ok: true }
 })
 
 // ------------------------------------------------------------------ decide
 
-/** The office approves a request (the seat is booked, and a moved class canceled) or declines it, with a note. */
+/**
+ * The office answers a request still open (waiting on it, or on the family's answer to a time it suggested):
+ * - `approve`: the class asked for is booked (a moved class canceled). `classId`, if given, is the class the office saw:
+ *   if the family has asked for another since, nothing is booked and the office is asked to look again.
+ * - `reject`: declined, with `note` for the family.
+ * - `offer`: `classId` is suggested instead, with `note` ("Tuesday is full; Thursday has two seats."): a class the family
+ *   could ask for themselves. The request waits on the family, who accept it or ask for another (answerClassOffer).
+ * The family is told each time.
+ */
 export const decideClassRequest = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req) => {
   const branchId = idOf(req.data?.branchId, 'academy')
   const requestId = idOf(req.data?.requestId, 'request')
-  const approve = req.data?.decision === 'approve'
-  if (!approve && req.data?.decision !== 'reject') throw new HttpsError('invalid-argument', 'Approve or decline.')
+  const decision = req.data?.decision
+  if (decision !== 'approve' && decision !== 'reject' && decision !== 'offer') throw new HttpsError('invalid-argument', 'Approve, decline or suggest another class.')
+  const classId = decision === 'offer' ? idOf(req.data?.classId, 'the class to suggest') : decision === 'approve' ? optionalId(req.data?.classId, 'class') : null
   const note = text(req.data?.note, 500)
   const via = viaOf(req.data?.via)
   const who = await callerOf(branchId, req.auth)
   if (who.role !== 'owner' && who.role !== 'admin') throw new HttpsError('permission-denied', 'Only the academy’s admins answer requests.')
-  const { tz } = await academyOf(branchId)
-  const b = base(branchId)
-  const ref = db.doc(`${b}/${COL.classRequests}/${requestId}`)
+  const academy = await academyOf(branchId)
+  const ctx = { branchId, b: base(branchId), requestId, ref: db.doc(`${base(branchId)}/${COL.classRequests}/${requestId}`), who, via, note, ...academy }
+  if (decision === 'offer') return offerClass(ctx, classId as string)
+  return decide(ctx, decision === 'approve', classId)
+})
 
+type DecideCtx = {
+  branchId: string
+  b: string
+  requestId: string
+  ref: FirebaseFirestore.DocumentReference
+  who: Caller
+  via: Via
+  note: string
+  settings: ReturnType<typeof resolveSettings>
+  tz: string
+  today: string
+}
+
+/** Approves (books the class asked for) or declines a request, and tells the family. */
+async function decide(x: DecideCtx, approve: boolean, seen: string | null) {
+  const { b, ref, who, via, note } = x
   const decided = await db.runTransaction(async (tx) => {
     const r = (await tx.get(ref)).data() as ClassRequest | undefined
     if (!r) throw new HttpsError('not-found', 'Request not found.')
-    if (r.status !== 'pending') throw new HttpsError('failed-precondition', r.status === 'withdrawn' ? 'The family withdrew this request.' : 'This request has already been answered.')
-    const stamp = { updatedAt: FieldValue.serverTimestamp(), decidedAt: FieldValue.serverTimestamp(), decidedBy: { email: who.email, name: who.name } }
+    if (!isOpenRequest(r)) throw refuse(closedMessage(r.status, 'office'))
+    const at = Timestamp.now()
+    const stamp = { offer: null, updatedAt: FieldValue.serverTimestamp(), decidedAt: FieldValue.serverTimestamp(), decidedBy: { email: who.email, name: who.name } }
     if (!approve) {
-      tx.update(ref, { status: 'rejected', decisionNote: note, ...stamp })
+      tx.update(ref, { status: 'rejected', decisionNote: note, history: withStep(r.history, requestStep('rejected', at, actorOf(who), null, note)), ...stamp })
       tx.create(
         db.collection(`${b}/${COL.auditLog}`).doc(),
-        audit(who, via, { action: 'request.reject', entityType: 'classRequest', entityId: requestId, summary: `Declined ${r.studentName}’s request for a class`, dateKey: r.dateKey, studentId: r.studentId, studentName: r.studentName }),
+        audit(who, via, { action: 'request.reject', entityType: 'classRequest', entityId: x.requestId, summary: `Declined ${r.studentName}’s request for a class`, dateKey: r.dateKey, studentId: r.studentId, studentName: r.studentName }),
       )
       return { ...r, decisionNote: note, sessionId: null as string | null }
     }
+    if (seen && seen !== r.classId) throw refuse('The family has asked for another class since. Check the request, then answer again.')
 
-    const classRef = db.doc(`${b}/${COL.classes}/${r.classId}`)
     const [classSnap, inClass, forSnap, studentSnap] = await Promise.all([
-      tx.get(classRef),
+      tx.get(db.doc(`${b}/${COL.classes}/${r.classId}`)),
       tx.get(db.collection(`${b}/${COL.sessions}`).where('classId', '==', r.classId)),
       r.forSessionId ? tx.get(db.doc(`${b}/${COL.sessions}/${r.forSessionId}`)) : Promise.resolve(null),
       tx.get(db.doc(`${b}/${COL.students}/${r.studentId}`)),
+      // Read, so that two bookings of the class's last seat can't both commit (bookSeat writes it).
+      tx.get(db.doc(`${b}/${COL.classSeats}/${r.classId}`)),
     ])
     const c = classSnap.data() as AcademyClass | undefined
-    if (!c || c.isDeleted || ms(c.startAt) <= Date.now()) throw new HttpsError('failed-precondition', 'That class is no longer ahead on the schedule. Decline the request, or book another time on the schedule.')
+    if (!c || c.isDeleted || ms(c.startAt) <= Date.now()) throw refuse('That class is no longer ahead on the schedule. Suggest another class, decline the request, or book another time on the schedule.')
     const live = inClass.docs.map((d) => d.data() as Session).filter(takesSeat)
-    if (live.some((s) => s.studentId === r.studentId)) throw new HttpsError('failed-precondition', `${r.studentName} is already in that class.`)
-    if (live.length >= c.seats) throw new HttpsError('failed-precondition', 'That class is full now. Make room on the schedule first, or decline the request.')
+    if (live.some((s) => s.studentId === r.studentId)) throw refuse(`${r.studentName} is already in that class.`)
+    if (live.length >= c.seats) throw refuse('That class is full now. Suggest another class, make room on the schedule first, or decline the request.')
     const moved = forSnap?.data() as Session | undefined
     if (r.kind === 'reschedule' && (!moved || moved.isDeleted || (moved.status !== 'pending' && moved.status !== 'confirmed'))) {
-      throw new HttpsError('failed-precondition', 'The class to move is no longer on the schedule. Decline the request, or book it on the schedule.')
+      throw refuse('The class to move is no longer on the schedule. Decline the request, or book it on the schedule.')
     }
+    const { seatId } = bookSeat(tx, b, who, via, x.tz, { r, c, inClass, moved, student: studentSnap.data() as Student | undefined }, 'as the family asked')
+    tx.update(ref, { status: 'approved', sessionId: seatId, decisionNote: note, history: withStep(r.history, requestStep('approved', at, actorOf(who), r, note)), ...stamp })
+    return { ...r, decisionNote: note, sessionId: seatId }
+  })
 
-    const student = studentSnap.data() as Student | undefined
-    const seatRef = db.collection(`${b}/${COL.sessions}`).doc()
-    const label = seatLabelFor(r.kind, r.forDateKey)
-    tx.create(seatRef, {
-      classId: r.classId,
-      coachId: '',
-      coachName: '',
-      studentId: r.studentId,
-      studentName: student?.name ?? r.studentName,
-      studentGrade: student?.grade ?? '',
-      note: label,
-      status: 'confirmed',
-      dateKey: c.dateKey,
-      weekday: weekdayOf(c.dateKey),
-      startMin: c.startMin,
-      endMin: c.endMin,
-      startAt: toInstant(c.dateKey, c.startMin, tz),
-      endAt: toInstant(c.dateKey, c.endMin, tz),
-      dayEndAt: dayEndInstant(c.dateKey, tz),
-      visualOrder: inClass.size,
-      confirmedAt: null,
-      confirmedBy: null,
-      source: 'request',
-      isDeleted: false,
-      deletedAt: null,
-      deletedBy: null,
-      createdAt: FieldValue.serverTimestamp(),
-      createdBy: who.email,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: who.email,
-    })
-    const log = db.collection(`${b}/${COL.auditLog}`)
+  const family = await familyOf(x.branchId, decided.studentId)
+  await tell(
+    x.branchId,
+    noticesFor(family, decidedNotice(decided, approve), (p) => familyClassesLink(p, decided.dateKey), { requestId: x.requestId, sessionId: decided.sessionId, dateKey: decided.dateKey }),
+    `decided-${x.requestId}`,
+  )
+  return { ok: true, sessionId: decided.sessionId }
+}
+
+/** Suggests another class to the family, and tells them. */
+async function offerClass(x: DecideCtx, classId: string) {
+  const { b, ref, who, via, note } = x
+  const done = await db.runTransaction(async (tx) => {
+    const r = (await tx.get(ref)).data() as ClassRequest | undefined
+    if (!r) throw new HttpsError('not-found', 'Request not found.')
+    if (!isOpenRequest(r)) throw refuse(closedMessage(r.status, 'office'))
+    const data = await readForCheck(tx, b, r, x.requestId, classId, x.today)
+    const check = offerCheck(r, { target: data.target, seats: data.seats, pending: data.pending, nowMs: Date.now(), today: x.today, settings: x.settings })
+    if (!check.ok || !data.c) throw refuse(check.ok ? 'That class can’t be suggested.' : check.message)
+    const at = Timestamp.now()
+    const c = data.c
+    const offer: ClassOffer = { classId, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, startAt: c.startAt, note, by: { email: who.email, name: who.name }, at }
+    tx.update(ref, { status: 'offered', offer, history: withStep(r.history, requestStep('offered', at, actorOf(who), offer, note)), updatedAt: FieldValue.serverTimestamp() })
     tx.create(
-      log.doc(),
+      db.collection(`${b}/${COL.auditLog}`).doc(),
       audit(who, via, {
-        action: 'session.create',
-        entityType: 'session',
-        entityId: seatRef.id,
-        summary: `Added ${r.studentName} to the class (${label}), as the family asked`,
+        action: 'request.offer',
+        entityType: 'classRequest',
+        entityId: x.requestId,
+        summary: `Suggested another class to ${r.studentName}’s family`,
         dateKey: c.dateKey,
         studentId: r.studentId,
         studentName: r.studentName,
-        changes: [{ field: 'status', label: 'Status', from: null, to: 'Confirmed' }],
       }),
     )
-    if (r.kind === 'reschedule' && moved && r.forSessionId) {
-      tx.update(db.doc(`${b}/${COL.sessions}/${r.forSessionId}`), {
-        status: 'canceled',
-        canceled: { at: FieldValue.serverTimestamp(), by: who.email, via: 'request' },
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: who.email,
-      })
-      tx.create(
-        log.doc(),
-        audit(who, via, {
-          action: 'session.status',
-          entityType: 'session',
-          entityId: r.forSessionId,
-          summary: `Canceled ${r.studentName}’s class: moved to ${label === 'Practice' ? 'another time' : 'its makeup'}, as the family asked`,
-          dateKey: moved.dateKey,
-          studentId: r.studentId,
-          studentName: r.studentName,
-          changes: [{ field: 'status', label: 'Status', from: moved.status === 'confirmed' ? 'Confirmed' : 'Pending', to: 'Canceled' }],
-        }),
-      )
-    }
-    tx.update(ref, { status: 'approved', sessionId: seatRef.id, decisionNote: note, ...stamp })
-    return { ...r, decisionNote: note, sessionId: seatRef.id }
+    return { r, offer }
   })
 
-  const family = await familyOf(branchId, decided.studentId)
-  const notice = decidedNotice(decided, approve)
+  const family = await familyOf(x.branchId, done.r.studentId)
   await tell(
-    branchId,
-    noticesFor(family, notice, (p) => familyClassesLink(p, decided.dateKey), { requestId, sessionId: decided.sessionId, dateKey: decided.dateKey }),
-    `decided-${requestId}`,
+    x.branchId,
+    noticesFor(family, offeredNotice(done.r, done.offer), (p) => familyClassesLink(p, done.offer.dateKey), { requestId: x.requestId, dateKey: done.offer.dateKey }),
+    `offered-${x.requestId}-${ms(done.offer.at)}`,
   )
-  return { ok: true, sessionId: decided.sessionId }
+  return { ok: true, sessionId: null }
+}
+
+// ------------------------------------------------------------------ answer
+
+/**
+ * The family answers a class the office suggested (a linked parent or the student):
+ * - `accept`: the class suggested is booked as approving books it (its seat labeled as the request's, a moved class
+ *   canceled), if it still has a seat open; else nothing changes and they're told why. `classId`, if given, is the class
+ *   they saw suggested: if the office has changed its suggestion since, nothing is booked.
+ * - `another`: they ask for `classId` instead, with an optional `message`: the request waits on the office again.
+ * The office is told either way.
+ */
+export const answerClassOffer = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req) => {
+  const branchId = idOf(req.data?.branchId, 'academy')
+  const requestId = idOf(req.data?.requestId, 'request')
+  const answer = req.data?.answer
+  if (answer !== 'accept' && answer !== 'another') throw new HttpsError('invalid-argument', 'Accept the time suggested, or ask for another.')
+  const classId = answer === 'another' ? idOf(req.data?.classId, 'class') : optionalId(req.data?.classId, 'class')
+  const message = text(req.data?.message, 500)
+  const via = viaOf(req.data?.via)
+  const who = await callerOf(branchId, req.auth)
+  const { settings, tz, today } = await academyOf(branchId)
+  const b = base(branchId)
+  const ref = db.doc(`${b}/${COL.classRequests}/${requestId}`)
+
+  const done = await db.runTransaction(async (tx) => {
+    const r = (await tx.get(ref)).data() as ClassRequest | undefined
+    if (!r || !familyOfStudent(who, r.studentId)) throw new HttpsError('not-found', 'Request not found.')
+    if (r.status !== 'offered' || !r.offer) throw refuse(closedMessage(r.status, 'family'))
+    const target = answer === 'accept' ? r.offer.classId : (classId as string)
+    const [data, , studentSnap] = await Promise.all([
+      readForCheck(tx, b, r, requestId, target, today),
+      // Read, so that two bookings of the class's last seat can't both commit (bookSeat writes it).
+      answer === 'accept' ? tx.get(db.doc(`${b}/${COL.classSeats}/${target}`)) : Promise.resolve(null),
+      answer === 'accept' ? tx.get(db.doc(`${b}/${COL.students}/${r.studentId}`)) : Promise.resolve(null),
+    ])
+    const facts = { target: data.target, seats: data.seats, pending: data.pending, nowMs: Date.now(), today, settings }
+    const check = answer === 'accept' ? acceptCheck(r, classId, facts) : anotherCheck(r, facts)
+    if (!check.ok || !data.c) throw refuse(check.ok ? 'That class can’t be booked anymore. Ask for another time.' : check.message)
+    const c = data.c
+    const at = Timestamp.now()
+    const now = { classId: target, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, startAt: c.startAt }
+
+    if (answer === 'another') {
+      tx.update(ref, { ...now, status: 'pending', offer: null, message, history: withStep(r.history, requestStep('asked_again', at, actorOf(who), now, message)), updatedAt: FieldValue.serverTimestamp() })
+      return { r: { ...r, ...now, message }, at, seatId: null as string | null, label: '' }
+    }
+    const booked: ClassRequest = { ...r, ...now }
+    const moved = r.forSessionId ? (data.sessions.find((d) => d.id === r.forSessionId)?.data() as Session | undefined) : undefined
+    const { seatId, label } = bookSeat(tx, b, who, via, tz, { r: booked, c, inClass: data.inClass, moved, student: studentSnap?.data() as Student | undefined }, 'accepting the time the academy suggested')
+    tx.update(ref, {
+      ...now,
+      status: 'approved',
+      sessionId: seatId,
+      offer: null,
+      history: withStep(r.history, requestStep('accepted', at, actorOf(who), now, message)),
+      decidedAt: FieldValue.serverTimestamp(),
+      decidedBy: { email: who.email, name: who.name },
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+    return { r: { ...booked, sessionId: seatId }, at, seatId: seatId as string | null, label }
+  })
+
+  // The office hears the answer; the rest of the family, that it's booked.
+  const r = done.r
+  const by = { name: who.name, role: who.role as 'parent' | 'student' }
+  const office = await officeOf(branchId)
+  const forOffice = answer === 'accept' ? acceptedNotice(r, by, r, done.label) : askedAgainNotice(r, by, r, message)
+  const items = noticesFor(office, forOffice, () => officeLink(r.dateKey, requestId), { requestId, sessionId: done.seatId, dateKey: r.dateKey })
+  if (answer === 'accept') {
+    const family = await familyOf(branchId, r.studentId)
+    items.push(...noticesFor(family, decidedNotice(r, true), (p) => familyClassesLink(p, r.dateKey), { requestId, sessionId: done.seatId, dateKey: r.dateKey }, who.email))
+  }
+  await tell(branchId, items, `${answer === 'accept' ? 'accepted' : 'askedagain'}-${requestId}-${ms(done.at)}`)
+  return { ok: true, sessionId: done.seatId }
 })
 
 // -------------------------------------------------------------- seats taken
@@ -433,11 +671,30 @@ export async function syncUpcomingSeats(branchId: string, today: string) {
   await writer.close()
 }
 
-/** Requests still waiting for a class that's past: there's nothing to answer, so they're closed as declined. */
+/** Who closes a request whose class passed: the server. */
+const SERVER: RequestActor = { email: 'system', name: '', role: 'system' }
+
+/**
+ * Requests still open whose class has started (the class suggested, while the family's answer is awaited): nothing is
+ * left to answer, so they're closed as declined.
+ */
 export async function closeStaleRequests(branchId: string, nowMs: number) {
-  const snap = await db.collection(`${base(branchId)}/${COL.classRequests}`).where('status', '==', 'pending').get()
-  const stale = snap.docs.filter((d) => ms(d.data().startAt) <= nowMs)
-  await Promise.all(stale.map((d) => d.ref.update({ status: 'rejected', decisionNote: 'The class has passed.', decidedAt: FieldValue.serverTimestamp(), decidedBy: null, updatedAt: FieldValue.serverTimestamp() })))
+  const snap = await db.collection(`${base(branchId)}/${COL.classRequests}`).where('status', 'in', ['pending', 'offered']).get()
+  const stale = snap.docs.filter((d) => isStaleRequest(d.data() as ClassRequest, nowMs))
+  const at = Timestamp.fromMillis(nowMs)
+  await Promise.all(
+    stale.map((d) => {
+      const r = d.data() as ClassRequest
+      return d.ref.update({
+        status: 'rejected',
+        decisionNote: r.status === 'offered' ? 'The class suggested has passed.' : 'The class has passed.',
+        offer: null,
+        history: withStep(r.history, requestStep('rejected', at, SERVER)),
+        decidedAt: FieldValue.serverTimestamp(),
+        decidedBy: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }),
+  )
   return stale.length
 }
-

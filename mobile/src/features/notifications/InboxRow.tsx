@@ -3,9 +3,11 @@ import { minutesOf } from "@shared/time";
 import {
   Bell,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   CalendarMinus,
   CalendarPlus,
+  CalendarSearch,
   CalendarX2,
   ChartLine,
   ChevronRight,
@@ -47,6 +49,9 @@ const ICONS: Record<string, LucideIcon> = {
   class_requested: CalendarPlus,
   request_approved: CircleCheck,
   request_rejected: CircleX,
+  request_offered: CalendarClock,
+  request_accepted: CircleCheck,
+  request_asked_again: CalendarSearch,
   score_added: Target,
   contract_signed: Signature,
 };

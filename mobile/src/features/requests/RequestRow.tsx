@@ -1,4 +1,4 @@
-import { type ClassRequest, type ClassRequestKind, REQUEST_KIND_LABELS } from "@shared/schedule/requests";
+import { type ClassRequest, type ClassRequestKind, REQUEST_KIND_LABELS, REQUEST_OFFICE_STATUS_LABELS, requestHistory, requestWaitsOn } from "@shared/schedule/requests";
 import { addDays, dateKeyOf, formatDateKey, formatInstant, minutesOf, todayKey } from "@shared/time";
 import { ArrowRightLeft, CalendarPlus, ChevronRight, type LucideIcon, RotateCcw } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -33,15 +33,28 @@ export function askedWhen(t: unknown, timezone: string, hour12: boolean): string
   return formatInstant(ms, timezone, { dateStyle: "medium", timeStyle: "short" });
 }
 
-/** A family's request in the office's lists: its kind, the student, what it's for and when, and when it was asked. */
+/** When a request waiting on the office was asked: "Asked today, 3:30 AM", or "Asked again …" after a suggestion. */
+function askedLine(r: RequestDoc, timezone: string, hour12: boolean): string {
+  const steps = requestHistory(r);
+  const last = steps[steps.length - 1];
+  return last?.action === "asked_again" ? `Asked again ${askedWhen(last.at, timezone, hour12)}` : `Asked ${askedWhen(r.createdAt, timezone, hour12)}`;
+}
+
+/**
+ * A family's request in the office's lists: its kind, the student, what it's for and when (the class suggested, while
+ * the family's answer is awaited), and when it was asked, or where it stands.
+ */
 export function RequestRow({ r, timezone, hour12, onPress, divider = false }: { r: RequestDoc; timezone: string; hour12: boolean; onPress: () => void; divider?: boolean }) {
   const colors = useColors();
   const { Icon, color } = KIND[r.kind];
+  const c = requestWaitsOn(r);
+  const when = `${r.status === "offered" ? "suggested " : ""}${shortDay(c.dateKey)}, ${timeRange(c.startMin, c.endMin, hour12)}`;
+  const state = r.status === "pending" ? askedLine(r, timezone, hour12) : `${REQUEST_OFFICE_STATUS_LABELS[r.status]} · ${askedWhen(r.updatedAt, timezone, hour12)}`;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${r.studentName}: ${whatFor(r)}, ${shortDay(r.dateKey)}, ${timeRange(r.startMin, r.endMin, hour12)}. Asked ${askedWhen(r.createdAt, timezone, hour12)}`}
+      accessibilityLabel={`${r.studentName}: ${whatFor(r)}, ${when}. ${state}`}
       style={({ pressed }) => [styles.row, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, pressed && { backgroundColor: colors.accent }]}
       testID={`request-${r.id}`}
     >
@@ -53,10 +66,10 @@ export function RequestRow({ r, timezone, hour12, onPress, divider = false }: { 
           {r.studentName}
         </T>
         <T variant="small" tone="muted" numberOfLines={2}>
-          {whatFor(r)} · {shortDay(r.dateKey)}, {timeRange(r.startMin, r.endMin, hour12)}
+          {whatFor(r)} · {when}
         </T>
         <T variant="tiny" tone="muted">
-          Asked {askedWhen(r.createdAt, timezone, hour12)}
+          {state}
         </T>
       </View>
       <ChevronRight size={16} color={colors.mutedForeground} />

@@ -3,7 +3,7 @@ import { LuCalendarClock, LuCalendarX, LuChevronRight, LuExternalLink, LuMail, L
 import { toast } from 'sonner'
 import { type TrendLevel, trendLabel } from '@shared/reports/types'
 import { familyNote, familyStatusLabel } from '@shared/schedule/family'
-import { familyCancelCheck } from '@shared/schedule/requests'
+import { classWhen, familyCancelCheck, isOpenRequest } from '@shared/schedule/requests'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, formatDateKey, formatDuration, formatTimeRange } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
@@ -239,7 +239,7 @@ export function ClassDetails({
             const upcoming = !hasEnded(s, now) && (s.status === 'pending' || s.status === 'confirmed')
             if (!upcoming) return null
             const check = familyCancelCheck({ status: s.status, isDeleted: s.isDeleted, startMs: s.startAt?.toMillis?.() ?? 0 }, now, settings)
-            const moving = requests.data.find((r) => r.status === 'pending' && r.kind === 'reschedule' && r.forSessionId === s.id)
+            const moving = requests.data.find((r) => isOpenRequest(r) && r.kind === 'reschedule' && r.forSessionId === s.id)
             async function cancelIt() {
               if (!s) return
               const whose = family.who === 'parent' ? `${family.firstName(s.studentId)}’s class` : 'Your class'
@@ -262,7 +262,11 @@ export function ClassDetails({
             }
             return (
               <div className="space-y-2.5">
-                {moving ? (
+                {moving?.status === 'offered' && moving.offer ? (
+                  <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-950/60 dark:text-sky-200">
+                    To move it, the academy suggests {classWhen(moving.offer)}: accept it or ask for another time at the top of Classes.
+                  </p>
+                ) : moving ? (
                   <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
                     Moving to {formatDateKey(moving.dateKey, 'weekdayMedium')}, {formatTimeRange(moving.startMin, moving.endMin)}: waiting for the academy.
                   </p>
