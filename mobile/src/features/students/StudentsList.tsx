@@ -13,6 +13,7 @@ import { StatusBarScrim, TabHeader } from "@/components/TabHeader";
 import { T } from "@/components/Text";
 import { useStudentList } from "@/features/data/hooks";
 import { studentLine } from "./format";
+import { findsStudent, goesBy } from "./search";
 import { space, useColors } from "@/theme";
 
 type Show = "all" | "active";
@@ -30,11 +31,12 @@ export function StudentsList({ titled }: { titled: boolean }) {
   const [query, setQuery] = useState("");
   const [show, setShow] = useState<Show>("all");
   const current = useMemo(() => students.data.filter((s) => !isInactiveStudent(s.status)), [students.data]);
+  const q = query.trim().toLowerCase();
   const list = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const base = show === "active" ? current : students.data;
-    return q ? base.filter((s) => (s.nameLower ?? s.name.toLowerCase()).includes(q) || s.name.toLowerCase().includes(q)) : base;
-  }, [students.data, current, show, query]);
+    // By their name or the other names they go by, as on the website.
+    return q ? base.filter((s) => findsStudent(s, q)) : base;
+  }, [students.data, current, show, q]);
   const loading = students.loading;
 
   return (
@@ -99,9 +101,9 @@ export function StudentsList({ titled }: { titled: boolean }) {
               <T variant="label" numberOfLines={1}>
                 {s.name}
               </T>
-              {studentLine(s) ? (
+              {goesBy(s, q) || studentLine(s) ? (
                 <T variant="small" tone="muted" numberOfLines={1}>
-                  {studentLine(s)}
+                  {[goesBy(s, q), studentLine(s)].filter(Boolean).join(" · ")}
                 </T>
               ) : null}
             </View>

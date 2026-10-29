@@ -181,9 +181,10 @@ function Picture({ src, alt, onOpen }: { src: string; alt: string; onOpen: (pict
 const styles = StyleSheet.create({
   blocks: { gap: space.md },
   body: { ...type.body, lineHeight: 22 },
-  h1: { fontSize: 20, fontWeight: "600", letterSpacing: -0.2, lineHeight: 26 },
-  h2: { fontSize: 17, fontWeight: "600", lineHeight: 23 },
-  h3: { fontSize: 15, fontWeight: "600", lineHeight: 21 },
+  // As the website sizes a post's headings against its text (web/src/site/styles.css, .post-body): 1.45 and 1.15 times.
+  h1: { fontSize: 21, fontWeight: "600", letterSpacing: -0.2, lineHeight: 26 },
+  h2: { fontSize: 21, fontWeight: "600", letterSpacing: -0.2, lineHeight: 26 },
+  h3: { fontSize: 17, fontWeight: "600", lineHeight: 23 },
   headingGap: { marginTop: space.xs },
   list: { gap: 6 },
   item: { flexDirection: "row", alignItems: "flex-start", gap: 6 },

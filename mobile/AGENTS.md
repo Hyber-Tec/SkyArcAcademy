@@ -66,7 +66,8 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        Week view; ClassRow, a class in a list; parts.tsx, the level and label colours, the seats taken,
                        the coaches in, who's in, a day's events; api.ts, the office's changes to a class's students),
                        requests (families' requests for classes: the server's callables (api.ts), the open seats and
-                       the office's requests waiting (data.ts), a request's row and Home's card), students, drive
+                       the office's requests waiting (data.ts), a request's row and Home's card), students (search.ts,
+                       a student found by their name or another name), drive
                        (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
                        and the family's), scan
                        (reading a card, the card and bull views with each hole at its measured size, saving: what it
@@ -225,6 +226,11 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A post's content** is the website's editor's HTML: the app reads it into its own blocks and draws them with its own
   text and colours (`src/features/announcements/`), never in a web view and never running anything in it; links open in
   the phone's browser (or its mail and phone apps).
+- **Saving a score again** rebuilds a paper card from its bulls (`cardEvaluation`) over the saved record, so what the
+  rebuild doesn't know stays: its kind, a typed total's number of shots, and the score the coach wrote on the card,
+  still the official one (its `official.appTotal` follows the new reading). A rebuilt score is never saved on its own.
+- **Finding a student** goes through `src/features/students/search.ts`: their name or the other names they go by, with
+  "Goes by …" when one of those matched, as the website's searches do.
 - **Permissions:** the camera and the photo library, for the Scan tab only (paper targets and match results sheets;
   texts in `app.config.ts`), and
   notifications. On Android the photo library is the system's photo picker, which needs no permission, and the

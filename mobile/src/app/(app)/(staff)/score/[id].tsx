@@ -54,14 +54,23 @@ const STAMPS = new Set(["id", "createdAt", "createdBy", "updatedAt", "updatedBy"
 /** The score as it will be saved: its scores rebuilt from the draft, or kept as they are where they can't change. */
 function changed(e: EvaluationDoc, d: Draft): NewEvaluation {
   const mode = editModeOf(e);
-  if (mode === "fixed") {
-    const kept = Object.fromEntries(Object.entries(e).filter(([k]) => !STAMPS.has(k))) as NewEvaluation;
-    return { ...kept, position: d.position, dateKey: e.source === "paper" ? d.dateKey : e.dateKey, note: d.note.trim() };
-  }
-  return cardEvaluation(
+  const kept = Object.fromEntries(Object.entries(e).filter(([k]) => !STAMPS.has(k))) as NewEvaluation;
+  if (mode === "fixed") return { ...kept, position: d.position, dateKey: e.source === "paper" ? d.dateKey : e.dateKey, note: d.note.trim() };
+  const rebuilt = cardEvaluation(
     { student: { id: e.studentId, name: e.studentName }, position: d.position, dateKey: d.dateKey, note: d.note, review: mode === "card" ? d.review : null, total: mode === "total" ? d.total : null },
     e.fileId,
   );
+  // What the rebuild doesn't know stays as it was: what the result was (a competition or an evaluation stays one), a
+  // typed total's number of shots, and the score the coach wrote on the card, still the official one, with the new
+  // reading as its reference (as the scan saves it).
+  const next: NewEvaluation = { ...kept, ...rebuilt };
+  if (mode === "total") next.shots = e.shots;
+  if (mode === "card" && e.official) {
+    next.total = e.total;
+    next.wholeTotal = e.wholeTotal;
+    next.official = rebuilt.total === e.total ? null : { ...e.official, appTotal: rebuilt.total };
+  }
+  return next;
 }
 
 const CHANGEABLE = "Its scores can still be changed bull by bull.";
@@ -235,11 +244,11 @@ export default function ScoreScreen() {
           </ListSection>
         ) : mode === "total" ? (
           <Field
-            label="Total, out of 100"
+            label={`Total, out of ${e.shots * 10}`}
             value={String(draft.total)}
-            onChangeText={(t) => change({ total: Math.min(100, Number(t.replace(/\D/g, "")) || 0) })}
+            onChangeText={(t) => change({ total: Math.min(e.shots * 10, Number(t.replace(/\D/g, "")) || 0) })}
             keyboardType="number-pad"
-            maxLength={3}
+            maxLength={String(e.shots * 10).length}
             hint="Only the card’s total was kept, without its bulls."
             testID="score-total-field"
           />
@@ -249,11 +258,16 @@ export default function ScoreScreen() {
               <ShotDarts evaluation={e} color={POSITION_COLORS[draft.position]} width={inner} current={current} onOpen={setOpenShot} />
             </View>
           </ListSection>
-        ) : (
+        ) : shotsOf(e).length ? (
           <ListSection title="Shots" footer="These scores change on the website.">
             <ListRow title={shotsOf(e).map((t) => t.v).join("  ")} />
           </ListSection>
-        )}
+        ) : e.match?.name ? (
+          // A competition from its results sheet has no shots: its match instead.
+          <ListSection title="The match" footer="These scores change on the website.">
+            <ListRow title={e.match.name} subtitle={e.match.course || undefined} testID="score-match" />
+          </ListSection>
+        ) : null}
 
         {e.problems.length ? (
           <Card style={styles.problems}>
