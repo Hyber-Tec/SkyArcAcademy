@@ -28,10 +28,13 @@ appId: com.skyarcacademy.app
     timeout: 15000
 - assertVisible:
     id: "student-family"
+# To the first score: a student with many is taller than the screen, so the scores' section never shows whole.
 - scrollUntilVisible:
     element:
-      id: "student-scores"
+      id: "student-score-.*"
     direction: DOWN
+    centerElement: true
+    optional: true
 # A score opens its own screen, when the student has one: its shots play back on the target.
 - runFlow:
     when:
@@ -65,10 +68,13 @@ appId: com.skyarcacademy.app
           visible:
             id: "student-screen"
           timeout: 15000
+# To the first file, as for the scores: the Drive's section can be taller than the screen.
 - scrollUntilVisible:
     element:
-      id: "student-files"
+      id: "student-file-.*"
     direction: DOWN
+    centerElement: true
+    optional: true
 # A file opens full screen, when the student has one.
 - runFlow:
     when:

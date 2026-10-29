@@ -215,7 +215,9 @@ appId: com.skyarcacademy.app
     visible:
       id: "score-total"
     timeout: 20000
-# Its shots play as it opens: played again from the first, then paused.
+# Its shots play as it opens: played again from the first and paused at once, so the readout holds an early shot. The
+# taps don't wait for the screen to settle: on Android it doesn't while the shots play, and the wait (14 s a tap) let
+# the whole replay go by first.
 - runFlow:
     when:
       visible:
@@ -223,13 +225,15 @@ appId: com.skyarcacademy.app
     commands:
       - tapOn:
           id: "replay-restart"
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          id: "replay-play"
+          waitToSettleTimeoutMs: 500
       - extendedWaitUntil:
           visible:
             id: "replay-readout"
             text: "(Series 1 · )?Shot [1-9] of.*"
           timeout: 10000
-      - tapOn:
-          id: "replay-play"
 - scrollUntilVisible:
     element:
       id: "family-score-compare"
@@ -313,12 +317,15 @@ appId: com.skyarcacademy.app
     timeout: 15000
 - assertVisible:
     id: "report-tiles"
+# Scrolled to the readout, under the buttons, so both are on screen.
 - scrollUntilVisible:
     element:
-      id: "replay-play"
+      id: "replay-readout"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "replay-play"
+    waitToSettleTimeoutMs: 500
 - assertVisible:
     id: "replay-readout"
 - scrollUntilVisible:

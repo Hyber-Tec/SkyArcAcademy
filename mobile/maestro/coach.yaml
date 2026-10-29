@@ -1,5 +1,5 @@
 # A coach's app: Home, Schedule, Availability, Scan and More (Students first in More), with what a coach may see. Home
-# counts their hours; Availability takes a day through every state (not available, cleared, times, cleared); Students
+# counts their hours; Availability takes a day through every state (not available, cleared, then times); Students
 # lists every student, a student's page has no family contacts, and More has no list of coaches. Signs in as the sample coach (same
 # practice password), then back in as the owner the other flows expect.
 # Run after sign-in.yaml (the practice owner):
@@ -29,9 +29,10 @@ appId: com.skyarcacademy.app
       id: "today-stats"
     timeout: 30000
 - assertVisible: "hours?"
-# Availability: a Tuesday 9 to 15 days ahead (unlocked, inside the notice window; the sample coach doesn't work
-# Tuesdays, so it's unset and has no classes). Not available, cleared, available from its opening hours, cleared: every
-# state, and back to the sample data as it was.
+# Availability: a Monday 9 to 15 days ahead (unlocked). The sample coach works Mondays beside two other coaches, so
+# taking his day away leaves every class with a coach in and the app doesn't ask first (a Tuesday can be the sample's
+# day with him alone). Not available, cleared, then available from its opening hours: every state, and in again, as
+# the sample data has him.
 - runFlow:
     file: steps/tab.yaml
     env:
@@ -41,7 +42,7 @@ appId: com.skyarcacademy.app
     visible:
       id: "availability-calendar"
     timeout: 30000
-- evalScript: "${output.day = (function () { var d = new Date(Date.now() + 9 * 86400000); while (d.getDay() !== 2) d = new Date(d.getTime() + 86400000); var m = d.getMonth() + 1, n = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (n < 10 ? '0' : '') + n; })()}"
+- evalScript: "${output.day = (function () { var d = new Date(Date.now() + 9 * 86400000); while (d.getDay() !== 1) d = new Date(d.getTime() + 86400000); var m = d.getMonth() + 1, n = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (n < 10 ? '0' : '') + n; })()}"
 # The day opens by its link, as Home's to-do opens it: its sheet.
 - runFlow:
     file: steps/availability-day.yaml
@@ -73,13 +74,6 @@ appId: com.skyarcacademy.app
     id: "availability-save"
 - extendedWaitUntil:
     visible: "Availability saved"
-    timeout: 15000
-- runFlow:
-    file: steps/availability-day.yaml
-- tapOn:
-    id: "availability-remove"
-- extendedWaitUntil:
-    visible: "Day cleared"
     timeout: 15000
 # Students, from More: everyone, as for the office.
 - runFlow:
