@@ -7,8 +7,8 @@ one checklist covers both. When something looks wrong, tell Claude Code (the las
 ## 1. Get the newest app
 
 **iPhone, through TestFlight:** open **TestFlight** → **Sky Arc** → **Update** (or **Install**). The newest build is
-**1.1.0 (5)**; it reaches the HyberTec group by itself once Apple has processed it (up to about half an hour after
-the upload). In the app, **More → Version** shows `1.1.0 (5)`.
+**1.1.0 (6)**; it reaches the HyberTec group by itself once Apple has processed it (up to about half an hour after
+the upload). In the app, **More → Version** shows `1.1.0 (6)`.
 
 **Android, over the cable** (Google Play and its review of 1.0.0 stay untouched):
 
@@ -24,8 +24,8 @@ Both are the real Sky Arc (production): what you do in them is saved for real.
 
 ## 2. Sign in with the demo logins
 
-The demo academy holds made-up coaches, students and families, ten weeks of classes, scores with their SIUS PDFs,
-reports and posts. Its own logins see only the demo, with **Demo** in amber beside the logo and each tab's title, so
+The demo academy holds made-up coaches, students and families, ten weeks of classes (each with a seat or two open
+ahead), families' requests in every state, scores with their SIUS PDFs, reports and posts. Its own logins see only the demo, with **Demo** in amber beside the logo and each tab's title, so
 nothing you do there reaches a real family.
 
 | Who | Email | What the phone shows |
@@ -75,14 +75,24 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
 - [ ] **Move to another time:** the class stays booked, with "waiting for the academy", until the office answers.
 - [ ] **Ask for a class:** a makeup or an extra class, from the open seats (never who's in them), with a message.
 - [ ] **Requests:** each answer (approved, or not with the office's note), and **Withdraw** one still waiting.
+- [ ] **A time the academy suggests** comes first in Classes, with its note and seats open: **Accept** (booked at
+      once, after a check), or **Ask for another** (a class with a seat open, and a message). Each request's
+      **History** folds open under it. (The Hwang family has one waiting in the demo.)
 - [ ] As the parent: each child gets their own sheet, cancel and move.
 - [ ] **Scores:** filter by child and by kind (Practice, Competition, Evaluation); a score's shots play back; Compare.
 - [ ] **Reports:** a shared report opens, with its target.
 
 **The office** (`M2`)
 - [ ] Home: the **requests** card, who's in with their clock, the latest scores.
-- [ ] Schedule → **Requests**: approve one; decline one with a note (the family sees the note in their app).
+- [ ] The **Schedule** tab's badge counts the requests waiting on you; Schedule → **Requests** lists them, then those
+      waiting on a family, then the last two weeks' answers.
+- [ ] A request: approve one; decline one with a note (the family sees the note in their app).
+- [ ] **Suggest another time:** type a note, tap a class with a seat open, confirm. The request waits on the family;
+      their answer (accepted, or another time asked) comes back to you, with its **History**. Back and forth as long
+      as it takes.
 - [ ] A class's sheet: marks **Here** and **No-show**.
+- [ ] A day that's over (Schedule → an earlier day): change a mark (a seat shown **Canceled** → **Here**), add a
+      student, take one out. Owners and admins change any day; coaches only look.
 - [ ] A class's sheet → **Add a student**: make-ups owed come first, labelled ("MU for 11/2"); also Practice, Trial 1/2
       and Evaluation.
 - [ ] A student's **⋯**: **Move to another class** that week, and **Take out of this class** (it asks first).
@@ -91,15 +101,17 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
 - [ ] **Drive:** folders, moving a file, a new folder; the Contracts folder (the office's only).
 
 **A coach** (`M7`)
-- [ ] Home: today's classes and the hours.
+- [ ] Home: today's classes and their students; hours and pay are in More → **Payroll**.
 - [ ] **Availability:** set a day more than 7 days ahead (times, not available, repeat every week).
 - [ ] Inside the 7 days: **Add time** only, with **Undo** for 10 seconds; removing time isn't offered.
 - [ ] Marking a day not available when you're the only coach in: it asks first.
-- [ ] Schedule: Day and Week, who's in, a class's sheet; the clock card shows clock-ins as clocked.
+- [ ] Schedule: Day and Week, who's in with their clock-ins, a class's sheet.
 - [ ] Students and Drive: what a coach may see (no family contacts on a student's page).
 
 **Scan: a paper card** (the office and coaches; `M6`, `P1`)
-- [ ] Lay the card on something light (a white table or sheet), on its own, nothing over the bulls; photograph it from
+- [ ] The Scan tab: the paper card first (**Take a photo**, **Choose from Photos**), then **Add a competition result**,
+      the latest cards, and the tips folded at the bottom.
+- [ ] Lay the card flat on its own, on any desk (white, wood or black), nothing over the bulls; photograph it from
       straight above, filling the frame.
 - [ ] The total, the bulls worth a look (orange), and the card with a circle on each hole.
 - [ ] A bull up close: the green circle hugs the hole, and it says how big the hole is ("hole 4.2 mm across").

@@ -210,6 +210,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - The **admin approves or rejects**. If rejected, the family can request another slot.
   - The admin can still book anything directly.
   - Example: a student cancels today's 4 PM class and requests tomorrow's open 4:30 PM seat; the manager approves.
+  - ✅ **Round 2 (Goo, 2026-10-28):** the office can also suggest another class, and the family accepts it or asks for
+    another, back and forth; requests have one place and a badge (#81, `docs/DECISIONS.md` §24).
 - ✅ **S4. Everyone is notified.** Cancellations, changes, new requests, and approvals or rejections notify the right
   people: **parents, students, coaches and admins**. Build the notification **events** here; the phone's push and
   notification settings come in Phase 3 (`M3`, `M4`). (#46)
