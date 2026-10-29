@@ -33,8 +33,8 @@ import { radius, space, useColors } from "@/theme";
  * time order, or the whole week's days one after another. Each class is laid out like the academy's sheets
  * (ClassCard): the coaches in, the seats two across with every student in their level's colour and rifle code, the
  * labels in theirs. Coaches see every class; theirs (in their hours) stand out. A class opens its sheet; the office
- * marks who's here there and adds, moves or takes out students. The office's Requests (with their count) are the
- * families' requests waiting for an answer, as the website's schedule has them.
+ * marks who's here there and adds, moves or takes out students. The office's Requests open every request from
+ * families, as the website's schedule has them; their count is those waiting on the office.
  */
 export default function ScheduleScreen() {
   const { settings, isCoach, isAdmin, staffId } = useBranch();
@@ -105,11 +105,11 @@ export default function ScheduleScreen() {
                 testID="schedule-view"
               />
             </View>
-            {requests.data.length ? (
+            {isAdmin ? (
               <IconButton
                 testID="schedule-requests"
                 icon={<CalendarCheck size={21} color={colors.foreground} />}
-                badge={requests.data.length}
+                badge={requests.data.length || undefined}
                 accessibilityLabel="Requests from families"
                 onPress={() => router.push("/requests")}
                 size={40}

@@ -1,5 +1,5 @@
 import { MAKEUP_LOOKBACK_DAYS, makeupsOwed, takesSeat } from "@shared/schedule/classes";
-import { type ClassRequestKind, isRequestable, requestHorizon } from "@shared/schedule/requests";
+import { type ClassRequestKind, isOpenRequest, isRequestable, requestHorizon } from "@shared/schedule/requests";
 import { type DateKey, addDays } from "@shared/time";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { CalendarPlus, CalendarSearch } from "lucide-react-native";
@@ -33,7 +33,7 @@ const KINDS: readonly ClassRequestKind[] = ["makeup", "reschedule", "extra"];
  * time, or an extra class, in a class with seats open in the next days, as the website's dialog
  * (web/src/features/requests/AskForClassDialog.tsx; docs/DECISIONS.md §23). Families see how many seats are open, never
  * who's in a class. The server checks the request with the shared rules (`requestCheck`) and says why when it can't
- * be made; the academy approves or declines, and the family is told either way. Opened with `studentId`, `kind` and
+ * be made; the academy approves, declines or suggests another time, and the family is told each time. Opened with `studentId`, `kind` and
  * `forSessionId` (the class to move, or the missed class to make up), and a class to move's day (`forDateKey`), so it's
  * found however far ahead it is (the choices stay within the request horizon).
  */
@@ -58,7 +58,8 @@ export default function AskForClassScreen() {
   const seats = useFamilySessions(ids, since, until);
   const requests = useFamilyRequests(ids);
   const classes = useClassSeats(today, horizon);
-  const pending = useMemo(() => requests.data.filter((r) => r.status === "pending"), [requests.data]);
+  // Open requests: waiting for the academy, or for the family's answer to a time suggested.
+  const pending = useMemo(() => requests.data.filter(isOpenRequest), [requests.data]);
 
   // Missed classes still to make up, less those a request is waiting for (the server would refuse a second one).
   const missed = useMemo(() => makeupsOwed(seats.data, since), [seats.data, since]);
@@ -112,7 +113,7 @@ export default function AskForClassScreen() {
         forSessionId: kindNow === "extra" ? null : kindNow === "makeup" ? (makeupFor?.id ?? null) : (moving?.id ?? null),
         message: message.trim(),
       });
-      toast.success("Request sent", { description: "The academy approves or declines it, and you’ll be told either way." });
+      toast.success("Request sent", { description: "The academy approves it or suggests another time, and you’ll be told." });
       router.back();
     } catch (e) {
       toast.error("The request wasn’t sent", { description: requestError(e) });
@@ -146,7 +147,7 @@ export default function AskForClassScreen() {
             ? moving
               ? `Choose another time for ${parent ? `${name}’s` : "your"} class on ${shortDay(moving.dateKey)}. It stays booked until the academy approves the move.`
               : "Choose another time for the class. It stays booked until the academy approves the move."
-            : "Choose a time with a seat open. The academy approves or declines each request."}
+            : "Choose a time with a seat open. The academy approves each request, or suggests another time."}
         </T>
 
         {parent && family.ids.length > 1 && preset !== "reschedule" ? (

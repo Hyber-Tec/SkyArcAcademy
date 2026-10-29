@@ -39,8 +39,9 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        (their Students is More's first row); More's pages (more/: students, coaches, payroll, account,
                        notifications, security); and the screens that open over the tabs (class/[id], coach/[id] and
                        availability-day sheets, the office's add-seat and move-seat (a student into a class's open seat,
-                       or to another class), requests (families' requests waiting) and request/[id] (one, to approve or
-                       decline), student/[id] and student/calendar, score/[id], file/[id], news/ the
+                       or to another class), requests (every request from families: waiting on the office, on a
+                       family's answer, decided) and request/[id] (one, to approve, decline or suggest another time,
+                       with its history), student/[id] and student/calendar, score/[id], file/[id], news/ the
                        academy's announcements (the list, news/[id] a post with its comments, news/attachment a post's
                        file), inbox the person's notifications (Home's bell), drive/ the Drive (the top, drive/[id] a
                        folder), reports/ every progress report and report/[id] one, with sharing a draft, and the Scan
@@ -65,8 +66,10 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        (classes.ts; the week strip; ClassCard, a class laid out like the academy's sheets; WeekList, the
                        Week view; ClassRow, a class in a list; parts.tsx, the level and label colours, the seats taken,
                        the coaches in, who's in, a day's events; api.ts, the office's changes to a class's students),
-                       requests (families' requests for classes: the server's callables (api.ts), the open seats and
-                       the office's requests waiting (data.ts), a request's row and Home's card), students (search.ts,
+                       requests (families' requests for classes: the server's callables (api.ts), the open seats, the
+                       office's open and decided requests and the classes a student could take (data.ts), a request's
+                       row and Home's card, the class picker (ClassChoices) and a request's back and forth (History)),
+                       students (search.ts,
                        a student found by their name or another name), drive
                        (downloading a Drive file through the Storage rules; FileView, a file full screen, the staff's
                        and the family's), scan
@@ -80,7 +83,7 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        classes, scores and shared reports, and the academy's news (news.ts); the child switcher; their
                        classes (classes.ts: brothers and sisters in the same class together) and the class cards; the
                        Classes tab's months (ClassMonth), each child in their colour (tints.ts); the makeups to book and
-                       their requests at the top of Classes (RequestsPanel); a
+                       their requests at the top of Classes (RequestsPanel, a time the academy suggests first); a
                        score's row, a post's row and a student's figures), reports (a progress report's figures and
                        charts), announcements (a post's content, read from the website's editor's HTML into blocks
                        (html.ts) and drawn with the app's own text (RichText); its dates and what it holds; PostParts,
@@ -160,7 +163,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   website does (`src/features/schedule/api.ts`, from its `classApi.ts`): marks them (Coming, Here and No-show on the day,
   Canceled; the words are the shared `SESSION_STATUS_LABELS`), adds one to an open seat (make-ups owed first, labelled
   as the sheets do: "MU for 11/2", "Practice", "Trial 1", "Evaluation"), moves one to another class that week, or takes
-  one out (to the Trash); and answers families' requests (`decideClassRequest`). The class itself (its time, seats,
+  one out (to the Trash); and answers families' requests (`decideClassRequest`: approve, decline, or suggest another
+  class, which the family accepts or answers by asking for another; Schedule's badge counts those waiting on the
+  office). The class itself (its time, seats,
   note, who's in) and part of a class for a student are the website's.
 - **Month calendars scroll vertically through months**, like the iOS Calendar app (permanent rule): never a static
   month with ‹ › arrows, including date pickers (`DatePickerDialog`, `MonthScroller`). Their weeks start on Sunday, as
@@ -214,7 +219,8 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   person's own read receipts (collection group `reads` by their email); opening a post writes their receipt once, with
   only the fields the rules allow (`src/features/family/news.ts`). Families never see a post's comments.
 - **Families never write the schedule**: they cancel a class and ask for one (a makeup, a move, an extra class) through
-  the server's callables (`cancelClass`, `requestClass`, `withdrawClassRequest`, `src/features/requests/api.ts`), which
+  the server's callables (`cancelClass`, `requestClass`, `withdrawClassRequest`, and `answerClassOffer` for a time the
+  academy suggests: accept it, or ask for another in `(family)/another`; `src/features/requests/api.ts`), which
   check each step with the shared rules (`familyCancelCheck`, `requestCheck`, `makeupsOwed`, `@shared/schedule/requests`
   and `classes`) and say why when they refuse; the app shows the same rules first (Cancel off after the cutoff, with
   `cancelRuleText`). Their switches and the office's (`noticeSwitchesFor(role)`) save to `notificationPrefs/{email}`
