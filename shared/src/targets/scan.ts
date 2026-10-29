@@ -499,7 +499,9 @@ function toShot(xDown: number, yDown: number, strength: number, radius: number, 
 const holeLike = (m: HoleMark) => m.l2 >= 0.45 && (m.contained >= 0.75 || (m.bounded >= 0.85 && m.l1 >= 2.5))
 
 function pickShots(read: HoleMark[], expected: number): { shots: Found[]; extra: Found[] } {
-  const marks = read.filter((c) => c.strength >= WEAK && holeLike(c))
+  // Strongest first, but a mark whose own round edge could be measured is surely a hole: it goes before those that
+  // couldn't be (the dark edge of another card lying over the bull can differ more than a hole does).
+  const marks = read.filter((c) => c.strength >= WEAK && holeLike(c)).sort((p, q) => Number(p.radius === null) - Number(q.radius === null) || q.strength - p.strength)
   const shots: Found[] = []
   const used = new Set<HoleMark>()
   for (const c of marks) {

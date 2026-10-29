@@ -4,7 +4,7 @@ import { type Mat3, applyH, fitEllipse, fitHomography } from './geometry'
 import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, holeRadiusOf, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
 import { CARD_HOLES, scanCard } from './scan'
 import { MISS_BEYOND_MM, PELLET_RADIUS_MM, scoreAt, scoreHole } from './score'
-import { type SyntheticShot, drawSyntheticCard } from './synthetic'
+import { SYNTHETIC_HOLE_MM, type SyntheticShot, drawSyntheticCard } from './synthetic'
 
 describe('scoreAt (ISSF: the hole touching a ring counts it)', () => {
   it('scores whole rings with the 4.5 mm pellet touching the line', () => {
@@ -216,6 +216,55 @@ describe('scanCard on a made-up photo of the card', () => {
     const scan = scanCard(blank)
     expect(scan.ok).toBe(false)
     expect(scan.reason).toMatch(/No target found/)
+  })
+})
+
+describe('scanCard whatever the card lies on', () => {
+  /**
+   * One shot per bull from the 10 to the 1, on the black, across its edge and on the paper, clean or with torn fibres,
+   * each hole's edge well inside its ring so the score is certain. A hole shows what's behind the card: lighter than
+   * the black and darker than the paper on a desk, darker than the black too on a black one.
+   */
+  const at = (d: number, deg: number) => ({ x: Math.round(d * Math.cos((deg * Math.PI) / 180) * 100) / 100, y: Math.round(d * Math.sin((deg * Math.PI) / 180) * 100) / 100 })
+  const RINGS: SyntheticShot[] = [
+    { bull: 1, ...at(1.0, -37), look: 'wall' },
+    { bull: 2, ...at(3.55, 135), look: 'fibres' },
+    { bull: 3, ...at(6.05, 45), look: 'wall', radiusMm: 2.15 },
+    { bull: 4, ...at(8.55, 180), look: 'fibres' },
+    { bull: 5, ...at(11.05, -90), look: 'wall', radiusMm: 1.95 },
+    { bull: 6, ...at(16.05, -45), look: 'wall' },
+    { bull: 7, ...at(18.55, -135), look: 'fibres' },
+    { bull: 8, ...at(21.05, 90), look: 'wall' },
+    { bull: 9, ...at(23.55, 45), look: 'wall', radiusMm: 2.15 },
+    { bull: 10, ...at(13.55, 135), look: 'fibres' },
+  ]
+
+  for (const background of ['white', 'brown', 'grey', 'black'] as const) {
+    it(`finds and scores every hole on a ${background} background`, () => {
+      const scan = scanCard(drawSyntheticCard({ width: 1000, height: 1333, shots: RINGS, background, ink: true, tilt: { x: -0.0002, y: 0.0001 }, turnDeg: -2, seed: 3 }))
+      expect(scan.ok).toBe(true)
+      expect(scan.shotsPerBull).toBe(1)
+      expect(scan.holeRadiusFrom).toBe('card')
+      for (const b of recordShots(scan)) {
+        const want = RINGS.find((s) => s.bull === b.n)!
+        const radius = want.radiusMm ?? SYNTHETIC_HOLE_MM
+        expect(b.shots, `bull ${b.n}`).toHaveLength(1)
+        const got = b.shots[0]
+        expect(Math.hypot(got.x - want.x, got.y - want.y), `bull ${b.n}`).toBeLessThan(0.3)
+        expect(got.value, `bull ${b.n}`).toBe(scoreHole(Math.hypot(want.x, want.y), radius).value)
+        // Measured as the card shows it, torn fibres reaching a little past the hole.
+        if (got.radiusFrom === 'hole') {
+          expect(got.radius, `bull ${b.n}`).toBeGreaterThan(radius - 0.08)
+          expect(got.radius, `bull ${b.n}`).toBeLessThan(radius + (want.look === 'fibres' ? 0.17 : 0.08))
+        }
+      }
+      // The coaches' red marks aren't holes, even beside a brown one.
+      expect(scan.bulls.flatMap((b) => b.extra)).toHaveLength(0)
+    })
+  }
+
+  it('has a hole in every ring, the 10 to the 1', () => {
+    expect(RINGS.map((s) => scoreHole(Math.hypot(s.x, s.y), s.radiusMm ?? SYNTHETIC_HOLE_MM).value)).toEqual([10, 9, 8, 7, 6, 4, 3, 2, 1, 5])
   })
 })
 
