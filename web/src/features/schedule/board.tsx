@@ -42,7 +42,7 @@ export interface Board {
   requestsFor: (classId: string) => WithId<ClassRequest>[]
   /** Opens a request to approve or decline. */
   openRequest: (requestId: string) => void
-  /** The office can change this day: not a coach, and not a past day. */
+  /** The office can change this day: owners and admins, any day (a day that's over too); never a coach. */
   canEdit: (d: DateKey) => boolean
 
   openClass: (classId: string) => void

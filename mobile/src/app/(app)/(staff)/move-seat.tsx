@@ -12,7 +12,7 @@ import { ListSection } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { type ClassDoc, useAcademyNow, useClassesBetween } from "@/features/data/hooks";
+import { type ClassDoc, useClassesBetween } from "@/features/data/hooks";
 import { moveSeat } from "@/features/schedule/api";
 import { shortDay, timeRange } from "@/features/schedule/format";
 import { useDoc } from "@/lib/firestore";
@@ -25,19 +25,18 @@ const DAYS = 7;
 
 /**
  * The office moves a student to another class, as the website's seat menu does ("Move to another class"): the classes of
- * the seat's day and the six after it (days not over yet), each with its open seats; this class, a class the student is
- * already in and a full one can't be chosen. A tap moves them (they take its whole time) and comes back. Opened with the
- * seat's ID (`sessionId`).
+ * the seat's day and the six after it (a day that's over too: the office puts the record right), each with its open
+ * seats; this class, a class the student is already in and a full one can't be chosen. A tap moves them (they take its
+ * whole time) and comes back. Opened with the seat's ID (`sessionId`).
  */
 export default function MoveSeatScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { branchId, actor, timezone, settings, isAdmin } = useBranch();
   const colors = useColors();
   const hour12 = settings.general.timeFormat !== "24h";
-  const { today } = useAcademyNow();
   const seat = useDoc<Session>(sessionId ? `${ROOT.branches}/${branchId}/${COL.sessions}/${sessionId}` : null);
   const s = seat.data;
-  const from = s ? (s.dateKey < today ? today : s.dateKey) : null;
+  const from = s ? s.dateKey : null;
   const to = s ? addDays(s.dateKey, DAYS - 1) : null;
   const data = useClassesBetween(from, to);
 
@@ -48,13 +47,13 @@ export default function MoveSeatScreen() {
       </Screen>
     );
   }
-  if (!s || s.isDeleted || !isAdmin || s.dateKey < today) {
+  if (!s || s.isDeleted || !isAdmin) {
     return (
       <Screen typing={false} testID="move-seat-screen">
         <EmptyState
           icon={<CalendarDays size={26} color={colors.mutedForeground} />}
-          title={s && !s.isDeleted && s.dateKey < today ? "This class is over" : "This seat isn’t on the schedule"}
-          text={s && !s.isDeleted && s.dateKey < today ? "A class’s students can be changed until its day is over." : "It may have been changed on the website."}
+          title="This seat isn’t on the schedule"
+          text="It may have been changed on the website."
           action={
             <Button variant="outline" onPress={() => router.back()} testID="move-seat-back">
               Back
@@ -68,7 +67,7 @@ export default function MoveSeatScreen() {
   const days: DateKey[] = [];
   for (let i = 0; i < DAYS; i++) {
     const d = addDays(s.dateKey, i);
-    if (d >= today && (data.byDate.get(d) ?? []).length) days.push(d);
+    if ((data.byDate.get(d) ?? []).length) days.push(d);
   }
   const move = (c: ClassDoc, order: number) => {
     moveSeat(branchId, actor, timezone, s, c, order);

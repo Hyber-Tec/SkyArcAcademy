@@ -355,9 +355,10 @@ service cloud.firestore {
 
       // ------------------------------------------------------ schedule
 
-      // Nobody edits a class or a session once its day is over (dayEndAt = next local midnight).
-      function dayOpen(data) {
-        return data.dayEndAt is timestamp && data.dayEndAt > request.time
+      // A class's or a session's day as saved: it ends at the next local midnight (dayEndAt). Nothing locks by time:
+      // owners and admins change any day, one that's over too, to put the record right (the owner, 2026-10-28).
+      function validDay(data) {
+        return data.dayEndAt is timestamp
           && data.dayEndAt <= data.startAt + duration.value(25, 'h')
           && data.dayEndAt > data.startAt;
       }
@@ -375,11 +376,9 @@ service cloud.firestore {
         }
 
         allow read: if isStaff(b);
-        allow create: if isAdmin(b) && dayOpen(request.resource.data) && validClass(request.resource.data);
-        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data)
-          && validClass(request.resource.data);
-        // Trashed classes can be purged even after their day.
-        allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
+        allow create: if isAdmin(b) && validDay(request.resource.data) && validClass(request.resource.data);
+        allow update: if isAdmin(b) && validDay(request.resource.data) && validClass(request.resource.data);
+        allow delete: if isAdmin(b);
       }
 
       // A session is one student's seat in a class. Staff read every one; families read their own children's.
@@ -387,10 +386,9 @@ service cloud.firestore {
         allow read: if isStaff(b)
           || (hasRole(b, 'student') && resource.data.studentId == myStudentId(b))
           || (hasRole(b, 'parent') && resource.data.studentId in myStudentIds(b));
-        allow create: if isAdmin(b) && dayOpen(request.resource.data);
-        allow update: if isAdmin(b) && dayOpen(resource.data) && dayOpen(request.resource.data);
-        // Trashed sessions can be purged even after their day.
-        allow delete: if isAdmin(b) && (dayOpen(resource.data) || resource.data.isDeleted == true);
+        allow create: if isAdmin(b) && validDay(request.resource.data);
+        allow update: if isAdmin(b) && validDay(request.resource.data);
+        allow delete: if isAdmin(b);
       }
 
       match /events/{eventId} {

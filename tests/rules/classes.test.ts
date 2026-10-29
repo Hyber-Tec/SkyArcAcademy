@@ -168,10 +168,12 @@ describe('sessions (each student in a class)', () => {
     await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/sessions/k8`), session('s1', 'c1')))
   })
 
-  it('nobody changes a class once its day is over; one in the Trash can still be purged', async () => {
+  it('owners and admins change a seat whose day is over, to put the record right; coaches never do', async () => {
+    await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/sessions/k0`), { status: 'present' }))
     const admin = db('admin@a.test')
-    await assertFails(updateDoc(doc(admin, `branches/${A}/sessions/k0`), { status: 'present' }))
-    await assertFails(deleteDoc(doc(admin, `branches/${A}/sessions/k0`)))
+    await assertSucceeds(updateDoc(doc(admin, `branches/${A}/sessions/k0`), { status: 'present' }))
+    await assertSucceeds(updateDoc(doc(db('owner@a.test'), `branches/${A}/sessions/k0`), { status: 'canceled' }))
+    await assertSucceeds(deleteDoc(doc(admin, `branches/${A}/sessions/k0`)))
     await assertSucceeds(deleteDoc(doc(admin, `branches/${A}/sessions/k0t`)))
   })
 })
@@ -208,15 +210,16 @@ describe('classes taught together', () => {
     }
   })
 
-  it('a class whose day is over stays as it was; one in the Trash can still be purged', async () => {
+  it('owners and admins add, change and remove a class whose day is over, to put the record right', async () => {
+    await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/classes/cl0`), { note: 'Late note' }))
     const admin = db('admin@a.test')
-    await assertFails(setDoc(doc(admin, `branches/${A}/classes/cl2`), academyClass(past)))
-    await assertFails(updateDoc(doc(admin, `branches/${A}/classes/cl0`), { note: 'Late note' }))
-    await assertFails(updateDoc(doc(admin, `branches/${A}/classes/cl0`), { isDeleted: true }))
-    // Neither moved from a day that's over, nor to one.
-    await assertFails(setDoc(doc(admin, `branches/${A}/classes/cl0`), academyClass(start)))
-    await assertFails(setDoc(doc(admin, `branches/${A}/classes/cl1`), academyClass(past)))
-    await assertFails(deleteDoc(doc(admin, `branches/${A}/classes/cl0`)))
+    await assertSucceeds(setDoc(doc(admin, `branches/${A}/classes/cl2`), academyClass(past)))
+    await assertSucceeds(updateDoc(doc(admin, `branches/${A}/classes/cl0`), { note: 'Late note' }))
+    await assertSucceeds(updateDoc(doc(db('owner@a.test'), `branches/${A}/classes/cl0`), { isDeleted: true }))
+    // Moved from a day that's over, or to one.
+    await assertSucceeds(setDoc(doc(admin, `branches/${A}/classes/cl0`), academyClass(start)))
+    await assertSucceeds(setDoc(doc(admin, `branches/${A}/classes/cl1`), academyClass(past)))
+    await assertSucceeds(deleteDoc(doc(admin, `branches/${A}/classes/cl0`)))
     await assertSucceeds(deleteDoc(doc(admin, `branches/${A}/classes/cl0t`)))
   })
 

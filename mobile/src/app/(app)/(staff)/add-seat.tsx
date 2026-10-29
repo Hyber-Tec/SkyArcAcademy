@@ -75,13 +75,13 @@ export default function AddSeatScreen() {
       </Screen>
     );
   }
-  if (!v || !isAdmin || v.c.dateKey < today) {
+  if (!v || !isAdmin) {
     return (
       <Screen typing={false} testID="add-seat-screen">
         <EmptyState
           icon={<CalendarDays size={26} color={colors.mutedForeground} />}
-          title={v && v.c.dateKey < today ? "This class is over" : "This class isn’t on the schedule"}
-          text={v && v.c.dateKey < today ? "A class’s students can be changed until its day is over." : "It may have been removed on the website."}
+          title="This class isn’t on the schedule"
+          text="It may have been removed on the website."
           action={
             <Button variant="outline" onPress={() => router.back()} testID="add-seat-back">
               Back

@@ -41,9 +41,9 @@ const AHEAD_MARKS: SessionStatus[] = ["confirmed", "canceled"];
  * website's class sheet: when, its levels and seats taken; the coaches in at its time (who's in, every one of them
  * teaching it; the office opens a coach's page from here); the note for the coaches; and its students in their level's
  * colour with the rifle code and their label. The office marks each student as the website does (Coming, Here and
- * No-show on the day, Canceled), on today and the days ahead, adds a student to an open seat (a make-up, a trial,
- * practice: /add-seat), and moves a student to another class or takes them out (each student's ⋯); the class itself
- * (its time, seats, note, who's in) changes on the website.
+ * No-show from the day on, Canceled), on any day, past ones too (to put the record right), adds a student to an open
+ * seat (a make-up, a trial, practice: /add-seat), and moves a student to another class or takes them out (each
+ * student's ⋯); the class itself (its time, seats, note, who's in) changes on the website.
  */
 export default function ClassSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -91,8 +91,8 @@ export default function ClassSheet() {
 
   const { c } = v;
   const me = isCoach ? staffId : null;
-  // The rules let the office change a seat until its day is over.
-  const editable = isAdmin && c.dateKey >= today;
+  // The office changes any class, a day that's over too, to put the record right (the owner, 2026-10-28).
+  const editable = isAdmin;
   const marks = c.dateKey <= today ? ALL_MARKS : AHEAD_MARKS;
   // Canceled students last: they free their seat.
   const seats = [...v.seats].sort((a, b) => Number(a.status === "canceled") - Number(b.status === "canceled"));
