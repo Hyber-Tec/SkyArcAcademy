@@ -106,10 +106,6 @@ appId: com.skyarcacademy.app
     element:
       id: "family-home-scores"
     direction: DOWN
-- scrollUntilVisible:
-    element:
-      id: "family-attendance"
-    direction: DOWN
 - runFlow:
     when:
       visible:

@@ -15,7 +15,6 @@ import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
 import { useAcademyNow, useClassesBetween, useRecentEvaluations } from "@/features/data/hooks";
 import { ScoreRow } from "@/features/family/ScoreRow";
-import { ClockCard } from "@/features/home/ClockCard";
 import { ToDoCard } from "@/features/home/ToDoCard";
 import { InboxBell } from "@/features/notifications/InboxBell";
 import { RequestsCard } from "@/features/requests/RequestsCard";
@@ -37,7 +36,8 @@ const AHEAD_DAYS = 14;
 
 /**
  * The day at a glance (the app opens here): the lockup with the bell (the person's notifications) beside it, a greeting
- * with the date, a coach's time clock, today's numbers, a coach's to-do (availability to set, posts to read), the
+ * with the date, today's numbers (a coach's are their classes and students: their clock and pay are in More, not here,
+ * the owner's call), a coach's to-do (availability to set, posts to read), the
  * office's requests from families waiting for an answer, the way to scan targets, today's classes in time order with the coaches in (for a coach, the classes in their hours, with the
  * other coaches in with them, and their hours), and the latest scores. Everything is live and in the academy's time
  * zone.
@@ -62,14 +62,13 @@ export default function TodayScreen() {
   // A coach's hours in today (inside its opening hours; an hour and a half reads 1.5).
   const mine = me ? data.availability.find((a) => a.staffId === me && a.dateKey === today) : undefined;
   const myRanges = mine && !mine.unavailable ? effectiveRanges(mine.ranges ?? [], hours) : [];
-  const myHours = Math.round(myRanges.reduce((m, r) => m + r.endMin - r.startMin, 0) / 6) / 10;
   // On a day without a class in their hours, when the next one is.
   const nextDay: DateKey | null = me && !classes.length ? ([...data.byDate.keys()].sort().find((d) => d > today && (data.byDate.get(d) ?? []).some((v) => teaches(v, me))) ?? null) : null;
   const nextClass = nextDay ? (data.byDate.get(nextDay) ?? []).find((v) => teaches(v, me)) : undefined;
   const first = (staff?.firstName || actor.name.split(/\s+/)[0] || "").trim();
 
   const contentStyle = Platform.OS === "android" ? { paddingTop: insets.top + space.lg } : undefined;
-  // A coach's own day: their time clock and what they still have to do (a coach not linked to a staff record has none).
+  // A coach's own to-do (a coach not linked to a staff record has none).
   const coach = isCoach && !!staffId;
 
   return (
@@ -94,14 +93,16 @@ export default function TodayScreen() {
         </T>
       </View>
 
-      {coach ? <ClockCard todays={classes} loading={data.loading} today={today} nowMin={nowMin} hour12={hour12} /> : null}
-
       <Card style={styles.stats} testID="today-stats">
         <Stat value={classes.length} label={classes.length === 1 ? "class" : "classes"} />
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
         <Stat value={students} label={students === 1 ? "student" : "students"} />
-        <View style={[styles.rule, { backgroundColor: colors.border }]} />
-        {isCoach ? <Stat value={myHours} label={myHours === 1 ? "hour" : "hours"} /> : <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />}
+        {isCoach ? null : (
+          <>
+            <View style={[styles.rule, { backgroundColor: colors.border }]} />
+            <Stat value={coaches} label={coaches === 1 ? "coach" : "coaches"} />
+          </>
+        )}
       </Card>
 
       {coach ? <ToDoCard /> : null}

@@ -11,10 +11,10 @@ import { usePreventRemove } from "expo-router/react-navigation";
 import { ExternalLink, Link2Off } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Keyboard, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
+import { FooterBar } from "@/components/FooterBar";
 import { Card } from "@/components/Card";
 import { confirmAsync } from "@/components/Confirm";
 import { DateField } from "@/components/DateField";
@@ -53,7 +53,6 @@ function roleLine(role: string, academy: string, startDate: string | null | unde
 
 function CoachAccount() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const colors = useColors();
   const { branchId, actor, staff, staffId, member, name: academy } = useBranch();
   const { email } = useAuth();
@@ -129,14 +128,14 @@ function CoachAccount() {
       testID="account-screen"
       footer={
         dirty ? (
-          <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.grouped, paddingBottom: insets.bottom + space.sm }]}>
+          <FooterBar>
             <Button variant="outline" onPress={() => setDraft(null)} style={styles.grow} testID="account-discard">
               Discard
             </Button>
             <Button onPress={save} style={styles.grow} testID="account-save">
               Save changes
             </Button>
-          </View>
+          </FooterBar>
         ) : null
       }
     >
@@ -271,5 +270,4 @@ const styles = StyleSheet.create({
   grow: { flex: 1, gap: 2 },
   center: { alignSelf: "center" },
   form: { padding: space.lg, gap: space.lg },
-  footer: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth },
 });

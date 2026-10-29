@@ -23,12 +23,12 @@ appId: com.skyarcacademy.app
     file: sign-in.yaml
     env:
       EMAIL: daniel.reed@skyarc-sample.test
-# Home: a coach's numbers are their classes, students and hours.
+# Home: a coach's numbers are their classes and students (their clock and pay are in More).
 - extendedWaitUntil:
     visible:
       id: "today-stats"
     timeout: 30000
-- assertVisible: "hours?"
+- assertVisible: "students?"
 # Availability: a Monday 9 to 15 days ahead (unlocked). The sample coach works Mondays beside two other coaches, so
 # taking his day away leaves every class with a coach in and the app doesn't ask first (a Tuesday can be the sample's
 # day with him alone). Not available, cleared, then available from its opening hours: every state, and in again, as

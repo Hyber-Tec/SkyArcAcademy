@@ -1,8 +1,7 @@
-import { attendanceFacts } from "@shared/reports/facts";
 import { personalBestIds } from "@shared/shooting/progress";
-import { type DateKey, addDays, weekDays } from "@shared/time";
+import { type DateKey, addDays } from "@shared/time";
 import { router } from "expo-router";
-import { CalendarX2, ChartLine, Target } from "lucide-react-native";
+import { CalendarX2, Target } from "lucide-react-native";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
@@ -14,20 +13,19 @@ import { SectionTitle } from "@/components/SectionTitle";
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { useAcademyNow } from "@/features/data/hooks";
-import { FamilyClassRow, NextClassCard } from "@/features/family/ClassCards";
-import { type EvaluationDoc, type SessionDoc, useFamilyEvaluations, useFamilyReports, useFamilySessions, useIsNew } from "@/features/family/data";
+import { NextClassCard } from "@/features/family/ClassCards";
+import { type EvaluationDoc, type SessionDoc, useFamilyEvaluations, useFamilySessions } from "@/features/family/data";
 import { AcademyContact, ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { hasEnded, namesList } from "@/features/family/format";
 import { useFamilyNews, useIsNewNews } from "@/features/family/news";
 import { InboxBell } from "@/features/notifications/InboxBell";
 import { NewsRow } from "@/features/family/NewsRow";
-import { ReportRow } from "@/features/family/ReportRow";
 import { ScoreRow } from "@/features/family/ScoreRow";
 import { familyClassId, familyClasses } from "@/features/family/classes";
-import { longDay, plural } from "@/features/schedule/format";
+import { longDay } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
-import { radius, space, useColors } from "@/theme";
+import { space, useColors } from "@/theme";
 
 function greeting(nowMin: number): string {
   if (nowMin < 12 * 60) return "Good morning";
@@ -37,34 +35,28 @@ function greeting(nowMin: number): string {
 
 /** How far ahead Home looks for each student's next class. */
 const AHEAD_DAYS = 8 * 7;
-/** Attendance counts the classes of the last 30 days. */
-const ATTENDANCE_DAYS = 30;
 /** The latest scores Home shows: one student's, or each child's when a parent's Home shows them all. */
-const LATEST_ONE = 3;
-const LATEST_EACH = 2;
+const LATEST_ONE = 2;
+const LATEST_EACH = 1;
 /** The academy's latest posts Home shows (the rest are on the News page). */
-const LATEST_NEWS = 3;
+const LATEST_NEWS = 2;
 
 /**
- * The family's first page (the app opens here): a greeting with the date; each student's next class (a parent's
- * children in the same class share a card) with its status and the class's note; the rest of this week (or
- * next week's, once this one has nothing left); the academy's latest news for families (when it has any; all of it on
- * the News page); the latest scores (each opens its own screen; all of them are a tab away); the latest shared progress
- * report; attendance over the last 30 days; and how to reach the academy. A parent with several children picks All or
- * one child. Everything is live and in the academy's time zone.
+ * The family's first page (the app opens here), kept short (the owner, 2026-10-28): a greeting with the date; each
+ * student's next class (a parent's children in the same class share a card) with its status and the class's note; the
+ * academy's latest news for families (when it has any; all of it on the News page); and the latest scores (each opens
+ * its own screen; all of them are a tab away). The week is on Classes, and reports (attendance in each) on Reports. A
+ * parent with several children picks All or one child. Everything is live and in the academy's time zone.
  */
 export default function FamilyHomeScreen() {
-  const { settings, member, actor, name: academy } = useBranch();
+  const { settings, member, actor } = useBranch();
   const colors = useColors();
   const family = useFamily();
   const { today, nowMin } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
   const when = { today, nowMin, hour12 };
-  const from = addDays(today, -ATTENDANCE_DAYS);
-  const sessions = useFamilySessions(family.ids, from, addDays(today, AHEAD_DAYS));
-  const reports = useFamilyReports(family.ids);
+  const sessions = useFamilySessions(family.ids, today, addDays(today, AHEAD_DAYS));
   const scores = useFamilyEvaluations(family.ids);
-  const isNew = useIsNew();
   const first = (member.displayName || actor.name).trim().split(/\s+/)[0] ?? "";
   const parent = family.who === "parent";
 
@@ -79,16 +71,6 @@ export default function FamilyHomeScreen() {
   const nextClassIds = new Set([...nextOf.values()].map(familyClassId));
   const nextGroups = familyClasses(coming.filter((s) => nextClassIds.has(familyClassId(s))));
   const nothingFor = family.shown.filter((id) => !nextOf.has(id));
-
-  // The rest of this week after those, or next week's once this one has nothing left.
-  const weekEnd = weekDays(today, settings.general.weekStartsOn)[6];
-  const after = coming.filter((s) => !nextClassIds.has(familyClassId(s)));
-  const thisWeek = familyClasses(after.filter((s) => s.dateKey <= weekEnd));
-  const nextWeek = familyClasses(after.filter((s) => s.dateKey > weekEnd && s.dateKey <= addDays(weekEnd, 7)));
-  const week = thisWeek.length ? { title: "Rest of this week", list: thisWeek } : nextWeek.length ? { title: "Next week", list: nextWeek } : null;
-
-  // The newest shared report of each student shown.
-  const latest = family.shown.flatMap((id) => reports.data.find((r) => r.studentId === id) ?? []);
 
   // The latest scores of each student shown (newest first), and which were a personal best when they were shot.
   const latestScores = useMemo(() => {
@@ -170,14 +152,6 @@ export default function FamilyHomeScreen() {
             )}
           </View>
 
-          {week && !sessions.loading ? (
-            <ListSection title={week.title} detail={plural(week.list.length, "class", "classes")} testID="family-week">
-              {week.list.map((g) => (
-                <FamilyClassRow key={g.id} group={g} when={when} showDate onPress={() => openClass(g.sessions[0])} testID={`family-week-${g.sessions[0].id}`} />
-              ))}
-            </ListSection>
-          ) : null}
-
           <AcademyNews today={today} />
 
           <ListSection title="Latest scores" testID="family-home-scores">
@@ -224,42 +198,6 @@ export default function FamilyHomeScreen() {
               />
             )}
           </ListSection>
-
-          <ListSection title={latest.length > 1 ? "Latest reports" : "Latest report"} testID="family-home-reports">
-            {reports.loading ? (
-              <ListRow title="Loading reports…" />
-            ) : latest.length ? (
-              latest.map((r) => (
-                <ReportRow
-                  key={r.id}
-                  report={r}
-                  name={parent ? family.firstName(r.studentId, r.student?.firstName) : null}
-                  isNew={isNew(r)}
-                  onPress={() => router.push({ pathname: "/report/[id]", params: { id: r.id } })}
-                  testID={`family-home-report-${r.id}`}
-                />
-              ))
-            ) : (
-              <ListRow
-                icon={
-                  <RowIcon>
-                    <ChartLine size={17} color={colors.mutedForeground} />
-                  </RowIcon>
-                }
-                title="No report yet"
-                subtitle={`${academy} shares progress reports here when they’re ready.`}
-                testID="family-home-no-report"
-              />
-            )}
-          </ListSection>
-
-          <ListSection title="Attendance" detail="Last 30 days" testID="family-attendance">
-            {family.shown.map((id) => (
-              <Attendance key={id} name={parent ? family.firstName(id) : null} sessions={mine.filter((s) => s.studentId === id)} from={from} today={today} nowMin={nowMin} loading={sessions.loading} />
-            ))}
-          </ListSection>
-
-          <AcademyContact />
         </>
       )}
     </Screen>
@@ -291,50 +229,6 @@ function AcademyNews({ today }: { today: DateKey }) {
   );
 }
 
-/**
- * A student's attendance over the last 30 days, as the reports count it (shared/src/reports/facts.ts): attended
- * against missed, canceled classes counting neither way, and classes not marked yet said so.
- */
-function Attendance({ name, sessions, from, today, nowMin, loading, divider }: { name: string | null; sessions: SessionDoc[]; from: DateKey; today: DateKey; nowMin: number; loading: boolean; divider?: boolean }) {
-  const colors = useColors();
-  const done = sessions.filter((s) => s.dateKey >= from && hasEnded(s, today, nowMin));
-  const a = attendanceFacts(done.map((s) => ({ dateKey: s.dateKey, status: s.status, past: true })));
-  const marked = a.attended + a.missed;
-  const line = loading
-    ? "Loading…"
-    : !done.length
-      ? "No classes in the last 30 days."
-      : [
-          marked ? `${a.attended} of ${marked} ${marked === 1 ? "class" : "classes"} attended` : "No classes marked yet",
-          a.canceled ? `${a.canceled} canceled` : null,
-          a.unmarked && marked ? `${a.unmarked} not marked yet` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
-  return (
-    <View style={[styles.attendance, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID="family-attendance-row" accessible accessibilityLabel={[name, a.percent !== null ? `${a.percent}% attended` : null, line].filter(Boolean).join(", ")}>
-      <View style={styles.attendanceTop}>
-        <View style={styles.grow}>
-          {name ? (
-            <T variant="label" numberOfLines={1}>
-              {name}
-            </T>
-          ) : null}
-          <T variant="small" tone="muted">
-            {line}
-          </T>
-        </View>
-        {a.percent !== null && !loading ? <T variant="stat">{a.percent}%</T> : null}
-      </View>
-      {a.percent !== null && !loading ? (
-        <View style={[styles.track, { backgroundColor: colors.secondary }]}>
-          <View style={[styles.fill, { width: `${a.percent}%`, backgroundColor: colors.primary }]} />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   header: { gap: 2 },
   top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
@@ -347,8 +241,4 @@ const styles = StyleSheet.create({
   grow: { flex: 1, gap: 2 },
   quiet: { flexDirection: "row", alignItems: "center", gap: space.md },
   quietIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  attendance: { paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
-  attendanceTop: { flexDirection: "row", alignItems: "center", gap: space.md },
-  track: { height: 6, borderRadius: radius.full, overflow: "hidden" },
-  fill: { height: 6, borderRadius: radius.full },
 });

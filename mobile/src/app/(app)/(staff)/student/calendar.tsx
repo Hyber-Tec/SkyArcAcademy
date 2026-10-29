@@ -40,7 +40,7 @@ export default function StudentCalendarScreen() {
   const status = useStatusColors();
   const { height } = useWindowDimensions();
   // Smaller weeks on a smaller phone, so the chosen day's classes keep room under the months.
-  const rowHeight = height >= 800 ? 46 : height >= 700 ? 42 : 38;
+  const rowHeight = height >= 900 ? 46 : height >= 800 ? 40 : height >= 700 ? 38 : 34;
   const hour12 = settings.general.timeFormat !== "24h";
   const { today } = useAcademyNow();
   // Fixed once open: a new day at midnight doesn't move the months under the person's finger.
