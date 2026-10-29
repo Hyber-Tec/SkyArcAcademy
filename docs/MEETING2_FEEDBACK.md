@@ -54,7 +54,7 @@ work started: *already done*, *small change* or *new work*.
   2. **Push notifications for everything**, with **notification settings** in the app for every role.
   3. **Coach availability lock: 7 days** (was 14). Coaches can still *add* availability inside the lock.
   4. **One pay rate only** (no admin rate). Paid time comes from the kiosk: 30 minutes early, automatic clock-out at
-     class end, and no clock-in means no pay.
+     class end (changed: pay ends at the last class, `K3`), and no clock-in means no pay.
   5. **New schedule view options** that show clock-in/out (Goo chooses one from a clickable demo).
   6. **Fix the paper scoring rule** to Sky Arc's "most of the hole" rule (Goo later chose the matches' rule, each hole
      at its real size: `P1`). Support competition results, 20/30/60-shot sessions, and the inner-ten count.
@@ -189,7 +189,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **Small change:** the confirmation already sits under Schedule; the new cancel rule (`S1`) joins it there as
     "Confirmation and cancellation".
 - ✅ **ST3. The new default values** (Section 5): the 7-day coach availability lock, the 24-hour family cancel cutoff,
-  the 24-hour confirmation, 30 minutes' early arrival, automatic clock-out at class end, and so on. All stay editable. (#49)
+  the 24-hour confirmation, 30 minutes' early arrival, automatic clock-out at class end (changed: pay ends at the last
+  class, `K3`), and so on. All stay editable. (#49)
   - *Plan:* **Small change:** the lock is already 7 days; the 14 the manager saw is the coaches' notice period, which
     becomes 7 too. New: the cancel cutoff (24 hours, the same as the confirmation), the arrival window (30 minutes) and
     the clock-out at the end of the last class.
@@ -292,11 +293,13 @@ To start a phase, paste this into Claude Code on the right computer:
   - **Don't import them into the system.** Goo scans and enters each one by hand, through the app: that's the real
     test, and Goo's feedback drives further fixes.
   - Goal: within **about 3–5 points** of the coach's score. **7–10+ points off is a problem.**
-- [ ] **P3. Photo background.** The scanner seems to work on a black background (the target itself is black). Check it.
+- ✅ **P3. Photo background.** The scanner seems to work on a black background (the target itself is black). Check it.
   If a light background works better, show a short tip in the scanner: card flat, nothing covering it, good light, a
-  lighter background if possible.
+  lighter background if possible. (#66)
   - *Plan:* **Small change:** holes in the black show only when light is behind them, so a dark surface hides them. The
     tip "a light surface under the card" (the phone's scan tips, `M6`).
+  - *Done (#66):* the phone's scan tips say "On something light, on its own" (a white table or sheet, not the pile of
+    cards; nothing over the bulls). The website has no card scanner: it checks cards the phone scanned.
 - ✅ **P4. Official score override.** When entering a card that was already scored by hand (past data), the admin can
   type the **written score as the official score**. The app's own score is kept for reference only: parents shouldn't
   see their 74 turn into a 70. (#48)
@@ -366,16 +369,16 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **Already done.**
 - ✅ **F3. Parent names are optional.** Without a name, show something like "Alex's parent." (#50)
   - *Plan:* **Small change:** a parent's name becomes optional ("Alex's parent").
-- [x] **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
+- ✅ **F4. Online enrollment contract with e-signature.** New families sign the academy's contract on their phone,
   without printing. A Google form tried before failed (parents couldn't sign), so it must be simple and reliable. The
   signed copy is saved automatically. *(Needs the blank contract from the manager.)* (#53)
   - *Plan:* **New work:** a link the office sends (Goo's pick, 2026-10-28). The family reads the contract on any phone,
     types their name and signs with a finger; no app or account needed. The signed PDF goes to the Contracts folder
     (`F5`). The text waits for the blank contract.
-- [x] **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
+- ✅ **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
   **visible only to the manager and owners, not coaches.** (#53)
   - *Plan:* **New work**, with `F6`: a Contracts folder only owners and admins see.
-- [x] **F6. The Drive as general storage, "like a Google Drive":** any file type (PDFs, images, game sheets,
+- ✅ **F6. The Drive as general storage, "like a Google Drive":** any file type (PDFs, images, game sheets,
   documents), folders, and **per-folder access** (some folders admin-only). (#53)
   - *Plan:* **Already done** for file types (PDFs, pictures, documents, videos) and folders. **New work:** folders for
     owners and admins only.
@@ -564,3 +567,53 @@ imports them automatically, and they're **never committed**.
 | Now | Remind the manager about the data and files in Section 7 (no rush). |
 | The next meetings | Show the progress and whatever past data we have by then. |
 | 1–2 weeks | The stores approve the app, then **it goes live**. |
+
+---
+
+## 9. Checked on 2026-10-28 (MacBook Pro)
+
+Every ✅ item above was checked against `main`, in the code and, where it shows, on the practice copy; the phone's test
+flows pass on the iPhone Simulator and the Android emulator (`npm run phone:test`). What done items still miss:
+
+**Fixed on the phone (#75):** a card saved again on the phone's score screen kept only its bulls (its kind, its
+official score and a typed total's number of shots went back to the defaults); a competition's inner tens and match
+didn't show; the Students search and "Add a student" ignored other names; a parent without a name showed as "Parent";
+a post's small heading was the size of its text (`M8`).
+
+**For the website, the server and the shared code:**
+- **P4, P9:** saving a scanned card again on the website's card page (`CardEditorPage.tsx`, `changed`) rebuilds it with
+  `cardEvaluation` and writes the whole record: the score written on the card and the result's kind are lost (a 74
+  goes back to 70). The phone keeps them since #75; the fix belongs in `cardEvaluation`, for both.
+- **S1, S4:** the coaches in aren't told of a family's cancel. Their notices fire only within 24 hours of the class and
+  for a confirmed seat (`shared/src/schedule/notify.ts`), and a family can only cancel before that; nothing sends it
+  later, though `functions/src/requests.ts` says they hear of it then.
+- **S9, D1:** the schedule import writes whole documents (`scripts/lib/firestore-rest.ts`, `commit`): run again on a
+  new sheet, it would wipe the office's changes since the import (attendance, cancellations, parents, other names).
+  Patch the fields it owns, or compare first.
+- **ST1:** three of Settings' examples are off. The lock's says "Oct 28 – Nov 3" when the lock runs to today + 7 (Nov
+  4); the cancel rule's says the button "goes away" (it's disabled, with the reason); and with the notice period equal
+  to the lock (7 and 7), the reminders the availability example promises never show.
+- **S6:** on the website's schedule a pending seat looks like a confirmed one (`seatParts.tsx`); "Pending" shows only
+  in a class's sheet.
+- **C2:** the rules should keep a coach's `staffRole` as it was when they change their own day inside the lock.
+- **P5, P6:** a decimal competition typed as a total keeps `wholeTotal = Math.floor(total)`, so 618.2 over 60 shots
+  charts as 103 per 10; a decimal sheet's inner tens aren't kept, and nothing breaks a tie by them.
+- **P7, P9:** on "All", the website's graphs draw competitions on the practice lines; reports keep competitions apart,
+  not evaluations.
+- **P12:** most of the website's student pickers ignore other names (`OptionPicker.tsx`, the schedule's Add a student,
+  a results sheet's name check).
+- **P13:** a score dated more than 7 days back tells the family nothing (`NEWS_DAYS`), so a sheet entered late sends no
+  notice; a three-position competition sends three.
+- **K1, K3:** each rate is still saved with an admin rate (`shared/src/pay/rates.ts`, kept for the phone's current
+  build); comments in `functions/src/index.ts` and `KioskPage.tsx` still say coaches are clocked out at the last
+  class.
+- **F1:** the student page's Family card (who can sign in, Give access) is hidden below 1024 px (`FamilyCard.tsx`).
+- **F3:** a parent without a name shows as their email in requests, notices and the activity log (the server falls back
+  to it, `functions/src/requests.ts`), and as "Parent" on the website's Info tab.
+- **F5, F6:** renaming the Contracts folder is stopped only by the website; every admin reads contracts, one kept out of
+  payroll too; the Drive takes a list of 18 file types (no zip, rtf, odt, Pages, audio or svg).
+- **N2:** the website's posts have no styles for code blocks and don't break long words, so a code block or a long link
+  runs off a phone's screen.
+- **D2, D3:** only the schedule import marks its records, and no screen shows the mark; `check-repo.sh` lets PNG, WebP
+  and JSON files through below the top folder.
+- **C4** was a one-time change on production, with no script: it can't be checked from the repository.
