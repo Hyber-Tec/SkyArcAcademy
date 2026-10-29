@@ -3,7 +3,8 @@ import { newMemberData } from '../branchFactory'
 import { STAFF_COLORS } from '../colors'
 import { COL, DOC, availabilityDocId } from '../paths'
 import { rateRecord } from '../pay/rates'
-import { makeupLabel } from '../schedule/classes'
+import { MAKEUP_LOOKBACK_DAYS, makeupLabel, makeupsOwed } from '../schedule/classes'
+import type { ClassRequestAction } from '../schedule/requests'
 import { DEFAULT_BUSINESS_RULES } from '../settings/businessRules'
 import type { SessionStatus, WeekHours } from '../settings/defaults'
 import { type DateKey, type Weekday, addDays, dayEndInstant, diffDays, makeDateKey, minutesOf, parseDateKey, toInstant, weekdayOf } from '../time'
@@ -13,8 +14,9 @@ import { chance } from './random'
 /**
  * Sample data, for trying the app before the academy's real data arrives: fictional coaches, a manager, students and
  * their families; ten weeks of classes around today in the academy's weekly layout, taught together by the coaches in
- * (each class's students are its seats, labelled as the sheets do: make-ups, practice, trials); who's in each day, time
- * entries, announcements and events. Everything is made up: the names match nobody at the academy, emails use the
+ * (each class's students are its seats, labelled as the sheets do: make-ups, practice, trials), with a seat or two open
+ * in the coming weeks' classes; families' requests for those seats, in each state; who's in each day, time entries,
+ * announcements and events. Everything is made up: the names match nobody at the academy, emails use the
  * reserved `.test` domain (no email is ever sent to them), and every document ID starts with `sample-`, so
  * `npm run seed:sample -- --remove` deletes all of it, along with anything the app later made for these people.
  */
@@ -64,6 +66,8 @@ export interface SampleSummary {
   /** Who's in: the staff's hours, one record per person and day (the manager's included). */
   whosIn: number
   shifts: number
+  /** Families' requests for classes, in each state. */
+  requests: number
 }
 
 // ----------------------------------------------------------------- the week
@@ -455,6 +459,9 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     }
   }
 
+  // From today on, make-ups and practice leave each class a seat open, so families have seats to ask for.
+  const roomFor = (d: DateKey) => (d >= today ? seats - 1 : seats)
+
   // Make-ups: about half the missed classes are made up within 16 days before or 18 after, in a class of their level
   // with a seat free, as on the sheets; the missed one says what became of it.
   const missed = made.filter((m) => m.kind === 'class' && (m.status === 'canceled' || m.status === 'no_show'))
@@ -465,7 +472,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       const d = addDays(m.dateKey, off)
       if (d < from || d > to || !isOpen(d) || busy.has(`${m.student.key}|${d}`)) continue
       const slot = slotsOn(d)
-        .filter((x) => bands.includes(x.block.band) && taken(d, x) < seats)
+        .filter((x) => bands.includes(x.block.band) && taken(d, x) < roomFor(d))
         .sort(byRank((x) => [bands.indexOf(x.block.band), taken(d, x)]))[0]
       if (!slot) continue
       const mu = addSeat(m.student, d, slot, 'makeup', makeupLabel(m.dateKey))
@@ -481,7 +488,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
   for (const d of days) {
     if (!isOpen(d)) continue
     for (const slot of slotsOn(d)) {
-      if (chance(d, slot.key, 'practice') >= 0.22 || taken(d, slot) >= seats) continue
+      if (chance(d, slot.key, 'practice') >= 0.22 || taken(d, slot) >= roomFor(d)) continue
       const who = STUDENTS.filter((s) => s.status === 'enrolled' && activeOn(s, d) && (s.level ?? 0) > YOUNG_UP_TO && !busy.has(`${s.key}|${d}`) && practicesIn(s, slot)).sort(
         (a, b) => chance(a.key, d, 'practice') - chance(b.key, d, 'practice'),
       )[0]
@@ -508,6 +515,196 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
         break
       }
     }
+  }
+
+  // Families' requests (docs/DECISIONS.md §23) ------------------------------------------
+  // From families who sign in, each with its back and forth: a few waiting for the office (one for a class that has
+  // filled up since it was asked for, so the office suggests another), one where the office suggested another time and
+  // waits on the family, one booked once the family accepted the time suggested, and one declined. The Hwang family (the
+  // sample parent's) has one waiting on each side. The seats they need are made here; the requests are written below,
+  // once the parents are known.
+  const studentOf = (key: string) => STUDENTS.find((s) => s.key === key)
+  const ownSeats = (s: SampleStudent) => made.filter((m) => m.student.key === s.key).sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+  /** A student's classes missed (canceled or a no-show) before `before` and not made up yet, the latest first. */
+  const owedOf = (s: SampleStudent, before = today): Seat[] => {
+    const own = ownSeats(s)
+    const owed = makeupsOwed(
+      own.map((m) => ({ id: m.id, studentId: s.key, dateKey: m.dateKey, status: m.status, note: String(m.data.note ?? ''), isDeleted: false })),
+      addDays(today, -MAKEUP_LOOKBACK_DAYS),
+    )
+    return owed
+      .filter((o) => o.dateKey < before)
+      .map((o) => own.find((m) => m.id === o.id)!)
+      .reverse()
+  }
+  type Choice = { d: DateKey; slot: Slot }
+  const idOf = (c: Choice) => classIdOf(c.d, c.slot)
+  /** The classes asked for so far: the others are picked first, and the one that fills up is none of them. */
+  const askedFor = new Set<string>()
+  /** The student has a seat that day at that time (not canceled): asking for it would clash. */
+  const clashes = (s: SampleStudent, d: DateKey, slot: Slot) =>
+    made.some((m) => m.student.key === s.key && m.dateKey === d && m.status !== 'canceled' && Number(m.data.startMin) < slot.block.endMin && Number(m.data.endMin) > slot.block.startMin)
+  /**
+   * Classes ahead a student could ask for: of their level (or `bands`), with a seat open, at a time they have no class;
+   * the days they have none first, then the classes nobody has asked for. `freeDay`: only those days (a seat booked
+   * keeps the sample's one class a day).
+   */
+  const choicesFor = (s: SampleStudent, fromDay: number, toDay: number, bands = bandsFor(s.level), freeDay = false): Choice[] =>
+    days
+      .filter((d) => d >= addDays(today, fromDay) && d <= addDays(today, toDay) && isOpen(d) && (!freeDay || !busy.has(`${s.key}|${d}`)))
+      .flatMap((d) => slotsOn(d).map((slot) => ({ d, slot })))
+      .filter(({ d, slot }) => bands.includes(slot.block.band) && (!s.days || s.days.includes(slot.wd)) && taken(d, slot) < seats && !clashes(s, d, slot))
+      .sort(byRank((x) => [Number(busy.has(`${s.key}|${x.d}`)), Number(askedFor.has(idOf(x)))]))
+  const ask = (c: Choice | undefined): Choice | null => {
+    if (c) askedFor.add(idOf(c))
+    return c ?? null
+  }
+  interface RequestPlan {
+    student: SampleStudent
+    kind: 'makeup' | 'reschedule' | 'extra'
+    /** The class asked for now: the one booked, once approved. */
+    at: Choice
+    /** The missed class a make-up is for, or the class a move replaces. */
+    forSeat: Seat | null
+    by: 'parent' | 'student'
+    message: string
+    status: 'pending' | 'offered' | 'approved' | 'rejected'
+    /** Oldest first; the first is the ask. */
+    steps: { action: ClassRequestAction; hoursAgo: number; office?: boolean; at?: Choice; note?: string }[]
+    offer?: { at: Choice; note: string; hoursAgo: number }
+    seat?: Seat
+    decisionNote?: string
+  }
+  const plans: RequestPlan[] = []
+
+  // Jiwoo: a make-up waiting for the office (her last class here was missed, if nothing else is owed).
+  const jiwoo = studentOf('jiwoo-hwang')
+  if (jiwoo) {
+    let owed: Seat | null = owedOf(jiwoo)[0] ?? null
+    if (!owed) {
+      owed = ownSeats(jiwoo).filter((m) => m.kind === 'class' && m.status === 'present' && m.dateKey < today && m.dateKey >= addDays(today, -10)).at(-1) ?? null
+      if (owed) {
+        owed.status = 'canceled'
+        Object.assign(owed.data, { status: 'canceled', note: 'Absent' })
+      }
+    }
+    const c = ask(choicesFor(jiwoo, 2, 9)[0])
+    if (c) {
+      const message = owed ? 'She was sick that day. Any evening works.' : 'Extra practice before the junior match, please.'
+      plans.push({ student: jiwoo, kind: owed ? 'makeup' : 'extra', at: c, forSeat: owed, by: 'parent', message, status: 'pending', steps: [{ action: 'asked', hoursAgo: 20, at: c }] })
+    }
+  }
+  // Minjun: asked for one of the older students' classes; the office suggested one of his level, and waits on the family.
+  const minjun = studentOf('minjun-hwang')
+  if (minjun) {
+    // Asked two days ago: for a class missed before then.
+    const owed = owedOf(minjun, addDays(today, -2))[0] ?? null
+    const first = ask(choicesFor(minjun, 3, 9, ['middle'])[0])
+    const instead = ask(choicesFor(minjun, 2, 12)[0])
+    if (first && instead) {
+      const note = 'That class is for older students. This one is Minjun’s level, with a seat open.'
+      plans.push({
+        student: minjun,
+        kind: owed ? 'makeup' : 'extra',
+        at: first,
+        forSeat: owed,
+        by: 'parent',
+        message: owed ? 'Could Minjun make up the class he missed?' : 'Could Minjun come for extra practice?',
+        status: 'offered',
+        steps: [
+          { action: 'asked', hoursAgo: 46, at: first },
+          { action: 'offered', hoursAgo: 26, office: true, at: instead, note },
+        ],
+        offer: { at: instead, note, hoursAgo: 26 },
+      })
+    }
+  }
+  // Samuel: an extra class, waiting for the office.
+  const samuel = studentOf('samuel-jang')
+  const samuelAt = samuel ? ask(choicesFor(samuel, 2, 10)[0]) : null
+  if (samuel && samuelAt) {
+    plans.push({ student: samuel, kind: 'extra', at: samuelAt, forSeat: null, by: 'parent', message: 'He has a match coming up and would like extra practice.', status: 'pending', steps: [{ action: 'asked', hoursAgo: 5, at: samuelAt }] })
+  }
+  // Arin, from her own sign-in: one of her classes moved to another day, waiting for the office.
+  const arin = studentOf('arin-tak')
+  if (arin) {
+    const next = ownSeats(arin).find((m) => m.kind === 'class' && (m.status === 'pending' || m.status === 'confirmed') && m.dateKey >= addDays(today, 3) && m.dateKey <= addDays(today, 10))
+    const c = next ? ask(choicesFor(arin, 2, 10)[0]) : null
+    if (next && c) plans.push({ student: arin, kind: 'reschedule', at: c, forSeat: next, by: 'student', message: 'I have a school concert that evening.', status: 'pending', steps: [{ action: 'asked', hoursAgo: 3, at: c }] })
+  }
+  // Grace: waiting for the office, for a class whose last seats went to other students' practice since she asked (no
+  // other request's class).
+  const grace = studentOf('grace-ellis')
+  if (grace) {
+    const owed = owedOf(grace, addDays(today, -3))[0] ?? null
+    const fullest = choicesFor(grace, 3, 9)
+      .filter((x) => !askedFor.has(idOf(x)))
+      .sort((a, b) => taken(b.d, b.slot) - taken(a.d, a.slot))
+    const c = ask(fullest[0])
+    if (c) {
+      const others = STUDENTS.filter((s) => s.key !== grace.key && s.status === 'enrolled' && activeOn(s, c.d) && (s.level ?? 0) > YOUNG_UP_TO && !busy.has(`${s.key}|${c.d}`) && practicesIn(s, c.slot)).sort(
+        (a, b) => chance(a.key, c.d, 'filled') - chance(b.key, c.d, 'filled'),
+      )
+      for (const o of others) {
+        if (taken(c.d, c.slot) >= seats) break
+        addSeat(o, c.d, c.slot, 'practice', 'Practice')
+      }
+      plans.push({ student: grace, kind: owed ? 'makeup' : 'extra', at: c, forSeat: owed, by: 'parent', message: 'Grace can come any day after 5.', status: 'pending', steps: [{ action: 'asked', hoursAgo: 70, at: c }] })
+    }
+  }
+  // Theo: the office suggested another time, the family accepted it, and it's booked.
+  const theo = studentOf('theo-tak')
+  if (theo) {
+    const owed = owedOf(theo, addDays(today, -3))[0] ?? null
+    const first = ask(choicesFor(theo, 2, 8)[0])
+    // Another day's class, and not the last seat of one another request asks for (that one would be full).
+    const others = choicesFor(theo, 2, 12, undefined, true).filter((x) => (!first || x.d !== first.d) && !(askedFor.has(idOf(x)) && taken(x.d, x.slot) >= seats - 1))
+    // A make-up within 18 days of the class it makes up, as the sheets' are; else an extra class.
+    const makeupAt = owed ? others.find((x) => diffDays(owed.dateKey, x.d) <= 18) : undefined
+    const kind = makeupAt ? 'makeup' : 'extra'
+    const booked = ask(makeupAt ?? others[0])
+    if (first && booked) {
+      const seat = addSeat(theo, booked.d, booked.slot, makeupAt ? 'makeup' : 'practice', makeupAt && owed ? makeupLabel(owed.dateKey) : 'Practice')
+      seat.status = 'confirmed'
+      Object.assign(seat.data, { status: 'confirmed', source: 'request' })
+      if (makeupAt && owed?.status === 'canceled') owed.data.note = `Absent: make-up planned for ${monthDay(booked.d)}`
+      const note = 'That class is full now. This one has a seat open.'
+      plans.push({
+        student: theo,
+        kind,
+        at: booked,
+        forSeat: makeupAt ? owed : null,
+        by: 'parent',
+        message: makeupAt ? 'Theo missed his class. Could he make it up?' : 'Could Theo come once more this week?',
+        status: 'approved',
+        seat,
+        steps: [
+          { action: 'asked', hoursAgo: 68, at: first },
+          { action: 'offered', hoursAgo: 52, office: true, at: booked, note },
+          { action: 'accepted', hoursAgo: 30, at: booked },
+        ],
+      })
+    }
+  }
+  // Sophie: an extra class the office declined, with a note.
+  const sophie = studentOf('sophie-novak')
+  const sophieAt = sophie ? ask(choicesFor(sophie, 1, 12)[0]) : null
+  if (sophie && sophieAt) {
+    const decisionNote = 'The beginners’ classes are busy this week. Next week has seats.'
+    plans.push({
+      student: sophie,
+      kind: 'extra',
+      at: sophieAt,
+      forSeat: null,
+      by: 'parent',
+      message: 'Could Sophie come twice this week?',
+      status: 'rejected',
+      decisionNote,
+      steps: [
+        { action: 'asked', hoursAgo: 52, at: sophieAt },
+        { action: 'rejected', hoursAgo: 30, office: true, note: decisionNote },
+      ],
+    })
   }
 
   // Classes, then their seats ------------------------------------------------------
@@ -637,6 +834,48 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
       createdAt: now,
       updatedAt: now,
     })
+  }
+
+  // The families' requests planned above, asked by the parent who signs in (or the student), answered by the manager.
+  const office = { email: SAMPLE_MANAGER.email, name: SAMPLE_MANAGER.name }
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000)
+  const timeOf = (x: Choice) => ({ classId: classIdOf(x.d, x.slot), dateKey: x.d, startMin: x.slot.block.startMin, endMin: x.slot.block.endMin })
+  const startOf = (x: Choice) => toInstant(x.d, x.slot.block.startMin, timezone)
+  let requests = 0
+  for (const p of plans) {
+    const s = p.student
+    const parent = familyParents.get(s.family ?? s.key)?.[0]
+    const family = p.by === 'student' ? { email: sampleEmail(s.first, s.last), name: `${s.first} ${s.last}`, role: 'student' as const } : parent ? { email: parent.email, name: parent.name, role: 'parent' as const } : null
+    if (!family) continue
+    const history = p.steps.map((st, i) => {
+      // The ask carries the family's message.
+      const note = st.note ?? (i === 0 ? p.message : '')
+      return { action: st.action, at: hoursAgo(st.hoursAgo), by: st.office ? { ...office, role: 'admin' } : family, ...(st.at ? timeOf(st.at) : {}), ...(note ? { note } : {}) }
+    })
+    const last = p.steps[p.steps.length - 1]
+    const decided = p.status === 'approved' || p.status === 'rejected'
+    add(`${COL.classRequests}/${SAMPLE_PREFIX}request-${s.key}`, {
+      kind: p.kind,
+      studentId: sampleStudentId(s.key),
+      studentName: `${s.first} ${s.last}`,
+      ...timeOf(p.at),
+      startAt: startOf(p.at),
+      forSessionId: p.forSeat?.id ?? null,
+      forDateKey: p.forSeat?.dateKey ?? null,
+      message: p.message,
+      status: p.status,
+      requestedBy: family,
+      createdAt: hoursAgo(p.steps[0].hoursAgo),
+      updatedAt: hoursAgo(last.hoursAgo),
+      decidedAt: decided ? hoursAgo(last.hoursAgo) : null,
+      // The office's answer, or the family member who accepted the time suggested.
+      decidedBy: decided ? (last.office ? office : { email: family.email, name: family.name }) : null,
+      decisionNote: p.decisionNote ?? '',
+      sessionId: p.seat?.id ?? null,
+      offer: p.offer ? { ...timeOf(p.offer.at), startAt: startOf(p.offer.at), note: p.offer.note, by: office, at: hoursAgo(p.offer.hoursAgo) } : null,
+      history,
+    })
+    requests++
   }
 
   // Time entries: everyone in clocks in when their hours start, give or take five minutes, and out a little after.
@@ -782,6 +1021,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     trials: count('trial'),
     whosIn,
     shifts,
+    requests,
   }
   add(`${COL.auditLog}/${SAMPLE_PREFIX}data-added`, {
     at: now,

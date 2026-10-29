@@ -135,6 +135,10 @@ export type NotificationType =
   | 'class_requested'
   | 'request_approved'
   | 'request_rejected'
+  // The office suggests another class (to the family); the family accepts it or asks for another (to the office).
+  | 'request_offered'
+  | 'request_accepted'
+  | 'request_asked_again'
   // A new score for a student, to their family.
   | 'score_added'
   | 'contract_signed'
@@ -178,6 +182,9 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   class_requested: { label: 'Class Request', color: '#D97706' },
   request_approved: { label: 'Request Approved', color: '#16A34A' },
   request_rejected: { label: 'Request Declined', color: '#6B7280' },
+  request_offered: { label: 'Another Time Suggested', color: '#2563EB' },
+  request_accepted: { label: 'Suggestion Accepted', color: '#16A34A' },
+  request_asked_again: { label: 'Asked Again', color: '#D97706' },
   score_added: { label: 'New Score', color: '#2563EB' },
   contract_signed: { label: 'Contract Signed', color: '#16A34A' },
 }

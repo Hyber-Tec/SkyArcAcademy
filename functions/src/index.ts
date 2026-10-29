@@ -436,6 +436,6 @@ export { onDriveFileCreated, onDriveFolderCreated, purgeDriveTrash } from './dri
 export { getContractForSigning, sendContractLink, signContract } from './contracts'
 export { onProgressReportWritten, onReportViewed } from './reports'
 export { websiteMessage } from './website'
-export { cancelClass, decideClassRequest, onClassWritten, onSeatWritten, requestClass, withdrawClassRequest } from './requests'
+export { answerClassOffer, cancelClass, decideClassRequest, onClassWritten, onSeatWritten, requestClass, withdrawClassRequest } from './requests'
 export { onScoreCreated } from './scores'
 export { readResultsSheet } from './sheets'

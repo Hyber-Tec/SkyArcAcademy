@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { isReservedEmail } from '../brand'
 import { coachesIn, seatKind } from '../schedule/classes'
+import { type ClassRequest, type RequestClass, type RequestSeat, isOpenRequest, offerCheck, requestCheck, requestHistory, seatLabelFor } from '../schedule/requests'
 import type { SessionStatus } from '../settings/defaults'
 import { DEFAULT_SETTINGS } from '../settings/defaults'
 import { addDays, diffDays, parseDateKey, toInstant, weekdayOf } from '../time'
 import type { Availability } from '../types'
-import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_PREFIX, buildSampleData } from './data'
+import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_PREFIX, type SampleDoc, buildSampleData } from './data'
 
 const TZ = 'America/New_York'
 const TODAY = '2026-10-15'
@@ -259,4 +260,97 @@ describe('sample data', () => {
     expect(events.length).toBe(2)
     for (const e of events) expect(e.isRecurring).toBe(e.recurrence !== null)
   })
+
+  it('leaves most classes in the coming weeks a seat or two for families to ask for', () => {
+    const ahead = classes.filter((c) => c.dateKey >= TODAY && c.dateKey <= addDays(TODAY, 14))
+    const open = ahead.map((c) => c.seats - inUse(seatsOf(c)).length)
+    expect(open.filter((n) => n === 1 || n === 2).length / ahead.length).toBeGreaterThan(0.6)
+    expect(open.filter((n) => n === 0).length / ahead.length).toBeLessThan(0.2)
+    // The seats taken families see are the classes' own.
+    for (const d of of('classSeats')) expect(d.data.taken).toBe(inUse(seatsOf(classOf.get(idOf(d.path))!)).length)
+  })
+})
+
+describe('the sample families’ requests', () => {
+  type Row = ClassRequest & { id: string }
+  /** The requests of a sample built on `today`, and what the server's checks read about them. */
+  function requestsOn(today: string) {
+    const now = toInstant(today, 15 * 60, TZ)
+    const built = today === TODAY ? docs : buildSampleData({ ...opts, today, now }).docs
+    const rows = (col: string) => built.filter((d: SampleDoc) => d.path.split('/')[2] === col && d.path.split('/').length === 4).map((d) => ({ ...d.data, id: idOf(d.path) }))
+    const requests = rows('classRequests') as unknown as Row[]
+    const sessions = rows('sessions') as unknown as (SeatRow & { startAt: Date; source: string })[]
+    const seatsTaken = new Map(rows('classSeats').map((c) => [c.id, c as unknown as { dateKey: string; startMin: number; endMin: number; seats: number; taken: number; startAt: Date }]))
+    const target = (classId: string): RequestClass | null => {
+      const c = seatsTaken.get(classId)
+      return c ? { id: classId, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, seats: c.seats, taken: c.taken, isDeleted: false, startMs: c.startAt.getTime() } : null
+    }
+    const seatsOfStudent = (studentId: string): RequestSeat[] =>
+      sessions.filter((s) => s.studentId === studentId).map((s) => ({ id: s.id, classId: s.classId, studentId: s.studentId, dateKey: s.dateKey, startMin: s.startMin, endMin: s.endMin, status: s.status, note: s.note, isDeleted: false, startMs: s.startAt.getTime() }))
+    const facts = (r: Row, classId: string) => ({
+      target: target(classId),
+      seats: seatsOfStudent(r.studentId),
+      pending: requests.filter((x) => x.studentId === r.studentId && x.id !== r.id && isOpenRequest(x)),
+      nowMs: now.getTime(),
+      today,
+      settings: DEFAULT_SETTINGS,
+    })
+    const members = rows('members') as unknown as { id: string; role: string; studentId?: string | null; studentIds?: string[] }[]
+    return { requests, sessions, target, facts, members, now }
+  }
+
+  it('has some in each state, the Hwang family’s waiting on the office and on them', () => {
+    const { requests } = requestsOn(TODAY)
+    const count = (status: string) => requests.filter((r) => r.status === status).length
+    expect([count('pending'), count('offered'), count('approved'), count('rejected')]).toEqual([4, 1, 1, 1])
+    expect(summary.requests).toBe(requests.length)
+    const hwang = requests.filter((r) => r.studentId === `${SAMPLE_PREFIX}jiwoo-hwang` || r.studentId === `${SAMPLE_PREFIX}minjun-hwang`)
+    expect(hwang.map((r) => r.status).sort()).toEqual(['offered', 'pending'])
+    expect(new Set(requests.map((r) => r.kind))).toEqual(new Set(['makeup', 'reschedule', 'extra']))
+  })
+
+  for (const today of [TODAY, '2026-11-02', '2026-12-08', '2027-01-21', '2027-03-04', '2027-05-30']) {
+    it(`are what the server would have made, on ${today}`, () => {
+      const { requests, sessions, target, facts, members, now } = requestsOn(today)
+      expect(requests).toHaveLength(7)
+      for (const r of requests) {
+        // Asked by a parent of the student, or the student, who signs in; the class is a sample class ahead.
+        const m = members.find((x) => x.id === r.requestedBy.email)!
+        expect(r.requestedBy.role === 'student' ? m.studentId : m.studentIds).toEqual(r.requestedBy.role === 'student' ? r.studentId : expect.arrayContaining([r.studentId]))
+        expect(target(r.classId)).toMatchObject({ dateKey: r.dateKey, startMin: r.startMin, endMin: r.endMin })
+        expect(r.dateKey > today && r.dateKey <= addDays(today, DEFAULT_SETTINGS.schedule.requests.daysAhead)).toBe(true)
+        // Its back and forth starts with the ask, in time order, ending at its last change.
+        const history = requestHistory(r)
+        expect(history[0]).toMatchObject({ action: 'asked', by: r.requestedBy })
+        const times = history.map((h) => (h.at as unknown as Date).getTime())
+        expect([...times].sort((a, b) => a - b)).toEqual(times)
+        expect(times.at(-1)).toBe((r.updatedAt as unknown as Date).getTime())
+        expect(times.at(-1)!).toBeLessThan(now.getTime())
+      }
+      // Waiting on the office: each one a family could ask for, but one whose class filled up since.
+      const pending = requests.filter((r) => r.status === 'pending')
+      const checks = pending.map((r) => requestCheck({ ...facts(r, r.classId), draft: { kind: r.kind, classId: r.classId, forSessionId: r.forSessionId } }))
+      expect(checks.filter((c) => !c.ok)).toEqual([{ ok: false, message: 'That class is full now. Choose another time.' }])
+      // Waiting on the family: a class of the student's level the office could suggest, with seats open.
+      const offered = requests.find((r) => r.status === 'offered')!
+      expect(offered.offer).toMatchObject({ by: { name: 'Paige Sutton' } })
+      expect(offerCheck(offered, facts(offered, offered.offer!.classId)).ok).toBe(true)
+      expect(requestHistory(offered).at(-1)).toMatchObject({ action: 'offered', classId: offered.offer!.classId, note: offered.offer!.note })
+      // Booked once the family accepted: its seat in the class suggested, labeled as approving labels it.
+      const approved = requests.find((r) => r.status === 'approved')!
+      expect(requestHistory(approved).map((h) => h.action)).toEqual(['asked', 'offered', 'accepted'])
+      expect(sessions.find((s) => s.id === approved.sessionId)).toMatchObject({
+        classId: approved.classId,
+        studentId: approved.studentId,
+        status: 'confirmed',
+        source: 'request',
+        note: seatLabelFor(approved.kind, approved.forDateKey),
+      })
+      expect(approved.decidedBy?.email).toBe(approved.requestedBy.email)
+      // Declined, with a note for the family.
+      const declined = requests.find((r) => r.status === 'rejected')!
+      expect(declined.decisionNote).toBeTruthy()
+      expect(requestHistory(declined).at(-1)).toMatchObject({ action: 'rejected', note: declined.decisionNote, by: { role: 'admin' } })
+    })
+  }
 })

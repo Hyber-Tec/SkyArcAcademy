@@ -5,9 +5,10 @@
  * announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic PDFs in the
  * students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the card in the
  * Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
- * It also has a few trial requests and questions sent from the website. Running it again rewrites the same documents,
- * and the sample's schedule (classes, seats, who's in, time entries) becomes the ten weeks around the new today: the
- * sample's earlier ones are replaced, those from before classes were taught together too.
+ * It also has a few trial requests and questions sent from the website, and families' requests for classes (waiting for
+ * the office, waiting for a family's answer to a time suggested, approved and declined). Running it again rewrites the
+ * same documents, and the sample's schedule (classes, seats, who's in, time entries, families' requests) becomes the ten
+ * weeks around the new today: the sample's earlier ones are replaced, those from before classes were taught together too.
  *
  * Where it goes: production holds the academy's real people (docs/DECISIONS.md §21), so there the sample goes only into
  * the demo academy (`demo`, §22), which the first run makes from the real one (its settings, its website and its
@@ -96,8 +97,8 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.websiteMessages]: (id) => isSample(id),
 }
 
-/** The sample's schedule, which each run replaces with the weeks around its today. */
-const SCHEDULE = [COL.classes, COL.classSeats, COL.sessions, COL.availability, COL.clockShifts] as const
+/** The sample's schedule, which each run replaces with the weeks around its today (the families' requests are for its classes). */
+const SCHEDULE = [COL.classes, COL.classSeats, COL.sessions, COL.availability, COL.clockShifts, COL.classRequests] as const
 
 /** Sub-collections that go with a removed document. */
 const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }
@@ -137,6 +138,7 @@ async function add() {
   console.log(`\n+ Sample data in ${PROJECT_ID} (${base}): ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
   console.log(`  ${summary.classes} classes with ${summary.seats} seats (${summary.makeups} make-ups, ${summary.practice} practice, ${summary.trials} trial visits)`)
   console.log(`  Who's in: ${summary.whosIn} days of the staff's hours; ${summary.shifts} time entries`)
+  console.log(`  ${summary.requests} requests from families: waiting for the office, for a family's answer to a time suggested, approved and declined`)
   console.log(`  ${messages.length} messages from the website (${messages.filter((m) => m.data.status === 'new').length} new)`)
   console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs and ${shooting.cards} scanned cards in the students' Drive folders), ${shooting.reports} progress reports`)
   console.log('  Remove it all with: npm run seed:sample -- --remove')

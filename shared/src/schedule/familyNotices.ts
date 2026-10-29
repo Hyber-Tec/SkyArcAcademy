@@ -2,12 +2,12 @@ import type { NotificationType } from '../comms'
 import { type DateKey, formatDateKey, formatMinutes, formatTimeRange } from '../time'
 import { seatKind } from './classes'
 import type { SessionSnapshot } from './notify'
-import { type ClassRequest, REQUEST_KIND_LABELS } from './requests'
+import { type ClassOffer, type ClassRequest, REQUEST_KIND_LABELS } from './requests'
 
 /**
  * What families and the office are told about classes (docs/DECISIONS.md §23): the family when the academy changes
- * their child's class or answers a request, the office when a family cancels or asks. The texts live here, the sending
- * in functions/src (requests.ts, sessionNotify.ts).
+ * their child's class, answers a request or suggests another time; the office when a family cancels, asks, accepts a
+ * time suggested or asks for another. The texts live here, the sending in functions/src (requests.ts, sessionNotify.ts).
  */
 
 export interface Notice {
@@ -67,6 +67,10 @@ export function familyCanceledNotice(s: { studentName: string; dateKey: DateKey;
   return { type: 'class_canceled_by_family', title: 'Canceled by the family', body: `${s.studentName}’s class on ${at(s)} was canceled by ${whom}.` }
 }
 
+/** "Jiyeon Hwang (for Jiwoo)", or the student by name: who took a step on a request. */
+const askerOf = (studentName: string, by: { name: string; role: 'parent' | 'student' }) =>
+  by.role === 'student' ? studentName : `${by.name || 'A parent'} (for ${first(studentName)})`
+
 /** The office hears of a request to approve. */
 export function requestedNotice(r: Pick<ClassRequest, 'kind' | 'studentName' | 'dateKey' | 'startMin' | 'endMin' | 'forDateKey' | 'requestedBy'>): Notice {
   const what =
@@ -75,8 +79,47 @@ export function requestedNotice(r: Pick<ClassRequest, 'kind' | 'studentName' | '
       : r.kind === 'reschedule' && r.forDateKey
         ? `to move ${formatDateKey(r.forDateKey, 'monthDay')}’s class`
         : 'an extra class'
-  const asker = r.requestedBy.role === 'student' ? r.studentName : `${r.requestedBy.name || 'A parent'} (for ${first(r.studentName)})`
-  return { type: 'class_requested', title: `Request: ${REQUEST_KIND_LABELS[r.kind]}`, body: `${asker} asks for ${what}: ${span(r)}.` }
+  return { type: 'class_requested', title: `Request: ${REQUEST_KIND_LABELS[r.kind]}`, body: `${askerOf(r.studentName, r.requestedBy)} asks for ${what}: ${span(r)}.` }
+}
+
+/** The family hears the academy suggests another class instead of the one asked for. */
+export function offeredNotice(
+  r: Pick<ClassRequest, 'kind' | 'studentName' | 'dateKey' | 'startMin' | 'forDateKey'>,
+  offer: Pick<ClassOffer, 'dateKey' | 'startMin' | 'endMin' | 'note'>,
+): Notice {
+  const who = first(r.studentName)
+  const what =
+    r.kind === 'makeup' && r.forDateKey
+      ? `${who}’s makeup for ${formatDateKey(r.forDateKey, 'monthDay')}`
+      : r.kind === 'reschedule' && r.forDateKey
+        ? `moving ${who}’s class on ${formatDateKey(r.forDateKey, 'monthDay')}`
+        : `${who}’s ${r.kind === 'extra' ? 'extra class' : 'request'}`
+  const note = offer.note.trim()
+  return {
+    type: 'request_offered',
+    title: 'Another time suggested',
+    body: `For ${what}, the academy suggests ${span(offer)} instead of ${at(r)}.${note ? ` “${note}”` : ''} Accept it or ask for another time in Classes.`,
+  }
+}
+
+/** The office hears the family accepted the class suggested: it's booked, with its seat's label. */
+export function acceptedNotice(r: Pick<ClassRequest, 'studentName'>, by: { name: string; role: 'parent' | 'student' }, booked: { dateKey: DateKey; startMin: number; endMin: number }, label: string): Notice {
+  return { type: 'request_accepted', title: 'Suggestion accepted', body: `${askerOf(r.studentName, by)} accepted ${span(booked)}: ${r.studentName} is booked (${label}).` }
+}
+
+/** The office hears the family asks for another class instead of the one suggested. */
+export function askedAgainNotice(
+  r: Pick<ClassRequest, 'kind' | 'studentName'>,
+  by: { name: string; role: 'parent' | 'student' },
+  asked: { dateKey: DateKey; startMin: number; endMin: number },
+  message: string,
+): Notice {
+  const words = message.trim()
+  return {
+    type: 'request_asked_again',
+    title: `Asked again: ${REQUEST_KIND_LABELS[r.kind]}`,
+    body: `${askerOf(r.studentName, by)} asks for ${span(asked)} instead of the time suggested.${words ? ` “${words}”` : ''}`,
+  }
 }
 
 /** The family hears the answer. */
