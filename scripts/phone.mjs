@@ -1373,7 +1373,6 @@ async function test() {
   // Android's photo picker works differently.
   if (flows.includes("scan.yaml")) {
     if (s.platform !== "ios") {
-      flows.splice(flows.indexOf("scan.yaml"), 1);
       skipped.push("scan.yaml");
       note("Skipped scan.yaml: it runs on the iPhone Simulator only for now.");
     } else {
@@ -1405,6 +1404,7 @@ async function test() {
   ok(`Signed in as the practice owner (${PRACTICE_OWNER.email})`);
   let failed = 0;
   for (const flow of flows) {
+    if (skipped.includes(flow)) continue;
     const needs = missingValues(path.join(dir, flow), values);
     if (needs.length) {
       skipped.push(flow);

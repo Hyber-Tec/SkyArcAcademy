@@ -20,6 +20,9 @@ appId: com.skyarcacademy.app
 - extendedWaitUntil:
     visible: "Select up to 20 photos."
     timeout: 20000
+# Its photos come in after its title: a tap before them selects nothing.
+- waitForAnimationToEnd:
+    timeout: 3000
 - tapOn:
     point: 16%, 27%
 - waitForAnimationToEnd:
@@ -49,10 +52,12 @@ appId: com.skyarcacademy.app
     timeout: 15000
 - tapOn:
     id: "bull-done"
+# Brought to the middle: scrolled only until it shows, the row stays under the Save bar, which takes the tap.
 - scrollUntilVisible:
     element:
       id: "scan-student"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "scan-student"
 - extendedWaitUntil:

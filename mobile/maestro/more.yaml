@@ -33,6 +33,12 @@ appId: com.skyarcacademy.app
     id: "coach-close"
 - runFlow:
     file: steps/back.yaml
+# The appearance is below the fold on a shorter screen: brought to the middle, clear of the tab bar.
+- scrollUntilVisible:
+    element:
+      id: "more-appearance-dark"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "more-appearance-dark"
 - tapOn:
