@@ -6,12 +6,14 @@ import { MISS_BEYOND_MM } from './score'
 /**
  * Pellet holes in one bull. The bull is resampled flat (millimetres, from its measured centre and axes); what the
  * printed bull looks like at each distance from its centre is learnt from the bull itself (the median around each
- * ring), and a hole is a 4 mm patch that differs from it: brighter than the black (the wall or torn white fibres
- * showing), or bluer or darker than the paper. The printed ring lines and the centre dot are left out, and so is red
- * ink (coaches write the scores in red). Each mark's centre is then fitted with the shape of a hole: a rim of about
- * 2 mm radius, often only partly visible as torn fibres, and sometimes a bright inside. Last, each hole's own edge is
- * found along rays from that centre, for its size as the card shows it and the centre of that edge (`measureHole`):
- * scores take the hole at its real size (docs/DECISIONS.md §23, P1).
+ * ring), and a hole is a 4 mm patch that differs from it. A hole shows whatever is behind the card (a white wall or
+ * sheet, a brown desk, a black one) and often torn fibres at its rim, so lighter and darker both count, on the black
+ * as on the paper, and so does another colour on the black, or a bluer one on the paper. The printed ring lines and
+ * the centre dot are left out, and so is red ink (coaches write the scores in red; a brown desk seen through a hole
+ * isn't red). Each mark's centre is then fitted with the shape of a hole: a rim of about 2 mm radius, often only
+ * partly visible as torn fibres, and sometimes a differing inside. Last, each hole's own edge is found along rays from
+ * that centre, for its size as the card shows it and the centre of that edge (`measureHole`): scores take the hole at
+ * its real size (docs/DECISIONS.md §23, P1).
  */
 
 /** Millimetres around the centre that are read, and the spacing of the samples. */
@@ -52,6 +54,13 @@ export interface HoleMark {
 const toIndex = (mm: number) => Math.round((mm + HALF) / STEP)
 const toMm = (g: number) => -HALF + g * STEP
 
+/**
+ * A red hue rather than an orange or brown one, from a colour's R − G and B − R: G − B stays small against R − min(G,
+ * B), a hue under about 20°. The coaches' pens show pink to red in photos (under 15°, even in warm light); a wooden
+ * desk seen through a hole is brown (20–30°), and so is the buff paper.
+ */
+const reddish = (rg: number, br: number) => -(rg + br) < 0.35 * Math.max(rg, -br)
+
 /** Reads one bull. `axes`: photo pixels per millimetre along the card's x and y (down), as ScannedBull's. */
 export function findHoles(img: RgbaImage, center: Vec, axes: [number, number, number, number]): HoleMark[] {
   return readBull(img, center, axes).marks
@@ -83,10 +92,11 @@ export function readBull(img: RgbaImage, center: Vec, axes: [number, number, num
       radius[i] = r
       const y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
       Y[i] = y
-      C[i] = rgb[2] - rgb[0]
+      const br = rgb[2] - rgb[0]
+      C[i] = br
       const rg = rgb[0] - rgb[1]
       RG[i] = rg
-      if (rg > 40 && rg > 0.28 * y) red[i] = 1
+      if (rg > 40 && rg > 0.28 * y && reddish(rg, br)) red[i] = 1
       if (r < 0.5) masked[i] = 1
       else if (Math.abs(r - BLACK_EDGE) < 0.4) {
         masked[i] = 1
@@ -160,44 +170,63 @@ export function readBull(img: RgbaImage, center: Vec, axes: [number, number, num
     return prof[b] * (1 - t) + prof[b + 1] * t
   }
 
-  // Ink: redder than the paper there (even a faint stroke), and just around it (its soft edge).
-  for (let i = 0; i < count; i++) if (valid[i] && RG[i] - expected(profR, radius[i]) > 14) red[i] = 1
-  const ink = dilate(red, 2)
-
-  // Differences, in units of this photo's own noise on the black and on the paper.
+  // Each sample's difference from the print there: in lightness (dY), in blueness (dC) and, on the black, in colour (CH,
+  // the distance from the print's colour). Ink: redder than the paper there (even a faint stroke) and red, and just
+  // around it (its soft edge).
   const dY = new Float32Array(count)
   const dC = new Float32Array(count)
-  const onBlack = new Float32Array(Math.ceil(count / 3) + 1)
-  const onPaper = new Float32Array(onBlack.length)
-  const bluer = new Float32Array(onBlack.length)
-  let nBlack = 0
-  let nPaper = 0
+  const CH = new Float32Array(count)
   for (let i = 0; i < count; i++) {
     if (!valid[i]) continue
+    const f = Math.min(BINS - 1.001, Math.max(0, radius[i] / BIN - 0.5))
+    const b = Math.floor(f)
+    const t = f - b
+    const c = C[i] - (profC[b] * (1 - t) + profC[b + 1] * t)
+    const d = RG[i] - (profR[b] * (1 - t) + profR[b + 1] * t)
+    dY[i] = Y[i] - (profY[b] * (1 - t) + profY[b + 1] * t)
+    dC[i] = c
+    if (radius[i] < BLACK_EDGE) CH[i] = Math.sqrt(c * c + d * d)
+    // Redder, without turning yellower as a brown desk seen through a hole may (G − B changes by −(d + c)).
+    if (d > 14 && -(d + c) < 0.2 * d && reddish(RG[i], C[i])) red[i] = 1
+  }
+  const ink = dilate(red, 2)
+
+  // Differences, in units of this photo's own noise on the black and on the paper. A colour difference is a distance,
+  // spread as noise in two dimensions is: its median is 1.1774 σ, and past 3.5 σ it's as rare as past 3 σ in lightness.
+  const third = Math.ceil(count / 3) + 1
+  const onBlack = new Float32Array(third)
+  const colour = new Float32Array(third)
+  const onPaper = new Float32Array(third)
+  const bluer = new Float32Array(third)
+  let nBlack = 0
+  let nPaper = 0
+  for (let i = 0; i < count; i += 3) {
+    if (!valid[i] || masked[i] || ink[i]) continue
     const r = radius[i]
-    dY[i] = Y[i] - expected(profY, r)
-    dC[i] = C[i] - expected(profC, r)
-    if (masked[i] || ink[i] || i % 3) continue
-    if (r < BLACK_EDGE - 1) onBlack[nBlack++] = Math.abs(dY[i])
-    else if (r > BLACK_EDGE + 1) {
+    if (r < BLACK_EDGE - 1) {
+      onBlack[nBlack] = Math.abs(dY[i])
+      colour[nBlack++] = CH[i]
+    } else if (r > BLACK_EDGE + 1) {
       onPaper[nPaper] = Math.abs(dY[i])
       bluer[nPaper++] = Math.abs(dC[i])
     }
   }
   const sBlack = Math.max(2, 1.4826 * medianOf(onBlack, nBlack))
+  const sColour = Math.max(2, medianOf(colour, nBlack) / 1.1774)
   const sPaper = Math.max(2, 1.4826 * medianOf(onPaper, nPaper))
   const sBlue = Math.max(2, 1.4826 * medianOf(bluer, nPaper))
   const T = 3
+  const TC = 3.5
   const A = plane(N, N)
   for (let i = 0; i < count; i++) {
-    if (!valid[i] || masked[i]) continue
-    const r = radius[i]
-    if (r < BLACK_EDGE) {
-      // On the black only brighter counts: the wall or torn fibres showing through.
-      A.data[i] = ink[i] ? 0 : Math.max(0, dY[i] / sBlack - T)
+    if (!valid[i] || masked[i] || ink[i]) continue
+    if (radius[i] < BLACK_EDGE) {
+      // On the black: lighter (a white or brown desk behind, torn fibres) or darker (a black desk), or another colour
+      // (under coloured light the print takes the light's colour, while a dark hole stays dark).
+      A.data[i] = Math.max(0, Math.abs(dY[i]) / sBlack - T) + Math.max(0, CH[i] / sColour - TC)
     } else {
-      // On the paper: darker or lighter (not the coaches' red ink), or bluer (the wall behind).
-      A.data[i] = ink[i] ? 0 : Math.max(0, Math.abs(dY[i]) / sPaper - T) + Math.max(0, dC[i] / sBlue - T)
+      // On the paper: darker (a desk behind) or lighter, or bluer (a white or grey sheet behind).
+      A.data[i] = Math.max(0, Math.abs(dY[i]) / sPaper - T) + Math.max(0, dC[i] / sBlue - T)
     }
   }
   // Across the printed lines a hole carries on: a line's samples are blended from just inside and just outside it.
@@ -275,10 +304,14 @@ export function readBull(img: RgbaImage, center: Vec, axes: [number, number, num
     if (!sampleRgb(img, center.x + xm * ax + ym * bx, center.y + xm * ay + ym * by, rgb)) return NaN
     const y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
     const rg = rgb[0] - rgb[1]
-    if ((rg > 40 && rg > 0.28 * y) || rg - expected(profR, r) > 14) return NaN
-    const dy = y - expected(profY, r)
-    if (r < BLACK_EDGE) return dy / sBlack
-    return Math.max(Math.abs(dy) / sPaper, (rgb[2] - rgb[0] - expected(profC, r)) / sBlue)
+    const br = rgb[2] - rgb[0]
+    const dr = rg - expected(profR, r)
+    const dc = br - expected(profC, r)
+    if (reddish(rg, br) && ((rg > 40 && rg > 0.28 * y) || (dr > 14 && -(dr + dc) < 0.2 * dr))) return NaN
+    // Lighter or darker than the print, or on the paper bluer: not any colour, as colour is blurrier in a photo than
+    // lightness and would push the edge out.
+    const dy = Math.abs(y - expected(profY, r))
+    return r < BLACK_EDGE ? dy / sBlack : Math.max(dy / sPaper, dc / sBlue)
   }
   for (const m of marks) {
     const edge = measureHole(look, m.x, m.y, T)
@@ -468,9 +501,9 @@ function dilate(mask: Uint8Array, r: number): Uint8Array {
 }
 
 /**
- * The two shapes a hole is fitted with, as tables by squared distance from its centre: a disc (the wall showing
- * through: bright inside and at the rim) and a ring (the card behind showing dark, with torn fibres at the rim only).
- * Both ask for nothing just outside the rim.
+ * The two shapes a hole is fitted with, as tables by squared distance from its centre: a disc (what's behind showing
+ * through: differing inside and at the rim) and a ring (what's behind no different from the print there, with torn
+ * fibres at the rim only). Both ask for nothing just outside the rim.
  */
 const KERNEL_REACH = RIM + 1.4
 const KERNEL_STEPS = 400
@@ -538,16 +571,18 @@ function fitHole(A: Plane, S: Plane, x0: number, y0: number): HoleMark {
     }
     return best
   }
-  // A bright inside means the wall shows through (the disc); otherwise only the rim's fibres do (the ring).
+  // A differing inside means what's behind shows through (the disc); otherwise only the rim's fibres do (the ring). An
+  // inside only a shade off the print, beside bright fibres, is the ring's.
   const disc = search(DISC)
   let inside = 0
   let lit = 0
   const r2 = (RIM - 0.5) * (RIM - 0.5)
+  const shade = 0.25 * S.data[Math.min(N - 1, Math.max(0, toIndex(y0))) * N + Math.min(N - 1, Math.max(0, toIndex(x0)))]
   for (let gy = toIndex(disc.y - RIM); gy <= toIndex(disc.y + RIM); gy++) {
     for (let gx = toIndex(disc.x - RIM); gx <= toIndex(disc.x + RIM); gx++) {
       if (gx < 0 || gy < 0 || gx >= N || gy >= N || (toMm(gx) - disc.x) ** 2 + (toMm(gy) - disc.y) ** 2 > r2) continue
       inside++
-      if (A.data[gy * N + gx] > 0) lit++
+      if (A.data[gy * N + gx] > shade) lit++
     }
   }
   const best = inside && lit / inside >= 0.5 ? disc : search(RING)

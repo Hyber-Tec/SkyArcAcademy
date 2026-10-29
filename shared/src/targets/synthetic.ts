@@ -5,7 +5,8 @@ import type { RgbaImage } from './image'
 
 /**
  * A made-up photo of the academy's paper card, for tests and demos: the printed bulls, ring lines and header, a wall
- * behind, some pen marks, holes where the shots are, a slant and noise. Never drawn from a real card or person.
+ * or a desk behind, some pen marks, holes where the shots are, a slant and noise. Never drawn from a real card or
+ * person.
  */
 
 export interface SyntheticShot {
@@ -14,10 +15,27 @@ export interface SyntheticShot {
   /** Millimetres from the bull's centre, x right and y up. */
   x: number
   y: number
-  /** What shows through the hole: the wall behind (bright) or the card behind (dark, with torn fibres at its rim). */
+  /**
+   * What shows through the hole: what's behind the card, clean to its edge ('wall'), or torn fibres over its rim with
+   * what's behind inside ('fibres'; before the wall, a dark card behind).
+   */
   look?: 'wall' | 'fibres'
   /** The hole's radius in the card (mm): a 4.5 mm pellet's is usually a little under 2.25. */
   radiusMm?: number
+}
+
+/** What a card may lie on for its photo, showing around it and through its holes. */
+export type SyntheticBackground = 'white' | 'brown' | 'grey' | 'black'
+
+/**
+ * How each background looks in the photo. The brown is a wooden desk: redder than the card's paper, but brown, not
+ * red as the coaches' ink is.
+ */
+export const SYNTHETIC_BACKGROUNDS: Readonly<Record<SyntheticBackground, readonly number[]>> = {
+  white: [240, 241, 236],
+  brown: [150, 104, 70],
+  grey: [128, 128, 130],
+  black: [16, 15, 17],
 }
 
 export interface SyntheticCard {
@@ -38,6 +56,11 @@ export interface SyntheticCard {
   ink?: boolean
   /** A sticky note over these record bulls. */
   coveredBulls?: number[]
+  /**
+   * What the card lies on: it shows around the card and through every hole, a little shaded there. Without it the card
+   * is before a pale wall.
+   */
+  background?: SyntheticBackground
   seed?: number
 }
 
@@ -99,8 +122,12 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
   }
   const covered = new Set((spec.coveredBulls ?? []).map((n) => CARD_BULLS.find((cb) => cb.kind === 'record' && cb.n === n)).filter(Boolean).map((b) => `${b!.col},${b!.row}`))
   const lines = [9, 8, 7, 6, 5, 3, 2, 1].map((ring) => ringRadiusMm(ring) - 0.1)
-  const mix = (a: number[], b: number[], t: number) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+  const mix = (a: readonly number[], b: readonly number[], t: number) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
   const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
+  // Around the card, and through its holes (in the card's shade there).
+  const around = spec.background ? SYNTHETIC_BACKGROUNDS[spec.background] : WALL
+  const through = spec.background ? around.map((v) => v * 0.92) : WALL
+  const behindFibres = spec.background ? through : BEHIND
 
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
@@ -109,7 +136,7 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
       // The size of this pixel on the card, for soft edges.
       const q = applyH(inv, { x: px + 1, y: py })
       const pix = Math.max(0.02, Math.hypot(q.x - p.x, q.y - p.y))
-      let color = WALL
+      let color: readonly number[] = around
       const onCard = p.x >= CARD_EDGES_MM.left && p.x <= CARD_EDGES_MM.right && p.y >= CARD_EDGES_MM.top && p.y <= CARD_EDGES_MM.bottom
       if (onCard) {
         color = PAPER
@@ -143,11 +170,11 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
             const hd = Math.hypot(X - h.x, Y - h.y)
             if (hd > h.r + 0.4) continue
             const inside = clamp01((h.r - hd) / pix + 0.5)
-            if (h.look === 'wall') color = mix(color, WALL, inside)
+            if (h.look === 'wall') color = mix(color, through, inside)
             else {
               // Torn fibres over the rim, from half a millimetre inside it to just past it.
               const tear = h.tears[Math.floor(((Math.atan2(Y - h.y, X - h.x) + Math.PI) / (2 * Math.PI)) * 12) % 12]
-              const rim = tear && hd > h.r - 0.5 && hd < h.r + 0.15 ? FIBRE : BEHIND
+              const rim = tear && hd > h.r - 0.5 && hd < h.r + 0.15 ? FIBRE : behindFibres
               color = mix(color, rim, hd < h.r - 0.5 ? inside : tear ? clamp01((h.r + 0.15 - hd) / pix + 0.5) : inside)
             }
           }
