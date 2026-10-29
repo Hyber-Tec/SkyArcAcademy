@@ -7,6 +7,7 @@ import { Camera, Images, Plus, Trash2, UserRound } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
+import { FooterBar } from "@/components/FooterBar";
 import { Card } from "@/components/Card";
 import { DateField } from "@/components/DateField";
 import { Field } from "@/components/Field";
@@ -183,9 +184,11 @@ export default function CompetitionSheetScreen() {
     <Screen
       testID="sheet-screen"
       footer={
-        <Button size="lg" disabled={!ready} busy={busy} onPress={() => void save()} testID="sheet-save">
-          {rows.length > 1 ? `Save ${rows.length} results` : "Save the result"}
-        </Button>
+        <FooterBar>
+          <Button size="lg" disabled={!ready} busy={busy} onPress={() => void save()} style={styles.grow} testID="sheet-save">
+            {rows.length > 1 ? `Save ${rows.length} results` : "Save the result"}
+          </Button>
+        </FooterBar>
       }
     >
       <T tone="muted">A photo of the results sheet fills the form; check every number before saving.</T>

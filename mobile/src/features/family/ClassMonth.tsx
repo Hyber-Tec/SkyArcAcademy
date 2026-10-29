@@ -64,8 +64,8 @@ export function FamilyClassMonth({
   const dark = useIsDark();
   const colorOf = useChildColor();
   const { height } = useWindowDimensions();
-  // Smaller weeks on a smaller phone, so the chosen day's classes keep room under the months.
-  const rowHeight = height >= 800 ? 46 : height >= 700 ? 42 : 38;
+  // Smaller weeks on a smaller phone (an iPhone 15 too), so the chosen day's classes keep room under the months.
+  const rowHeight = height >= 900 ? 46 : height >= 800 ? 40 : height >= 700 ? 38 : 34;
   const scroller = useRef<MonthScrollerHandle>(null);
   const panel = useRef<ScrollView>(null);
   const [anchor] = useState(selected);
@@ -184,7 +184,16 @@ export function FamilyClassMonth({
           />
         </View>
       </View>
-      <ScrollView ref={panel} style={styles.fill} contentContainerStyle={styles.panel} contentInsetAdjustmentBehavior="automatic" testID="family-month-panel">
+      {/* Always clear of the floating tab bar on iPhone, a short day's too: with "automatic" a list shorter than its
+          frame kept its last classes under the bar, where it couldn't scroll them up. */}
+      <ScrollView
+        ref={panel}
+        style={[styles.fill, styles.under]}
+        contentContainerStyle={styles.panel}
+        contentInsetAdjustmentBehavior="always"
+        alwaysBounceVertical
+        testID="family-month-panel"
+      >
         <Legend />
         <View style={styles.dayHead}>
           <View style={styles.grow}>
@@ -334,7 +343,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   grow: { flex: 1, gap: 2 },
   months: { marginHorizontal: space.lg, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  panel: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  // A gap under the months, so the day's heading never meets their edge once the list is scrolled.
+  under: { marginTop: space.sm },
+  panel: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xxl },
   dayHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   none: { gap: space.sm },
   next: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },

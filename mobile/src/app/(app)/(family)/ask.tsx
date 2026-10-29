@@ -6,6 +6,7 @@ import { CalendarPlus, CalendarSearch } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
+import { FooterBar } from "@/components/FooterBar";
 import { ChoiceRow } from "@/components/ChoiceRow";
 import { EmptyState } from "@/components/EmptyState";
 import { Field } from "@/components/Field";
@@ -125,9 +126,19 @@ export default function AskForClassScreen() {
       <Screen
         testID="ask-screen"
         footer={
-          <Button icon={<CalendarPlus size={18} color={colors.primaryForeground} />} disabled={!ready} busy={sending} onPress={() => void send()} testID="ask-send">
-            Send request
-          </Button>
+          <FooterBar>
+            <Button
+              size="lg"
+              icon={<CalendarPlus size={18} color={colors.primaryForeground} />}
+              disabled={!ready}
+              busy={sending}
+              onPress={() => void send()}
+              style={styles.grow}
+              testID="ask-send"
+            >
+              Send request
+            </Button>
+          </FooterBar>
         }
       >
         <T tone="muted" style={styles.intro} testID="ask-intro">
@@ -231,6 +242,7 @@ export default function AskForClassScreen() {
 }
 
 const styles = StyleSheet.create({
+  grow: { flex: 1 },
   intro: { paddingHorizontal: space.xs },
   block: { gap: space.sm },
 });

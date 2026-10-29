@@ -4,8 +4,8 @@ import { POSITION_LABELS, type Evaluation } from "@shared/shooting/evaluation";
 import { formatDateKey } from "@shared/time";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Camera, Images, Trophy } from "lucide-react-native";
-import { useMemo } from "react";
+import { Camera, ChevronDown, ChevronUp, Images, Lightbulb, Trophy } from "lucide-react-native";
+import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -19,9 +19,10 @@ import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
 /**
- * The Scan tab: a paper card's photo, from the camera or the library (several at once are read one after the other),
- * scored and filed in the student's Drive; a competition's results from a photo of its results sheet (/scan/sheet).
- * Below, the latest paper cards saved, from the app or the website.
+ * The Scan tab, kept short (the owner, 2026-10-28): a paper card's photo, from the camera or the library (several at
+ * once are read one after the other), scored and filed in the student's Drive; a competition's results from a photo of
+ * its results sheet (/scan/sheet); the latest paper cards saved, from the app or the website; and, folded at the
+ * bottom, the tips for a good scan.
  */
 export default function ScanScreen() {
   const colors = useColors();
@@ -30,6 +31,7 @@ export default function ScanScreen() {
     query(collection(db, ROOT.branches, branchId, COL.evaluations), orderBy("createdAt", "desc"), limit(30)),
   );
   const cards = useMemo(() => recent.data.filter((e) => e.source === "paper").slice(0, 8), [recent.data]);
+  const [tips, setTips] = useState(false);
 
   const choose = async () => {
     try {
@@ -52,10 +54,7 @@ export default function ScanScreen() {
     <Screen title="Scan" testID="scan-screen">
       <Card style={styles.hero}>
         <T variant="heading">Score a paper target</T>
-        <T tone="muted">
-          Photograph the card: the app finds every shot and scores it. You check it, choose the student, and it’s saved in their Drive with the scores for their
-          reports.
-        </T>
+        <T tone="muted">Photograph the card: the app scores every shot, you check it and choose the student.</T>
         <View style={styles.buttons}>
           <Button size="lg" icon={<Camera size={20} color={colors.primaryForeground} />} onPress={() => router.push("/scan/camera")} testID="scan-take-photo">
             Take a photo
@@ -65,27 +64,14 @@ export default function ScanScreen() {
           </Button>
         </View>
       </Card>
-      <ListSection title="After a match">
+      <ListSection>
         <ListRow
           icon={<Trophy size={20} color={colors.foreground} />}
           title="Add a competition result"
-          subtitle="Photograph the results sheet: its numbers fill the form, and it’s filed in the student’s Drive."
+          subtitle="From a photo of the results sheet"
           onPress={() => router.push("/scan/sheet")}
           testID="scan-competition"
         />
-      </ListSection>
-      <ListSection title="For a good scan">
-        <ListRow title="The whole card in the photo" subtitle="Fill the frame with it, from straight above." />
-        <ListRow
-          title="On something light, on its own"
-          subtitle={
-            <T variant="small" tone="muted">
-              A white table or sheet, not the pile of cards: holes in the black show only where light comes through. Nothing over the bulls.
-            </T>
-          }
-        />
-        <ListRow title="Flat, in even light" subtitle="No glare on the black, no shadow across it." />
-        <ListRow title="Several cards?" subtitle="Choose them all from Photos: they’re read one after the other." />
       </ListSection>
       {cards.length ? (
         <ListSection title="Latest paper cards">
@@ -105,6 +91,25 @@ export default function ScanScreen() {
           {recent.loading ? "Loading the latest cards…" : "The paper cards you save show up here."}
         </T>
       )}
+      <ListSection>
+        <ListRow
+          icon={<Lightbulb size={20} color={colors.mutedForeground} />}
+          title="Tips for a good scan"
+          right={tips ? <ChevronUp size={18} color={colors.mutedForeground} /> : <ChevronDown size={18} color={colors.mutedForeground} />}
+          chevron={false}
+          onPress={() => setTips((t) => !t)}
+          accessibilityLabel={tips ? "Hide the tips for a good scan" : "Show the tips for a good scan"}
+          testID="scan-tips"
+        />
+        {tips
+          ? [
+              <ListRow key="whole" title="The whole card, from straight above" subtitle="Fill the photo with it." />,
+              <ListRow key="flat" title="Flat, in even light" subtitle="No glare on the black, no shadow across it." />,
+              <ListRow key="alone" title="On its own" subtitle="Not on the pile of cards, and nothing over the bulls." />,
+              <ListRow key="several" title="Several cards?" subtitle="Choose them all from Photos: they’re read one after the other." />,
+            ]
+          : null}
+      </ListSection>
     </Screen>
   );
 }

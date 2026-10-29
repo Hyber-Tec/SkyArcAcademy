@@ -88,7 +88,7 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        post's comments (comments.ts, PostComments)), notifications (the person's inbox, the staff's
                        and the family's (InboxScreen), and Home's bell; what a notice or a tapped push opens, inbox.ts
                        and pushOpen.ts; More → Notifications' "This phone", PhoneNotifications, and the family's and
-                       the office's switches, NoticeSwitches), home (a coach's to-do and time clock on Home), availability (a coach's
+                       the office's switches, NoticeSwitches), home (a coach's to-do on Home), availability (a coach's
                        days: the clean month calendar's day (CalendarDay), the day sheet (DayEditor: available or not,
                        the time wheels, Repeat), Copy last week, and the writes with the website's checks (api.ts, from
                        `@shared/availabilityWrites`)), pay (a coach's pay lines from `@shared/pay/lines`: the kiosk's
@@ -101,6 +101,7 @@ src/components/        the shared building blocks (Text `T`, Button, Card, ListS
                        TabHeader, SectionTitle,
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, TimeWheel, FactRow, SwitchRow,
                        DateField, ContactButtons, SwipeToDelete, ActionSheet, ToastHost, Hatch (an open seat's lines),
+                       FooterBar (a page's bottom actions),
                        DemoBadge (the demo academy's mark, beside the lockup and each tab's title), Sheet (the edges
                        a full-screen sheet pads),
                        ZoomCanvas and ZoomScrollView: every zoomable picture and the page around it) and brand/ (the
@@ -218,6 +219,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   and `classes`) and say why when they refuse; the app shows the same rules first (Cancel off after the cutoff, with
   `cancelRuleText`). Their switches and the office's (`noticeSwitchesFor(role)`) save to `notificationPrefs/{email}`
   with only the fields the rules allow; coaches keep theirs on their staff record.
+- **A page's bottom actions** (`Screen`'s `footer`) go in `FooterBar`: the page's colour with a hairline over it,
+  clear of the home indicator. A bare button as a footer sat on the screen's rounded bottom edge, cut off on an
+  iPhone 15.
 - **A sheet's toasts**: a sheet is drawn above the app's toasts, so a sheet that shows one has its own `ToastHost`,
   beside its ScrollView (a fragment): a View wrapped around the ScrollView leaves an iPhone sheet blank when it grows.
 - **Full-screen sheets** (a `Modal` with `presentationStyle="pageSheet"`) pad `SHEET_EDGES` (`src/components/Sheet.ts`):
