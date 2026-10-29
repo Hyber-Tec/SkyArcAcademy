@@ -10,6 +10,7 @@ import { ListRow, ListSection } from "@/components/List";
 import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
 import { type StudentDoc, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
+import { findsStudent, goesBy } from "@/features/students/search";
 import { firstName } from "@/features/schedule/classes";
 import { listWords } from "@/features/schedule/format";
 import { useStaffLook } from "@/features/schedule/parts";
@@ -55,19 +56,7 @@ export function StudentPicker({
   }, [day.byDate, today, nowMin]);
 
   // A student is found by their name or the other names they go by (a nickname, another spelling), as on the website.
-  const everyone = useMemo(
-    () =>
-      students.filter((s) =>
-        q ? s.nameLower.includes(q) || s.name.toLowerCase().includes(q) || (s.otherNames ?? []).some((n) => n.toLowerCase().includes(q)) : s.status !== "finished",
-      ),
-    [students, q],
-  );
-  // Found by another name: which one, so the person sees why.
-  const alias = (s: StudentDoc) => {
-    if (!q || s.nameLower.includes(q) || s.name.toLowerCase().includes(q)) return null;
-    const other = (s.otherNames ?? []).find((n) => n.toLowerCase().includes(q));
-    return other ? `Goes by ${other}` : null;
-  };
+  const everyone = useMemo(() => students.filter((s) => (q ? findsStudent(s, q) : s.status !== "finished")), [students, q]);
   const pick = (s: Pick<StudentDoc, "id" | "name">) => {
     onPick({ id: s.id, name: s.name });
     setSearch("");
@@ -139,7 +128,7 @@ export function StudentPicker({
               <ListRow
                 divider={index > 0}
                 title={studentLabel(item.name, item.grade)}
-                subtitle={[alias(item), item.level, item.program].filter(Boolean).join(" · ") || undefined}
+                subtitle={[goesBy(item, q), item.level, item.program].filter(Boolean).join(" · ") || undefined}
                 onPress={() => pick(item)}
                 testID={`pick-${item.id}`}
               />

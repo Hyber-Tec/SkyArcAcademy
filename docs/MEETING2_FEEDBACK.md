@@ -466,8 +466,11 @@ from the app, without calling or texting the academy.
     for 10 seconds, as the website does; past days stay read-only. With it, the phone's pay follows `K1`–`K6`
     (`docs/mobile-pay.md`): one hourly rate, paid time from the kiosk as the shared rule says, and extra time with its
     note.
-- [ ] **M8. Posts in the app:** the rich text and images from `N1`/`N2` display correctly.
+- ✅ **M8. Posts in the app:** the rich text and images from `N1`/`N2` display correctly. (#75)
   - *Plan:* **Already done:** the phone draws the editor's rich text and pictures.
+  - *Done (#75):* checked on both phones with a post of every format the website's editor makes (headings, bold,
+    italic, underline, strike, inline code, a link, nested and numbered lists, a quote, a code block, a rule and a
+    picture); a post's headings now take the website's sizes (a small heading was the size of its text).
 - [ ] **M9. A new build and release** following the release process, after the current review.
 
 ---

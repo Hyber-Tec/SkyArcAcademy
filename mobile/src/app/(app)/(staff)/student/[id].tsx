@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { categoryOf } from "@shared/drive/files";
 import { totalWithTens } from "@shared/shooting/evaluation";
 import { formatBytes } from "@shared/drive/model";
-import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel } from "@shared/people";
+import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel, parentLabel } from "@shared/people";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import { formatDateKey, formatInstant } from "@shared/time";
 import { showActions } from "@/components/ActionSheet";
@@ -86,6 +86,7 @@ export default function StudentScreen() {
   const next = classes.next.slice(0, 3);
   const last = classes.last.slice(0, 3);
   const line = studentLine(s);
+  const first = s.firstName || s.name.split(/\s+/)[0];
   return (
     <>
       <Stack.Screen options={{ title: s.name }} />
@@ -103,13 +104,14 @@ export default function StudentScreen() {
 
         {isAdmin ? (
           <ListSection title="Family" testID="student-family">
+            {/* A parent's name is optional (F3): "Avery's parent", as the website says it, with their email under it. */}
             {parents.map((x, i) => (
               <ListRow
                 key={`${x.name}-${i}`}
                 icon={<Avatar name={x.name || x.email || "?"} size={38} />}
-                title={x.name || x.email || "Parent"}
-                subtitle={[x.relation, x.phone ? formatPhone(x.phone) : x.name ? x.email : null].filter(Boolean).join(" · ")}
-                right={<ContactButtons phone={x.phone} email={x.email} name={x.name || "the parent"} />}
+                title={parentLabel(x.name, first)}
+                subtitle={[x.relation, x.phone ? formatPhone(x.phone) : null, !x.name || !x.phone ? x.email : null].filter(Boolean).join(" · ")}
+                right={<ContactButtons phone={x.phone} email={x.email} name={parentLabel(x.name, first)} />}
                 testID={`student-parent-${i}`}
               />
             ))}

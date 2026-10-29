@@ -19,6 +19,7 @@ import { SearchField } from "@/components/SearchField";
 import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { type StudentDoc, useAcademyClass, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
+import { findsStudent, goesBy } from "@/features/students/search";
 import { addSeat } from "@/features/schedule/api";
 import { longDay, plural, timeRange } from "@/features/schedule/format";
 import { LevelChip } from "@/features/schedule/parts";
@@ -97,7 +98,7 @@ export default function AddSeatScreen() {
   const levels = new Set(v.seats.map((s) => byId.get(s.studentId)?.level).filter(Boolean));
   const needle = q.trim().toLowerCase();
   const list = students.data
-    .filter((s) => !here.has(s.id) && !isInactiveStudent(s.status) && (!needle || s.nameLower.includes(needle)))
+    .filter((s) => !here.has(s.id) && !isInactiveStudent(s.status) && findsStudent(s, needle))
     .sort((a, b) => Number(levels.has(b.level)) - Number(levels.has(a.level)) || a.name.localeCompare(b.name));
   const owedNear = owed.filter((o) => !here.has(o.studentId) && o.classId !== c.id && byId.has(o.studentId)).sort((a, b) => Math.abs(diffDays(a.dateKey, c.dateKey)) - Math.abs(diffDays(b.dateKey, c.dateKey)));
   const owedShown = allOwed ? owedNear : owedNear.slice(0, OWED_SHOWN);
@@ -173,7 +174,7 @@ export default function AddSeatScreen() {
               <ListRow
                 key={st.id}
                 title={st.name}
-                subtitle={st.grade ? gradeLabel(st.grade) : undefined}
+                subtitle={[goesBy(st, needle), st.grade ? gradeLabel(st.grade) : null].filter(Boolean).join(" · ") || undefined}
                 right={<LevelChip level={st.level} rifle={st.rifle} />}
                 onPress={open > 0 ? () => pick(st, label) : undefined}
                 testID={`add-seat-student-${st.id}`}

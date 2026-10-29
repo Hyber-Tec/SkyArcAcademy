@@ -27,7 +27,8 @@ export function scoreFacts(e: Pick<Evaluation, "source" | "shots" | "innerTens" 
   const where = offsetWords(e.mpi);
   return [
     `${e.shots} shots`,
-    e.source === "sius" && e.innerTens !== null ? `${e.innerTens} inner ${e.innerTens === 1 ? "ten" : "tens"}` : null,
+    // A SIUS result's, and a competition's when its sheet gave them (a paper card has none).
+    e.innerTens !== null ? `${e.innerTens} inner ${e.innerTens === 1 ? "ten" : "tens"}` : null,
     e.groupMm !== null ? `group ${e.groupMm} mm` : null,
     e.mpi ? (where ? `sits ${where}` : "centred") : null,
     missing ? `${missing} missing (0)` : null,
@@ -99,7 +100,8 @@ export function ScoreHead({
       </View>
       <T variant="display" testID="score-total">
         {scoreTotal(e)}
-        {sius ? null : (
+        {/* Out of shots × 10 for a paper card only: a SIUS result or a competition sheet can count decimals (10.9 a shot). */}
+        {e.source !== "paper" ? null : (
           <T variant="heading" tone="muted">
             {" "}
             / {e.shots * 10}
