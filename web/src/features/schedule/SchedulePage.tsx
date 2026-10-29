@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useStaffList, useStudentList } from '@/features/data/hooks'
-import { usePendingRequests } from '@/features/requests/hooks'
+import { useOpenRequests } from '@/features/requests/hooks'
 import { useShifts } from '@/features/timeclock/api'
 import { useElementWidth } from '@/hooks/use-element-width'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -102,12 +102,17 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     for (const s of shifts) m.set(s.dateKey, [...(m.get(s.dateKey) ?? []), s])
     return m
   }, [shifts])
-  const pending = usePendingRequests(admin)
+  // Families' requests on the classes they're for: waiting on the office on the class asked for, waiting on the family
+  // on the class suggested to them (its seat isn't held).
+  const requests = useOpenRequests(admin)
   const requestsByClass = useMemo(() => {
     const m = new Map<string, WithId<ClassRequest>[]>()
-    for (const r of pending.data) m.set(r.classId, [...(m.get(r.classId) ?? []), r])
+    for (const r of requests.data) {
+      const on = r.status === 'offered' && r.offer ? r.offer.classId : r.classId
+      m.set(on, [...(m.get(on) ?? []), r])
+    }
     return m
-  }, [pending.data])
+  }, [requests.data])
 
   // ---------------------------------------------------------------- dialogs
   const [classId, setClassId] = useState<string | null>(() => params.get('class'))
@@ -128,7 +133,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     if (id) setClassId(id)
     params.delete('class')
     params.delete('date')
-    if (day && isDateKey(day)) route.go({ view: 'day', date: day }, true)
+    // The rest stays: a notice's `request=` opens its request on that day.
+    if (day && isDateKey(day)) route.go({ view: 'day', date: day }, true, params.toString())
     else setParams(params, { replace: true })
   }, [params, setParams, route])
 

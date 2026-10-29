@@ -23,6 +23,8 @@ const TITLES: Record<string, string> = {
   'event.update': 'Event updated',
   'event.delete': 'Event deleted',
   'dayConfig.update': 'Day updated',
+  'request.offer': 'Another class suggested',
+  'request.reject': 'Request declined',
 }
 
 /**

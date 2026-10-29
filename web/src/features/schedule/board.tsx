@@ -38,9 +38,12 @@ export interface Board {
   shiftsOn: (d: DateKey) => WithId<ClockShift>[]
   /** Teaches: a coach (the manager and the owner can be in without teaching). */
   teaches: (staffId: string) => boolean
-  /** Families' requests for a class still waiting for the office (the office only). */
+  /**
+   * Families' open requests on a class (the office only): those asking for it, waiting for the office, and those it was
+   * suggested for, waiting for the family's answer.
+   */
   requestsFor: (classId: string) => WithId<ClassRequest>[]
-  /** Opens a request to approve or decline. */
+  /** Opens a request to approve, decline or suggest another class. */
   openRequest: (requestId: string) => void
   /** The office can change this day: not a coach, and not a past day. */
   canEdit: (d: DateKey) => boolean

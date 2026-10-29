@@ -17,9 +17,10 @@ export function useScheduleRoute(basePath: string) {
   const date: DateKey = dateParam && isDateKey(dateParam) ? dateParam : todayKey(timezone)
   const explicit = !!viewParam && !!dateParam && isDateKey(dateParam)
 
+  /** Opens a view and date; `search` (without its "?") keeps parameters such as a request to open. */
   const go = useCallback(
-    (next: { view?: ScheduleView; date?: DateKey }, replace = false) => {
-      navigate(`${basePath}/${next.view ?? view}/${next.date ?? date}`, { replace })
+    (next: { view?: ScheduleView; date?: DateKey }, replace = false, search = '') => {
+      navigate(`${basePath}/${next.view ?? view}/${next.date ?? date}${search ? `?${search}` : ''}`, { replace })
     },
     [navigate, basePath, view, date],
   )
