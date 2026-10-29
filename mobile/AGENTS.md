@@ -228,6 +228,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **A page's bottom actions** (`Screen`'s `footer`) go in `FooterBar`: the page's colour with a hairline over it,
   clear of the home indicator. A bare button as a footer sat on the screen's rounded bottom edge, cut off on an
   iPhone 15.
+- **A sheet's root is its ScrollView** (a form sheet: a class's or a request's): inside a View, the sheet showed
+  nothing once dragged to its full height. A sheet's actions sit in its content; one at the end of a long list (a
+  class to suggest) is a tap on the row, then a confirmation.
 - **A sheet's toasts**: a sheet is drawn above the app's toasts, so a sheet that shows one has its own `ToastHost`,
   beside its ScrollView (a fragment): a View wrapped around the ScrollView leaves an iPhone sheet blank when it grows.
 - **Full-screen sheets** (a `Modal` with `presentationStyle="pageSheet"`) pad `SHEET_EDGES` (`src/components/Sheet.ts`):

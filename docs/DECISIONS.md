@@ -783,3 +783,24 @@ the main product: families do everything they need there, without calling or tex
   signature, consent); the server adds a signature page (the signer, the time in the academy's zone, the IP address and
   browser, the link, the blank contract's SHA-256) and files the PDF in Contracts, which only owners and admins see.
   Signers' names are in English letters (the PDF's standard fonts).
+
+## 24. Goo's round on the phones (2026-10-28)
+
+Goo tried TestFlight 1.1.0 (5) on an iPhone 15 with the demo logins and asked for these (all merged that night, #78–#81):
+
+- **Owners and admins change anything, any day** (#79): "let's not put too much rules unless I actually ask". A class
+  and its seats no longer lock once their day is over, in the rules, on the website (the schedule, Settings → Opening
+  hours) and on the phone; a seat shown canceled that wasn't can be put right. Coaches and families still never write
+  the schedule. The one lock left is the pay period, which the office locks and unlocks itself in payroll.
+- **The office suggests another time** (#81): besides approve and decline, the office suggests another class with a
+  seat open, with a note; the family accepts it (booked at once) or asks for another, back and forth until it's booked,
+  withdrawn or declined. Requests have one place (waiting on the office, waiting on a family, decided), a badge on the
+  schedule, and notices both ways. Two families after the last seat: the first booking wins and the second is told the
+  class is full (the server counts the seats in the booking's transaction).
+- **The phone, simpler** (#78): the Scan tab shows the paper card first, then "Add a competition", then the latest
+  cards, with the tips folded at the bottom; a coach's Home shows classes and students (hours and pay are in More); a
+  family's Home shows the next class, the news and the latest scores ("Contact the academy" only before a student is
+  linked); Classes → Month scrolls its day's classes; bottom buttons sit clear of the iPhone's rounded edge.
+- **Cards on any desk** (#80): the reader finds holes whatever is behind the card (white, brown, black). On Goo's cards
+  the app stays a point or so over the coaches where a hole touches the next ring's line: the matches' rule Goo chose
+  (§23, P1); the closest calls are shown orange for a look.
