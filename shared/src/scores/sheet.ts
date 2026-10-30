@@ -5,7 +5,7 @@ import type { DateKey } from '../time'
 /**
  * A match's results sheet, read from the text of its photo or PDF (Google's text reader on the server, the manager's
  * second meeting, docs/DECISIONS.md §23): the shooter, the match, the date, the course of fire, the qualification total
- * with its inner tens ("478 - 13"), and each shot when the sheet lists them ("K1 7.2", "S12 10.4*", the star marking an
+ * with its inner tens ("486 - 15"), and each shot when the sheet lists them ("K1 8.4", "S12 10.4*", the star marking an
  * inner ten), grouped by position (K kneeling, P prone, S standing), and each series' group centre as printed under its
  * target picture. What isn't found is left empty for the admin to type: the reader suggests, the admin checks before
  * anything is saved. Made-up sheets in the tests; never a real one.
@@ -25,12 +25,12 @@ export interface SheetPosition {
 }
 
 export interface SheetReading {
-  /** "Ian Lee", from "Lee, Ian". */
+  /** "Mina Park", from "Park, Mina". */
   name: string
   match: string
   course: string
   dateKey: DateKey | null
-  /** The qualification as printed: its total, and its inner tens when printed ("478 - 13"). */
+  /** The qualification as printed: its total, and its inner tens when printed ("486 - 15"). */
   total: number | null
   innerTens: number | null
   /** Decimal scoring ("587.4"), or whole numbers ("478"). */
@@ -136,11 +136,11 @@ export function readSheetText(text: string, words?: readonly SheetWord[]): Sheet
   const innerTens = qual?.[2] ? Number(qual[2]) : null
   const decimal = !!qual && /[.,]\d/.test(qual[1])
 
-  // "Lee, Ian": the first line that is a surname, a comma and a first name.
+  // "Park, Mina": the first line that is a surname, a comma and a first name.
   const nameLine = lines.find((l) => /^[A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?,\s*[A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?$/.test(l))
   const name = nameLine ? nameLine.split(',').map((p) => p.trim()).reverse().join(' ') : ''
 
-  // "Walton August 3P | Sat, 22 Aug 2026": the match, then its date.
+  // "Lakeside Fall 3P | Sat, 12 Sep 2026": the match, then its date.
   const matchLine = lines.find((l) => /\|/.test(l) && sheetDate(l))
   const match = matchLine ? matchLine.split('|')[0].trim() : ''
   const dateKey = sheetDate(matchLine ?? text)

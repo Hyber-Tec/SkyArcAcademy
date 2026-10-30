@@ -18,7 +18,8 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { SwitchRow } from "@/components/SwitchRow";
 import { T } from "@/components/Text";
 import { useAcademyNow, useStudent } from "@/features/data/hooks";
-import { type SheetPhoto, type SheetRow, readSheet, saveSheetResults, sheetPhoto } from "@/features/scan/sheet";
+import { type SheetPhoto, type SheetRow, findSheetPlaces, readSheet, saveSheetResults, sheetPhoto } from "@/features/scan/sheet";
+import type { SheetPlaces } from "@shared/scores/sheetSave";
 import { type PickedStudent, StudentPicker } from "@/features/scan/StudentPicker";
 import { errorMessage } from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -33,6 +34,8 @@ interface Row {
   innerTens: string;
   /** Each shot, when the sheet listed them and they add up. */
   values: number[] | null;
+  /** Their places on the sheet's target pictures, once found (they go with the values). */
+  places?: SheetPlaces | null;
   /** What to check, when the sheet was only partly read ("1 shot not read: …"). */
   check?: string | null;
 }
@@ -71,6 +74,9 @@ export default function CompetitionSheetScreen() {
   const [photo, setPhoto] = useState<SheetPhoto | null>(null);
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState<string | null>(null);
+  // Finding the shots on the sheet's target pictures, after the text: null before, then what was found.
+  const [placing, setPlacing] = useState(false);
+  const [placedNote, setPlacedNote] = useState<string | null>(null);
   const [match, setMatch] = useState("");
   const [course, setCourse] = useState("");
   const [dateKey, setDateKey] = useState<DateKey>(today);
@@ -81,7 +87,8 @@ export default function CompetitionSheetScreen() {
   const [busy, setBusy] = useState(false);
   const nextKey = useRef(2);
 
-  const setRow = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch, values: "values" in patch ? (patch.values ?? null) : null } : r)));
+  const setRow = (key: number, patch: Partial<Row>) =>
+    setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch, values: "values" in patch ? (patch.values ?? null) : null, places: "values" in patch ? r.places : null } : r)));
 
   /** A photo of the sheet: read on the server, and what it found put in the form. */
   const choose = async (from: "camera" | "library") => {
@@ -135,6 +142,26 @@ export default function CompetitionSheetScreen() {
           ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? "position" : "positions"}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ""}.${who}`
           : `Partly read: check every number against the sheet.${who}`,
       );
+      // Then each shot's place on the sheet's target pictures, for the replay: the rows keep it with their values.
+      if (r.consistent && r.positions.length) {
+        setPlacing(true);
+        setPlacedNote(null);
+        void findSheetPlaces(p, r)
+          .then(({ places, placed, of }) => {
+            setRows((all) => all.map((row) => (row.position && row.values ? { ...row, places: places[row.position] ?? null } : row)));
+            setPlacedNote(
+              !of
+                ? null
+                : placed === of
+                  ? `Every shot's place found on the sheet's targets (${of} series): they play back on the score.`
+                  : placed
+                    ? `Shots placed on ${placed} of ${of} series' targets; the others keep their scores only.`
+                    : "The sheet's targets couldn't be read, so the shots keep their scores only.",
+            );
+          })
+          .catch(() => setPlacedNote(null))
+          .finally(() => setPlacing(false));
+      }
     } catch (e) {
       setReadNote(readError(e));
     } finally {
@@ -167,7 +194,7 @@ export default function CompetitionSheetScreen() {
     if (!ready || !student || busy) return;
     setBusy(true);
     try {
-      const results: SheetRow[] = parsed.map(({ r, shots, total, tens }) => ({ position: r.position as Position, shots, total, innerTens: tens, values: r.values }));
+      const results: SheetRow[] = parsed.map(({ r, shots, total, tens }) => ({ position: r.position as Position, shots, total, innerTens: tens, values: r.values, places: r.places ?? null }));
       await saveSheetResults({ branchId, actor, student, dateKey, kind, match, course, note, rows: results, photo });
       toast.success(results.length === 1 ? "Competition result added" : `${results.length} competition results added`, {
         description: photo ? `For ${student.name}. The sheet goes to their Drive folder in the background.` : `For ${student.name}.`,
@@ -185,7 +212,7 @@ export default function CompetitionSheetScreen() {
       testID="sheet-screen"
       footer={
         <FooterBar>
-          <Button size="lg" disabled={!ready} busy={busy} onPress={() => void save()} style={styles.grow} testID="sheet-save">
+          <Button size="lg" disabled={!ready || placing} busy={busy} onPress={() => void save()} style={styles.grow} testID="sheet-save">
             {rows.length > 1 ? `Save ${rows.length} results` : "Save the result"}
           </Button>
         </FooterBar>
@@ -217,6 +244,18 @@ export default function CompetitionSheetScreen() {
               {readNote}
             </T>
           ) : null}
+          {placing ? (
+            <View style={styles.reading} testID="sheet-placing">
+              <ActivityIndicator />
+              <T variant="small" tone="muted">
+                Finding each shot on the sheet’s targets…
+              </T>
+            </View>
+          ) : placedNote ? (
+            <T variant="small" tone="muted" testID="sheet-placed-note">
+              {placedNote}
+            </T>
+          ) : null}
           <View style={styles.buttons}>
             <Button style={styles.grow} icon={<Camera size={18} color={colors.primaryForeground} />} disabled={reading} onPress={() => void choose("camera")} testID="sheet-take-photo">
               {photo ? "Take another" : "Take a photo"}
@@ -230,7 +269,7 @@ export default function CompetitionSheetScreen() {
 
       <ListSection title="The match">
         <View style={styles.insetGap}>
-          <Field label="Match" value={match} onChangeText={setMatch} maxLength={120} placeholder="Walton August 3P" testID="sheet-match" />
+          <Field label="Match" value={match} onChangeText={setMatch} maxLength={120} placeholder="Lakeside Fall 3P" testID="sheet-match" />
           <Field label="Course of fire" value={course} onChangeText={setCourse} maxLength={80} placeholder="3x20 Air Rifle" testID="sheet-course" />
           <DateField label="Date" value={dateKey} onChange={setDateKey} today={today} max={today} pickerTitle="The day of the match" testID="sheet-date" />
         </View>

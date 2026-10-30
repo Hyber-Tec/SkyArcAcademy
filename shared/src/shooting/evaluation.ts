@@ -122,7 +122,7 @@ export interface Evaluation extends AuditStamp {
    * reference.
    */
   official?: { appTotal: number; by: string; at: TimestampLike } | null
-  /** A competition's match, as its results sheet names it ("Walton August 3P", "3x20 Air Rifle"). */
+  /** A competition's match, as its results sheet names it ("Lakeside Fall 3P", "3x20 Air Rifle"). */
   match?: { name: string; course: string } | null
 }
 

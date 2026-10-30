@@ -25,7 +25,7 @@ export function matchResults<E extends MatchResult>(e: E, all: readonly E[]): E[
   return [...list].sort((a, b) => order(a.position) - order(b.position))
 }
 
-/** A whole-number match ("478 - 13") keeps its totals whole; a decimal one ("587.4") its tenths. */
+/** A whole-number match ("486 - 15") keeps its totals whole; a decimal one ("587.4") its tenths. */
 export const isWholeResult = (r: Pick<Evaluation, 'total' | 'wholeTotal'>) => Number.isInteger(r.total) && r.total === r.wholeTotal
 
 /** A series' total as the match counts it: whole numbers, or tenths. */

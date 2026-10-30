@@ -5,7 +5,10 @@ import { toast } from 'sonner'
 import { classifyFile, cleanFileName } from '@shared/drive/files'
 import { studentFolderId } from '@shared/drive/types'
 import type { SheetReading } from '@shared/scores/sheet'
-import { type EvalSeries, type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition } from '@shared/shooting/evaluation'
+import { readSheetShots } from '@shared/scores/sheetRead'
+import { type SheetPlaces, placedSeries, placesByPosition, sheetSeriesOf } from '@shared/scores/sheetSave'
+import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition } from '@shared/shooting/evaluation'
+import type { RgbaImage } from '@shared/targets/image'
 import { wholeScore } from '@shared/shooting/target'
 import { type DateKey, todayKey } from '@shared/time'
 import type { AuditStamp } from '@shared/types'
@@ -26,8 +29,11 @@ import { ResultKindPicker } from './kinds'
 
 const read = httpsCallable<{ branchId: string; content: string; mime: string }, { reading: SheetReading; found: boolean }>(functions, 'readResultsSheet')
 
-/** A photo shrunk to read (2000 px is plenty for printed text), as base64 JPEG; a PDF as it is. */
-async function contentOf(file: File): Promise<{ content: string; mime: string }> {
+/**
+ * A photo shrunk to read (2000 px is plenty for printed text), as base64 JPEG, with its pixels for finding the shots on
+ * the sheet's target pictures (the server's words have their places on these same pixels); a PDF as it is.
+ */
+async function contentOf(file: File): Promise<{ content: string; mime: string; pixels?: RgbaImage }> {
   const base64 = (blob: Blob) =>
     new Promise<string>((resolve, reject) => {
       const r = new FileReader()
@@ -41,10 +47,12 @@ async function contentOf(file: File): Promise<{ content: string; mime: string }>
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  const ctx = canvas.getContext('2d')
+  ctx?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  const pixels = ctx ? ctx.getImageData(0, 0, canvas.width, canvas.height) : undefined
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
   if (!blob) throw new Error('The photo couldn’t be prepared.')
-  return { content: await base64(blob), mime: 'image/jpeg' }
+  return { content: await base64(blob), mime: 'image/jpeg', pixels }
 }
 
 interface Row {
@@ -55,6 +63,8 @@ interface Row {
   innerTens: string
   /** Each shot, when the sheet listed them and they add up. */
   values: number[] | null
+  /** Their places on the sheet's target pictures, when found (they go with the values). */
+  places?: SheetPlaces | null
   /** What to check, when the sheet was only partly read ("1 shot not read: check the total"). */
   check?: string | null
 }
@@ -85,6 +95,7 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
   const [file, setFile] = useState<File | null>(null)
   const [reading, setReading] = useState(false)
   const [readNote, setReadNote] = useState<string | null>(null)
+  const [placedNote, setPlacedNote] = useState<string | null>(null)
   const [match, setMatch] = useState('')
   const [course, setCourse] = useState('')
   const [dateKey, setDateKey] = useState<DateKey>(today)
@@ -95,15 +106,18 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
   const [busy, setBusy] = useState(false)
   const nextKey = useRef(2)
 
-  const setRow = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch, values: 'values' in patch ? (patch.values ?? null) : null } : r)))
+  const setRow = (key: number, patch: Partial<Row>) =>
+    setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch, values: 'values' in patch ? (patch.values ?? null) : null, places: 'values' in patch ? r.places : null } : r)))
 
   async function choose(f: File | null) {
     setFile(f)
     setReadNote(null)
+    setPlacedNote(null)
     if (!f) return
     setReading(true)
     try {
-      const { reading: r, found } = (await read({ branchId, ...(await contentOf(f)) })).data
+      const { pixels, ...content } = await contentOf(f)
+      const { reading: r, found } = (await read({ branchId, ...content })).data
       if (!found) {
         setReadNote('No text found on it. Type the numbers below.')
         return
@@ -137,6 +151,14 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
           ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? 'position' : 'positions'}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ''}.${who}`
           : `Partly read: check every number against the sheet.${who}`,
       )
+      // Then each shot's place on the sheet's target pictures, for the replay: the rows keep it with their values.
+      if (pixels && r.consistent && r.positions.length) {
+        const shots = readSheetShots(pixels, r)
+        const places = placesByPosition(shots)
+        const { placed, of } = placedSeries(shots)
+        setRows((all) => all.map((row) => (row.position && row.values ? { ...row, places: places[row.position] ?? null } : row)))
+        if (of) setPlacedNote(placed === of ? `Every shot's place found on the sheet's targets (${of} series): they play back on the score.` : placed ? `Shots placed on ${placed} of ${of} series' targets; the others keep their scores only.` : "The sheet's targets couldn't be read, so the shots keep their scores only.")
+      }
     } catch (e) {
       setReadNote((e as Error).message || 'The sheet couldn’t be read. Type the numbers below.')
     } finally {
@@ -171,12 +193,7 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
       const label = { name: match.trim(), course: course.trim() }
       const evaluations: Omit<Evaluation, keyof AuditStamp>[] = parsed.map(({ r, shots, total, tens }) => {
         const values = r.values && r.values.length === shots ? r.values : null
-        const series: EvalSeries[] = values
-          ? Array.from({ length: Math.ceil(values.length / 10) }, (_, i) => {
-              const part = values.slice(i * 10, i * 10 + 10)
-              return { n: i + 1, total: Math.round(part.reduce((n, v) => n + v, 0) * 10) / 10, shots: part.map((v) => ({ v, a: null })), mpi: null, groupMm: null }
-            })
-          : []
+        const series = values ? sheetSeriesOf(values, r.places) : []
         return {
           studentId,
           studentName,
@@ -235,6 +252,7 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
               {file ? <span className="min-w-0 truncate text-sm text-muted-foreground">{file.name}</span> : null}
             </div>
             {readNote ? <FieldDescription>{readNote}</FieldDescription> : <FieldDescription>Optional. It’s filed in the student’s Drive folder with the result.</FieldDescription>}
+            {placedNote ? <FieldDescription data-testid="sheet-placed-note">{placedNote}</FieldDescription> : null}
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field>
