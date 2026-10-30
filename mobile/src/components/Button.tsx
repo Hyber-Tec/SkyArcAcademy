@@ -8,7 +8,8 @@ type Size = "default" | "lg" | "sm";
 
 /**
  * The website's buttons (web/src/components/ui/button.tsx) at touch sizes: primary, outline, secondary, ghost, the
- * destructive one in its tinted red, and a text link.
+ * destructive one in its tinted red, and a text link. `wrap`: the label takes a second line rather than being cut, and
+ * the button grows with it (a full-width button with a long label, with the phone's larger text sizes).
  */
 export function Button({
   children,
@@ -18,6 +19,7 @@ export function Button({
   size = "default",
   disabled = false,
   busy = false,
+  wrap = false,
   style,
   testID,
   accessibilityLabel,
@@ -29,6 +31,7 @@ export function Button({
   size?: Size;
   disabled?: boolean;
   busy?: boolean;
+  wrap?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   accessibilityLabel?: string;
@@ -61,7 +64,9 @@ export function Button({
         styles.base,
         variant === "link"
           ? { height: undefined, paddingHorizontal: 0, paddingVertical: 4 }
-          : { height, paddingHorizontal: size === "sm" ? 12 : 18 },
+          : wrap
+            ? { minHeight: height, paddingVertical: 8, paddingHorizontal: size === "sm" ? 12 : 18 }
+            : { height, paddingHorizontal: size === "sm" ? 12 : 18 },
         {
           backgroundColor: bg[variant],
           borderColor: variant === "outline" ? colors.border : "transparent",
@@ -73,8 +78,11 @@ export function Button({
       {busy ? <ActivityIndicator color={fg} /> : icon ? <View>{icon}</View> : null}
       {children !== undefined && children !== null && (
         <Text
-          numberOfLines={1}
-          style={{ color: fg, fontSize: size === "sm" ? 14 : 16, fontWeight: variant === "link" ? "500" : "600", textDecorationLine: variant === "link" ? "underline" : "none" }}
+          numberOfLines={wrap ? undefined : 1}
+          style={[
+            { color: fg, fontSize: size === "sm" ? 14 : 16, fontWeight: variant === "link" ? "500" : "600", textDecorationLine: variant === "link" ? "underline" : "none" },
+            wrap && styles.wrapLabel,
+          ]}
         >
           {children}
         </Text>
@@ -101,4 +109,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  // A label that may wrap shares the row with the icon, centred on its lines.
+  wrapLabel: { flexShrink: 1, textAlign: "center" },
 });

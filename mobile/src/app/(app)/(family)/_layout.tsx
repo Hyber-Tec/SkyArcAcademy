@@ -11,9 +11,9 @@ export const unstable_settings = { anchor: "(tabs)" };
 
 /**
  * The family's part of the app (parents and students, who see much the same: a parent their children, a student
- * themself): five tabs, and what opens over them (a class's sheet, asking for a class, a score, its original file, a
- * progress report, the academy's news, a post and its attachments, and their notifications). Every screen loads its
- * record by ID, so links and the back gesture always work.
+ * themself): five tabs, and what opens over them (a day of the months' and a class's sheets, asking for a class, a
+ * score, its original file, a progress report, the academy's news, a post and its attachments, and their
+ * notifications). Every screen loads its record by ID, so links and the back gesture always work.
  */
 export default function FamilyLayout() {
   const colors = useColors();
@@ -36,6 +36,8 @@ export default function FamilyLayout() {
         screenLayout={({ route, children }) => (route.name === "(tabs)" ? children : <GestureHandlerRootView style={{ flex: 1 }}>{children}</GestureHandlerRootView>)}
       >
         <Stack.Screen name="(tabs)" />
+        {/* A day tapped on Classes' months, and a class: sheets sized to what they hold. */}
+        <Stack.Screen name="day" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
         <Stack.Screen name="session/[id]" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
         <Stack.Screen name="ask" options={{ ...page, title: "Ask for a class" }} />
         <Stack.Screen name="another" options={{ ...page, title: "Ask for another time" }} />

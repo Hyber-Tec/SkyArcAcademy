@@ -50,8 +50,10 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        Addresses the family's part also has ("/reports") are named with their group from inside a tab
                        ("/(app)/(staff)/reports"): from there the router would pick the family's.
   (app)/(family)/      parents and students (a parent their children, a student themself): (tabs) Home · Classes ·
-                       Scores · Reports · More, and what opens over them (session/[id] a class's sheet, with Cancel and
-                       Move, ask asking for a class (a makeup, a move, an extra class), score/[id] a score to look at,
+                       Scores · Reports · More, and what opens over them (day a day's sheet from Classes' months: its
+                       classes, or none, and "Ask for a class on this day"; session/[id] a class's sheet, with Cancel and
+                       Move, ask asking for a class (a makeup, a move, an extra class; `date`, a day chosen on the
+                       months), score/[id] a score to look at,
                        file/[id] its original, report/[id] a progress report, news/ the academy's news: the list,
                        news/[id] a post, news/attachment a post's file, inbox their notifications (Home's bell));
                        FamilyProvider holds whose they are and the child a parent chose
@@ -82,8 +84,11 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        target), access, account (deleting an account), family (what a family reads: their students,
                        classes, scores and shared reports, and the academy's news (news.ts); the child switcher; their
                        classes (classes.ts: brothers and sisters in the same class together) and the class cards; the
-                       Classes tab's months (ClassMonth), each child in their colour (tints.ts); the makeups to book and
-                       their requests at the top of Classes (RequestsPanel, a time the academy suggests first); a
+                       Classes tab (the owner's remake, 2026-10-29: clear at a glance, for every age): its top
+                       (ClassesHeader: List / Month and Ask), the months filling the page with a tap opening the day's
+                       sheet (ClassMonth), each child in their colour (tints.ts), and above the list only what has
+                       something, each part in its colour (RequestsPanel: Needs your answer, Waiting for the academy,
+                       Makeups to book, the recent requests folded), with buttons stacked rather than cut; a
                        score's row, a post's row and a student's figures), reports (a progress report's figures and
                        charts), announcements (a post's content, read from the website's editor's HTML into blocks
                        (html.ts) and drawn with the app's own text (RichText); its dates and what it holds; PostParts,
@@ -101,7 +106,7 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        details, notification switches and the sign-in methods, SignInSecurity, for every role)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, ChoiceRow (one of a few choices), Skeleton, Screen,
-                       TabHeader, SectionTitle,
+                       TabHeader, SectionTitle, SectionHeading (a part of a page in its colour),
                        SearchField, Dialog, IconButton, DatePickerDialog, MonthScroller, TimeWheel, FactRow, SwitchRow,
                        DateField, ContactButtons, SwipeToDelete, ActionSheet, ToastHost, Hatch (an open seat's lines),
                        FooterBar (a page's bottom actions),
@@ -141,7 +146,8 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   them.
 - **Look:** the website's shadcn neutral theme, light and dark (`useColors()`), on the grouped background of the
   phone's own list screens; Sky Arc's red (`colors.brand`) only as an accent. Use the shared components; a new
-  reusable one goes in `src/components/` with its own file.
+  reusable one goes in `src/components/` with its own file. Nothing is cut short on an iPhone 15 at the phone's larger
+  text sizes: buttons with long labels go full width, one under the other, with `wrap` (never squeezed side by side).
 - **Logos:** only the official files (CLAUDE.md, "Brand and logos"), through `src/components/brand/SkyArc.tsx`:
   `SkyArcLogo` (the full logo: sign-in screens, loading), `SkyArcLockup` (the square icon with the wordmark: the top of
   the navigation) and `SkyArcMark` (the square icon). `src/components/brand/files.ts` holds the official SVG files as

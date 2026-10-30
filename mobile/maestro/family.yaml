@@ -128,6 +128,22 @@ appId: com.skyarcacademy.app
     visible:
       id: "family-classes"
     timeout: 30000
+- assertVisible:
+    id: "family-ask"
+# A time the academy suggests, when the family has one waiting: Accept, then Ask for another time, one under the other
+# (nothing is answered here).
+- runFlow:
+    when:
+      visible:
+        id: "family-needs-answer"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "family-offer-another-.*"
+          direction: DOWN
+          centerElement: true
+      - assertVisible:
+          id: "family-offer-accept-.*"
 - scrollUntilVisible:
     element:
       id: "family-classes-show-past"
@@ -160,8 +176,10 @@ appId: com.skyarcacademy.app
     centerElement: true
 - tapOn:
     id: "family-classes-show-upcoming"
-# The months: each day marked with the children's classes and the day chosen under them (today, or the next day with a
-# class), a class's sheet opened from it, then the list again.
+# The months: the whole page, each day marked with the children's classes. Today opens its sheet from the bottom (its
+# classes, or "No classes"), and a class's sheet takes its place; closed, then tomorrow's sheet, and asking for a class
+# on that day when it has a seat open (opened and left: nothing is sent); then the list again. The days are the phone's
+# (Maestro's clock), which near midnight may be a day off the academy's: any day opens the same way.
 - scrollUntilVisible:
     element:
       id: "family-classes-view-month"
@@ -170,29 +188,77 @@ appId: com.skyarcacademy.app
     id: "family-classes-view-month"
 - extendedWaitUntil:
     visible:
-      id: "family-month-day-title"
+      id: "family-month"
+    timeout: 30000
+- evalScript: "${output.today = (function () { var d = new Date(); var m = d.getMonth() + 1, n = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (n < 10 ? '0' : '') + n; })()}"
+- evalScript: "${output.tomorrow = (function () { var d = new Date(Date.now() + 86400000); var m = d.getMonth() + 1, n = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (n < 10 ? '0' : '') + n; })()}"
+- tapOn:
+    id: "family-month-day-${output.today}"
+- extendedWaitUntil:
+    visible:
+      id: "family-day-classes|family-day-none|family-day-closed"
+    timeout: 30000
+- assertVisible:
+    id: "family-day-title"
+- runFlow:
+    when:
+      visible:
+        id: "family-day-class-.*"
+    commands:
+      - tapOn:
+          id: "family-day-class-.*"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "family-session-students"
+          timeout: 15000
+      - tapOn:
+          id: "family-session-close"
+- runFlow:
+    when:
+      visible:
+        id: "family-day-close"
+    commands:
+      - tapOn:
+          id: "family-day-close"
+- extendedWaitUntil:
+    notVisible:
+      id: "family-day-sheet|family-session-sheet"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "family-month-day-${output.tomorrow}"
+    direction: DOWN
+- tapOn:
+    id: "family-month-day-${output.tomorrow}"
+- extendedWaitUntil:
+    visible:
+      id: "family-day-classes|family-day-none|family-day-closed"
     timeout: 30000
 - runFlow:
     when:
       visible:
-        id: "family-month-next"
+        id: "family-day-ask"
     commands:
       - tapOn:
-          id: "family-month-next"
+          id: "family-day-ask"
+      - extendedWaitUntil:
+          visible:
+            id: "ask-intro"
+          timeout: 15000
+      - runFlow:
+          file: steps/back.yaml
 - runFlow:
     when:
       visible:
-        id: "family-month-class-.*"
+        id: "family-day-close"
     commands:
       - tapOn:
-          id: "family-month-class-.*"
-          index: 0
-      - extendedWaitUntil:
-          visible:
-            id: "family-session-sheet"
-          timeout: 15000
-      - tapOn:
-          id: "family-session-close"
+          id: "family-day-close"
+- extendedWaitUntil:
+    visible:
+      id: "family-classes-view-list"
+    timeout: 15000
 - tapOn:
     id: "family-classes-view-list"
 - scrollUntilVisible:

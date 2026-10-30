@@ -39,6 +39,9 @@ const light = {
   /** An event on the schedule (a meeting, an open practice), the website's sky blue. */
   event: "#00598a",
   eventTint: "#f0f9ff",
+  /** A makeup still to book (the family's Classes), violet: apart from the suggestions' blue and the requests' amber. */
+  makeup: "#7c3aed",
+  makeupTint: "#7c3aed17",
   overlay: "#00000066",
   /** Sky Arc's red (the logo's dot, #FB0202), its solid fill and its text shade, as the website's brand tokens. */
   brand: "#FB0202",
@@ -76,6 +79,8 @@ const dark: typeof light = {
   demoTint: "#ffb90026",
   event: "#74d4ff",
   eventTint: "#052f4a66",
+  makeup: "#a78bfa",
+  makeupTint: "#8b5cf62e",
   overlay: "#000000a6",
   brand: "#FB0202",
   brandSolid: "#E00000",

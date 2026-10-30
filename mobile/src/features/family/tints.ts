@@ -23,3 +23,10 @@ export function useChildColor(): (studentId: string) => string | null {
     [several, ids, dark],
   );
 }
+
+/** A class's mark on the months: its child's colour when a parent has several children, else the first colour (sky). */
+export function useMarkColor(): (studentId: string) => string {
+  const colorOf = useChildColor();
+  const dark = useIsDark();
+  return useCallback((studentId: string) => colorOf(studentId) ?? (dark ? DARK : LIGHT)[0], [colorOf, dark]);
+}
