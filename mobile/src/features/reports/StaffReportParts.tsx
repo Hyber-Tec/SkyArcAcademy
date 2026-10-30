@@ -112,7 +112,10 @@ export function ReportStaffFacts({ report: r }: { report: StaffReport }) {
   const level = f?.trend?.level ?? null;
   const changes = (f?.positions ?? []).filter((p) => p.change !== null && p.first && p.latest);
   const made = millis(r.generatedAt);
-  const edited = Object.values(r.narrativeMeta?.sections ?? {}).some((m) => m?.source === "staff");
+  const sections = Object.values(r.narrativeMeta?.sections ?? {});
+  const edited = sections.some((m) => m?.source === "staff");
+  // Sections drafted with "Write with AI" on the website (docs/DECISIONS.md §26).
+  const drafted = sections.some((m) => m?.source === "ai");
   const kinds = [f?.evaluations.sius ? `${f.evaluations.sius} SIUS` : "", f?.evaluations.paper ? `${f.evaluations.paper} paper` : ""].filter(Boolean).join(", ");
   const dot = (color: string) => <View style={[styles.dot, { backgroundColor: color, borderColor: colors.card }]} />;
   return (
@@ -133,7 +136,7 @@ export function ReportStaffFacts({ report: r }: { report: StaffReport }) {
         <ListRow title="Period" subtitle={r.period.label} />
         <ListRow title="Evaluations" subtitle={`${f?.evaluations.total ?? 0}${kinds ? ` (${kinds})` : ""}`} />
         <ListRow title="Prepared" subtitle={[made !== null ? formatInstant(made, timezone, { dateStyle: "medium", timeStyle: "short" }) : null, r.generatedBy?.name ? `by ${r.generatedBy.name}` : null].filter(Boolean).join(" ") || "—"} />
-        <ListRow title="Written by" subtitle={edited ? "Standard text, edited by staff" : "Standard text"} />
+        <ListRow title="Written by" subtitle={drafted ? (edited ? "Drafted with AI, edited by staff" : "Drafted with AI") : edited ? "Standard text, edited by staff" : "Standard text"} />
       </ListSection>
 
       {r.series?.length ? (
