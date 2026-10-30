@@ -51,12 +51,35 @@ function NowPill() {
   );
 }
 
+/** A child's colour beside their name, as the months mark their classes. */
+function ChildDot({ color }: { color: string | null | undefined }) {
+  if (!color) return null;
+  return <View style={[styles.childDot, { backgroundColor: color }]} />;
+}
+
 /**
  * One class in a list: its time (and the day in a tile, where the list has no day headings), how long it is, and each
  * of the family's students in it with their status and the class's note ("Makeup for 10/12"). Tapping it opens the
- * class.
+ * class. `dotOf`: each child's colour beside their name (a day's sheet, opened from the months). The time wraps
+ * rather than being cut, whatever the phone's text size.
  */
-export function FamilyClassRow({ group, when, showDate = false, divider = false, onPress, testID }: { group: FamilyClass; when: When; showDate?: boolean; divider?: boolean; onPress: () => void; testID?: string }) {
+export function FamilyClassRow({
+  group,
+  when,
+  showDate = false,
+  divider = false,
+  dotOf,
+  onPress,
+  testID,
+}: {
+  group: FamilyClass;
+  when: When;
+  showDate?: boolean;
+  divider?: boolean;
+  dotOf?: (studentId: string) => string | null;
+  onPress: () => void;
+  testID?: string;
+}) {
   const colors = useColors();
   const { who, firstName, shown } = useFamily();
   // A child's name where more than one child shows.
@@ -81,16 +104,19 @@ export function FamilyClassRow({ group, when, showDate = false, divider = false,
       {showDate ? <DateTile dateKey={group.dateKey} today={when.today} /> : null}
       <View style={styles.grow}>
         <View style={styles.line}>
-          <T variant="label" numberOfLines={1} style={[styles.shrink, off && { color: colors.mutedForeground, textDecorationLine: "line-through" }]}>
+          <T variant="label" style={[styles.shrink, off && { color: colors.mutedForeground, textDecorationLine: "line-through" }]}>
             {timeRange(group.startMin, group.endMin, when.hour12)}
           </T>
           {live ? <NowPill /> : null}
           <View style={styles.grow} />
           {single ? <FamilyStatus status={only.status} ended={ended} /> : null}
         </View>
-        <T variant="small" tone="muted">
-          {[single && named ? names[0] : null, length].filter(Boolean).join(" · ")}
-        </T>
+        <View style={styles.nameLine}>
+          {single && named ? <ChildDot color={dotOf?.(only.studentId)} /> : null}
+          <T variant="small" tone="muted" style={styles.shrink}>
+            {[single && named ? names[0] : null, length].filter(Boolean).join(" · ")}
+          </T>
+        </View>
         {note ? (
           <T variant="small" tone="muted">
             {note}
@@ -102,7 +128,8 @@ export function FamilyClassRow({ group, when, showDate = false, divider = false,
               const n = familyNote(s.note);
               return (
                 <View key={s.id} style={styles.child}>
-                  <View style={styles.line}>
+                  <View style={styles.nameLine}>
+                    <ChildDot color={dotOf?.(s.studentId)} />
                     <T variant="small" style={styles.childName}>
                       {names[i]}
                     </T>
@@ -195,11 +222,13 @@ const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: 60 },
   line: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  nameLine: { flexDirection: "row", alignItems: "center", gap: 6 },
   tile: { width: 46, paddingVertical: 6, borderRadius: radius.md, alignItems: "center", alignSelf: "flex-start" },
   tileDay: { fontWeight: "700", letterSpacing: 0.5 },
   tileDate: { fontSize: 19, fontWeight: "700", fontVariant: ["tabular-nums"] },
   child: { marginTop: 4, gap: 1 },
   childName: { flex: 1, fontWeight: "600" },
+  childDot: { width: 8, height: 8, borderRadius: radius.full },
   now: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.full },
   nowDot: { width: 6, height: 6, borderRadius: 3 },
   card: { gap: 2 },

@@ -69,15 +69,17 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
       phone: it looks the same (`M8`).
 
 **A parent and a student** (`M1`)
-- [ ] **Classes:** the week and the month; a class's sheet.
-- [ ] **Cancel a class** more than 24 hours ahead: it's canceled, and it shows under "Makeups to book".
+- [ ] **Classes:** the list and the month (the whole page; a tap on a day opens its sheet from the bottom: its classes or
+      "No classes", and **Ask for a class on this day**); a class's sheet. Nothing is cut short with a larger text size.
+- [ ] **Cancel a class** more than 24 hours ahead: it's canceled, and it shows under "Makeups to book" (**Book**).
 - [ ] A class less than 24 hours away: **Cancel** is greyed out, with the rule.
 - [ ] **Move to another time:** the class stays booked, with "waiting for the academy", until the office answers.
 - [ ] **Ask for a class:** a makeup or an extra class, from the open seats (never who's in them), with a message.
-- [ ] **Requests:** each answer (approved, or not with the office's note), and **Withdraw** one still waiting.
-- [ ] **A time the academy suggests** comes first in Classes, with its note and seats open: **Accept** (booked at
-      once, after a check), or **Ask for another** (a class with a seat open, and a message). Each request's
-      **History** folds open under it. (The Hwang family has one waiting in the demo.)
+- [ ] **Requests:** "Waiting for the academy", with **Withdraw**; each answer under "Recent requests" (approved, or not
+      with the office's note).
+- [ ] **A time the academy suggests** comes first in Classes ("Needs your answer"), with its note and seats left:
+      **Accept** (booked at once, after a check), or **Ask for another time** (a class with a seat open, and a message).
+      Each request's **History** folds open under it. (The Hwang family has one waiting in the demo.)
 - [ ] As the parent: each child gets their own sheet, cancel and move.
 - [ ] **Scores:** filter by child and by kind (Practice, Competition, Evaluation); a score's shots play back; Compare.
 - [ ] **Reports:** a shared report opens, with its target.

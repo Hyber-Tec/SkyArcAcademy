@@ -1,6 +1,6 @@
 import { MAKEUP_LOOKBACK_DAYS, makeupsOwed, takesSeat } from "@shared/schedule/classes";
 import { type ClassRequestKind, isOpenRequest, isRequestable, requestHorizon } from "@shared/schedule/requests";
-import { type DateKey, addDays } from "@shared/time";
+import { type DateKey, addDays, isDateKey } from "@shared/time";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { CalendarPlus, CalendarSearch } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -35,10 +35,11 @@ const KINDS: readonly ClassRequestKind[] = ["makeup", "reschedule", "extra"];
  * who's in a class. The server checks the request with the shared rules (`requestCheck`) and says why when it can't
  * be made; the academy approves, declines or suggests another time, and the family is told each time. Opened with `studentId`, `kind` and
  * `forSessionId` (the class to move, or the missed class to make up), and a class to move's day (`forDateKey`), so it's
- * found however far ahead it is (the choices stay within the request horizon).
+ * found however far ahead it is (the choices stay within the request horizon). `date`: a day chosen on Classes' months
+ * (its sheet's "Ask for a class on this day"): that day's open classes only, until "See other days".
  */
 export default function AskForClassScreen() {
-  const params = useLocalSearchParams<{ studentId?: string; kind?: string; forSessionId?: string; forDateKey?: string }>();
+  const params = useLocalSearchParams<{ studentId?: string; kind?: string; forSessionId?: string; forDateKey?: string; date?: string }>();
   const family = useFamily();
   const { branchId, settings } = useBranch();
   const colors = useColors();
@@ -70,6 +71,8 @@ export default function AskForClassScreen() {
   const [classId, setClassId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // The day chosen on the months, until the family asks to see the others.
+  const [onDay, setOnDay] = useState<DateKey | null>(() => (preset !== "reschedule" && isDateKey(params.date) ? params.date : null));
 
   // A makeup needs one owed; with none, an extra class is what's left (a move comes only from a class's sheet).
   const kindNow: ClassRequestKind = kind === "makeup" && !owed.length && !seats.loading ? "extra" : kind;
@@ -94,6 +97,7 @@ export default function AskForClassScreen() {
     for (const c of choices) m.set(c.dateKey, [...(m.get(c.dateKey) ?? []), c]);
     return [...m.entries()];
   }, [choices]);
+  const daysShown = onDay ? byDay.filter(([d]) => d === onDay) : byDay;
   const picked = choices.find((c) => c.id === classId) ?? null;
   const loading = seats.loading || classes.loading || requests.loading;
   const ready = !!picked && !!studentId && (kindNow === "extra" || (kindNow === "makeup" ? !!makeupFor : !!moving));
@@ -147,7 +151,9 @@ export default function AskForClassScreen() {
             ? moving
               ? `Choose another time for ${parent ? `${name}’s` : "your"} class on ${shortDay(moving.dateKey)}. It stays booked until the academy approves the move.`
               : "Choose another time for the class. It stays booked until the academy approves the move."
-            : "Choose a time with a seat open. The academy approves each request, or suggests another time."}
+            : onDay
+              ? `Choose a time on ${shortDay(onDay)} with a seat open. The academy approves each request, or suggests another time.`
+              : "Choose a time with a seat open. The academy approves each request, or suggests another time."}
         </T>
 
         {parent && family.ids.length > 1 && preset !== "reschedule" ? (
@@ -198,27 +204,48 @@ export default function AskForClassScreen() {
           </ListSection>
         )}
 
-        {/* The open classes, a day at a time (each day's title says when). */}
+        {/* The open classes, a day at a time (each day's title says when); the day chosen on the months alone, at first. */}
         {loading ? (
           <SkeletonCards count={3} height={52} />
-        ) : byDay.length ? (
-          byDay.map(([day, list]) => (
-            <ListSection key={day} title={shortDay(day)} testID={`ask-day-${day}`}>
-              {list.map((c) => {
-                const open = c.seats - c.taken;
-                return (
-                  <ChoiceRow
-                    key={c.id}
-                    selected={c.id === classId}
-                    title={timeRange(c.startMin, c.endMin, hour12)}
-                    right={`${plural(open, "seat")} open`}
-                    onPress={() => setClassId(c.id)}
-                    testID={`ask-class-${c.id}`}
-                  />
-                );
-              })}
-            </ListSection>
-          ))
+        ) : daysShown.length ? (
+          <>
+            {daysShown.map(([day, list]) => (
+              <ListSection key={day} title={shortDay(day)} testID={`ask-day-${day}`}>
+                {list.map((c) => {
+                  const open = c.seats - c.taken;
+                  return (
+                    <ChoiceRow
+                      key={c.id}
+                      selected={c.id === classId}
+                      title={timeRange(c.startMin, c.endMin, hour12)}
+                      right={`${plural(open, "seat")} open`}
+                      onPress={() => setClassId(c.id)}
+                      testID={`ask-class-${c.id}`}
+                    />
+                  );
+                })}
+              </ListSection>
+            ))}
+            {onDay && byDay.length > daysShown.length ? (
+              <Button variant="ghost" wrap onPress={() => setOnDay(null)} testID="ask-other-days">
+                See other days
+              </Button>
+            ) : null}
+          </>
+        ) : onDay ? (
+          <EmptyState
+            testID="ask-day-none"
+            icon={<CalendarSearch size={26} color={colors.mutedForeground} />}
+            title={`No open seats on ${shortDay(onDay)}`}
+            text={byDay.length ? "Seats open up when students cancel. Other days have room now." : `No open seats until ${monthDay(horizon)}. Seats open up when students cancel, so check again soon.`}
+            action={
+              byDay.length ? (
+                <Button variant="outline" wrap onPress={() => setOnDay(null)} testID="ask-other-days">
+                  See other days
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <EmptyState
             testID="ask-none"

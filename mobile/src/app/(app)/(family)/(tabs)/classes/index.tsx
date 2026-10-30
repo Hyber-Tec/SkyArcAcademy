@@ -1,33 +1,33 @@
 import { type DateKey, addDays } from "@shared/time";
-import { router } from "expo-router";
-import { CalendarX2, History } from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { router, useFocusEffect, useIsFocused } from "expo-router";
+import { CalendarDays, CalendarX2, ChevronRight, History, MessageCircleQuestionMark } from "lucide-react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ListSection } from "@/components/List";
 import { Screen } from "@/components/Screen";
+import { SectionHeading } from "@/components/SectionHeading";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { SkeletonCards } from "@/components/Skeleton";
-import { TabHeader } from "@/components/TabHeader";
 import { T } from "@/components/Text";
 import { useAcademyNow } from "@/features/data/hooks";
 import { FamilyClassRow } from "@/features/family/ClassCards";
+import { ClassesHeader, type ClassesMode } from "@/features/family/ClassesHeader";
 import { FamilyClassMonth } from "@/features/family/ClassMonth";
 import { useFamilySessions } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
-import { AskButton, RequestsPanel } from "@/features/family/RequestsPanel";
-import { useFamily } from "@/features/family/FamilyProvider";
+import { type FamilyState, useFamily } from "@/features/family/FamilyProvider";
+import { RequestsPanel, useClassesToDo } from "@/features/family/RequestsPanel";
 import { type FamilyClass, familyClasses } from "@/features/family/classes";
 import { dayHeading, hasEnded } from "@/features/family/format";
 import { plural } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
-import { space, useColors } from "@/theme";
+import { radius, space, useColors } from "@/theme";
 
 type Show = "upcoming" | "past";
-type Mode = "list" | "month";
 
 /** Weeks shown at first, and added by "Show more". */
 const STEP_WEEKS = 8;
@@ -35,13 +35,24 @@ const STEP_WEEKS = 8;
 const MAX_AHEAD_WEEKS = 26;
 const MAX_BACK_WEEKS = 52;
 
+/** "Your classes", "Jiwoo’s classes", "Your children’s classes". */
+function whoseClasses(family: FamilyState): string {
+  if (family.who === "student") return "Your classes";
+  return family.shown.length === 1 ? `${family.firstName(family.shown[0])}’s classes` : "Your children’s classes";
+}
+
 /**
- * The family's classes, as a list or on the months (List / Month, by the title, as on the website). The list goes day
- * by day: what's coming (earliest first) or what's past (latest first), each with its status in plain words and the
- * class's note. The months scroll vertically, each day marked with its classes (FamilyClassMonth), and the day
- * tapped shows its classes under them. A parent with several children picks All or one child. A class opens its sheet
- * (where it's canceled or moved). At the top, "Ask for a class", then the makeups still to book and the family's requests
- * with the academy's answers (RequestsPanel); the academy books and changes everything else.
+ * The family's classes, remade to be clear at a glance (the owner, 2026-10-29), as a list or on the months (List /
+ * Month and Ask by the title, the same in both; a parent with several children picks All or one child under it).
+ *
+ * The list: first, only when there's something, what asks for the family's answer or tells them where their requests
+ * stand, each part in its own colour (RequestsPanel: Needs your answer, Waiting for the academy, Makeups to book, then
+ * the recent requests folded); then the classes day by day, what's coming (earliest first) or what's past (latest
+ * first), each with its status in plain words and the class's note, a few weeks at a time. A class opens its sheet
+ * (where it's canceled or moved).
+ *
+ * The months: the whole page, scrolling vertically; a tap on a day opens its sheet (`/day`: its classes, or none, and
+ * asking for a class on it). A time the academy suggests says so above them, a tap away from the list.
  */
 export default function FamilyClassesScreen() {
   const family = useFamily();
@@ -50,9 +61,13 @@ export default function FamilyClassesScreen() {
   const { settings } = useBranch();
   const { today, nowMin } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
-  const [mode, setMode] = useState<Mode>("list");
-  // The day chosen on the months (null: today, whichever day that is), kept while the list shows.
-  const [day, setDay] = useState<DateKey | null>(null);
+  const [mode, setMode] = useState<ClassesMode>("list");
+  // The day whose sheet is open, filled on the months while it is (this page isn't in front then), and forgotten once
+  // the page is in front again.
+  const [tapped, setTapped] = useState<DateKey | null>(null);
+  const focused = useIsFocused();
+  useFocusEffect(useCallback(() => setTapped(null), []));
+  const todo = useClassesToDo();
   const [show, setShow] = useState<Show>("upcoming");
   const [ahead, setAhead] = useState(STEP_WEEKS);
   const [back, setBack] = useState(STEP_WEEKS);
@@ -85,47 +100,65 @@ export default function FamilyClassesScreen() {
     else setBack((w) => Math.min(MAX_BACK_WEEKS, w + STEP_WEEKS));
   };
   const span = upcoming ? `in the next ${weeks} weeks` : `in the last ${weeks} weeks`;
-  const switcher = family.ids.length ? (
-    <View style={styles.mode}>
-      <SegmentedControl<Mode>
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "list", label: "List" },
-          { value: "month", label: "Month" },
-        ]}
-        testID="family-classes-view"
-      />
-    </View>
-  ) : undefined;
+  const linked = family.ids.length > 0;
+  const header = <ClassesHeader mode={mode} onMode={setMode} linked={linked} />;
 
-  // The months scroll by themselves (a list in the page's scroll would fight it): a page of their own, its top as the
-  // list's.
-  if (mode === "month" && family.ids.length) {
+  const openDay = useCallback((d: DateKey) => {
+    setTapped(d);
+    router.push({ pathname: "/day", params: { date: d } });
+  }, []);
+
+  // The months scroll by themselves (a list in the page's scroll would fight them): a page of their own under the top.
+  if (mode === "month" && linked) {
     return (
       <View style={[styles.page, { backgroundColor: colors.grouped }]} testID="family-classes">
         <View style={[styles.top, { paddingTop: insets.top + space.lg }]}>
-          <TabHeader title="Classes" right={switcher} testID="family-classes-title" />
+          {header}
           <ChildSwitcher />
-          <AskButton testID="family-ask-month" />
+          {todo.offers.length ? (
+            <Pressable
+              onPress={() => setMode("list")}
+              accessibilityRole="button"
+              accessibilityHint="Shows it in the list, to answer it"
+              style={({ pressed }) => [styles.strip, { backgroundColor: colors.infoTint, borderColor: `${colors.info}55` }, pressed && styles.pressed]}
+              testID="family-month-needs-answer"
+            >
+              <MessageCircleQuestionMark size={18} color={colors.info} />
+              <T variant="label" style={[styles.grow, { color: colors.info }]}>
+                {todo.offers.length === 1 ? "The academy suggests another time" : `The academy suggests ${todo.offers.length} other times`}
+              </T>
+              <T variant="small" style={[styles.answer, { color: colors.info }]}>
+                Answer
+              </T>
+              <ChevronRight size={16} color={colors.info} />
+            </Pressable>
+          ) : null}
         </View>
-        <FamilyClassMonth selected={day ?? today} onSelect={setDay} today={today} nowMin={nowMin} hour12={hour12} />
+        <FamilyClassMonth today={today} nowMin={nowMin} hour12={hour12} selected={focused ? null : tapped} onOpenDay={openDay} />
       </View>
     );
   }
 
   return (
-    <Screen title="Classes" titleRight={switcher} typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-classes">
-      {!family.ids.length ? (
+    <Screen tab typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-classes">
+      {header}
+      {!linked ? (
         <NotLinked />
       ) : (
         <>
-          <View style={styles.controls}>
-            <ChildSwitcher />
-            <AskButton />
-          </View>
-          <RequestsPanel />
-          <View style={styles.controls}>
+          <ChildSwitcher />
+          {todo.any ? <RequestsPanel todo={todo} /> : null}
+
+          <View style={[styles.controls, todo.any && styles.after]}>
+            {todo.any ? (
+              <SectionHeading
+                title={whoseClasses(family)}
+                icon={<CalendarDays size={16} color={colors.brand} />}
+                color={colors.brandText}
+                tint={colors.brandTint}
+                testID="family-classes-heading"
+              />
+            ) : null}
             <SegmentedControl<Show>
               value={show}
               onChange={setShow}
@@ -154,7 +187,7 @@ export default function FamilyClassesScreen() {
           ) : days.length ? (
             <View style={styles.days} testID="family-classes-list">
               {days.map(([day, list]) => (
-                <ListSection key={day} title={dayHeading(day, today)} testID={`family-day-${day}`}>
+                <ListSection key={day} title={dayHeading(day, today)} testID={`family-classes-day-${day}`}>
                   {list.map((g) => (
                     <FamilyClassRow
                       key={g.id}
@@ -172,12 +205,12 @@ export default function FamilyClassesScreen() {
               testID="family-classes-empty"
               icon={upcoming ? <CalendarX2 size={26} color={colors.mutedForeground} /> : <History size={26} color={colors.mutedForeground} />}
               title={upcoming ? "Nothing booked" : "No past classes"}
-              text={upcoming ? `No classes ${span}. The academy books them, and they show here; ask for one above.` : `No classes ${span}.`}
+              text={upcoming ? `No classes ${span}. The academy books them, and they show here. To ask for one, tap Ask at the top.` : `No classes ${span}.`}
             />
           )}
 
           {canMore && (!sessions.loading || extending) ? (
-            <Button variant="ghost" onPress={more} busy={extending} testID="family-classes-more">
+            <Button variant="ghost" wrap onPress={more} busy={extending} testID="family-classes-more">
               {upcoming ? `Show ${STEP_WEEKS} more weeks` : "Show earlier classes"}
             </Button>
           ) : noMore && count ? (
@@ -193,9 +226,14 @@ export default function FamilyClassesScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  top: { paddingHorizontal: space.lg, paddingBottom: space.md, gap: space.md },
-  mode: { width: 150 },
+  top: { paddingHorizontal: space.lg, paddingBottom: space.sm, gap: space.md },
+  grow: { flex: 1 },
+  pressed: { opacity: 0.6 },
+  strip: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: space.md, paddingVertical: space.md },
+  answer: { fontWeight: "700" },
   controls: { gap: space.md },
+  // The classes stand apart from the parts above them.
+  after: { marginTop: space.sm },
   summary: { paddingHorizontal: space.xs },
   days: { gap: space.lg },
   end: { textAlign: "center", paddingVertical: space.sm },
