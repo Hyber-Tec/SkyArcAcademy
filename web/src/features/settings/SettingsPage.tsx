@@ -1,5 +1,7 @@
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router'
-import { pageByKey, pageFor } from './pages'
+import { Spinner } from '@/components/ui/spinner'
+import { useIsSuperAdmin } from '@/features/ai/api'
+import { type SettingsPageDef, pageByKey, pageFor } from './pages'
 import { SettingsHome } from './SettingsHome'
 import { SettingsPageView } from './SettingsPageView'
 
@@ -16,6 +18,20 @@ export function SettingsPage() {
   const key = pageFor(section, params.get('find'))
   if (!key) return <Navigate to="/admin/settings" replace />
   if (key !== section) return <Navigate to={`/admin/settings/${key}${location.search}`} replace />
+  const page = pageByKey(key)!
   // Each page starts afresh: its own draft, its own "More options".
-  return <SettingsPageView key={key} page={pageByKey(key)!} />
+  return page.superAdminOnly ? <SuperAdminPage page={page} /> : <SettingsPageView key={key} page={page} />
+}
+
+/** The AI page: super admins only; anyone else is sent back to the Settings home. */
+function SuperAdminPage({ page }: { page: SettingsPageDef }) {
+  const { isSuperAdmin, loading } = useIsSuperAdmin()
+  if (loading)
+    return (
+      <div className="flex justify-center py-16 text-muted-foreground">
+        <Spinner className="size-6" />
+      </div>
+    )
+  if (!isSuperAdmin) return <Navigate to="/admin/settings" replace />
+  return <SettingsPageView key={page.key} page={page} />
 }

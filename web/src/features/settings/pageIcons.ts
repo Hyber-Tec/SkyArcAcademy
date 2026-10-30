@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { LuBell, LuBuilding2, LuCalendarCheck, LuCalendarDays, LuClock, LuFilePenLine, LuGlobe, LuGraduationCap, LuHistory, LuUserPlus, LuWallet } from 'react-icons/lu'
+import { LuBell, LuBuilding2, LuCalendarCheck, LuCalendarDays, LuClock, LuFilePenLine, LuGlobe, LuGraduationCap, LuHistory, LuSparkles, LuUserPlus, LuWallet } from 'react-icons/lu'
 
 /** Each page's icon on its tile and at the top of the page. */
 export const PAGE_ICONS: Record<string, IconType> = {
@@ -14,6 +14,7 @@ export const PAGE_ICONS: Record<string, IconType> = {
   website: LuGlobe,
   contract: LuFilePenLine,
   activity: LuHistory,
+  ai: LuSparkles,
 }
 
 /** "Eastern time", from the zone's long name ("Eastern Daylight Time"); the zone's name when it has none. */

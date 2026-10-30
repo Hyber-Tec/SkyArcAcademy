@@ -8,7 +8,7 @@ import { OTHER_FINDS, SETTINGS_SECTIONS, type FieldDef } from './schema'
  */
 
 /** The parts of a page that aren't fields of the schema. */
-export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity'
+export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity' | 'ai'
 
 export type PageItem = { field: string } | { block: BlockKey }
 
@@ -17,7 +17,7 @@ export interface PageGroup {
   items: PageItem[]
 }
 
-export type HomeGroup = 'day' | 'people' | 'academy'
+export type HomeGroup = 'day' | 'people' | 'academy' | 'platform'
 
 export interface SettingsPageDef {
   key: string
@@ -33,6 +33,8 @@ export interface SettingsPageDef {
   selfTitled?: boolean
   /** Words it's also found by. */
   keywords?: string
+  /** Only super admins see it (the AI page): its tile, its search results and its address. */
+  superAdminOnly?: boolean
 }
 
 const f = (path: string): PageItem => ({ field: path })
@@ -124,12 +126,25 @@ export const PAGES: SettingsPageDef[] = [
   { key: 'website', title: 'Website', description: 'The public website: its pages, photos, coaches and reviews, and the trial requests and questions it sends.', home: 'academy', groups: [{ items: [b('website')] }], more: [], wide: true, selfTitled: true },
   { key: 'contract', title: 'Enrollment contract', description: 'The blank contract families sign from a link the office sends.', home: 'academy', groups: [{ items: [b('contract')] }], more: [], selfTitled: true },
   { key: 'activity', title: 'Activity log', description: 'Every change to the settings, the schedule, people and pay: who made it and when.', home: 'academy', groups: [{ items: [b('activity')] }], more: [], wide: true, selfTitled: true, keywords: 'audit history' },
+  {
+    key: 'ai',
+    title: 'AI',
+    description: 'The models the AI features use, the providers’ keys, the spend and every request. For super admins.',
+    home: 'platform',
+    groups: [{ items: [b('ai')] }],
+    more: [],
+    wide: true,
+    selfTitled: true,
+    superAdminOnly: true,
+    keywords: 'artificial intelligence model api key spend cost tokens usage super admin',
+  },
 ]
 
 export const HOME_GROUPS: { key: HomeGroup; title: string }[] = [
   { key: 'day', title: 'Day to day' },
   { key: 'people', title: 'People' },
   { key: 'academy', title: 'The academy' },
+  { key: 'platform', title: 'Super admins' },
 ]
 
 /** Every field of the schema, by its path. */
