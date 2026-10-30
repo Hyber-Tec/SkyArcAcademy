@@ -1,9 +1,10 @@
 import { serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useEffect, useMemo, useRef } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowLeft, LuCalendarDays, LuNotebookPen, LuTarget, LuUserRound } from 'react-icons/lu'
+import { LuArrowLeft, LuCalendarDays, LuHardDrive, LuNotebookPen, LuTarget, LuUserRound } from 'react-icons/lu'
 import { Link, useNavigate, useParams } from 'react-router'
 import { dayHours } from '@shared/availability'
+import { studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { type DateKey, addDays } from '@shared/time'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
@@ -11,6 +12,7 @@ import { useBranch } from '@/branch/BranchProvider'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDayConfigs, useStaffList } from '@/features/data/hooks'
+import { DriveBrowser } from '@/features/drive/DrivePage'
 import { useSessionDialog } from '@/features/schedule/useSessionDialog'
 import { branchDocRef, useDoc } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,7 @@ const TABS: { key: ProfileTab; label: string; icon: IconType; adminOnly: boolean
   { key: 'scores', label: 'Scores', icon: LuTarget, adminOnly: false },
   { key: 'info', label: 'Info', icon: LuUserRound, adminOnly: false },
   { key: 'calendar', label: 'Calendar', icon: LuCalendarDays, adminOnly: false },
+  { key: 'drive', label: 'Drive', icon: LuHardDrive, adminOnly: false },
 ]
 
 export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
@@ -60,11 +63,13 @@ export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'coach
 }
 
 /**
- * The student page: who the student is on the left (it stays in view), and the Sessions, Info and Calendar tabs on the
- * right.
+ * The student page: who the student is on the left (it stays in view), and the Classes, Scores, Info, Calendar and
+ * Drive tabs on the right. The Drive tab is the student's folder in the Drive, with its folders inside it in the
+ * address (its own route, `drive/*`).
  */
 function StudentProfile({ student, mode, base }: { student: WithId<Student>; mode: 'admin' | 'coach'; base: string }) {
-  const { tab = 'sessions' } = useParams()
+  const params = useParams()
+  const tab = params['*'] !== undefined ? 'drive' : (params.tab ?? 'sessions')
   const navigate = useNavigate()
   const { branchId, settings } = useBranch()
   const isAdmin = mode === 'admin'
@@ -141,6 +146,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
             {active === 'calendar' ? (
               <StudentCalendarView studentId={student.id} readOnly={!isAdmin} onCreate={(d) => newSession(d)} onOpen={(s) => sessionDialog.openEdit(s)} />
             ) : null}
+            {active === 'drive' ? <DriveBrowser key={student.id} base={`${base}/${student.id}/drive`} rootId={studentFolderId(student.id)} embedded /> : null}
           </div>
         </div>
       </div>

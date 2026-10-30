@@ -14,7 +14,9 @@ import {
   moveRefusal,
   planAccess,
   planMove,
+  searchWithin,
   sortDriveItems,
+  trailFrom,
   trashEntries,
   trashQuestion,
   updatedText,
@@ -99,6 +101,24 @@ describe('the Drive index', () => {
     const hits = idx.search('prone res')
     expect(hits.map((h) => [h.id, h.where])).toEqual([['prone result', 'Plans / Old']])
     expect(idx.nameTaken(null, ' plans ')).toBe(true)
+  })
+
+  it('searches inside a student’s folder alone, its trail starting there, for their Drive tab', () => {
+    const mia = studentFolderId('mia')
+    const idx = buildDriveIndex(
+      [folder('Matches', mia), folder('Plans', null)],
+      [file('prone a', 'Matches'), file('prone b', mia), file('prone c', 'Plans'), file('prone d', studentFolderId('leo'))],
+      students,
+    )
+    expect(searchWithin(idx, 'prone', mia).map((h) => h.id).sort()).toEqual(['prone a', 'prone b'])
+    expect(searchWithin(idx, 'prone', null)).toHaveLength(4)
+    // Never the folder itself, found by its name at the top.
+    expect(searchWithin(idx, 'mia', null).map((h) => h.id)).toEqual([mia])
+    expect(searchWithin(idx, 'mia', mia)).toEqual([])
+    expect(trailFrom(idx, mia, 'Matches').map((c) => c.name)).toEqual(['Mia Larkin', 'Matches'])
+    expect(trailFrom(idx, null, 'Matches').map((c) => c.name)).toEqual(['Mia Larkin', 'Matches'])
+    expect(trailFrom(idx, mia, 'Plans')).toEqual([])
+    expect(trailFrom(idx, mia, mia).map((c) => c.id)).toEqual([mia])
   })
 
   it('opens with folders A to Z above the newest files, and a picked column sorts both', () => {

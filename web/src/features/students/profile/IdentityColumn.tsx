@@ -21,7 +21,7 @@ import { FamilyCard } from './FamilyCard'
 import { initialsOf, timeSpan } from './model'
 import type { StudentActivity } from './useStudentActivity'
 
-export type ProfileTab = 'sessions' | 'scores' | 'info' | 'calendar'
+export type ProfileTab = 'sessions' | 'scores' | 'info' | 'calendar' | 'drive'
 
 const actionClass = 'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/50 hover:text-foreground [&_svg]:size-[18px] [&_svg]:text-foreground'
 

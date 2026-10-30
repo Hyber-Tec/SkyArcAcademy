@@ -433,7 +433,8 @@ and parents. Except admin."
   coaches: the app reads each result's date and scores, asks whose it is and the position (suggested from the file
   name, marked so, with "Set all" for several), files each in the student's folder named by its date, and saves its
   scores; a PDF that isn't a SIUS result is kept as a file. It always worked by dropping anywhere on the page, but
-  nothing showed it, so the owner didn't find it.
+  nothing showed it, so the owner didn't find it. (Replaced on 2026-10-30, §28: no drop area; a drag over the page says
+  where the files will land.)
 - **The meeting notes, checked** (the notes stay out of git): what's still missing is in `docs/TODO.md`.
 
 
@@ -918,3 +919,20 @@ desk, and added a competition from its sheet. Built that night (#83–#93; the s
 - **Not done:** the camera on Goo's Samsung wasn't tried again (the same photos read on the Android emulator); the
   website's day plan for a "Write with AI" button on the phone; telling families that a report's words were drafted with
   AI (a question for Goo, `docs/TODO.md`).
+
+## 28. The Drive: right-click menus, drops anywhere, and each student's Drive tab (2026-10-30)
+
+Goo's asks after trying the website:
+
+- **Right-click menus in the Drive**: on the page (anywhere but a row) **New folder**, **Upload files**, **Upload
+  folder** and **Add paper scores…**, then List or Grid and the details; on a folder, its menu with **New** (a folder,
+  files or a folder into it, without opening it); on one of several selected, one menu for all of them (Move to…,
+  Move to Trash, Clear the selection); on a crumb, its folder's menu. The ⋯ buttons keep the same menus, for touch.
+- **No drop area at the top** (it replaces §17's): files dropped anywhere on the page go into the folder open, and SIUS
+  PDFs among them are read as before (whose result each is and its position, then filed in the student's folder with
+  its scores). While files are dragged over the page, it says where they'll land and what happens to SIUS results;
+  PDFs being read show as a notice. **New → Upload files** does what the drop area's "Choose PDFs" did.
+- **A Drive tab on the student's page** (Classes, Scores, Info, Calendar, Drive): the student's folder, with everything
+  the Drive does inside it (folders, uploads and drops, SIUS results filed as theirs, the menus, a search of their
+  folder alone); **Open in the Drive** opens the same folder on the Drive page. Coaches have it too, without the
+  Contracts folder (owners' and admins' only). A finished student whose folder is empty shows that it is.

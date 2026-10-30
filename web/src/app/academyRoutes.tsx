@@ -26,6 +26,8 @@ const adminRoutes: RouteObject[] = [
   { path: 'schedule/*', lazy: page(() => import('@/features/schedule/SchedulePage'), 'SchedulePage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'StudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },
+  // The Drive tab, with the folders inside the student's: the same page, so moving between tabs keeps it.
+  { path: 'students/:studentId/drive/*', lazy: page(() => import('@/features/students/StudentProfilePage'), 'StudentProfilePage') },
   { path: 'students/:studentId/scores/:evaluationId', lazy: page(() => import('@/features/scores/card/CardEditorPage'), 'CardEditorPage') },
   { path: 'drive/trash', lazy: page(() => import('@/features/drive/DriveTrashPage'), 'DriveTrashPage') },
   { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
@@ -87,6 +89,7 @@ const coachRoutes: RouteObject[] = [
   { path: 'availability', lazy: page(() => import('@/features/availability/CoachAvailabilityPage'), 'CoachAvailabilityPage') },
   { path: 'students', lazy: page(() => import('@/features/students/StudentDirectoryPage'), 'CoachStudentDirectoryPage') },
   { path: 'students/:studentId/:tab?', lazy: page(() => import('@/features/students/StudentProfilePage'), 'CoachStudentProfilePage') },
+  { path: 'students/:studentId/drive/*', lazy: page(() => import('@/features/students/StudentProfilePage'), 'CoachStudentProfilePage') },
   { path: 'students/:studentId/scores/:evaluationId', lazy: page(() => import('@/features/scores/card/CardEditorPage'), 'CoachCardEditorPage') },
   { path: 'drive/*', lazy: page(() => import('@/features/drive/DrivePage'), 'DrivePage') },
   { path: 'reports', lazy: page(() => import('@/features/reports/ReportsPage'), 'CoachReportsPage') },
