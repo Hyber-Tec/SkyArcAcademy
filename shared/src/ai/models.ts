@@ -13,6 +13,8 @@ export interface AiProviderInfo {
   keyWhere: string
   /** Where the provider lists its models and prices, to check this list. */
   pricesUrl: string
+  /** Something a super admin should know before choosing it, shown on the AI page. */
+  caution?: string
 }
 
 /** The only place outside the AI page's own text that names providers: the AI page (super admins only). */
@@ -22,6 +24,9 @@ export const AI_PROVIDER_INFO: Record<AiProvider, AiProviderInfo> = {
     keyUrl: 'https://aistudio.google.com/apikey',
     keyWhere: 'Google AI Studio → Get API key',
     pricesUrl: 'https://ai.google.dev/gemini-api/docs/pricing',
+    // The Gemini API terms (ai.google.dev/gemini-api/terms, updated 2026-04-28), read on 2026-10-30.
+    caution:
+      'Google’s Gemini API terms say it may not be used in an app "directed towards or likely to be accessed by individuals under the age of 18", and the academy’s students use this app. Check those terms before choosing Gemini (Google Cloud’s Vertex AI has its own).',
   },
   anthropic: {
     label: 'Anthropic Claude',
@@ -55,26 +60,26 @@ export interface AiModel extends AiPrice {
 }
 
 /** When the list's prices were last checked against the providers' pages. */
-export const AI_MODELS_CHECKED = '2026-10-29'
+export const AI_MODELS_CHECKED = '2026-10-30'
 
 const ALL = THINKING_LEVELS
 const LMH: readonly ThinkingLevel[] = ['low', 'medium', 'high']
 
 export const AI_MODELS: readonly AiModel[] = [
-  // Google Gemini. Gemini 3 and later take a thinking level; Gemini 2.5 a budget of thinking tokens.
-  { provider: 'gemini', id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', inputPerM: 0.1, outputPerM: 0.4, thinking: ALL, recommended: true, note: 'Cheapest and quick' },
-  { provider: 'gemini', id: 'gemini-3-flash', label: 'Gemini 3 Flash', inputPerM: 0.5, outputPerM: 3, thinking: ALL },
-  { provider: 'gemini', id: 'gemini-3-pro', label: 'Gemini 3 Pro', inputPerM: 2, outputPerM: 12, thinking: ['low', 'high'] },
-  { provider: 'gemini', id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', inputPerM: 0.1, outputPerM: 0.4, thinking: ALL, wire: { minimal: 0, low: 1024, medium: 4096, high: 12288 } },
-  { provider: 'gemini', id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', inputPerM: 0.3, outputPerM: 2.5, thinking: ALL, wire: { minimal: 0, low: 1024, medium: 4096, high: 12288 } },
-  // Anthropic Claude: thinking is adaptive, its depth set by the effort.
-  { provider: 'anthropic', id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', inputPerM: 0.1, outputPerM: 0.5, thinking: LMH, recommended: true, note: 'Cheapest Claude' },
-  { provider: 'anthropic', id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', inputPerM: 2, outputPerM: 10, thinking: LMH },
-  { provider: 'anthropic', id: 'claude-opus-5-5', label: 'Claude Opus 5.5', inputPerM: 4, outputPerM: 20, thinking: LMH },
-  // OpenAI, through the Responses API: the reasoning effort.
-  { provider: 'openai', id: 'gpt-5-nano', label: 'GPT-5 nano', inputPerM: 0.05, outputPerM: 0.4, thinking: ALL, recommended: true, note: 'Cheapest' },
-  { provider: 'openai', id: 'gpt-5-mini', label: 'GPT-5 mini', inputPerM: 0.25, outputPerM: 2, thinking: ALL },
-  { provider: 'openai', id: 'gpt-5', label: 'GPT-5', inputPerM: 1.25, outputPerM: 10, thinking: ALL },
+  // Anthropic Claude: thinking is adaptive, its depth set by the effort ("minimal" asks for low). Sonnet 5.5 at low is the
+  // first choice for report text (checked 2026-10-30: plain writing that keeps to the figures, about $6 a month here).
+  { provider: 'anthropic', id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', inputPerM: 2, outputPerM: 10, thinking: LMH, recommended: true, note: 'Good writing; about $6 a month here' },
+  { provider: 'anthropic', id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', inputPerM: 0.1, outputPerM: 0.5, thinking: LMH, note: 'Cheapest Claude; under $1 a month here' },
+  { provider: 'anthropic', id: 'claude-opus-5-5', label: 'Claude Opus 5.5', inputPerM: 4, outputPerM: 20, thinking: LMH, note: 'Best; thinks every time' },
+  // Google Gemini (Gemini 3 and later take a thinking level). 3.8 Flash and 4 Argon take no "minimal".
+  { provider: 'gemini', id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', inputPerM: 0.3, outputPerM: 2.5, thinking: ALL, recommended: true, note: 'Cheapest Gemini' },
+  { provider: 'gemini', id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', inputPerM: 0.75, outputPerM: 3.75, thinking: LMH, note: 'Doubles to $1.50 / $7.50 on Jan 1, 2027' },
+  { provider: 'gemini', id: 'gemini-4-argon', label: 'Gemini 4 Argon', inputPerM: 2, outputPerM: 10, thinking: LMH, note: 'Doubles to $4 / $20 on Dec 1, 2026' },
+  { provider: 'gemini', id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', inputPerM: 0.25, outputPerM: 1.5, thinking: ALL, note: 'Shuts down May 7, 2027' },
+  // OpenAI, through the Responses API: the reasoning effort ("minimal" is their "none" where a model has it).
+  { provider: 'openai', id: 'gpt-6-luna', label: 'GPT-6 Luna', inputPerM: 0.1, outputPerM: 0.5, thinking: ALL, wire: { minimal: 'none' }, recommended: true, note: 'Cheapest' },
+  { provider: 'openai', id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', inputPerM: 1, outputPerM: 5, thinking: ALL, wire: { minimal: 'none' } },
+  { provider: 'openai', id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', inputPerM: 2, outputPerM: 10, thinking: LMH },
 ]
 
 /** The listed models of a provider, recommended first. */

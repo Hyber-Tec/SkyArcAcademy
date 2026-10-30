@@ -6,9 +6,12 @@ import { AI_FEATURES, type AiConfigDoc, type AiFeature, type AiFeatureConfig, ty
  * every feature starts off, on its provider's recommended model, until a super admin turns it on.
  */
 
-/** A new feature's start: the cheapest good model, a little thinking, off. */
+/**
+ * A new feature's start: Claude's recommended model with a little thinking, off (checked 2026-10-30: Google's Gemini API
+ * terms bar apps that under-18s use; `AI_PROVIDER_INFO.gemini.caution`).
+ */
 export function defaultFeature(): AiFeatureConfig {
-  return { provider: 'gemini', model: recommendedModel('gemini').id, thinking: 'low', enabled: false }
+  return { provider: 'anthropic', model: recommendedModel('anthropic').id, thinking: 'low', enabled: false }
 }
 
 /** Until a super admin sets them: $10 a month in all, and 30 requests an hour for each person. */

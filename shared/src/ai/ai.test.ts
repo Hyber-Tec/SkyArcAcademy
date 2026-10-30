@@ -77,7 +77,7 @@ describe('the model list', () => {
 describe('the config', () => {
   it('starts every feature off, on the recommended model, with the default limits', () => {
     const c = resolveAiConfig(null)
-    expect(c.features.reportText).toEqual({ provider: 'gemini', model: recommendedModel('gemini').id, thinking: 'low', enabled: false })
+    expect(c.features.reportText).toEqual({ provider: 'anthropic', model: recommendedModel('anthropic').id, thinking: 'low', enabled: false })
     expect(c.monthlyLimitUsd).toBe(AI_DEFAULTS.monthlyLimitUsd)
     expect(c.hourlyLimit).toBe(AI_DEFAULTS.hourlyLimit)
     // A limit taken off stays off.
@@ -97,12 +97,12 @@ describe('saving the settings', () => {
   const current = resolveAiConfig(null)
 
   it('changes a feature’s model, thinking and switch, with a history line for each', () => {
-    const r = checkAiSettings({ features: { reportText: { provider: 'anthropic', model: ' claude-haiku-5-5 ', thinking: 'medium', enabled: true } } }, current)
+    const r = checkAiSettings({ features: { reportText: { provider: 'gemini', model: ' gemini-3.5-flash-lite ', thinking: 'medium', enabled: true } } }, current)
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.next.features.reportText).toEqual({ provider: 'anthropic', model: 'claude-haiku-5-5', thinking: 'medium', enabled: true })
+    expect(r.next.features.reportText).toEqual({ provider: 'gemini', model: 'gemini-3.5-flash-lite', thinking: 'medium', enabled: true })
     expect(r.changes.map((c) => c.summary)).toEqual(['Report text: model', 'Report text: thinking', 'Report text: turned on'])
-    expect(r.changes[0]).toMatchObject({ feature: 'reportText', from: `Google Gemini · ${recommendedModel('gemini').id}`, to: 'Anthropic Claude · claude-haiku-5-5' })
+    expect(r.changes[0]).toMatchObject({ feature: 'reportText', from: `Anthropic Claude · ${recommendedModel('anthropic').id}`, to: 'Google Gemini · gemini-3.5-flash-lite' })
   })
 
   it('needs prices for a model typed in, and keeps them', () => {
