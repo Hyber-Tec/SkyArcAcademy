@@ -46,6 +46,7 @@ async function requireAcademyAdmin(branchId: unknown, auth: Auth): Promise<AiPer
 }
 
 const last4 = (key: string) => key.slice(-4)
+const errorWords = (e: unknown) => (e as Error)?.message ?? String(e)
 
 // ------------------------------------------------------------------- keys
 
@@ -181,7 +182,7 @@ async function run(input: RunInput): Promise<{ ok: true; text: string; ms: numbe
     return problem ? { ok: false, error: problem, ms: answer.ms } : { ok: true, text: answer.text, ms: answer.ms, tokens, costUsd }
   } catch (e) {
     const ms = Date.now() - started
-    const error = e instanceof AiProviderError ? e.message : `Unexpected error: ${(e as Error)?.message ?? String(e)}`
+    const error = e instanceof AiProviderError ? e.message : `Unexpected error: ${errorWords(e)}`
     const tokens = e instanceof AiProviderError && e.tokens ? e.tokens : { inputTokens: 0, outputTokens: 0, thinkingTokens: 0 }
     await logUsage({ ...base, ...tokens, costUsd: aiCostUsd(tokens, price), ok: false, error: error.slice(0, 500), ms })
     if (!(e instanceof AiProviderError)) logger.error('AI request failed unexpectedly', { feature: input.feature, provider, model, error })
@@ -191,7 +192,8 @@ async function run(input: RunInput): Promise<{ ok: true; text: string; ms: numbe
 
 /**
  * The AI page's Test button: a tiny request with the model and thinking level on the page (saved or not), so a super
- * admin sees it answer, how long it took, the tokens and the cost, or the provider's own error. Logged as `test`.
+ * admin sees it answer, how long it took, the tokens and the cost, or the provider's own error. Logged as `test`. A
+ * failure of the server's own (not a provider's) is shown in its words too, instead of Firebase's bare "INTERNAL".
  */
 export const aiTest = onCall({ timeoutSeconds: 120, ...LIGHT }, async (req) => {
   const { provider, model, thinking } = (req.data ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown }
@@ -199,25 +201,31 @@ export const aiTest = onCall({ timeoutSeconds: 120, ...LIGHT }, async (req) => {
   if (typeof model !== 'string' || !model.trim()) throw new HttpsError('invalid-argument', 'Choose or type a model.')
   if (thinking !== null && thinking !== undefined && !isThinkingLevel(thinking)) throw new HttpsError('invalid-argument', 'Choose a thinking level.')
   const by = await requireSuperAdmin(req.auth)
-  const config = await loadConfig()
-  await checkLimits(config, by.uid)
   const level = (thinking ?? null) as ThinkingLevel | null
   const id = cleanModelId(model)
   if (!isModelId(id)) throw new HttpsError('invalid-argument', `“${id}” isn’t a model ID.`)
-  const result = await run({
-    feature: 'test',
-    use: { provider, model: id, thinking: level },
-    prices: config.prices,
-    system: 'You check that an app can reach you. Reply with JSON only.',
-    user: 'Reply with this JSON and nothing else: {"ok": true, "word": "ready"}',
-    schema: { type: 'object', properties: { ok: { type: 'boolean' }, word: { type: 'string' } }, required: ['ok', 'word'], additionalProperties: false },
-    maxOutputTokens: MAX_OUTPUT[level ?? 'none'],
-    by,
-    branchId: null,
-    ref: null,
-  })
-  if (!result.ok) return { ok: false, error: result.error, ms: result.ms }
-  return { ok: true, ms: result.ms, ...result.tokens, costUsd: result.costUsd, priced: !!priceOf(provider, id, config.prices), text: result.text.slice(0, 200) }
+  try {
+    const config = await loadConfig()
+    await checkLimits(config, by.uid)
+    const result = await run({
+      feature: 'test',
+      use: { provider, model: id, thinking: level },
+      prices: config.prices,
+      system: 'You check that an app can reach you. Reply with JSON only.',
+      user: 'Reply with this JSON and nothing else: {"ok": true, "word": "ready"}',
+      schema: { type: 'object', properties: { ok: { type: 'boolean' }, word: { type: 'string' } }, required: ['ok', 'word'], additionalProperties: false },
+      maxOutputTokens: MAX_OUTPUT[level ?? 'none'],
+      by,
+      branchId: null,
+      ref: null,
+    })
+    if (!result.ok) return { ok: false, error: result.error, ms: result.ms }
+    return { ok: true, ms: result.ms, ...result.tokens, costUsd: result.costUsd, priced: !!priceOf(provider, id, config.prices), text: result.text.slice(0, 200) }
+  } catch (e) {
+    if (e instanceof HttpsError) throw e
+    logger.error('AI test failed unexpectedly', { provider, model: id, error: errorWords(e) })
+    return { ok: false, error: `The server couldn’t run the test: ${errorWords(e)}`.slice(0, 500), ms: 0 }
+  }
 })
 
 /**
@@ -238,27 +246,34 @@ export const draftReportText = onCall({ timeoutSeconds: 120, ...LIGHT }, async (
   const config = resolveAiConfig((await configRef().get()).data())
   const use = config.features.reportText
   if (!use.enabled) throw new HttpsError('failed-precondition', 'AI isn’t on for report text.')
-  await checkLimits(config, by.uid)
 
   const prompt = reportTextPrompt(report)
   const firstName = report.student?.firstName ?? ''
-  const result = await run({
-    feature: 'reportText',
-    use,
-    prices: config.prices,
-    system: prompt.system,
-    user: prompt.user,
-    schema: REPORT_TEXT_SCHEMA as unknown as Record<string, unknown>,
-    maxOutputTokens: MAX_OUTPUT[use.thinking ?? 'none'],
-    by,
-    branchId: branchId as string,
-    ref: reportId,
-    // An answer that isn't the report's shape is logged as failed, with why.
-    check: (text) => {
-      const p = parseReportText(text, firstName)
-      return p.ok ? null : p.error
-    },
-  })
+  let result: Awaited<ReturnType<typeof run>>
+  try {
+    await checkLimits(config, by.uid)
+    result = await run({
+      feature: 'reportText',
+      use,
+      prices: config.prices,
+      system: prompt.system,
+      user: prompt.user,
+      schema: REPORT_TEXT_SCHEMA as unknown as Record<string, unknown>,
+      maxOutputTokens: MAX_OUTPUT[use.thinking ?? 'none'],
+      by,
+      branchId: branchId as string,
+      ref: reportId,
+      // An answer that isn't the report's shape is logged as failed, with why.
+      check: (text) => {
+        const p = parseReportText(text, firstName)
+        return p.ok ? null : p.error
+      },
+    })
+  } catch (e) {
+    if (e instanceof HttpsError) throw e
+    logger.error('AI report text failed unexpectedly', { branchId, reportId, error: errorWords(e) })
+    throw new HttpsError('unavailable', 'AI couldn’t write this just now.')
+  }
   const parsed = result.ok ? parseReportText(result.text, firstName) : null
   if (!parsed?.ok) {
     logger.warn('AI report text failed', { branchId, reportId, error: result.ok ? 'invalid answer' : result.error })

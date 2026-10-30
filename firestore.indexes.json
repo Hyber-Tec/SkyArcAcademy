@@ -189,6 +189,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "aiUsage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "at",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "costUsd",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

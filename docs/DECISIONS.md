@@ -876,6 +876,10 @@ within that (Goo can overrule any of it):
   Google's Gemini API terms say it may not be used in an app "directed towards or likely to be accessed by individuals
   under the age of 18", and students use this app; the AI page says so when Gemini is chosen. At 400 reports a month,
   that's about $6 (Sonnet 5.5), under $1 (Haiku 5.5) or about $1 (Gemini 3.5 Flash-Lite). Goo chooses (`docs/TODO.md`).
+- **The monthly spending total needs a Firestore index** (`aiUsage`: `at`, `costUsd`), which the emulators don't ask
+  for: without it, every Test and "Write with AI" failed on production with "INTERNAL" (2026-10-30). While the index
+  builds, the functions add the month's requests up themselves, and a failure of the server's own shows on the Test in
+  its words.
 
 ## 27. Goo's round on the phones and the scanner (2026-10-29)
 
