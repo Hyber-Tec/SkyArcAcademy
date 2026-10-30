@@ -6,14 +6,17 @@ import type { DateKey } from '../time'
  * A match's results sheet, read from the text of its photo or PDF (Google's text reader on the server, the manager's
  * second meeting, docs/DECISIONS.md §23): the shooter, the match, the date, the course of fire, the qualification total
  * with its inner tens ("478 - 13"), and each shot when the sheet lists them ("K1 7.2", "S12 10.4*", the star marking an
- * inner ten), grouped by position (K kneeling, P prone, S standing). What isn't found is left empty for the admin to
- * type: the reader suggests, the admin checks before anything is saved. Made-up sheets in the tests; never a real one.
+ * inner ten), grouped by position (K kneeling, P prone, S standing), and each series' group centre as printed under its
+ * target picture. What isn't found is left empty for the admin to type: the reader suggests, the admin checks before
+ * anything is saved. Made-up sheets in the tests; never a real one.
  */
 
 export interface SheetPosition {
   position: Position
   /** Each shot's score, in the sheet's order. */
   shots: number[]
+  /** Each shot's number as the sheet labels it (K12 → 12), beside `shots`: a series is ten of them (11–20). */
+  numbers: number[]
   /** Shots marked as inner tens. */
   innerTens: number
   /** Whole-number total (each shot rounded down) and decimal total. */
@@ -37,6 +40,55 @@ export interface SheetReading {
   consistent: boolean
   /** Shots each position should have, from the course of fire ("3x20" → 20, "60 Shots" → 60); null when it doesn't say. */
   perPosition: number | null
+  /**
+   * Each series' group centre as printed under its target picture ("Center: (1.24mm, -0.38mm)"), in the order the
+   * text reader gave them: not the series' order (a sheet's two columns come out interleaved), so they are matched
+   * to the pictures by where they are printed, or by the shots' own mean (sheetShots.ts).
+   */
+  centres: SheetCentre[]
+}
+
+/** A group centre printed on the sheet: millimetres from the target's centre, x right and y up. */
+export interface SheetCentre {
+  x: number
+  y: number
+  /** Where "Center" is printed on the photo (px), when the text reader gave each word's place; null otherwise. */
+  at: { x: number; y: number } | null
+}
+
+/** A word the text reader found, and where its middle is on the photo (px). */
+export interface SheetWord {
+  text: string
+  x: number
+  y: number
+}
+
+const NUMBER = String.raw`([-−–]?\s?\d+(?:[.,]\d+)?)`
+const CENTRE = new RegExp(String.raw`cent(?:er|re)\s*:?\s*\(?\s*${NUMBER}\s*(?:mm)?\s*[,;]\s*${NUMBER}\s*(?:mm)?`, 'gi')
+const toNumber = (s: string) => Number(s.replace(/[−–]/, '-').replace(/\s/g, '').replace(',', '.'))
+
+/**
+ * The group centres printed on a sheet, in the text's order; with the reader's words, each one's place on the photo
+ * (its "Center" word's), found by reading the words that follow it.
+ */
+export function printedCentres(text: string, words?: readonly SheetWord[]): SheetCentre[] {
+  const out: SheetCentre[] = [...text.matchAll(CENTRE)].map((m) => ({ x: toNumber(m[1]), y: toNumber(m[2]), at: null }))
+  if (!words?.length) return out
+  // Each "Center" word with the words after it, read the same way; its place goes to the printed centre it matches.
+  const placed: SheetCentre[] = []
+  words.forEach((w, i) => {
+    if (!/^cent(?:er|re):?$/i.test(w.text.trim())) return
+    const m = new RegExp(CENTRE.source, 'i').exec(words.slice(i, i + 10).map((x) => x.text).join(' '))
+    if (m) placed.push({ x: toNumber(m[1]), y: toNumber(m[2]), at: { x: w.x, y: w.y } })
+  })
+  for (const c of out) {
+    const k = placed.findIndex((p) => Math.abs(p.x - c.x) < 0.005 && Math.abs(p.y - c.y) < 0.005)
+    if (k >= 0) {
+      c.at = placed[k].at
+      placed.splice(k, 1)
+    }
+  }
+  return out
 }
 
 /** Shots a position has in a course of fire: "3x20 Air Rifle" → 20, "60 Shots Air Rifle" → 60. */
@@ -69,7 +121,11 @@ export function sheetDate(text: string): DateKey | null {
   return null
 }
 
-export function readSheetText(text: string): SheetReading {
+/**
+ * What a sheet's text says. With the text reader's words (each with its place on the photo), the printed group centres
+ * also get their places, for matching them to the target pictures.
+ */
+export function readSheetText(text: string, words?: readonly SheetWord[]): SheetReading {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -120,6 +176,7 @@ export function readSheetText(text: string): SheetReading {
     return {
       position,
       shots: sorted.map((s) => s.v),
+      numbers: sorted.map((s) => s.n),
       innerTens: sorted.filter((s) => s.x).length,
       wholeTotal: sorted.reduce((n, s) => n + wholeScore(s.v), 0),
       decimalTotal: round1(sorted.reduce((n, s) => n + s.v, 0)),
@@ -130,5 +187,5 @@ export function readSheetText(text: string): SheetReading {
   const sum = decimal ? round1(positions.reduce((n, p) => n + p.decimalTotal, 0)) : positions.reduce((n, p) => n + p.wholeTotal, 0)
   const tens = positions.reduce((n, p) => n + p.innerTens, 0)
   const consistent = positions.length > 0 && total !== null && Math.abs(sum - total) < 0.05 && (decimal || innerTens === null || tens === innerTens)
-  return { name, match, course, dateKey, total, innerTens, decimal, positions, consistent, perPosition: shotsPerPosition(course) }
+  return { name, match, course, dateKey, total, innerTens, decimal, positions, consistent, perPosition: shotsPerPosition(course), centres: printedCentres(text, words) }
 }
