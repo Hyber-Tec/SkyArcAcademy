@@ -324,6 +324,8 @@ To start a phase, paste this into Claude Code on the right computer:
   included, to see their growth. (#48)
   - *Plan:* **New work:** a Competition result from a photo of the results sheet. The total and inner tens are read with
     Google's text reader (Goo's pick, 2026-10-28), and the admin checks them before saving.
+  - *Since (Goo, 2026-10-29):* a competition shows as its match, series by series, each shot placed from the sheet's
+    target pictures and played back, and reports compare each match with the one before (#89, #93; DECISIONS §27).
 - ✅ **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
   (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history. (#48)
   - *Plan:* **New work**, with `P9`: the Evaluation label.

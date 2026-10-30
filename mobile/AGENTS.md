@@ -58,6 +58,9 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        news/[id] a post, news/attachment a post's file, inbox their notifications (Home's bell));
                        FamilyProvider holds whose they are and the child a parent chose
   (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
+  (app)/view-as        a super admin's "View the app as" (an admin, a coach, a parent or a student, or the demo
+                       academy): a modal over either part, declared after them so the app still opens on its tabs;
+                       BranchProvider applies the choice (src/state/viewAs.ts) and only the view changes
 src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy, or the demo
                        one (`isDemo`): settings, rules, time zone, member, staff record, the actor for the audit log),
                        PushProvider (push notifications: this phone's token, taps, the toast while open, the badge, the

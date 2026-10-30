@@ -870,3 +870,45 @@ within that (Goo can overrule any of it):
   not to keep the requests.
 - **The model list** (`shared/src/ai/models.ts`) has each provider's models with their prices as checked on
   2026-10-29, a recommended (cheap) one first; a price typed on the page wins over the list's, as providers change them.
+- **The model list, checked against the providers' pages (2026-10-30, #91):** Claude Sonnet 5.5, Haiku 5.5 and Opus 5.5;
+  Gemini 3.5 Flash-Lite, 3.8 Flash, 4 Argon and 3.1 Flash-Lite; OpenAI's GPT-6 Luna and GPT-6.1 Terra and Sol, with the
+  dates their prices change or they shut down. A feature starts on **Claude Sonnet 5.5 at low thinking**, not Gemini:
+  Google's Gemini API terms say it may not be used in an app "directed towards or likely to be accessed by individuals
+  under the age of 18", and students use this app; the AI page says so when Gemini is chosen. At 400 reports a month,
+  that's about $6 (Sonnet 5.5), under $1 (Haiku 5.5) or about $1 (Gemini 3.5 Flash-Lite). Goo chooses (`docs/TODO.md`).
+
+## 27. Goo's round on the phones and the scanner (2026-10-29)
+
+Goo tried TestFlight 1.1.0 (6) on an iPhone and the Android build on a Samsung, scanned the manager's cards on every
+desk, and added a competition from its sheet. Built that night (#83–#93; the schedule is §25, the AI §26):
+
+- **The card reader on any desk, in any light** (#83): a card photographed at a slant (the near bulls larger), in uneven
+  light (its far end in shadow) or beside other cards' bulls (a pile) no longer fails or numbers the bulls from the wrong
+  row. On the 45 real photos kept on the Mac, 43 read as before and the 2 Samsung photos that had failed read every
+  bull (82 against the coach's 80: two holes touching the next line, the matches' rule, §23). A hole that shows the same
+  grey as the card behind it, on a blurred photo, still needs a person to place it.
+- **More colour** (#84): each place's colour (classes red, scores blue, competitions and the Drive amber, reports
+  violet, news teal, people green) on section titles and row icons; a score green or amber against the student's own
+  average in that position; class statuses in their colours. A coach's day marked **not available** is red, on the
+  phone and the website, never the grey of a day not set yet. The Schedule tab's badge no longer shows "0".
+- **View the app as** (#85): super admins (§26) see the phone as any of the academy's people (an admin, a coach, a
+  parent, a student), or the demo academy, without signing out; "As Jiyeon" beside each tab's title, **Yourself** to go
+  back. Only the view changes, as on the website. Apple's and Google's rules don't stop a feature only the developer's
+  account sees; the next review notes say so.
+- **The family's Classes, remade** (#87): "Needs your answer" (a time the academy suggests: Accept, Ask for another
+  time, Withdraw, full width), "Waiting for the academy", "Makeups to book" (**Book**), then the classes, each part
+  with its colour and nothing when empty. **Month** is the page: the months scroll as one, a day's tap opens it from the
+  bottom (its classes, or "No classes", and **Ask for a class on this day**). Nothing is cut short with large text.
+- **A competition as its match** (#89): a results sheet's competition shows its total and inner tens, each position's,
+  then each series of ten as the sheet prints it ("K1–K10 · 71 - 1"); a series opens its shots (inner tens starred)
+  and plays them back where they have places. A sheet's shots read in tenths. Reports compare each competition with
+  the same position's match before it, from before the period too ("+1.2 vs Sep 12"). "Decimal scoring" is now
+  "Totals with a decimal point", set from the sheet. **Each shot's place** is read from the sheet's own target
+  pictures (#93): on the circle its decimal score allows, kept only when the series' mean lands on the centre printed
+  under its picture (on the manager's 9 sheets, kept on the Mac: 54 of 54 series, within 0.09 mm). A picture that can't
+  be read leaves its shots with scores only; a very tight group can put one shot up to 1.5 mm off.
+- **Each student's Contracts folder** (#88, §23): signed contracts land in the student's own folder; production's empty
+  top-level Contracts folder was removed.
+- **Not done:** the camera on Goo's Samsung wasn't tried again (the same photos read on the Android emulator); the
+  website's day plan for a "Write with AI" button on the phone; telling families that a report's words were drafted with
+  AI (a question for Goo, `docs/TODO.md`).
