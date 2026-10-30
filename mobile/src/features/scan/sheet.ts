@@ -1,9 +1,12 @@
 import { collection, doc, serverTimestamp, writeBatch } from "@react-native-firebase/firestore";
+import { AlphaType, ColorType, Skia } from "@shopify/react-native-skia";
 import { cleanFileName } from "@shared/drive/files";
 import { type DriveActor, studentFolderId } from "@shared/drive/types";
 import { COL, ROOT } from "@shared/paths";
 import type { SheetReading } from "@shared/scores/sheet";
-import { type EvalSeries, type Evaluation, POSITION_LABELS, type Position, type ResultKind, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
+import { readSheetShots } from "@shared/scores/sheetRead";
+import { type SheetPlaces, placedSeries, placesByPosition, sheetSeriesOf } from "@shared/scores/sheetSave";
+import { type Evaluation, POSITION_LABELS, type Position, type ResultKind, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
 import { wholeScore } from "@shared/shooting/target";
 import { type DateKey, formatDateKey } from "@shared/time";
 import type { AuditStamp } from "@shared/types";
@@ -58,13 +61,35 @@ export function readSheet(branchId: string, photo: SheetPhoto): Promise<{ readin
   return read({ branchId, content: photo.base64, mime: "image/jpeg" });
 }
 
-/** One position's result, as checked: its shots, total, inner tens, and each shot when the sheet listed them and they add up. */
+/**
+ * The shots' places on the sheet's target pictures (shared/src/scores/sheetRead.ts), found on the same photo the server
+ * read (its words' places match its pixels), and how many series got theirs. Done on the phone, after the text.
+ */
+export async function findSheetPlaces(photo: SheetPhoto, reading: SheetReading): Promise<{ places: Partial<Record<Position, SheetPlaces>>; placed: number; of: number }> {
+  const none = { places: {}, placed: 0, of: 0 };
+  const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(photo.uri));
+  if (!image) return none;
+  const width = image.width();
+  const height = image.height();
+  const pixels = image.readPixels(0, 0, { width, height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul });
+  if (!(pixels instanceof Uint8Array)) return none;
+  // Lets the screen say it's looking before the phone gets busy.
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  const found = readSheetShots({ width, height, data: pixels }, reading);
+  return { places: placesByPosition(found), ...placedSeries(found) };
+}
+
+/**
+ * One position's result, as checked: its shots, total, inner tens, each shot when the sheet listed them and they add
+ * up, and their places on the sheet's pictures when those were found.
+ */
 export interface SheetRow {
   position: Position;
   shots: number;
   total: number;
   innerTens: number | null;
   values: number[] | null;
+  places?: SheetPlaces | null;
 }
 
 const describe = (e: Pick<Evaluation, "source" | "position" | "dateKey" | "total" | "shots">) =>
@@ -89,14 +114,9 @@ export async function saveSheetResults(c: {
   const ids = c.rows.map(() => doc(col(COL.evaluations)).id);
   const fileRef = c.photo ? doc(col(COL.driveFiles)) : null;
   const label = { name: c.match.trim(), course: c.course.trim() };
-  const evaluations: Omit<Evaluation, keyof AuditStamp>[] = c.rows.map(({ position, shots, total, innerTens, values: given }) => {
+  const evaluations: Omit<Evaluation, keyof AuditStamp>[] = c.rows.map(({ position, shots, total, innerTens, values: given, places }) => {
     const values = given && given.length === shots ? given : null;
-    const series: EvalSeries[] = values
-      ? Array.from({ length: Math.ceil(values.length / 10) }, (_, i) => {
-          const part = values.slice(i * 10, i * 10 + 10);
-          return { n: i + 1, total: Math.round(part.reduce((n, v) => n + v, 0) * 10) / 10, shots: part.map((v) => ({ v, a: null })), mpi: null, groupMm: null };
-        })
-      : [];
+    const series = values ? sheetSeriesOf(values, places) : [];
     return {
       studentId: c.student.id,
       studentName: c.student.name,

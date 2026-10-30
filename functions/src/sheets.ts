@@ -3,7 +3,7 @@ import { logger } from 'firebase-functions/v2'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { db, LIGHT } from './app'
 import { COL, ROOT } from '@shared/paths'
-import { readSheetText } from '@shared/scores/sheet'
+import { type SheetWord, readSheetText } from '@shared/scores/sheet'
 import type { Member } from '@shared/types'
 
 /** Photos are shrunk on the device first; a PDF is sent as it is. */
@@ -39,10 +39,25 @@ export const readResultsSheet = onCall({ timeoutSeconds: 60, memory: '512MiB', .
     throw new HttpsError('unavailable', res.status === 403 ? 'Reading sheets isn’t switched on yet. Type the numbers instead.' : 'The sheet couldn’t be read just now. Type the numbers instead.')
   }
   const out = (await res.json()) as {
-    responses?: { fullTextAnnotation?: { text?: string }; responses?: { fullTextAnnotation?: { text?: string } }[]; error?: { message?: string } }[]
+    responses?: {
+      fullTextAnnotation?: { text?: string }
+      textAnnotations?: { description?: string; boundingPoly?: { vertices?: { x?: number; y?: number }[] } }[]
+      responses?: { fullTextAnnotation?: { text?: string } }[]
+      error?: { message?: string }
+    }[]
   }
   const first = out.responses?.[0]
   const text = pdf ? (first?.responses ?? []).map((r) => r.fullTextAnnotation?.text ?? '').join('\n') : (first?.fullTextAnnotation?.text ?? '')
   if (first?.error?.message) logger.warn('The text reader said', { message: first.error.message })
-  return { reading: readSheetText(text), found: text.trim().length > 0 }
+  // A photo's words with their places (the first annotation is the whole text), so each printed group centre can be
+  // matched to the target picture above it (shared/src/scores/sheetRead.ts). A PDF's words are on its pages, not on a
+  // photo, so it has none.
+  const words: SheetWord[] | undefined = pdf
+    ? undefined
+    : (first?.textAnnotations ?? []).slice(1).map((a) => {
+        const v = a.boundingPoly?.vertices ?? []
+        const n = v.length || 1
+        return { text: a.description ?? '', x: v.reduce((s, p) => s + (p.x ?? 0), 0) / n, y: v.reduce((s, p) => s + (p.y ?? 0), 0) / n }
+      })
+  return { reading: readSheetText(text, words), found: text.trim().length > 0 }
 })
