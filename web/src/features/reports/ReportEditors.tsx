@@ -16,12 +16,15 @@ const FIELD =
 
 /** In edit mode: where the words came from, and Restore. */
 export function SectionTools({ k, edit, children }: { k: NarrativeKey; edit: EditApi; children: React.ReactNode }) {
-  const edited = edit.meta[k]?.source === 'staff'
+  const source = edit.meta[k]?.source
+  const changed = source === 'staff' || source === 'ai'
   return (
     <div className="relative mt-2 rounded-xl ring-1 ring-transparent ring-offset-4 transition hover:ring-[#e3e1da] print:ring-0">
       <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10.5px] print:hidden">
-        <span className="rounded-full bg-[#f1f0eb] px-2 py-0.5 font-medium text-[#52514e]">{edited ? 'Edited' : 'Standard text'}</span>
-        {edited ? (
+        <span className="rounded-full bg-[#f1f0eb] px-2 py-0.5 font-medium text-[#52514e]" data-testid={`section-source-${k}`}>
+          {source === 'ai' ? 'AI draft: check it' : source === 'staff' ? 'Edited' : 'Standard text'}
+        </span>
+        {changed ? (
           <button type="button" onClick={() => edit.onRestore(k)} className="ml-auto rounded-md px-1.5 py-0.5 font-medium text-[#52514e] hover:bg-[#f1f0eb]">
             Restore standard text
           </button>

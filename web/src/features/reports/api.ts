@@ -61,13 +61,17 @@ export async function createReport(opts: {
   return id
 }
 
-/** Saves edited sections (drafts only); the sections touched become the staff's own. */
-export async function saveNarrative(branchId: string, actor: Actor, r: Report, narrative: ReportNarrative, touched: NarrativeKey[]) {
+/**
+ * Saves edited sections (drafts only); the sections touched become the staff's own, or stay AI's when AI drafted them
+ * (`meta`: the editor's, which says so).
+ */
+export async function saveNarrative(branchId: string, actor: Actor, r: Report, narrative: ReportNarrative, touched: NarrativeKey[], meta: Partial<Record<NarrativeKey, SectionMeta>> = {}) {
   const sections: Partial<Record<NarrativeKey, SectionMeta>> = { ...(r.narrativeMeta?.sections ?? {}) }
+  const ai = (k: NarrativeKey) => meta[k]?.source === 'ai'
   for (const k of touched) {
     const restored = JSON.stringify(narrative[k]) === JSON.stringify(r.narrativeOriginal?.[k])
     if (restored) delete sections[k]
-    else sections[k] = { source: 'staff', editedBy: actor.name, editedAt: new Date().toISOString() }
+    else sections[k] = { source: ai(k) ? 'ai' : 'staff', editedBy: actor.name, editedAt: new Date().toISOString() }
   }
   const batch = writeBatch(db)
   batch.update(ref(branchId, r.id), { narrative, narrativeMeta: { ...(r.narrativeMeta ?? { source: 'template' }), sections }, updatedAt: serverTimestamp(), updatedBy: actor.email })
@@ -77,8 +81,8 @@ export async function saveNarrative(branchId: string, actor: Actor, r: Report, n
     actor,
     r,
     'report.edit',
-    `Edited ${r.studentName}'s ${reportName(r)}`,
-    touched.map((k) => ({ field: `narrative.${k}`, label: NARRATIVE_LABELS[k], from: null, to: 'edited' })),
+    `Edited ${r.studentName}'s ${reportName(r)}${touched.some((k) => sections[k]?.source === 'ai') ? ', from a draft by AI' : ''}`,
+    touched.map((k) => ({ field: `narrative.${k}`, label: NARRATIVE_LABELS[k], from: null, to: !sections[k] ? 'standard text' : sections[k]?.source === 'ai' ? 'AI draft' : 'edited' })),
   )
   await batch.commit()
 }
@@ -91,8 +95,8 @@ export async function setOption(branchId: string, actor: Actor, r: Report, key: 
 }
 
 /**
- * Recomputes the figures from the student's current evaluations and classes, keeping every section staff wrote:
- * only standard-text sections follow the new figures.
+ * Recomputes the figures from the student's current evaluations and classes, keeping every section staff wrote (or
+ * kept from AI's draft): only standard-text sections follow the new figures.
  */
 export async function refreshFigures(branchId: string, actor: Actor, r: Report) {
   const inputs = await loadComposeInputs(branchId, r.studentId, r.startDate, r.endDate)
@@ -100,7 +104,8 @@ export async function refreshFigures(branchId: string, actor: Actor, r: Report) 
   const { facts, series } = reportFacts(inputs.evaluations, inputs.sessions, inputs.previous, inputs.earlier)
   const fresh = templateNarrative(facts, r.student.firstName, r.period.label)
   const edited = r.narrativeMeta?.sections ?? {}
-  const narrative = Object.fromEntries(NARRATIVE_KEYS.map((k) => [k, edited[k]?.source === 'staff' ? r.narrative[k] : fresh[k]])) as unknown as ReportNarrative
+  const kept = (k: NarrativeKey) => edited[k]?.source === 'staff' || edited[k]?.source === 'ai'
+  const narrative = Object.fromEntries(NARRATIVE_KEYS.map((k) => [k, kept(k) ? r.narrative[k] : fresh[k]])) as unknown as ReportNarrative
   const batch = writeBatch(db)
   batch.update(ref(branchId, r.id), {
     facts,

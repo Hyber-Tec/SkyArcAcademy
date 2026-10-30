@@ -139,7 +139,11 @@ export const NARRATIVE_LABELS: Record<NarrativeKey, string> = {
 }
 
 export interface SectionMeta {
-  source: 'template' | 'staff'
+  /**
+   * Who wrote it: the standard text, staff by hand, or AI when an owner or admin asked for a draft ("Write with AI",
+   * docs/DECISIONS.md §26); a section AI drafted stays `ai` as it's edited, and Restore takes it back to the standard text.
+   */
+  source: 'template' | 'staff' | 'ai'
   editedBy?: string
   editedAt?: string
 }

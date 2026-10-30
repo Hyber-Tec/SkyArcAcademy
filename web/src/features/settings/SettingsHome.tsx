@@ -21,12 +21,14 @@ import { addDays, todayKey, weekdayOf } from '@shared/time'
 import type { AuditEntry } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { useIsSuperAdmin } from '@/features/ai/api'
+import { AiTileSummary } from '@/features/ai/AiTileSummary'
 import { useContractTemplates } from '@/features/contracts/api'
 import { useDayConfigs } from '@/features/data/hooks'
 import { useNewWebsiteMessageCount } from '@/features/website/api'
 import { branchCol, useQuery } from '@/lib/firestore'
 import { useNow } from '@/lib/useNow'
-import { HOME_GROUPS, PAGES, SETTINGS_FINDS, pageTitle } from './pages'
+import { HOME_GROUPS, PAGES, SETTINGS_FINDS, pageByKey, pageTitle } from './pages'
 import { PAGE_ICONS, zoneWords } from './pageIcons'
 
 /**
@@ -39,7 +41,10 @@ export function SettingsHome() {
   const now = useNow(60_000)
   const today = todayKey(timezone, now)
   const [q, setQ] = useState('')
-  const found = useMemo(() => searchFinds(SETTINGS_FINDS, q), [q])
+  // The AI page is for super admins only: its tile and its search results too.
+  const { isSuperAdmin } = useIsSuperAdmin()
+  const pages = useMemo(() => PAGES.filter((p) => !p.superAdminOnly || isSuperAdmin), [isSuperAdmin])
+  const found = useMemo(() => searchFinds(SETTINGS_FINDS, q).filter((f) => !pageByKey(f.page)?.superAdminOnly || isSuperAdmin), [q, isSuperAdmin])
 
   // What the tiles say beyond the settings: the next dates with other hours, new messages, the contract, the last change.
   const { map: dayConfigs } = useDayConfigs(today, addDays(today, 180))
@@ -132,11 +137,11 @@ export function SettingsHome() {
           )}
         </div>
       ) : (
-        HOME_GROUPS.map((g) => (
+        HOME_GROUPS.filter((g) => pages.some((p) => p.home === g.key)).map((g) => (
           <section key={g.key} className="mt-8">
             <h2 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">{g.title}</h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {PAGES.filter((p) => p.home === g.key).map((p) => {
+              {pages.filter((p) => p.home === g.key).map((p) => {
                 const Icon = PAGE_ICONS[p.key]
                 return (
                   <Link
@@ -148,7 +153,7 @@ export function SettingsHome() {
                     <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted">{Icon ? <Icon className="size-5" /> : null}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">{p.title}</span>
-                      <span className="mt-1 line-clamp-4 text-sm text-muted-foreground">{summary[p.key]}</span>
+                      <span className="mt-1 line-clamp-4 text-sm text-muted-foreground">{p.key === 'ai' ? <AiTileSummary /> : summary[p.key]}</span>
                     </span>
                     <LuChevronRight className="mt-3 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </Link>

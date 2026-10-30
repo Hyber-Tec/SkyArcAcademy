@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Sky Arc security rules (forked from HyberCRM).
 // - The academy's data lives under branches/{ACADEMY_ID} ('skyarc'; shared/src/academy.ts); access needs an active
-//   membership in it. There is no Super Admin.
+//   membership in it. Super admins (superAdmins/{email}) reach only the AI page's platform-wide collections, never an
+//   academy's data by being one.
 // - There is no catch-all rule: a collection without a rule is closed.
 // - Members are keyed by lower-cased email (branches/{b}/members/{email}); one role per person.
 // - Records concern minors: parents read only their own children's records.
@@ -122,6 +123,48 @@ service cloud.firestore {
     // "Which announcements have I read?" — my own read receipts across posts.
     match /{path=**}/reads/{readerKey} {
       allow read: if signedIn() && resource.data.email == emailKey();
+    }
+
+    // ------------------------------------------------------------- the AI
+
+    // Platform-wide, outside every academy (shared/src/ai/types.ts, docs/DECISIONS.md §26). Super admins open
+    // Settings → AI: they read the config, the log of requests and the change history; every change goes through Cloud
+    // Functions, which write the history. The providers' keys and each person's hourly count are server only: no
+    // client reads them, a super admin's included. Any signed-in person may read aiConfig/public (which features are
+    // set up and on), so the academy's pages know whether to offer AI.
+
+    function isSuperAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/superAdmins/$(emailKey()));
+    }
+
+    match /superAdmins/{email} {
+      // Anyone signed in may ask whether they are one (their own document), so the page knows to show itself.
+      allow get: if signedIn() && email == emailKey();
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /aiConfig/{docId} {
+      allow get: if (docId == 'public' && signedIn()) || (docId == 'main' && isSuperAdmin());
+      allow list, write: if false;
+    }
+
+    match /aiKeys/{provider} {
+      allow read, write: if false;
+    }
+
+    match /aiUsage/{entryId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /aiChanges/{entryId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /aiLimits/{uid} {
+      allow read, write: if false;
     }
 
     // -------------------------------------------------------------- academy

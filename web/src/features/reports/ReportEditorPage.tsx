@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { LuArrowLeft, LuEllipsis, LuExternalLink, LuPencil, LuRefreshCw, LuSend, LuTrash2, LuUndo2 } from 'react-icons/lu'
+import { LuArrowLeft, LuEllipsis, LuExternalLink, LuPencil, LuRefreshCw, LuSend, LuSparkles, LuTrash2, LuUndo2 } from 'react-icons/lu'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
+import { callError, draftReportText, isLimitError, useAiPublic } from '@/features/ai/api'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { branchDocRef, useDoc } from '@/lib/firestore'
 import { deleteReport, refreshFigures, saveNarrative, unshareReport } from './api'
@@ -23,6 +24,9 @@ import { ReportRail } from './ReportRail'
 import { type Report, errorMessage, stateLabel } from './model'
 
 type Editing = { narrative: ReportNarrative; meta: Partial<Record<NarrativeKey, SectionMeta>>; touched: Set<NarrativeKey> }
+
+/** What "Write with AI" replaces: everything but the coach's note. */
+const AI_SECTIONS: NarrativeKey[] = ['overview', 'strengths', 'focusAreas', 'goals']
 
 /** Reports → a report: review, edit (admins), share with the family (admins and coaches), print. */
 export function ReportEditorPage({ portal = 'admin' }: { portal?: 'admin' | 'coach' }) {
@@ -60,12 +64,15 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
   const navigate = useNavigate()
   const { branchId, timezone, isAdmin, actor } = useBranch()
   const [editing, setEditing] = useState<Editing | null>(null)
-  const [busy, setBusy] = useState<'save' | 'refresh' | null>(null)
+  const [busy, setBusy] = useState<'save' | 'refresh' | 'ai' | null>(null)
   const [sharing, setSharing] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const { confirm, dialog } = useConfirm()
   const draft = r.status === 'draft'
   const mayEdit = isAdmin && draft
+  // "Write with AI": owners and admins, on a draft, once a super admin has set AI up for report text.
+  const aiOn = useAiPublic()?.reportText === true
+  const mayWriteWithAi = mayEdit && aiOn
 
   // What the report would be built from now, to say when it has fallen behind its evaluations.
   const { data: evaluations, loading: evalsLoading } = useStudentEvaluations(r.studentId)
@@ -79,7 +86,10 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
         narrative: editing.narrative,
         meta: editing.meta,
         onChange: (key, value) =>
-          setEditing((e) => (e ? { ...e, narrative: { ...e.narrative, [key]: value }, meta: { ...e.meta, [key]: { source: 'staff', editedBy: actor.name } }, touched: new Set(e.touched).add(key) } : e)),
+          setEditing((e) =>
+            // A section AI drafted stays AI's as it's changed (Restore takes it back to the standard text).
+            e ? { ...e, narrative: { ...e.narrative, [key]: value }, meta: { ...e.meta, [key]: { source: e.meta[key]?.source === 'ai' ? 'ai' : 'staff', editedBy: actor.name } }, touched: new Set(e.touched).add(key) } : e,
+          ),
         onRestore: (key) =>
           setEditing((e) => {
             if (!e) return e
@@ -94,11 +104,39 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
     if (!editing) return
     setBusy('save')
     try {
-      await saveNarrative(branchId, actor, r, editing.narrative, [...editing.touched])
+      await saveNarrative(branchId, actor, r, editing.narrative, [...editing.touched], editing.meta)
       toast.success('Report saved')
       setEditing(null)
     } catch (e) {
       toast.error('Could not save the report', { description: errorMessage(e, 'Try again.') })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** A draft from AI for every section but the coach's note, as changes to review and save. */
+  async function writeWithAi() {
+    const ok = await confirm({
+      title: 'Replace the overview, strengths, focus areas and goals with a draft?',
+      description: 'AI writes them from this report’s figures. You can edit the draft before sharing; the coach’s note stays as it is.',
+      confirmLabel: 'Write with AI',
+    })
+    if (!ok) return
+    setBusy('ai')
+    try {
+      const { narrative, check } = await draftReportText(branchId, r.id)
+      setEditing((e) => {
+        const base = e ?? { narrative: structuredClone(r.narrative), meta: { ...(r.narrativeMeta?.sections ?? {}) }, touched: new Set<NarrativeKey>() }
+        const meta = { ...base.meta }
+        for (const k of AI_SECTIONS) meta[k] = { source: 'ai', editedBy: actor.name }
+        return { narrative: { ...base.narrative, ...narrative }, meta, touched: new Set([...base.touched, ...AI_SECTIONS]) }
+      })
+      toast.success('AI wrote a draft', { description: 'Read it through and change what you like, then Save.' })
+      if (check?.length) {
+        toast.warning('Check these numbers before saving', { description: `${check.join(', ')}: they aren’t in the report’s figures.`, duration: 15_000 })
+      }
+    } catch (e) {
+      toast.error(isLimitError(e) ? callError(e) : 'AI couldn’t write this just now. Try again, or write it yourself.')
     } finally {
       setBusy(null)
     }
@@ -165,12 +203,28 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
           <Badge variant={draft ? 'secondary' : 'default'} data-testid="report-state">
             {stateLabel(r, timezone)}
           </Badge>
+          {mayWriteWithAi ? (
+            // Phones: in the ⋯ menu until editing, so the header keeps to one line.
+            <Button
+              variant="outline"
+              size="sm"
+              className={editing ? undefined : 'hidden sm:inline-flex'}
+              disabled={!!busy}
+              onClick={() => void writeWithAi()}
+              aria-label="Write with AI"
+              title="Write with AI"
+              data-testid="write-with-ai"
+            >
+              {busy === 'ai' ? <Spinner /> : <LuSparkles />}
+              <span className="hidden sm:inline">Write with AI</span>
+            </Button>
+          ) : null}
           {editing ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => void cancelEdit()}>
+              <Button variant="ghost" size="sm" disabled={busy === 'ai'} onClick={() => void cancelEdit()}>
                 Cancel
               </Button>
-              <Button size="sm" disabled={busy === 'save'} onClick={() => void save()}>
+              <Button size="sm" disabled={busy === 'save' || busy === 'ai'} onClick={() => void save()}>
                 {busy === 'save' ? <Spinner /> : null} Save
               </Button>
             </>
@@ -204,6 +258,11 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    {mayWriteWithAi ? (
+                      <DropdownMenuItem className="sm:hidden" disabled={!!busy} onSelect={() => void writeWithAi()}>
+                        <LuSparkles /> Write with AI
+                      </DropdownMenuItem>
+                    ) : null}
                     {mayEdit ? (
                       <DropdownMenuItem disabled={!!busy} onSelect={() => void refresh()}>
                         <LuRefreshCw /> Update figures
@@ -222,9 +281,9 @@ function Editor({ report: r, portal, listPath }: { report: Report; portal: 'admi
             </>
           )}
         </div>
-        {busy === 'refresh' ? (
+        {busy === 'refresh' || busy === 'ai' ? (
           <div className="flex items-center gap-2 border-t bg-muted/40 px-4 py-2 text-sm text-muted-foreground sm:px-6" role="status">
-            <Spinner /> Updating the figures…
+            <Spinner /> {busy === 'ai' ? 'AI is writing a draft from the figures…' : 'Updating the figures…'}
           </div>
         ) : null}
         {!draft && !editing ? (

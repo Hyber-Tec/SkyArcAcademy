@@ -5,7 +5,8 @@ end of the matching section, with the date.
 
 ## 1. Product (from the brief and the kickoff meeting, Oct 13, 2026)
 
-- **One academy.** No branch creation, no super-admin layer.
+- **One academy.** No branch creation, no super-admin layer. *Changed: super admins for the AI page only, with no
+  access to the academy's data (§26).*
 - **Web first.** The phone app (admin, coach, parent, student) is Phase 2; data and APIs stay ready for it.
 - **No landing page yet.** The homepage is a placeholder: logo, one line, Log in, Book a trial. Goo designs the
   landing page last. *Changed: the public website (§18).*
@@ -196,8 +197,9 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   decimals for SIUS results (§7: both).
 - **Reports** are made from a student's results and classes over a period (since the last report, last month, this
   month, the last 30 or 90 days, or chosen dates). The words start as standard text built only from the figures; no AI
-  writes them. Admins edit them; admins and coaches share; a shared report is locked until an admin stops sharing it.
-  Families get an inbox item, and an email with a sign-in link when whoever shares asks for one.
+  writes them. *Changed: owners and admins can ask AI for a draft (§26).* Admins edit them; admins and coaches share; a
+  shared report is locked until an admin stops sharing it. Families get an inbox item, and an email with a sign-in link
+  when whoever shares asks for one.
 - **The trend** on a report is calculated: the second half of the period against the first, per position, weighted by
   how many results each has. A point or more per 10 shots up is "Improving", a point and a half down "Dipping"
   (families read "Building back up"), anything between "Steady".
@@ -833,3 +835,38 @@ Goo used the website's timeline (§23) and asked for these:
 - **Two pages off the menu, still at their addresses:** Employees → Pay Rates (a person's rate is on their page in
   Employees → Directory, where the links that led to Pay Rates go now) and Access Control ("we only have one admin;
   don't delete it, hide it, in case we need it back").
+
+## 26. AI for report text, and the AI page (2026-10-29)
+
+Goo: reports keep the real data and add words written by AI; there should be a page to manage the API keys and see the
+spend; more AI features will come, each free to use a cheaper model, and Claude, Gemini or any other provider. Built
+within that (Goo can overrule any of it):
+
+- **"Write with AI" on a report** (changes §8's "no AI writes them"): on a draft report, owners and admins see it once
+  AI is set up for report text. It asks first, then fills the overview, strengths, focus areas and goals (never the
+  coach's note) with a draft written from the report's figures and the student's first name only, as unsaved changes
+  they read, edit and save. Those sections show "AI draft: check it" while editing, and the report's side panel says
+  the words came from AI. The standard text stays the starting text, what's used without AI, and what Restore brings
+  back. The instructions: plain, warm, factual English for parents; only the figures given, never a made-up number;
+  no comparing with other students; no medical or psychological claims; never mention AI. A draft whose shape is wrong
+  is refused, and a number that isn't in the figures is pointed out to check before saving. Coaches and families never
+  see the button; the families' report never says how its words were written.
+- **Super admins** (`superAdmins/{email}`, the phone's "View the app as" reads them too): HyberTec's, not the
+  academy's. Being one opens Settings → AI and gives no access to the academy's data, so §3's "no hidden Super Admin"
+  still holds. Super admins add and remove each other on the page, and there's always one; the first is added with
+  `npx tsx scripts/super-admin.ts --add <email>`.
+- **Settings → AI**, for super admins only, the one page that names providers and models (everywhere else it's "AI",
+  CLAUDE.md): **Models** (each feature's provider, model from the list or typed in with its prices, thinking level
+  Minimal, Low, Medium, High or Default, on or off, and Test), **Keys** (Google Gemini, Anthropic Claude, OpenAI: add,
+  replace, remove), **Spend** (this month, last month, the last 30 days or chosen dates: requests, input, output and
+  thinking tokens, dollars; by feature, model and person; the month against its limit), **Requests** (each one: its
+  tokens, cost, time, who, and the provider's error when it failed), **Changes** (every change, who and when) and
+  **Super admins**.
+- **Every AI request runs in Cloud Functions**: the keys are kept where only the functions read them (the page shows
+  their last 4 characters) and never reach a browser or a phone. Each request is logged with its tokens and its cost
+  from the prices (thinking billed as output), and refused once the month's logged cost reaches the monthly limit, or
+  when the person has made 30 requests in the last hour; both are set on the page ($10 a month and 30 an hour until a
+  super admin changes them). The providers are called over their own HTTP APIs, without their SDKs; OpenAI is asked
+  not to keep the requests.
+- **The model list** (`shared/src/ai/models.ts`) has each provider's models with their prices as checked on
+  2026-10-29, a recommended (cheap) one first; a price typed on the page wins over the list's, as providers change them.
