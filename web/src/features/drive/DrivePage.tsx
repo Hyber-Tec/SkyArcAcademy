@@ -12,6 +12,7 @@ import {
   LuLayoutGrid,
   LuList,
   LuLock,
+  LuPanelRight,
   LuPencilLine,
   LuPlus,
   LuSearch,
@@ -25,7 +26,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
 import { studentNamedIn } from '@shared/drive/suggest'
-import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, moveAccessNote, moveRefusal, sortDriveItems } from '@shared/drive/model'
+import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, moveAccessNote, moveRefusal, searchWithin, sortDriveItems, trailFrom } from '@shared/drive/model'
 import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
@@ -33,7 +34,7 @@ import { type Evaluation, POSITION_LABELS, type Position, type ResultKind } from
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
-import { type MenuEntry, menu } from '@/components/app/ItemMenu'
+import { ContextMenuFor, type MenuEntry, menu } from '@/components/app/ItemMenu'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -53,12 +54,12 @@ import { type DroppedEntry, useFileDropZone, useWindowDropGuard } from './dropzo
 import { FilePreview, downloadFile } from './FilePreview'
 import { MoveDialog } from './MoveDialog'
 import { AccessBadge, FolderGlyph } from './parts'
-import { ResultsDropArea } from './ResultsDropArea'
 import { readSiusFiles } from './sius'
 import { type ResultUpload, plannedFile, saveResults, sendAll, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
 import { useDriveIndex } from './useDriveIndex'
 
 const SEARCH_LIMIT = 200
+const READING_TOAST = 'drive-reading'
 
 type Dialog =
   | { kind: 'newFolder'; parentId: string | null }
@@ -75,23 +76,30 @@ function resultName(dateKey: string, position: Position | null, total: number | 
 }
 
 /**
- * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. Its
- * first section is the drop area for SIUS PDFs (dropped there or anywhere on the page, or chosen with its button):
- * they're read on the spot; whoever adds them confirms whose result each is and its position, and each is filed in
- * the student's folder, named by its date, with its scores saved for the reports. Admins and coaches add,
- * rename, move and trash alike (the owner's call, 2026-10-17); only admins open the Trash, to restore or delete for
- * good. Admins choose who sees a folder (F6): everyone on staff, or owners and admins only, which coaches never see
- * (the Contracts folder is one); the page lists what the viewer's role may read. Families never see the Drive.
+ * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. Files
+ * dropped anywhere on it (or added with New, or a right-click) go into the folder open; SIUS PDFs among them are read
+ * on the spot: whoever adds them confirms whose result each is and its position, and each is filed in the student's
+ * folder, named by its date, with its scores saved for the reports. Admins and coaches add, rename, move and trash alike
+ * (the owner's call, 2026-10-17); only admins open the Trash, to restore or delete for good. Admins choose who sees a
+ * folder (F6): everyone on staff, or owners and admins only, which coaches never see (the Contracts folders are); the
+ * page lists what the viewer's role may read. Families never see the Drive.
  */
 export function DrivePage() {
-  // The address: /drive, /drive/f/{folderId} or /drive/file/{fileId} (one route, so the page stays put between folders).
+  const { portal } = useBranch()
+  return <DriveBrowser base={`/${portal}/drive`} rootId={null} />
+}
+
+/**
+ * The Drive's folders and files, with everything done to them: the Drive page (from the top), and a student's Drive tab
+ * on their page (from their folder, which it stays inside: its crumbs, search and drops). The address says which folder
+ * is open: `{base}`, `{base}/f/{folderId}` or `{base}/file/{fileId}`, one route, so the page stays put between folders.
+ */
+export function DriveBrowser({ base, rootId, embedded = false }: { base: string; rootId: string | null; embedded?: boolean }) {
   const [segment, routeId = null] = (useParams()['*'] ?? '').split('/')
   const routeFolder = segment === 'f' ? routeId : null
   const routeFile = segment === 'file' ? routeId : null
   const navigate = useNavigate()
   const { branchId, actor, isAdmin, role, portal, timezone } = useBranch()
-  const canWrite = isStaffRole(role)
-  const base = `/${portal}/drive`
   useWindowDropGuard()
   useUploadProgress()
   const index = useDriveIndex()
@@ -114,6 +122,8 @@ export function DrivePage() {
   const [hotCrumb, setHotCrumb] = useState<string | null | undefined>(undefined)
   const uploadInput = useRef<HTMLInputElement>(null)
   const folderInput = useRef<HTMLInputElement>(null)
+  // Where the files chosen next go: the folder whose menu said Upload (null: the top), else the folder open.
+  const uploadTo = useRef<string | null | undefined>(undefined)
   const { confirm, dialog: confirmDialog } = useConfirm()
 
   useEffect(() => {
@@ -124,13 +134,17 @@ export function DrivePage() {
     }
   }, [layout])
 
-  // Where we are: the folder in the address, or the folder of the file in the address.
+  // Where we are: the folder in the address, or the folder of the file in the address (else the top).
   const linkedFile = routeFile ? index.fileOf(routeFile) : null
-  const cwd = routeFile ? (linkedFile?.folderId ?? null) : routeFolder
+  const cwd = routeFile ? (linkedFile?.folderId ?? rootId) : (routeFolder ?? rootId)
   const folder = ready && cwd ? index.folderOf(cwd) : null
-  const crumbs = useMemo(() => (folder ? index.pathOf(folder.id) : []), [index, folder])
+  // A finished student's folder is gone once it's empty: their tab says so, and takes nothing.
+  const rootMissing = ready && !!rootId && !index.folderOf(rootId)
+  const canWrite = isStaffRole(role) && !rootMissing
+  // From the top (the Drive's, or the student's folder) down to the folder open.
+  const crumbs: { id: string | null; name: string }[] = rootId ? trailFrom(index, rootId, cwd) : [{ id: null, name: 'Drive' }, ...(folder ? trailFrom(index, null, folder.id) : [])]
   const studentHere = index.studentOf(cwd)
-  const urlOf = (id: string | null) => (id ? `${base}/f/${id}` : base)
+  const urlOf = (id: string | null) => (id && id !== rootId ? `${base}/f/${id}` : base)
   const go = (id: string | null) => {
     setQ('')
     setSelected(new Set())
@@ -145,23 +159,30 @@ export function DrivePage() {
     if (linkedFile) setPreview(linkedFile)
     else toast.error('That file isn’t in the Drive any more.')
   }, [ready, routeFile, linkedFile])
-  // A folder that's gone gives way to the top.
+  // A folder that's gone, or (in a student's tab) one outside their folder, gives way to the top.
   useEffect(() => {
-    if (ready && routeFolder && !index.folderOf(routeFolder)) navigate(base, { replace: true })
-  }, [ready, routeFolder, index, navigate, base])
+    if (!ready) return
+    const outside = (id: string | null) => !!rootId && !index.isInside(id, rootId)
+    if (routeFolder && (!index.folderOf(routeFolder) || outside(routeFolder))) navigate(base, { replace: true })
+    else if (linkedFile && outside(linkedFile.folderId)) navigate(base, { replace: true })
+  }, [ready, routeFolder, linkedFile, rootId, index, navigate, base])
 
   // A student's folder shows each result's scores.
   const { data: evaluations } = useStudentEvaluations(studentHere)
   const scoresByFile = useMemo(() => new Map(evaluations.filter((e) => e.fileId).map((e) => [e.fileId as string, e])), [evaluations])
 
   const query_ = q.trim()
-  const hits = useMemo(() => (query_ && ready ? index.search(query_) : []), [index, query_, ready])
+  const hits = useMemo(() => (query_ && ready ? searchWithin(index, query_, rootId) : []), [index, query_, ready, rootId])
   const rows = useMemo(() => {
     if (!ready) return []
     const sorted = sortDriveItems(query_ ? hits : levelItems(index, cwd), sort, index)
     return sorted.slice(0, SEARCH_LIMIT)
   }, [ready, query_, hits, index, cwd, sort])
-  const whereOf = (it: DriveItem) => (query_ ? (it as { where?: string }).where ?? '' : null)
+  const whereOf = (it: DriveItem) => {
+    if (!query_) return null
+    if (!rootId) return (it as { where?: string }).where ?? ''
+    return trailFrom(index, rootId, it.kind === 'folder' ? it.folder.parentId : it.file.folderId).map((c) => c.name).join(' / ')
+  }
 
   useEffect(() => {
     setSelected((cur) => {
@@ -174,7 +195,17 @@ export function DrivePage() {
   const selectedRows = rows.filter((r) => selected.has(r.id))
 
   // ------------------------------------------------------------ files in
-  const refuseDrop = () => toast.error('Only the academy’s staff can add files to the Drive.')
+  const refuseDrop = () => toast.error(rootMissing ? 'This student has finished, so their folder takes no new files.' : 'Only the academy’s staff can add files to the Drive.')
+  const studentName = (id: string | null) => (id ? (index.students.find((s) => s.id === id)?.name ?? null) : null)
+  /** PDFs being read (SIUS results are found among them), shown as a toast until the results open. */
+  const showReading = (r: { done: number; total: number } | null, whose: string | null) => {
+    setReading(r)
+    if (!r) return void toast.dismiss(READING_TOAST)
+    toast.loading(r.total === 1 ? 'Reading the PDF…' : `Reading ${Math.min(r.done + 1, r.total)} of ${r.total} PDFs…`, {
+      id: READING_TOAST,
+      description: whose ? `Then you check the position of each of ${whose}’s results.` : 'Then you choose whose result each one is and its position.',
+    })
+  }
 
   async function intake(raw: DroppedEntry[], baseId: string | null) {
     if (!canWrite) return refuseDrop()
@@ -193,15 +224,16 @@ export function DrivePage() {
     let pdfs = accepted.filter((a) => a.plan.kind === 'pdf')
     let read: Awaited<ReturnType<typeof readSiusFiles>> = []
     if (pdfs.length) {
-      setReading({ done: 0, total: pdfs.length })
+      const whose = studentName(index.studentOf(baseId))
+      showReading({ done: 0, total: pdfs.length }, whose)
       try {
-        read = await readSiusFiles(pdfs.map((a) => a.entry.file), timezone, (done) => setReading({ done, total: pdfs.length }))
+        read = await readSiusFiles(pdfs.map((a) => a.entry.file), timezone, (done) => showReading({ done, total: pdfs.length }, whose))
       } catch {
         // The reader didn't load (offline?): the PDFs wait for another try rather than going in unread.
         toast.error(pdfs.length === 1 ? 'Couldn’t read the PDF' : 'Couldn’t read the PDFs', { description: `Check the connection, then add ${pdfs.length === 1 ? 'it' : 'them'} again.` })
         pdfs = []
       } finally {
-        setReading(null)
+        showReading(null, null)
       }
     }
     const sius = pdfs.flatMap((a, i) => (read[i] ? [{ ...a, sius: read[i]! }] : []))
@@ -400,11 +432,23 @@ export function DrivePage() {
     }
   }
   const menuOf = (it: DriveItem): MenuEntry[] => {
+    // One of several selected: the menu is for all of them.
+    if (canWrite && selected.size > 1 && selected.has(it.id)) {
+      const folderIds = selectedRows.filter((r) => r.kind === 'folder').map((r) => r.id)
+      const fileIds = selectedRows.filter((r) => r.kind === 'file').map((r) => r.id)
+      return menu(
+        { kind: 'label', label: `${countLabel(folderIds.length + fileIds.length, 'item')} selected` },
+        { label: 'Move to…', icon: LuFolderInput, onSelect: () => setDialog({ kind: 'move', folderIds, fileIds }) },
+        { label: 'Clear the selection', icon: LuX, onSelect: () => setSelected(new Set()) },
+        { label: 'Move to Trash', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void trash(folderIds, fileIds) },
+      )
+    }
     if (it.kind === 'folder') {
       const f = it.folder
       const fixed = isFixedFolder(f)
       return menu(
         { label: 'Open', icon: LuChevronRight, onSelect: () => go(f.id) },
+        canWrite && { kind: 'sub', label: 'New', icon: LuPlus, entries: newItems(f.id) },
         f.studentId ? { label: 'Student’s page', icon: LuUserRound, onSelect: () => navigate(`/${portal}/students/${f.studentId}`) } : null,
         f.studentId ? { label: 'Scores', icon: LuTarget, onSelect: () => navigate(`/${portal}/students/${f.studentId}/scores`) } : null,
         canWrite && !fixed && { label: 'Rename…', icon: LuPencilLine, onSelect: () => setDialog({ kind: 'renameFolder', id: f.id }) },
@@ -431,13 +475,38 @@ export function DrivePage() {
       canWrite && settled && { label: 'Move to Trash', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void trash([], [f.id]) },
     )
   }
+  const choose = (input: React.RefObject<HTMLInputElement | null>, folderId: string | null) => {
+    uploadTo.current = folderId
+    input.current?.click()
+  }
+  /** New (the button), and the same in the menus: a folder's, a crumb's, and a right-click on the list's background. */
   const newItems = (folderId: string | null) =>
     menu(
       { label: 'New folder', icon: LuFolderPlus, onSelect: () => setDialog({ kind: 'newFolder', parentId: folderId }) },
-      { label: 'Upload files', icon: LuUpload, onSelect: () => uploadInput.current?.click() },
-      { label: 'Upload folder', icon: LuFolderUp, onSelect: () => folderInput.current?.click() },
+      { label: 'Upload files', icon: LuUpload, onSelect: () => choose(uploadInput, folderId) },
+      { label: 'Upload folder', icon: LuFolderUp, onSelect: () => choose(folderInput, folderId) },
       { label: 'Add paper scores…', icon: LuClipboardPen, separatorBefore: true, onSelect: () => setDialog({ kind: 'paper', studentId: index.studentOf(folderId), fileId: null, position: null }) },
     )
+  const backgroundMenu = menu(
+    ...(canWrite && ready ? newItems(cwd) : []),
+    {
+      kind: 'radio',
+      value: layout,
+      options: [
+        { value: 'list', label: 'List' },
+        { value: 'grid', label: 'Grid' },
+      ],
+      onChange: (v) => setLayout(v === 'grid' ? 'grid' : 'list'),
+      separatorBefore: true,
+    },
+    { label: details ? 'Hide details' : 'Show details', icon: LuPanelRight, separatorBefore: true, onSelect: () => setDetails((d) => !d) },
+  )
+  /** A crumb's menu: its folder's (the top's is New). */
+  const crumbMenu = (id: string | null): MenuEntry[] => {
+    const f = id ? index.folderOf(id) : null
+    if (!id) return canWrite ? newItems(null) : []
+    return f ? menuOf({ kind: 'folder', id, folder: f }) : []
+  }
 
   const api: ListApi = {
     index,
@@ -484,6 +553,9 @@ export function DrivePage() {
     </span>
   )
 
+  const rootName = rootId ? (index.folderOf(rootId)?.name ?? null) : null
+  /** "the Drive", or "Mia Larkin’s folder" in her tab: what a search looks through. */
+  const within = rootName ? `${rootName}’s folder` : 'the Drive'
   let state: React.ReactNode = null
   if (index.error) state = <p className="p-10 text-center text-sm text-muted-foreground">The Drive couldn’t be loaded. {index.error.message}</p>
   else if (!ready) state = <Skeleton className="m-3 h-48" />
@@ -491,11 +563,11 @@ export function DrivePage() {
     state = (
       <div className="flex flex-col items-center gap-2 p-12 text-center text-sm text-muted-foreground">
         <LuHardDrive className="size-6" />
-        {cwd ? 'This folder is empty.' : 'Nothing in the Drive yet.'}
-        {canWrite ? <span>Drop files here, or use New.</span> : null}
+        {rootMissing ? 'This student has finished, and their folder is empty.' : cwd ? 'This folder is empty.' : 'Nothing in the Drive yet.'}
+        {canWrite ? <span>Drop files here, or use New (or a right-click).</span> : null}
       </div>
     )
-  else if (!rows.length) state = <p className="p-10 text-center text-sm text-muted-foreground">Nothing in the Drive matches “{query_}”.</p>
+  else if (!rows.length) state = <p className="p-10 text-center text-sm text-muted-foreground">Nothing in {within} matches “{query_}”.</p>
 
   const title = folder ? folder.name : 'Drive'
   // ← and → in the preview step through the folder in the list's order.
@@ -503,22 +575,12 @@ export function DrivePage() {
   const dialogFolder = dialog?.kind === 'renameFolder' ? index.folderOf(dialog.id) : null
   const dialogFile = dialog?.kind === 'renameFile' ? index.fileOf(dialog.id) : null
 
-  return (
-    <div className="relative -m-4 min-h-[calc(100svh-3.5rem)] p-4 sm:-m-6 sm:p-6" {...pageDrop.handlers}>
-      {/* The whole page takes a drop; the drop area at the top (kept in view meanwhile) says what happens to it. */}
-      {pageDrop.dragOver ? <div className="pointer-events-none absolute inset-2 z-30 rounded-2xl border-2 border-dashed border-brand/60 bg-brand/5" /> : null}
-
-      <nav className="mb-3 flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground" aria-label="Where you are">
-        {cwd ? (
-          <button type="button" className={cn('rounded px-1 hover:text-foreground', hotCrumb === null && 'bg-brand/10 text-foreground')} onClick={() => go(null)} {...dropHandlers(api, null, (h) => setHotCrumb(h ? null : undefined))}>
-            Drive
-          </button>
-        ) : (
-          <span className="px-1 font-medium text-foreground">Drive</span>
-        )}
-        {crumbs.map((c, i) => (
-          <span key={c.id} className="flex min-w-0 items-center gap-1">
-            <span aria-hidden>/</span>
+  const nav = (
+    <nav className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground" aria-label="Where you are">
+      {crumbs.map((c, i) => (
+        <span key={c.id ?? 'top'} className="flex min-w-0 items-center gap-1">
+          {i ? <span aria-hidden>/</span> : null}
+          <ContextMenuFor entries={crumbMenu(c.id)}>
             {i === crumbs.length - 1 ? (
               <span className="truncate px-1 font-medium text-foreground">{c.name}</span>
             ) : (
@@ -526,165 +588,202 @@ export function DrivePage() {
                 {c.name}
               </button>
             )}
-          </span>
-        ))}
-      </nav>
+          </ContextMenuFor>
+        </span>
+      ))}
+    </nav>
+  )
+  // Where a drop lands, and what happens to SIUS results in it.
+  const dropWhere = folder?.studentId ? `${folder.name}’s folder` : folder ? `“${folder.name}”` : 'the Drive'
+  const dropLine = studentHere ? `SIUS results are read and filed as ${studentName(studentHere) ?? 'the student'}’s, with their scores.` : 'SIUS results are read and filed in each student’s folder, with their scores.'
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
-            {folder ? <FolderGlyph student={!!folder.studentId} locked={accessOf(folder) === 'admins'} className="size-6" /> : <LuHardDrive className="size-5" />}
-          </span>
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
-          {folder && accessOf(folder) === 'admins' ? <AccessBadge /> : null}
-          {folder?.studentId ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/${portal}/students/${folder.studentId}/scores`}>
-                <LuTarget /> Scores
-              </Link>
-            </Button>
+  return (
+    <>
+      {/* The whole page takes a drop, into the folder open, and a right-click on it is New (a row's or a crumb's is
+          its own). */}
+      <ContextMenuFor entries={backgroundMenu}>
+        <div
+          className={cn('@container/drive relative', embedded ? '-m-2 min-h-[28rem] p-2' : '-m-4 min-h-[calc(100svh-3.5rem)] p-4 sm:-m-6 sm:p-6')}
+          data-testid="drive-page"
+          {...pageDrop.handlers}
+        >
+          {pageDrop.dragOver ? (
+            <div className="pointer-events-none absolute inset-2 z-30 rounded-2xl border-2 border-dashed border-brand/60 bg-brand/5" data-testid="drive-drop-overlay">
+              <div className="sticky top-[35vh] mx-auto mt-24 w-fit max-w-[calc(100%-2rem)] rounded-xl border bg-card px-5 py-3 text-center shadow-lg">
+                <p className="flex items-center justify-center gap-2 text-sm font-semibold">
+                  <LuUpload className="size-4 shrink-0 text-brand-text" /> Drop to upload to {dropWhere}
+                </p>
+                <p className="mt-0.5 text-[13px] text-pretty text-muted-foreground">{dropLine}</p>
+              </div>
+            </div>
           ) : null}
-        </div>
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          {isAdmin ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Trash" asChild>
-                  <Link to={`${base}/trash`}>
-                    <LuTrash2 />
+
+          {embedded ? (
+            <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+              {nav}
+              {!rootMissing ? (
+                <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+                  <Link to={`/${portal}/drive${cwd ? `/f/${cwd}` : ''}`}>
+                    <LuExternalLink /> Open in the Drive
                   </Link>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>Trash</TooltipContent>
-            </Tooltip>
-          ) : null}
-          <span className="tabular-nums" title="Everything stored in the Drive (not counting the Trash)">
-            {ready ? `${formatBytes(used)} used` : 'Measuring…'}
-          </span>
-        </div>
-      </div>
-
-      {canWrite ? (
-        <ResultsDropArea
-          studentName={studentHere ? (index.students.find((s) => s.id === studentHere)?.name ?? null) : null}
-          folderName={folder?.name ?? null}
-          dragging={pageDrop.dragOver}
-          reading={reading}
-          disabled={!ready}
-          onFiles={(files) => void intake(files.map((file) => ({ file, path: [] })), cwd)}
-        />
-      ) : null}
-
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full max-w-md" role="search">
-          <LuSearch className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && setQ('')}
-            placeholder="Search the Drive"
-            aria-label="Search the Drive"
-            autoComplete="off"
-            data-1p-ignore="true"
-            className="rounded-full pr-9 pl-9"
-          />
-          {q ? (
-            <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted" onClick={() => setQ('')} aria-label="Clear search">
-              <LuX className="size-4" />
-            </button>
-          ) : null}
-        </div>
-        {canWrite ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="rounded-full" disabled={!ready}>
-                <LuPlus /> New
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {newItems(cwd).map((m) =>
-                m.kind === undefined || m.kind === 'item' ? (
-                  <span key={m.label} className="contents">
-                    {m.separatorBefore ? <DropdownMenuSeparator /> : null}
-                    <DropdownMenuItem onSelect={m.onSelect}>
-                      {m.icon ? <m.icon /> : null} {m.label}
-                    </DropdownMenuItem>
-                  </span>
-                ) : null,
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </div>
-
-      {query_ && ready ? (
-        <p className="mb-2 text-sm text-muted-foreground">
-          {hits.length ? `${countLabel(hits.length, 'result')} in the Drive for “${query_}”${hits.length > SEARCH_LIMIT ? ` (the first ${SEARCH_LIMIT} are shown)` : ''}` : null}
-        </p>
-      ) : null}
-      {canWrite && selectedRows.length ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm" role="toolbar" aria-label="Selection">
-          <span className="font-medium">{selectedRows.length} selected</span>
-          <Button size="sm" variant="outline" onClick={() => setDialog({ kind: 'move', folderIds: selectedRows.filter((r) => r.kind === 'folder').map((r) => r.id), fileIds: selectedRows.filter((r) => r.kind === 'file').map((r) => r.id) })}>
-            <LuFolderInput /> Move…
-          </Button>
-          <Button size="sm" variant="outline" className="text-destructive" onClick={() => void trash(selectedRows.filter((r) => r.kind === 'folder').map((r) => r.id), selectedRows.filter((r) => r.kind === 'file').map((r) => r.id))}>
-            <LuTrash2 /> Move to Trash
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
-          </Button>
-        </div>
-      ) : null}
-
-      <input ref={uploadInput} type="file" multiple hidden onChange={(e) => {
-        const files = [...(e.target.files ?? [])]
-        e.target.value = ''
-        void intake(files.map((file) => ({ file, path: [] })), cwd)
-      }} />
-      <input ref={folderInput} type="file" multiple hidden {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} onChange={(e) => {
-        const files = [...(e.target.files ?? [])].map((file) => ({ file, path: String((file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '').split('/').filter(Boolean).slice(0, -1) }))
-        e.target.value = ''
-        void intake(files, cwd)
-      }} />
-
-      <div className={cn('grid gap-4', details && 'lg:grid-cols-[minmax(0,1fr)_18rem]')}>
-        <div className="@container min-w-0 rounded-xl border bg-card">
-          {layout === 'list' ? (
-            <>
-              <DriveListHead api={api} controls={controls} />
-              {state ?? rows.map((it) => <DriveRow key={it.id} it={it} api={api} />)}
-            </>
+              ) : null}
+            </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b px-3 py-1.5">
-                <span className="text-xs text-muted-foreground">
-                  {sort.col ? `Sorted by ${sort.col}, ${sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}` : 'Folders A to Z, then the newest files'}
-                </span>
-                {controls}
-              </div>
-              {state ?? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-3 p-3">
-                  {rows.map((it) => (
-                    <DriveCard key={it.id} it={it} api={api} />
-                  ))}
+              <div className="mb-3">{nav}</div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
+                    {folder ? <FolderGlyph student={!!folder.studentId} locked={accessOf(folder) === 'admins'} className="size-6" /> : <LuHardDrive className="size-5" />}
+                  </span>
+                  <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+                  {folder && accessOf(folder) === 'admins' ? <AccessBadge /> : null}
+                  {folder?.studentId ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/${portal}/students/${folder.studentId}/scores`}>
+                        <LuTarget /> Scores
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
-              )}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  {isAdmin ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Trash" asChild>
+                          <Link to={`${base}/trash`}>
+                            <LuTrash2 />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Trash</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  <span className="tabular-nums" title="Everything stored in the Drive (not counting the Trash)">
+                    {ready ? `${formatBytes(used)} used` : 'Measuring…'}
+                  </span>
+                </div>
+              </div>
             </>
           )}
-        </div>
-        {details && ready ? (
-          <DetailsPanel
-            index={index}
-            folderId={cwd}
-            selected={selectedRows.length === 1 ? selectedRows[0] : null}
-            scoresByFile={scoresByFile}
-            onAccess={isAdmin ? (id) => setDialog({ kind: 'access', id }) : undefined}
-          />
-        ) : null}
-      </div>
 
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative w-full max-w-md" role="search">
+              <LuSearch className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === 'Escape' && setQ('')}
+                // The browser's own menu (paste) here, not the page's.
+                onContextMenu={(e) => e.stopPropagation()}
+                placeholder={`Search ${within}`}
+                aria-label={`Search ${within}`}
+                autoComplete="off"
+                data-1p-ignore="true"
+                className="rounded-full pr-9 pl-9"
+              />
+              {q ? (
+                <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted" onClick={() => setQ('')} aria-label="Clear search">
+                  <LuX className="size-4" />
+                </button>
+              ) : null}
+            </div>
+            {canWrite ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="rounded-full" disabled={!ready}>
+                    <LuPlus /> New
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {newItems(cwd).map((m) =>
+                    m.kind === undefined || m.kind === 'item' ? (
+                      <span key={m.label} className="contents">
+                        {m.separatorBefore ? <DropdownMenuSeparator /> : null}
+                        <DropdownMenuItem onSelect={m.onSelect}>
+                          {m.icon ? <m.icon /> : null} {m.label}
+                        </DropdownMenuItem>
+                      </span>
+                    ) : null,
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
+
+          {query_ && ready ? (
+            <p className="mb-2 text-sm text-muted-foreground">
+              {hits.length ? `${countLabel(hits.length, 'result')} in ${within} for “${query_}”${hits.length > SEARCH_LIMIT ? ` (the first ${SEARCH_LIMIT} are shown)` : ''}` : null}
+            </p>
+          ) : null}
+          {canWrite && selectedRows.length ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm" role="toolbar" aria-label="Selection">
+              <span className="font-medium">{selectedRows.length} selected</span>
+              <Button size="sm" variant="outline" onClick={() => setDialog({ kind: 'move', folderIds: selectedRows.filter((r) => r.kind === 'folder').map((r) => r.id), fileIds: selectedRows.filter((r) => r.kind === 'file').map((r) => r.id) })}>
+                <LuFolderInput /> Move…
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => void trash(selectedRows.filter((r) => r.kind === 'folder').map((r) => r.id), selectedRows.filter((r) => r.kind === 'file').map((r) => r.id))}>
+                <LuTrash2 /> Move to Trash
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                Clear
+              </Button>
+            </div>
+          ) : null}
+
+          <input ref={uploadInput} type="file" multiple hidden onChange={(e) => {
+            const files = [...(e.target.files ?? [])]
+            e.target.value = ''
+            void intake(files.map((file) => ({ file, path: [] })), uploadTo.current === undefined ? cwd : uploadTo.current)
+          }} />
+          <input ref={folderInput} type="file" multiple hidden {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} onChange={(e) => {
+            const files = [...(e.target.files ?? [])].map((file) => ({ file, path: String((file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '').split('/').filter(Boolean).slice(0, -1) }))
+            e.target.value = ''
+            void intake(files, uploadTo.current === undefined ? cwd : uploadTo.current)
+          }} />
+
+          {/* Beside the list when there's room: the page's width on the Drive, the tab's own on a student's page. */}
+          <div className={cn('grid gap-4', details && (embedded ? '@4xl/drive:grid-cols-[minmax(0,1fr)_18rem]' : 'lg:grid-cols-[minmax(0,1fr)_18rem]'))}>
+            <div className="@container min-w-0 rounded-xl border bg-card">
+              {layout === 'list' ? (
+                <>
+                  <DriveListHead api={api} controls={controls} />
+                  {state ?? rows.map((it) => <DriveRow key={it.id} it={it} api={api} />)}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between border-b px-3 py-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      {sort.col ? `Sorted by ${sort.col}, ${sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}` : 'Folders A to Z, then the newest files'}
+                    </span>
+                    {controls}
+                  </div>
+                  {state ?? (
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-3 p-3">
+                      {rows.map((it) => (
+                        <DriveCard key={it.id} it={it} api={api} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {details && ready ? (
+              <DetailsPanel
+                index={index}
+                folderId={cwd}
+                selected={selectedRows.length === 1 ? selectedRows[0] : null}
+                scoresByFile={scoresByFile}
+                onAccess={isAdmin ? (id) => setDialog({ kind: 'access', id }) : undefined}
+              />
+            ) : null}
+          </div>
+        </div>
+      </ContextMenuFor>
+
+      {/* Dialogs sit outside the page's right-click menu: their fields keep the browser's own. */}
       {preview ? (
         <FilePreview
           file={preview}
@@ -763,6 +862,6 @@ export function DrivePage() {
       ) : null}
       {dialog?.kind === 'refused' ? <RefusedDialog refused={dialog.refused} added={dialog.added} onClose={() => setDialog(null)} /> : null}
       {confirmDialog}
-    </div>
+    </>
   )
 }

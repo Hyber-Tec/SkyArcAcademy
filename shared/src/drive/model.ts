@@ -483,6 +483,24 @@ export function levelItems(index: DriveIndex, folderId: string | null): DriveIte
   ]
 }
 
+/**
+ * From `rootId` (null: the top of the Drive) down to a folder, as the crumbs show it; empty when the folder isn't inside
+ * it. A student's Drive tab starts at their folder.
+ */
+export function trailFrom(index: DriveIndex, rootId: string | null, folderId: string | null): { id: string; name: string }[] {
+  const path = index.pathOf(folderId)
+  if (!rootId) return path
+  const at = path.findIndex((c) => c.id === rootId)
+  return at < 0 ? [] : path.slice(at)
+}
+
+/** A search inside a folder (null: the whole Drive): what's in it at any depth, never the folder itself. */
+export function searchWithin(index: DriveIndex, query: string, rootId: string | null): DriveHit[] {
+  const hits = index.search(query)
+  if (!rootId) return hits
+  return hits.filter((h) => (h.kind === 'folder' ? h.id !== rootId && index.isInside(h.id, rootId) : index.isInside(h.file.folderId, rootId)))
+}
+
 /** When an item last changed: a file's own stamp, a folder's newest change at any depth. */
 export function itemUpdated(it: DriveItem, index: DriveIndex | null = null): DriveUpdated {
   if (it.kind === 'folder') {
