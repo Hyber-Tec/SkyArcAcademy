@@ -61,6 +61,10 @@ export interface SyntheticCard {
    * is before a pale wall.
    */
   background?: SyntheticBackground
+  /** Uneven light: the photo darkens from its top to its bottom by this much (0.5: the bottom at half the light). */
+  shadow?: number
+  /** Dark discs the size of a bull beside the card (another card's bulls peeking out of a pile), at card millimetres. */
+  strays?: { x: number; y: number }[]
   seed?: number
 }
 
@@ -137,6 +141,7 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
       const q = applyH(inv, { x: px + 1, y: py })
       const pix = Math.max(0.02, Math.hypot(q.x - p.x, q.y - p.y))
       let color: readonly number[] = around
+      for (const d of spec.strays ?? []) color = mix(BLACK, color, clamp01((Math.hypot(p.x - d.x, p.y - d.y) - BULL_RADIUS_MM) / pix + 0.5))
       const onCard = p.x >= CARD_EDGES_MM.left && p.x <= CARD_EDGES_MM.right && p.y >= CARD_EDGES_MM.top && p.y <= CARD_EDGES_MM.bottom
       if (onCard) {
         color = PAPER
@@ -182,7 +187,7 @@ export function drawSyntheticCard(spec: SyntheticCard): RgbaImage {
         }
       }
       // A little light falling off across the photo, and sensor noise.
-      const light = 0.92 + 0.08 * (px / width)
+      const light = (0.92 + 0.08 * (px / width)) * (1 - (spec.shadow ?? 0) * (py / height))
       const i = (py * width + px) * 4
       data[i] = color[0] * light + (rand() - 0.5) * noise
       data[i + 1] = color[1] * light + (rand() - 0.5) * noise

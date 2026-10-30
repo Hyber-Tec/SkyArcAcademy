@@ -78,10 +78,21 @@ const failed = (reason: string): CardScan => ({ ok: false, reason, bulls: [], sh
 export function scanCard(img: RgbaImage, opts: ScanOptions = {}): CardScan {
   const coarseF = Math.max(1, Math.round(Math.max(img.width, img.height) / COARSE_SIDE))
   const coarse = downscaleLuma(img, coarseF)
-  const discs = findDiscs(coarse, coarseF)
-  if (discs.length < 4) return failed('No target found. Lay the card flat, fill the photo with it and keep it sharp.')
-
-  const lattice = fitLattice(discs, coarse, coarseF)
+  // The bulls are the dark discs at the threshold that splits the photo's dark from its light. Under uneven light (a
+  // lamp to one side, the card's far end in shadow) that one threshold misses some: then the discs seen at thresholds
+  // either side of it are pooled (each bull once), and the pool is kept if it fills more of the card's grid.
+  const t0 = otsu(coarse.data)
+  const first = sameSize(discsAt(coarse, coarseF, t0))
+  let lattice = first.length >= 4 ? fitLattice(first, coarse, coarseF) : null
+  let anyDiscs = first.length >= 4
+  if (!lattice || lattice.found.size < CARD_BULLS.length) {
+    const pool = poolDiscs([t0, ...RETRY_STEPS.map((d) => t0 + d)].flatMap((t) => discsAt(coarse, coarseF, t)))
+    const pooled = sameSize(pool)
+    const fit = pooled.length >= 4 ? fitLattice(pooled, coarse, coarseF) : null
+    anyDiscs ||= pooled.length >= 4
+    if (fit && (!lattice || fit.found.size > lattice.found.size)) lattice = fit
+  }
+  if (!anyDiscs) return failed('No target found. Lay the card flat, fill the photo with it and keep it sharp.')
   if (!lattice) return failed('The card’s bulls didn’t line up. Take the photo from straight above, with the whole card in it.')
 
   // Each bull: measured from its black edge where it was seen, placed by the grid where it wasn't.
@@ -92,14 +103,20 @@ export function scanCard(img: RgbaImage, opts: ScanOptions = {}): CardScan {
     const ellipse: Ellipse | null = refineBull(img, guess, radius)
     return { cb, ellipse, guess }
   })
-  // A bull half under a sticky note, or cut by the photo's edge, measures out of shape against the others: unseen.
-  const sizes = refined.filter((r) => r.ellipse).map((r) => r.ellipse!)
-  if (sizes.length >= 4) {
-    const a = medianOf(sizes.map((e) => e.a))
-    const b = medianOf(sizes.map((e) => e.b))
+  // A bull half under a sticky note, or cut by the photo's edge, measures out of shape against the others: unseen. Each
+  // is compared at its own place on the card: a photo taken at a slant shows the near bulls larger than the far ones.
+  const seen = refined.filter((r) => r.ellipse)
+  if (seen.length >= 4) {
+    const scaleAt = (cb: { col: number; row: number }) => {
+      const J = jacobianH(lattice.H, { x: cb.col, y: cb.row })
+      return Math.sqrt(Math.abs(J[0] * J[3] - J[1] * J[2]))
+    }
+    const a = medianOf(seen.map((r) => r.ellipse!.a / scaleAt(r.cb)))
+    const b = medianOf(seen.map((r) => r.ellipse!.b / scaleAt(r.cb)))
     for (const r of refined) {
       const e = r.ellipse
-      if (e && (Math.abs(e.a / a - 1) > 0.12 || Math.abs(e.b / b - 1) > 0.12)) r.ellipse = null
+      const s = scaleAt(r.cb)
+      if (e && (Math.abs(e.a / s / a - 1) > 0.12 || Math.abs(e.b / s / b - 1) > 0.12)) r.ellipse = null
     }
   }
   const measured = refined.filter((r) => r.ellipse)
@@ -149,13 +166,18 @@ interface Disc extends Vec {
   /** Radius in photo pixels (the geometric mean of the disc's semi-axes). */
   r: number
   area: number
+  /** How fully the blob fills its ellipse (1: a solid disc). */
+  fill: number
 }
 
-function findDiscs(lum: Plane, f: number): Disc[] {
-  const t = otsu(lum.data)
+/** Luma steps from the first threshold that are tried too when it misses bulls: shadowed bulls need a darker one. */
+const RETRY_STEPS = [-15, -30, -45, 15, 30]
+
+/** The dark blobs at threshold `t` shaped like a bull seen in a photo (round or a little oval, filled). */
+function discsAt(lum: Plane, f: number, t: number): Disc[] {
   const mask = new Uint8Array(lum.width * lum.height)
   for (let i = 0; i < mask.length; i++) mask[i] = lum.data[i] < t ? 1 : 0
-  const candidates: Disc[] = []
+  const found: Disc[] = []
   for (const b of blobs(mask, lum.width, lum.height, lum.width * lum.height * 0.0003)) {
     if (b.touchesEdge) continue
     const tr = b.mxx + b.myy
@@ -169,9 +191,22 @@ function findDiscs(lum: Plane, f: number): Disc[] {
     const fill = b.area / (Math.PI * a * c)
     const boxFill = b.area / ((b.maxX - b.minX + 1) * (b.maxY - b.minY + 1))
     if (c / a < 0.45 || fill < 0.78 || fill > 1.15 || boxFill < 0.55) continue
-    candidates.push({ x: (b.cx + 0.5) * f - 0.5, y: (b.cy + 0.5) * f - 0.5, r: Math.sqrt(a * c) * f, area: b.area * f * f })
+    found.push({ x: (b.cx + 0.5) * f - 0.5, y: (b.cy + 0.5) * f - 0.5, r: Math.sqrt(a * c) * f, area: b.area * f * f, fill })
   }
-  // The bulls are the biggest set of discs of about the same size.
+  return found
+}
+
+/** Discs from several thresholds, each bull once: of the same disc seen more than once, the roundest-filled. */
+function poolDiscs(all: Disc[]): Disc[] {
+  const kept: Disc[] = []
+  for (const d of [...all].sort((p, q) => Math.abs(p.fill - 1) - Math.abs(q.fill - 1))) {
+    if (!kept.some((k) => (k.x - d.x) ** 2 + (k.y - d.y) ** 2 < (0.6 * Math.min(k.r, d.r)) ** 2)) kept.push(d)
+  }
+  return kept
+}
+
+/** The bulls are the biggest set of discs of about the same size. */
+function sameSize(candidates: Disc[]): Disc[] {
   let best: Disc[] = []
   for (const ref of candidates) {
     const group = candidates.filter((d) => d.area >= ref.area / 1.8 && d.area <= ref.area * 1.8)
@@ -179,9 +214,6 @@ function findDiscs(lum: Plane, f: number): Disc[] {
   }
   return best
 }
-
-// ---------------------------------------------------------------------------------------------------------------
-// The grid: which disc is which bull.
 
 interface Lattice {
   /** Card grid (column, row) → photo pixels. */
@@ -273,21 +305,23 @@ function fitLattice(discs: Disc[], lum: Plane, f: number): Lattice | null {
     })
   }
   const cells = coords.map((c) => ({ i: Math.round(c.i), j: Math.round(c.j), ok: Math.abs(c.i - Math.round(c.i)) < 0.3 && Math.abs(c.j - Math.round(c.j)) < 0.3 }))
-  const used = cells.filter((c) => c.ok)
-  if (used.length < 4) return null
-  const minI = Math.min(...used.map((c) => c.i))
-  const minJ = Math.min(...used.map((c) => c.j))
-  const spanI = Math.max(...used.map((c) => c.i)) - minI + 1
-  const spanJ = Math.max(...used.map((c) => c.j)) - minJ + 1
+  if (cells.filter((c) => c.ok).length < 4) return null
 
   // Which way up the card is: rows run along v (an upright or upside-down card) or along u (a card turned sideways).
-  // Of the two ways that keep the card unmirrored, the header (barcode, logo, name line) decides.
+  // Of the two ways that keep the card unmirrored, the header (barcode, logo, name line) decides. Discs past the card's
+  // grid (another card's bulls peeking out of a pile, a dark cup on the desk) can line up with it too: the card is the
+  // block of its size holding the most discs.
   type Orientation = (i: number, j: number) => Vec
-  let ways: Orientation[]
-  if (spanI <= CARD_COLS && spanJ <= CARD_ROWS && !(spanI === CARD_ROWS && spanJ < CARD_ROWS)) {
-    ways = [(i, j) => ({ x: i - minI, y: j - minJ }), (i, j) => ({ x: CARD_COLS - 1 - (i - minI), y: CARD_ROWS - 1 - (j - minJ) })]
-  } else if (spanI <= CARD_ROWS && spanJ <= CARD_COLS) {
-    ways = [(i, j) => ({ x: CARD_COLS - 1 - (j - minJ), y: i - minI }), (i, j) => ({ x: j - minJ, y: CARD_ROWS - 1 - (i - minI) })]
+  const upright = cardBlock(cells, CARD_COLS, CARD_ROWS)
+  const sideways = cardBlock(cells, CARD_ROWS, CARD_COLS)
+  const ways: Orientation[] = []
+  // As many discs either way (part of the card unseen): upright, as a card is usually photographed.
+  if (upright && upright.count >= (sideways?.count ?? 0)) {
+    const { minI, minJ } = upright
+    ways.push((i, j) => ({ x: i - minI, y: j - minJ }), (i, j) => ({ x: CARD_COLS - 1 - (i - minI), y: CARD_ROWS - 1 - (j - minJ) }))
+  } else if (sideways) {
+    const { minI, minJ } = sideways
+    ways.push((i, j) => ({ x: CARD_COLS - 1 - (j - minJ), y: i - minI }), (i, j) => ({ x: j - minJ, y: CARD_ROWS - 1 - (i - minI) }))
   } else return null
 
   let best: { found: Map<string, Disc>; H: Mat3; score: number } | null = null
@@ -310,6 +344,24 @@ function fitLattice(discs: Disc[], lum: Plane, f: number): Lattice | null {
   }
   if (!best) return null
   return { H: best.H, found: best.found, radius: medianOf(discs.map((d) => d.r)) }
+}
+
+/**
+ * The block of grid cells `w` across and `h` down holding the most discs (at least four), and where it starts: the
+ * corner of the discs inside it, so a card with a row out of the photo is placed as before.
+ */
+function cardBlock(cells: { i: number; j: number; ok: boolean }[], w: number, h: number): { minI: number; minJ: number; count: number } | null {
+  const used = cells.filter((c) => c.ok)
+  let best: { minI: number; minJ: number; count: number } | null = null
+  for (const a of used) {
+    for (const b of used) {
+      // Every block worth trying starts at a disc's column and another's row.
+      const inside = used.filter((c) => c.i >= a.i && c.i < a.i + w && c.j >= b.j && c.j < b.j + h)
+      if (inside.length < 4 || (best && inside.length <= best.count)) continue
+      best = { minI: Math.min(...inside.map((c) => c.i)), minJ: Math.min(...inside.map((c) => c.j)), count: inside.length }
+    }
+  }
+  return best
 }
 
 function invertSafe(H: Mat3): Mat3 | null {
