@@ -346,7 +346,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             </h1>
             {view === 'day' && date === today ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">TODAY</span> : null}
             {view === 'day' && !data.hoursOf(date).isOpen ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
-            {view === 'day' && date < today ? <span className="hidden text-xs text-muted-foreground sm:inline">Past · view only</span> : null}
+            {/* Owners and admins change any day (docs/DECISIONS.md §24); coaches only look. */}
+            {view === 'day' && date < today ? <span className="hidden text-xs text-muted-foreground sm:inline">{admin ? 'Past' : 'Past · view only'}</span> : null}
           </div>
           {!panelOpen ? (
             <>
