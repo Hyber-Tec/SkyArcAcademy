@@ -50,7 +50,7 @@ const LATEST_NEWS = 2;
  * parent with several children picks All or one child. Everything is live and in the academy's time zone.
  */
 export default function FamilyHomeScreen() {
-  const { settings, member, actor } = useBranch();
+  const { settings, member, actor, viewAs } = useBranch();
   const colors = useColors();
   const family = useFamily();
   const { today, nowMin } = useAcademyNow();
@@ -58,7 +58,7 @@ export default function FamilyHomeScreen() {
   const when = { today, nowMin, hour12 };
   const sessions = useFamilySessions(family.ids, today, addDays(today, AHEAD_DAYS));
   const scores = useFamilyEvaluations(family.ids);
-  const first = (member.displayName || actor.name).trim().split(/\s+/)[0] ?? "";
+  const first = (viewAs?.person?.name || member.displayName || actor.name).trim().split(/\s+/)[0] ?? "";
   const parent = family.who === "parent";
 
   const shown = new Set(family.shown);

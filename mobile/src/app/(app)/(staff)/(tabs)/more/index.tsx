@@ -2,7 +2,7 @@ import { notificationsSummary } from "@shared/profile";
 import { ROLE_LABELS } from "@shared/roles";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Bell, ChartLine, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
+import { Bell, ChartLine, Eye, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
@@ -37,7 +37,7 @@ function Icon({ as: Picture, tone }: { as: typeof Globe; tone: Accent }) {
  * the privacy policy, which version this is, and signing out.
  */
 export default function MoreScreen() {
-  const { actor, member, name, isCoach, portal, staff } = useBranch();
+  const { actor, member, name, isCoach, portal, staff, canViewAs, viewAs } = useBranch();
   const { email, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const colors = useColors();
@@ -55,6 +55,15 @@ export default function MoreScreen() {
           onPress={() => router.push("/more/account")}
           testID="more-account"
         />
+        {canViewAs ? (
+          <ListRow
+            icon={<Icon as={Eye} tone="violet" />}
+            title="View the app as…"
+            subtitle={viewAs?.person ? `Now: ${viewAs.person.name}` : "An admin, a coach, a parent or a student"}
+            onPress={() => router.push("/view-as")}
+            testID="more-view-as"
+          />
+        ) : null}
       </ListSection>
 
       {/* "/reports" is also the families' Reports tab: from inside a tab the router would pick theirs, so the staff's
