@@ -55,7 +55,7 @@ export const PAGES: SettingsPageDef[] = [
     home: 'day',
     groups: [
       { title: 'Families', items: [f('schedule.autoConfirm.hoursBefore'), f('schedule.autoConfirm.enabled'), f('schedule.requests.daysAhead')] },
-      { title: 'A new class', items: [b('seats'), f('schedule.defaultSessionMinutes'), f('schedule.events.titlePresets')] },
+      { title: 'A new class', items: [b('seats'), f('schedule.defaultSessionMinutes')] },
       { title: 'The schedule', items: [f('general.weekStartsOn'), f('schedule.defaultView')] },
     ],
     more: ['schedule.snapMinutes', 'schedule.pasteStatus', 'trash.retentionDays'],

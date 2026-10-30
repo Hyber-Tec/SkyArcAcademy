@@ -110,7 +110,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
           { value: 'week', label: 'Week' },
         ],
       },
-      { kind: 'list', path: 'schedule.events.titlePresets', group: 'Classes', label: 'Event names to pick from', keywords: 'event tournament closed presets', help: 'One per line. Offered when adding an event to the schedule.' },
       { kind: 'number', path: 'schedule.snapMinutes', more: true, label: 'Clicks and drags snap to', keywords: 'snap step grid', min: 1, max: 60, step: 1, suffix: 'min' },
       { kind: 'select', path: 'schedule.pasteStatus', more: true, label: 'Pasted and duplicated classes start as', keywords: 'paste duplicate status', options: SESSION_STATUS_OPTIONS },
       {

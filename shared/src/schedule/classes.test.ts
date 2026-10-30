@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DayHours } from '../settings/defaults'
 import type { AcademyClass, Session, WithId } from '../types'
-import { cellsOf, classViews, coachesIn, makeupLabel, makeupsLost, makeupsOwed, openSeats, seatKind, uncovered } from './classes'
+import { cellsOf, classViews, coachesIn, makeupLabel, makeupsLost, makeupsOwed, openSeats, peopleIn, seatKind, uncovered } from './classes'
 import { type ConflictSeat, seatConflicts } from './conflicts'
 
 const open: DayHours = { isOpen: true, openMin: 16 * 60, closeMin: 21 * 60 }
@@ -45,6 +45,10 @@ describe('classes taught together', () => {
       ['sam', true],
     ])
     expect(coachesIn(cls, day, { isOpen: false, openMin: 0, closeMin: 0 })).toEqual([])
+    // Everyone in at its time, the office too (the timeline draws the class across their rows); a closed day, nobody.
+    expect(peopleIn(cls, day, open)).toEqual(['pat', 'sam', 'office'])
+    expect(peopleIn(cls, [...day, { ...day[0], dateKey: '2026-11-03', staffId: 'other' }], open)).toEqual(['pat', 'sam', 'office'])
+    expect(peopleIn(cls, day, { isOpen: false, openMin: 0, closeMin: 0 })).toEqual([])
     expect(uncovered(cls, [{ startMin: t(16), endMin: t(17) }])).toEqual([{ startMin: t(17), endMin: t(18) }])
     expect(uncovered(cls, [{ startMin: t(17), endMin: t(17, 30) }])).toEqual([
       { startMin: t(16, 30), endMin: t(17) },

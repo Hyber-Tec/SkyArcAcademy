@@ -1,26 +1,28 @@
 import { useEffect, useRef } from 'react'
 import { LuArrowRight, LuCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSend, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
-import { seatKind } from '@shared/schedule/classes'
+import { peopleIn, seatKind } from '@shared/schedule/classes'
 import { type ClassRequest, REQUEST_KIND_LABELS } from '@shared/schedule/requests'
 import { KIND_COLORS, levelColor } from '@shared/schedule/seatColors'
-import { NO_COACH_ROW, type Span, type TimelinePerson, classPieces, clockSpan, gridColumns, gridHeight, rowHeights, timelineRange, timelineRows } from '@shared/schedule/timeline'
+import { NO_COACH_ROW, type Span, type TimelineClass, type TimelinePerson, classPieces, classSlots, clockSpan, rowHeights, stackHeight, timelineRange, timelineRows } from '@shared/schedule/timeline'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutes, formatMinutesShort, weekdayOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { ContextMenuFor, MenuOnTap, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { type Board, REFUSAL, cellsOf, useBoard, useDragSource, useDropTarget } from './board'
-import { SeatMenu } from './DayList'
+import { classActions, dayActions, openSeatActions, requestActions, seatContextActions } from './menus'
+import { SeatMenu } from './SeatMenu'
 import { CoachBadge, NowPill, SEAT_FILL, SeatCount, StatusDot, abbreviate, classRange, gradeLabel, seatVars } from './seatParts'
-import type { ClassView, EventDoc } from './useClassData'
+import type { ClassView } from './useClassData'
 
 /**
  * The schedule as a timeline (V2, the owner's pick of the second round of designs, 2026-10-28): a row for each person
  * in that day, with their hours (white), the time they aren't in (grey) and their clock-in to clock-out (green, its end
- * dashed while they're still in) behind it, as HyberCRM draws it; each class is one block across the rows of the coaches
- * who teach it, its students as cards big enough to read and mark. The week is the same, a day under the other. The
- * sums (row order, pieces, heights) are in shared/src/schedule/timeline.ts.
+ * dashed while they're still in) behind it, as HyberCRM draws it; each class is one block across the rows of everyone
+ * in at its time, coaches, admins and owners alike (the owner, 2026-10-29), its students as cards big enough to read and
+ * mark, one under the other with its requests and open seats, all one size. The week is the same, a day under the
+ * other. The sums (row order, pieces, heights, slots) are in shared/src/schedule/timeline.ts.
  */
 
 /** The people column: narrower on a smaller page, so more of the day fits. */
@@ -30,19 +32,15 @@ const AXIS_H = 34
 const ROW_MIN = 64
 /** The space a class block leaves above and below itself in its rows. */
 const INSET = 6
-/** Inside a block: its padding, its header, the student cards and the gap between them. */
+/**
+ * Inside a block: its padding, its header, then one column of slots (students, requests, open seats), each as tall as a
+ * student's card, with a gap between them.
+ */
 const PAD = 8
 const HEAD_H = 28
 const CARD_H = 56
-const OPEN_H = 34
-/** Open seats sit two or three across, narrower than a student's card. */
-const OPEN_MIN_W = 92
-const REQUEST_H = 48
 const GAP = 6
 const OVERFLOW_H = 22
-/** The narrowest a student card gets before a block puts one per row. */
-const CARD_MIN_W = 188
-const EVENT_H = 30
 /** Pixels a minute: at least enough for a one-hour class to hold a student's card; wider fills the page. */
 const MIN_PPM = 3.4
 const MAX_PPM = 6.5
@@ -62,17 +60,19 @@ interface Person extends TimelinePerson {
   role?: string
 }
 
-/** Who's in that day, the classes, the rows' order and the time the day shows. */
+/** Who's in that day, the classes and whose rows each spans, the rows' order and the time the day shows. */
 interface Frame {
   dateKey: DateKey
   classes: ClassView[]
   people: Map<string, Person>
+  /** Each class as the rows see it: who teaches it, and everyone in at its time. */
+  spans: Map<string, TimelineClass>
   rows: string[]
   lo: number
   hi: number
 }
 
-/** A class block, or a piece of one when its coaches can't all sit together. */
+/** A class block, or a piece of one when the rows it spans can't all sit together. */
 interface Piece {
   v: ClassView
   rows: [number, number]
@@ -81,8 +81,6 @@ interface Piece {
   of: number
   left: number
   width: number
-  cols: number
-  openCols: number
   top: number
   height: number
 }
@@ -94,49 +92,46 @@ interface DayModel extends Frame {
   heights: number[]
   tops: number[]
   pieces: Piece[]
-  events: { e: WithId<EventDoc>; lane: number }[]
-  eventLanes: number
 }
 
 function frameOf(b: Board, d: DateKey): Frame {
   const classes = b.byDate.get(d) ?? []
   const avail = b.inOn(d)
   const shifts = b.shiftsOn(d)
+  const hours = b.hoursOf(d)
   const people = new Map<string, Person>()
   for (const a of avail) {
     const teaches = a.staffRole ? a.staffRole === 'coach' && b.teaches(a.staffId) : b.teaches(a.staffId)
     people.set(a.staffId, { id: a.staffId, teaches, firstMin: a.ranges[0]?.startMin ?? 0, name: b.staffName(a.staffId, a.staffName), role: a.staffRole })
   }
   for (const s of shifts) if (!people.has(s.staffId)) people.set(s.staffId, { id: s.staffId, teaches: b.teaches(s.staffId), firstMin: s.inMin, name: b.staffName(s.staffId, s.staffName) })
-  const rows = timelineRows([...people.values()], classes.map((v) => ({ id: v.c.id, coachIds: v.coaches.map((k) => k.staffId) })))
-  const spans: Span[] = [
+  // A class spans the rows of everyone in at its time, teaching or not (who teaches it stays the coaches in).
+  const spans = new Map(classes.map((v) => [v.c.id, { id: v.c.id, coachIds: v.coaches.map((k) => k.staffId), inIds: peopleIn(v.c, avail, hours) }]))
+  const rows = timelineRows([...people.values()], [...spans.values()])
+  const all: Span[] = [
     ...avail.flatMap((a) => a.ranges),
     ...classes.map((v) => ({ startMin: v.c.startMin, endMin: v.c.endMin })),
-    ...b.eventsOn(d).map((e) => ({ startMin: e.startMin, endMin: e.endMin })),
     // A clock-in counts; so does its clock-out, or now while still in today (not a shift left open from another day).
     ...shifts.flatMap((s) => {
       const c = clockSpan(s, d, b.today, b.nowMin)
       return c ? [{ startMin: c.startMin, endMin: c.open && d !== b.today ? c.startMin + 30 : c.endMin }] : []
     }),
   ]
-  const hours = b.hoursOf(d)
-  const range = timelineRange(spans, hours.isOpen ? { startMin: hours.openMin, endMin: hours.closeMin } : { startMin: 16 * 60, endMin: 20 * 60 })
-  return { dateKey: d, classes, people, rows, lo: range.startMin, hi: range.endMin }
+  const range = timelineRange(all, hours.isOpen ? { startMin: hours.openMin, endMin: hours.closeMin } : { startMin: 16 * 60, endMin: 20 * 60 })
+  return { dateKey: d, classes, people, spans, rows, lo: range.startMin, hi: range.endMin }
 }
 
-/** How tall a class's students need its block to be: `cols` cards across, then its open seats `openCols` across. */
-function blockNeed(b: Board, v: ClassView, cols: number, openCols: number): number {
+/** A class's slots: its students, families' requests (each in an open seat's place), then the seats still open. */
+function slotsOf(b: Board, v: ClassView) {
   const { cells, open, overflow } = cellsOf(v.seats, v.c.seats)
-  const cards = [...cells.map(() => CARD_H), ...b.requestsFor(v.c.id).map(() => REQUEST_H)]
-  const seats = Array.from({ length: open }, () => OPEN_H)
-  return (
-    PAD +
-    HEAD_H +
-    (cards.length ? GAP + gridHeight(cards, cols, GAP) : 0) +
-    (seats.length ? GAP + gridHeight(seats, openCols, GAP) : 0) +
-    (overflow.length ? OVERFLOW_H : 0) +
-    PAD
-  )
+  return { ...classSlots(cells, open, b.requestsFor(v.c.id)), overflow }
+}
+
+/** How tall a class's block needs to be: its header, then its slots one under the other. */
+function blockNeed(b: Board, v: ClassView): number {
+  const s = slotsOf(b, v)
+  const n = s.cells.length + s.requests.length + s.open
+  return PAD + HEAD_H + (n ? GAP + stackHeight(n, CARD_H, GAP) : 0) + (s.overflow.length ? OVERFLOW_H : 0) + PAD
 }
 
 function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
@@ -145,14 +140,13 @@ function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
   const pieces: Omit<Piece, 'top' | 'height'>[] = []
   const needs: { rows: [number, number]; need: number }[] = []
   for (const v of f.classes) {
-    const runs = classPieces(f.rows, v.coaches.map((k) => k.staffId))
+    const span = f.spans.get(v.c.id)
+    const runs = span ? classPieces(f.rows, span) : []
     const left = Math.round(x(v.c.startMin)) + 2
     const w = Math.max(120, Math.round(x(v.c.endMin)) - left - 2)
-    const cols = gridColumns(w - 2 * PAD, CARD_MIN_W, GAP)
-    const openCols = Math.min(4, gridColumns(w - 2 * PAD, OPEN_MIN_W, GAP))
     runs.forEach((rows, index) => {
-      pieces.push({ v, rows, index, of: runs.length, left, width: w, cols, openCols })
-      needs.push({ rows, need: index === 0 ? blockNeed(b, v, cols, openCols) : PAD * 2 + HEAD_H + 22 })
+      pieces.push({ v, rows, index, of: runs.length, left, width: w })
+      needs.push({ rows, need: index === 0 ? blockNeed(b, v) : PAD * 2 + HEAD_H + 22 })
     })
   }
   const heights = rowHeights(
@@ -166,15 +160,7 @@ function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
     const [a, z] = p.rows
     return { ...p, top: tops[a] + INSET, height: tops[z] + heights[z] - tops[a] - 2 * INSET }
   })
-  // Events in lanes, so two at once both show.
-  const ends: number[] = []
-  const events = b.eventsOn(f.dateKey).map((e) => {
-    let lane = ends.findIndex((end) => end <= e.startMin)
-    if (lane < 0) lane = ends.push(e.endMin) - 1
-    else ends[lane] = e.endMin
-    return { e, lane }
-  })
-  return { ...f, ppm, nameW, width, heights, tops, pieces: placed, events, eventLanes: ends.length }
+  return { ...f, ppm, nameW, width, heights, tops, pieces: placed }
 }
 
 // ---------------------------------------------------------------------------------------------------------- the views
@@ -323,7 +309,7 @@ function WeekDay({ m, width }: { m: DayModel; width: number }) {
       </div>
       {m.rows.length ? (
         <div className="overflow-clip rounded-xl border bg-card shadow-xs" style={{ width: m.nameW + m.width + 2 }}>
-          <DayTimeline m={m} />
+          <DayTimeline m={m} week />
         </div>
       ) : (
         <div className="sticky left-0 rounded-xl border border-dashed px-4 py-6 text-sm text-muted-foreground" style={{ width: width - 2 }}>
@@ -336,83 +322,49 @@ function WeekDay({ m, width }: { m: DayModel; width: number }) {
 
 // ------------------------------------------------------------------------------------------------------- a day's rows
 
-function DayTimeline({ m, stickyAxis }: { m: DayModel; stickyAxis?: boolean }) {
+/** A day's rows and its classes. Right-click its empty space to add a class or set who's in. */
+function DayTimeline({ m, stickyAxis, week }: { m: DayModel; stickyAxis?: boolean; week?: boolean }) {
   const b = useBoard()
   const x = (min: number) => (clamp(min, m.lo, m.hi) - m.lo) * m.ppm
   const nowX = m.dateKey === b.today && b.nowMin >= m.lo && b.nowMin <= m.hi ? x(b.nowMin) : null
   const total = m.heights.reduce((n, h) => n + h, 0)
   const marks = hourMarks(m.lo, m.hi)
+  const editable = b.mode === 'admin' && b.canEdit(m.dateKey)
   // An hour's label, kept inside the axis; it gives way to the "now" pill.
   const labelAt = (t: number) => clamp(x(t), 20, m.width - 24)
   return (
-    <div className="relative bg-card" style={{ width: m.nameW + m.width }}>
-      <div className={cn('z-30 flex border-b bg-card', stickyAxis && 'sticky top-0')} style={{ height: AXIS_H }}>
-        <div className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-card px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase" style={{ width: m.nameW }}>
-          Who's in
-        </div>
-        <div className="relative shrink-0" style={{ width: m.width }}>
-          {marks
-            .filter((t) => nowX === null || Math.abs(labelAt(t) - nowX) > 48)
-            .map((t) => (
-              <span key={t} className="absolute top-2.5 -translate-x-1/2 text-[11px] font-medium whitespace-nowrap text-muted-foreground" style={{ left: labelAt(t) }}>
-                {formatMinutesShort(t)}
+    <ContextMenuFor entries={editable ? dayActions(b, m.dateKey, week) : []}>
+      <div className="relative bg-card" style={{ width: m.nameW + m.width }} data-testid="timeline-rows">
+        <div className={cn('z-30 flex border-b bg-card', stickyAxis && 'sticky top-0')} style={{ height: AXIS_H }}>
+          <div className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-card px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase" style={{ width: m.nameW }}>
+            Who's in
+          </div>
+          <div className="relative shrink-0" style={{ width: m.width }}>
+            {marks
+              .filter((t) => nowX === null || Math.abs(labelAt(t) - nowX) > 48)
+              .map((t) => (
+                <span key={t} className="absolute top-2.5 -translate-x-1/2 text-[11px] font-medium whitespace-nowrap text-muted-foreground" style={{ left: labelAt(t) }}>
+                  {formatMinutesShort(t)}
+                </span>
+              ))}
+            {nowX !== null ? (
+              <span className="absolute top-1.5 z-10 -translate-x-1/2 rounded-md bg-brand-solid px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-white tabular-nums" style={{ left: nowX }}>
+                {formatMinutes(b.nowMin)}
               </span>
-            ))}
-          {nowX !== null ? (
-            <span className="absolute top-1.5 z-10 -translate-x-1/2 rounded-md bg-brand-solid px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-white tabular-nums" style={{ left: nowX }}>
-              {formatMinutes(b.nowMin)}
-            </span>
-          ) : null}
+            ) : null}
+          </div>
+        </div>
+        <div className="relative" style={{ height: total }}>
+          {m.rows.map((id, i) => (
+            <PersonRow key={id} m={m} id={id} height={m.heights[i]} marks={marks} />
+          ))}
+          {nowX !== null ? <div className="pointer-events-none absolute top-0 bottom-0 z-[5] w-0.5 bg-brand-solid/80" style={{ left: m.nameW + nowX - 1 }} /> : null}
+          {m.pieces.map((p) => (
+            <ClassBlock key={`${p.v.c.id}-${p.index}`} p={p} nameW={m.nameW} />
+          ))}
         </div>
       </div>
-      {m.events.length ? <EventsRow m={m} /> : null}
-      <div className="relative" style={{ height: total }}>
-        {m.rows.map((id, i) => (
-          <PersonRow key={id} m={m} id={id} height={m.heights[i]} marks={marks} />
-        ))}
-        {nowX !== null ? <div className="pointer-events-none absolute top-0 bottom-0 z-[5] w-0.5 bg-brand-solid/80" style={{ left: m.nameW + nowX - 1 }} /> : null}
-        {m.pieces.map((p) => (
-          <ClassBlock key={`${p.v.c.id}-${p.index}`} p={p} nameW={m.nameW} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** The day's events, above the people (the office opens one to change it). */
-function EventsRow({ m }: { m: DayModel }) {
-  const b = useBoard()
-  const x = (min: number) => (clamp(min, m.lo, m.hi) - m.lo) * m.ppm
-  const height = 8 + m.eventLanes * (EVENT_H + 4)
-  return (
-    <div className="flex border-b" style={{ height }}>
-      <div className="sticky left-0 z-20 flex shrink-0 items-center border-r bg-card px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase" style={{ width: m.nameW }}>
-        Events
-      </div>
-      <div className="relative shrink-0 bg-sky-50/60 dark:bg-sky-950/20" style={{ width: m.width }}>
-        {m.events.map(({ e, lane }) => {
-          const left = x(e.startMin) + 2
-          const w = Math.max(64, x(e.endMin) - left - 2)
-          const body = (
-            <>
-              <span className="truncate text-xs font-semibold">{e.title}</span>
-              {w > 150 ? <span className="shrink-0 text-[11px] text-sky-700 tabular-nums dark:text-sky-300">{classRange(e.startMin, e.endMin)}</span> : null}
-            </>
-          )
-          const cls = 'absolute flex items-center gap-1.5 overflow-hidden rounded-lg bg-sky-100 px-2 text-sky-900 ring-1 ring-sky-200 dark:bg-sky-900/60 dark:text-sky-100 dark:ring-sky-800'
-          const style = { left, width: w, top: 4 + lane * (EVENT_H + 4), height: EVENT_H }
-          return b.openEvent ? (
-            <button key={`${e.id}-${lane}`} type="button" className={cn(cls, 'text-left hover:bg-sky-200/70')} style={style} onClick={() => b.openEvent?.(e)} title={`${e.title}: open to change`}>
-              {body}
-            </button>
-          ) : (
-            <div key={`${e.id}-${lane}`} className={cls} style={style} title={e.title}>
-              {body}
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    </ContextMenuFor>
   )
 }
 
@@ -482,7 +434,7 @@ function WhoCell({ m, id }: { m: DayModel; id: string }) {
             Set who's in
           </button>
         ) : (
-          <span className="text-xs text-muted-foreground">Nobody is in for these classes</span>
+          <span className="text-xs text-muted-foreground">No coach is in to teach these classes</span>
         )}
       </div>
     )
@@ -525,32 +477,30 @@ function WhoCell({ m, id }: { m: DayModel; id: string }) {
     </>
   )
   if (b.mode !== 'admin') return <div className={cell} style={{ width: m.nameW }}>{body}</div>
+  // One menu on a click and on a right-click.
+  const entries = menu(
+    { kind: 'label', label: name },
+    editable && { label: "Edit who's in this day", icon: LuPencil, onSelect: () => b.editWhosIn(m.dateKey) },
+    { label: `Open ${name.split(' ')[0]}'s page`, icon: LuSquareArrowOutUpRight, separatorBefore: true, onSelect: () => navigate(`/admin/employees/directory/${id}`) },
+  )
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <MenuOnTap entries={entries}>
+      <ContextMenuFor entries={entries}>
         <button type="button" className={cn(cell, 'transition-colors hover:bg-muted/60')} style={{ width: m.nameW }} title={name}>
           {body}
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
-        {editable ? (
-          <DropdownMenuItem onSelect={() => b.editWhosIn(m.dateKey)}>
-            <LuPencil /> Edit who's in this day
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => navigate(`/admin/employees/directory/${id}`)}>
-          <LuSquareArrowOutUpRight /> Open {name.split(' ')[0]}'s page
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </ContextMenuFor>
+    </MenuOnTap>
   )
 }
 
 // ------------------------------------------------------------------------------------------------------ a class block
 
-/** A class across its coaches' rows: its time and seats on top, then its students. Drop a student here to move them. */
+/**
+ * A class across the rows of everyone in at its time: its time and seats on top, then its slots in one column, all one
+ * size: its students, families' requests, the seats still open. Drop a student here to move them; right-click it for
+ * the class's actions.
+ */
 function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
   const b = useBoard()
   const { v } = p
@@ -558,82 +508,81 @@ function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
   const drop = useDropTarget(v)
   const now = c.dateKey === b.today && b.nowMin >= c.startMin && b.nowMin < c.endMin
   const notMine = !!b.me && !v.coaches.some((k) => k.staffId === b.me)
-  const requests = b.requestsFor(c.id)
+  const editable = b.mode === 'admin' && b.canEdit(c.dateKey)
+  const slots = slotsOf(b, v)
   // Those waiting on the office (a class suggested to a family shows too, but waits on them).
-  const waiting = requests.filter((r) => r.status === 'pending').length
-  const { cells, open, overflow } = cellsOf(v.seats, c.seats)
+  const waiting = slots.requests.filter((r) => r.status === 'pending').length
   return (
-    <div
-      {...drop.props}
-      className={cn(
-        'absolute z-10 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-[opacity,box-shadow,border-color]',
-        p.of > 1 && 'border-dashed border-foreground/30',
-        !v.coaches.length && 'border-amber-300 dark:border-amber-800',
-        now && 'border-brand/50 ring-1 ring-brand/25',
-        notMine && 'opacity-60',
-        drop.dragging && drop.refused && !drop.hovered && 'opacity-40',
-        drop.hovered && drop.ok && 'border-brand ring-[3px] ring-brand/20',
-      )}
-      style={{ left: nameW + p.left, top: p.top, width: p.width, height: p.height }}
-      data-testid="class-block"
-    >
-      <button
-        type="button"
-        data-class-time={c.id}
-        onClick={() => b.openClass(c.id)}
-        className="group/head mx-1 mt-1 flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/70"
-        title="Open the class"
+    <ContextMenuFor entries={editable ? classActions(b, v) : []}>
+      <div
+        {...drop.props}
+        className={cn(
+          'absolute z-10 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-[opacity,box-shadow,border-color]',
+          p.of > 1 && 'border-dashed border-foreground/30',
+          !v.coaches.length && 'border-amber-300 dark:border-amber-800',
+          now && 'border-brand/50 ring-1 ring-brand/25',
+          notMine && 'opacity-60',
+          drop.dragging && drop.refused && !drop.hovered && 'opacity-40',
+          drop.hovered && drop.ok && 'border-brand ring-[3px] ring-brand/20',
+        )}
+        style={{ left: nameW + p.left, top: p.top, width: p.width, height: p.height }}
+        data-testid="class-block"
       >
-        <span className="text-[15px] font-semibold whitespace-nowrap tabular-nums group-hover/head:underline group-hover/head:underline-offset-4">{classRange(c.startMin, c.endMin)}</span>
-        {now ? <NowPill /> : null}
-        {waiting ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-1.5 text-[11px] leading-5 font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900" title={`${waiting} request${waiting > 1 ? 's' : ''} waiting`}>
-            <LuInbox className="size-3" />
-            {waiting}
-          </span>
+        <button
+          type="button"
+          data-class-time={c.id}
+          onClick={() => b.openClass(c.id)}
+          className="group/head mx-1 mt-1 flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/70"
+          title="Open the class"
+        >
+          <span className="text-[15px] font-semibold whitespace-nowrap tabular-nums group-hover/head:underline group-hover/head:underline-offset-4">{classRange(c.startMin, c.endMin)}</span>
+          {now ? <NowPill /> : null}
+          {waiting ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-1.5 text-[11px] leading-5 font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900" title={`${waiting} request${waiting > 1 ? 's' : ''} waiting`}>
+              <LuInbox className="size-3" />
+              {waiting}
+            </span>
+          ) : null}
+          <SeatCount used={v.taken} of={c.seats} className="ml-auto shrink-0" />
+        </button>
+        {p.index === 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-2 pt-1.5 pb-2" data-testid="class-slots">
+            {slots.cells.map((s) => (
+              <StudentCard key={s.id} seat={s} v={v} />
+            ))}
+            {slots.requests.map((r) => (
+              <RequestCard key={r.id} r={r} v={v} />
+            ))}
+            {Array.from({ length: slots.open }, (_, i) => (
+              <OpenSeatCard key={`open-${i}`} v={v} target={drop.ok} landing={drop.ok && drop.hovered && i === 0} />
+            ))}
+            {slots.overflow.length ? (
+              <div className="shrink-0 truncate px-1 text-xs text-muted-foreground">
+                Also canceled: <span className="line-through">{slots.overflow.map((s) => s.studentName).join(', ')}</span>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="px-2.5 pt-1 text-xs text-muted-foreground">The same class: the people in at its time aren’t next to each other, so it shows in {p.of} parts. Its students are in the first.</p>
+        )}
+        {drop.hovered && drop.refused ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60">
+            <span className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background shadow">{REFUSAL[drop.refused]}</span>
+          </div>
         ) : null}
-        <SeatCount used={v.taken} of={c.seats} className="ml-auto shrink-0" />
-      </button>
-      {p.index === 0 ? (
-        <div className="min-h-0 flex-1 px-2 pt-1.5 pb-2">
-          {cells.length || requests.length ? (
-            <div className="grid items-start gap-1.5" style={{ gridTemplateColumns: `repeat(${p.cols}, minmax(0, 1fr))` }}>
-              {cells.map((s) => (
-                <StudentCard key={s.id} seat={s} v={v} />
-              ))}
-              {requests.map((r) => (
-                <RequestCard key={r.id} r={r} />
-              ))}
-            </div>
-          ) : null}
-          {open ? (
-            <div className={cn('grid gap-1.5', (cells.length || requests.length) && 'mt-1.5')} style={{ gridTemplateColumns: `repeat(${p.openCols}, minmax(0, 1fr))` }}>
-              {Array.from({ length: open }, (_, i) => (
-                <OpenSeatCard key={`open-${i}`} v={v} target={drop.ok} landing={drop.ok && drop.hovered && i === 0} />
-              ))}
-            </div>
-          ) : null}
-          {overflow.length ? (
-            <div className="truncate px-1 pt-1.5 text-xs text-muted-foreground">
-              Also canceled: <span className="line-through">{overflow.map((s) => s.studentName).join(', ')}</span>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <p className="px-2.5 pt-1 text-xs text-muted-foreground">The same class: its coaches aren’t next to each other, so it shows in {p.of} parts. Its students are in the first.</p>
-      )}
-      {drop.hovered && drop.refused ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60">
-          <span className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background shadow">{REFUSAL[drop.refused]}</span>
-        </div>
-      ) : null}
-    </div>
+      </div>
+    </ContextMenuFor>
   )
 }
 
+/** Every slot in a class block: a student's card, a request or an open seat, the same height and the block's width. */
+const SLOT = 'h-[56px] w-full min-w-0 shrink-0 rounded-lg'
+
 /**
  * A student in a class, as a card: their name, their level in its colour (or the label's colour for a make-up, practice
- * or trial), their rifle and grade, how they're marked, and their actions (⋯). Drag it to another class to move them.
+ * or trial), their rifle and grade, how they're marked, and their actions (⋯, or a right-click). A no-show turns the
+ * card grey (the owner, 2026-10-29: "no-show must be obvious"); a canceled seat is grey and struck through. Drag it to
+ * another class to move them.
  */
 function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   const b = useBoard()
@@ -645,6 +594,7 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   const canceled = seat.status === 'canceled'
   const present = seat.status === 'present'
   const noShow = seat.status === 'no_show'
+  const grey = canceled || noShow
   const own = seat.startMin !== v.c.startMin || seat.endMin !== v.c.endMin ? classRange(seat.startMin, seat.endMin) : null
   const label = (seat.note ?? '').trim()
   const editable = b.mode === 'admin' && b.canEdit(seat.dateKey)
@@ -654,78 +604,83 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   const color = special ? KIND_COLORS[kind] : levelColor(level, b.levels)
   const open = () => b.openClass(v.c.id)
   return (
-    <div
-      data-seat-id={seat.id}
-      {...source}
-      className={cn(
-        '@container flex h-[56px] min-w-0 flex-col justify-center gap-1 overflow-hidden rounded-lg pr-1 ring-1 ring-black/[0.07] ring-inset dark:ring-white/[0.07]',
-        canceled ? 'bg-muted/70 text-muted-foreground' : SEAT_FILL,
-        special && level && !canceled ? 'pl-3' : 'pl-2.5',
-        source.draggable && 'cursor-grab active:cursor-grabbing',
-        b.lifted === seat.id && 'opacity-30',
-      )}
-      style={{ ...(canceled ? {} : seatVars(color)), boxShadow: special && level && !canceled ? `inset 4px 0 0 ${levelColor(level, b.levels).dot}` : undefined }}
-      data-testid="student-card"
-    >
-      <div className="flex h-6 min-w-0 items-center gap-1">
-        <button
-          type="button"
-          onClick={open}
-          className={cn('min-w-0 truncate text-left text-[14px] leading-5 font-semibold hover:underline hover:underline-offset-2', canceled && 'line-through decoration-[1.5px]', noShow && 'opacity-60')}
-          title={`${seat.studentName}: open the class`}
-        >
-          {seat.studentName}
-        </button>
-        {!markable ? <StatusDot status={seat.status} /> : null}
-        <span className="min-w-0 flex-1" />
-        {editable ? <SeatMenu seat={seat} v={v} compact /> : null}
+    <ContextMenuFor entries={editable ? seatContextActions(b, seat, v) : []}>
+      <div
+        data-seat-id={seat.id}
+        data-status={seat.status}
+        {...source}
+        className={cn(
+          SLOT,
+          '@container flex flex-col justify-center gap-1 overflow-hidden pr-1 ring-1 ring-black/[0.07] ring-inset dark:ring-white/[0.07]',
+          canceled ? 'bg-muted/70 text-muted-foreground' : noShow ? 'bg-zinc-200/70 text-zinc-700 ring-zinc-300 dark:bg-zinc-700/70 dark:text-zinc-200 dark:ring-zinc-600' : SEAT_FILL,
+          special && level && !grey ? 'pl-3' : 'pl-2.5',
+          source.draggable && 'cursor-grab active:cursor-grabbing',
+          b.lifted === seat.id && 'opacity-30',
+        )}
+        style={{ ...(grey ? {} : seatVars(color)), boxShadow: special && level && !grey ? `inset 4px 0 0 ${levelColor(level, b.levels).dot}` : undefined }}
+        data-testid="student-card"
+      >
+        <div className="flex h-6 min-w-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={open}
+            className={cn('min-w-0 truncate text-left text-[14px] leading-5 font-semibold hover:underline hover:underline-offset-2', canceled && 'line-through decoration-[1.5px]')}
+            title={`${seat.studentName}: open the class`}
+          >
+            {seat.studentName}
+          </button>
+          {!markable ? <StatusDot status={seat.status} /> : null}
+          <span className="min-w-0 flex-1" />
+          {editable ? <SeatMenu seat={seat} v={v} compact /> : null}
+        </div>
+        <div className="flex h-6 min-w-0 items-center gap-1">
+          <button type="button" onClick={open} className="min-w-0 flex-1 truncate text-left text-[12px] leading-4 opacity-85" tabIndex={-1}>
+            {noShow ? <span className="font-semibold">No-show · </span> : null}
+            {special ? <span className="font-semibold">{label || KIND_COLORS[kind].name} · </span> : null}
+            {level ? (
+              <>
+                <span className="@min-[270px]:hidden">{abbreviate(level)}</span>
+                <span className="hidden @min-[270px]:inline">{level}</span>
+              </>
+            ) : (
+              'New'
+            )}
+            {st?.rifle ? <span className="font-semibold"> · {st.rifle}</span> : null}
+            {grade ? ` · ${grade}` : ''}
+            {own ? ` · ${own}` : ''}
+            {label && !special ? ` · ${label}` : ''}
+          </button>
+          {markable ? (
+            <span className="flex shrink-0 items-center gap-px overflow-hidden rounded-md bg-background/85 ring-1 ring-black/5 dark:bg-background/45 dark:ring-white/10" role="group" aria-label="Mark">
+              <button
+                type="button"
+                aria-pressed={present}
+                aria-label={`${seat.studentName}: here`}
+                title={present ? 'Here (click to undo)' : 'Mark here'}
+                onClick={() => b.setStatus(seat, present ? 'confirmed' : 'present')}
+                className={cn('inline-flex size-6 items-center justify-center transition-colors', present ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+              >
+                <LuCheck className="size-3.5" strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                aria-pressed={noShow}
+                aria-label={`${seat.studentName}: no-show`}
+                title={noShow ? 'No-show (click to undo)' : 'Mark no-show'}
+                onClick={() => b.setStatus(seat, noShow ? 'confirmed' : 'no_show')}
+                className={cn('inline-flex size-6 items-center justify-center transition-colors', noShow ? 'bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+              >
+                <LuUserX className="size-3.5" />
+              </button>
+            </span>
+          ) : canceled && editable ? (
+            <Button variant="ghost" size="icon-xs" aria-label={`Restore ${seat.studentName}`} title="Restore the seat" onClick={() => b.setStatus(seat, 'confirmed')}>
+              <LuRotateCcw />
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <div className="flex h-6 min-w-0 items-center gap-1">
-        <button type="button" onClick={open} className="min-w-0 flex-1 truncate text-left text-[12px] leading-4 opacity-85" tabIndex={-1}>
-          {special ? <span className="font-semibold">{label || KIND_COLORS[kind].name} · </span> : null}
-          {level ? (
-            <>
-              <span className="@min-[270px]:hidden">{abbreviate(level)}</span>
-              <span className="hidden @min-[270px]:inline">{level}</span>
-            </>
-          ) : (
-            'New'
-          )}
-          {st?.rifle ? <span className="font-semibold"> · {st.rifle}</span> : null}
-          {grade ? ` · ${grade}` : ''}
-          {own ? ` · ${own}` : ''}
-          {label && !special ? ` · ${label}` : ''}
-        </button>
-        {markable ? (
-          <span className="flex shrink-0 items-center gap-px overflow-hidden rounded-md bg-background/85 ring-1 ring-black/5 dark:bg-background/45 dark:ring-white/10" role="group" aria-label="Mark">
-            <button
-              type="button"
-              aria-pressed={present}
-              aria-label={`${seat.studentName}: here`}
-              title={present ? 'Here (click to undo)' : 'Mark here'}
-              onClick={() => b.setStatus(seat, present ? 'confirmed' : 'present')}
-              className={cn('inline-flex size-6 items-center justify-center transition-colors', present ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-            >
-              <LuCheck className="size-3.5" strokeWidth={2.5} />
-            </button>
-            <button
-              type="button"
-              aria-pressed={noShow}
-              aria-label={`${seat.studentName}: no-show`}
-              title={noShow ? 'No-show (click to undo)' : 'Mark no-show'}
-              onClick={() => b.setStatus(seat, noShow ? 'confirmed' : 'no_show')}
-              className={cn('inline-flex size-6 items-center justify-center transition-colors', noShow ? 'bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-            >
-              <LuUserX className="size-3.5" />
-            </button>
-          </span>
-        ) : canceled && editable ? (
-          <Button variant="ghost" size="icon-xs" aria-label={`Restore ${seat.studentName}`} title="Restore the seat" onClick={() => b.setStatus(seat, 'confirmed')}>
-            <LuRotateCcw />
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    </ContextMenuFor>
   )
 }
 
@@ -738,30 +693,34 @@ function requestWhat(r: Pick<ClassRequest, 'kind' | 'forDateKey'>): string {
 
 /**
  * A family's request for this class, waiting for the office: open it to approve, decline or suggest another class. Or
- * this class suggested to a family, waiting for their answer (its seat isn't held for them).
+ * this class suggested to a family, waiting for their answer (its seat isn't held for them). Either sits in an open
+ * seat's place.
  */
-function RequestCard({ r }: { r: WithId<ClassRequest> }) {
+function RequestCard({ r, v }: { r: WithId<ClassRequest>; v: ClassView }) {
   const b = useBoard()
   const offered = r.status === 'offered'
   return (
-    <button
-      type="button"
-      onClick={() => b.openRequest(r.id)}
-      className={cn(
-        'flex h-[48px] min-w-0 items-center gap-2 rounded-lg border border-dashed px-2.5 text-left transition-colors',
-        offered
-          ? 'border-sky-300 bg-sky-50/70 text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70'
-          : 'border-amber-400 bg-amber-50/80 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70',
-      )}
-      title={offered ? 'Suggested to this family: waiting for their answer' : 'A family’s request: open it to approve, decline or suggest another class'}
-      data-testid="request-card"
-    >
-      {offered ? <LuSend className="size-4 shrink-0" /> : <LuInbox className="size-4 shrink-0" />}
-      <span className="min-w-0 leading-tight">
-        <span className="block truncate text-[13px] font-semibold">{r.studentName}</span>
-        <span className="block truncate text-[11.5px] opacity-80">{offered ? 'Suggested · waiting on the family' : `${requestWhat(r)} · waiting`}</span>
-      </span>
-    </button>
+    <ContextMenuFor entries={b.mode === 'admin' && b.canEdit(v.c.dateKey) ? requestActions(b, r.id, v) : []}>
+      <button
+        type="button"
+        onClick={() => b.openRequest(r.id)}
+        className={cn(
+          SLOT,
+          'flex items-center gap-2 border border-dashed px-2.5 text-left transition-colors',
+          offered
+            ? 'border-sky-300 bg-sky-50/70 text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70'
+            : 'border-amber-400 bg-amber-50/80 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70',
+        )}
+        title={offered ? 'Suggested to this family: waiting for their answer' : 'A family’s request: open it to approve, decline or suggest another class'}
+        data-testid="request-card"
+      >
+        {offered ? <LuSend className="size-4 shrink-0" /> : <LuInbox className="size-4 shrink-0" />}
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate text-[14px] leading-5 font-semibold">{r.studentName}</span>
+          <span className="block truncate text-[12px] leading-4 opacity-80">{offered ? 'Suggested · waiting on the family' : `${requestWhat(r)} · waiting`}</span>
+        </span>
+      </button>
+    </ContextMenuFor>
   )
 }
 
@@ -770,32 +729,39 @@ function OpenSeatCard({ v, target, landing }: { v: ClassView; target: boolean; l
   const b = useBoard()
   const editable = b.mode === 'admin' && b.canEdit(v.c.dateKey)
   return (
-    <button
-      type="button"
-      data-open-seat={v.c.id}
-      disabled={!editable}
-      onClick={() => b.addSeat(v.c.id)}
-      aria-label={editable ? 'Add a student to this seat' : 'Open seat'}
-      title={editable ? 'Add a student to this seat' : 'Open seat'}
-      className={cn(
-        'hatch-empty flex h-[34px] min-w-0 items-center justify-center gap-1 rounded-lg border border-dashed border-foreground/15 text-[12.5px] text-muted-foreground transition-colors',
-        editable && 'hover:border-foreground/35 hover:bg-muted/70 hover:text-foreground',
-        target && 'border-brand/50 bg-brand/[0.04] text-brand-text',
-        landing && 'border-solid border-brand bg-brand/10',
-      )}
-    >
-      {/* The content never takes the pointer: swapping it under a drag would make the browser drop the move. */}
-      <span className="pointer-events-none flex items-center gap-1.5">
-        {landing ? (
-          <span className="font-semibold">Move here</span>
-        ) : editable ? (
-          <>
-            <LuPlus className="size-3.5" /> Add
-          </>
-        ) : (
-          'Open'
+    <ContextMenuFor entries={editable ? openSeatActions(b, v) : []}>
+      <button
+        type="button"
+        data-open-seat={v.c.id}
+        disabled={!editable}
+        onClick={() => b.addSeat(v.c.id)}
+        aria-label={editable ? 'Add a student to this seat' : 'Open seat'}
+        title={editable ? 'Add a student to this seat' : 'Open seat'}
+        className={cn(
+          SLOT,
+          '@container hatch-empty flex items-center justify-center gap-1 border border-dashed border-foreground/15 text-[13px] text-muted-foreground transition-colors',
+          editable && 'hover:border-foreground/35 hover:bg-muted/70 hover:text-foreground',
+          target && 'border-brand/50 bg-brand/[0.04] text-brand-text',
+          landing && 'border-solid border-brand bg-brand/10',
         )}
-      </span>
-    </button>
+        data-testid="open-seat"
+      >
+        {/* The content never takes the pointer: swapping it under a drag would make the browser drop the move. */}
+        <span className="pointer-events-none flex items-center gap-1.5">
+          {landing ? (
+            <span className="font-semibold">Move here</span>
+          ) : editable ? (
+            <>
+              <LuPlus className="size-4" />
+              <span>
+                Add<span className="hidden @min-[150px]:inline"> a student</span>
+              </span>
+            </>
+          ) : (
+            'Open seat'
+          )}
+        </span>
+      </button>
+    </ContextMenuFor>
   )
 }

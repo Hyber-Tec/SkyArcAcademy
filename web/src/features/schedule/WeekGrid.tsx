@@ -5,10 +5,12 @@ import { KIND_COLORS, levelColor } from '@shared/schedule/seatColors'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutesShort, weekdayOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { ContextMenuFor } from '@/components/app/ItemMenu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useElementWidth } from '@/hooks/use-element-width'
 import { cn } from '@/lib/utils'
 import { REFUSAL, cellsOf, freeSeats, useBoard, useDragSource, useDropTarget } from './board'
+import { seatContextActions } from './menus'
 import { CoachBadge, NowPill, SEAT_FILL, StatusDot, abbreviate, gradeLabel, seatVars, shortName } from './seatParts'
 import type { ClassView } from './useClassData'
 
@@ -117,7 +119,6 @@ function DayHeader({ dateKey }: { dateKey: DateKey }) {
   const today = dateKey === b.today
   const inOn = b.inOn(dateKey)
   const editable = b.mode === 'admin' && b.canEdit(dateKey)
-  const events = b.eventsOn(dateKey)
   const body = (
     <>
       <span className="mb-0.5 flex items-center justify-between text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -157,15 +158,6 @@ function DayHeader({ dateKey }: { dateKey: DateKey }) {
         {today ? <span className="shrink-0 rounded-full bg-brand-solid px-1.5 text-[10px] leading-4 font-semibold text-white">Today</span> : null}
         <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums">{classes.length ? (open ? `${open} open` : 'Full') : ''}</span>
       </div>
-      {events.length ? (
-        <div className="space-y-0.5">
-          {events.map((e) => (
-            <div key={e.id} className="truncate rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 dark:bg-sky-950/40 dark:text-sky-300" title={e.title}>
-              {e.title} · {span(e.startMin, e.endMin)}
-            </div>
-          ))}
-        </div>
-      ) : null}
       {editable ? (
         <button
           type="button"
@@ -283,7 +275,10 @@ function CoachStack({ v, grid, className }: { v: ClassView; grid?: boolean; clas
   )
 }
 
-/** A seat as the sheet colours it: the level (or the label's colour for a make-up, practice or trial), then the name. */
+/**
+ * A seat as the sheet colours it: the level (or the label's colour for a make-up, practice or trial), then the name. A
+ * no-show is grey (the owner, 2026-10-29: "no-show must be obvious"). The office right-clicks it for its actions.
+ */
 function WeekSeat({ seat, v, roomy }: { seat: WithId<Session>; v: ClassView; roomy: boolean }) {
   const b = useBoard()
   const source = useDragSource(seat)
@@ -293,42 +288,46 @@ function WeekSeat({ seat, v, roomy }: { seat: WithId<Session>; v: ClassView; roo
   const special = kind !== 'regular'
   const color = special ? KIND_COLORS[kind] : levelColor(level, b.levels)
   const canceled = seat.status === 'canceled'
+  const noShow = seat.status === 'no_show'
   const own = seat.startMin !== v.c.startMin || seat.endMin !== v.c.endMin ? span(seat.startMin, seat.endMin) : null
   const top = special ? (seat.note ?? '').trim() || KIND_COLORS[kind].name : level ? `${abbreviate(level)}${st?.rifle ? ` ${st.rifle}` : ''}` : 'New'
   const open = () => b.openClass(v.c.id)
+  const editable = b.mode === 'admin' && b.canEdit(seat.dateKey)
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
-          data-seat-id={seat.id}
-          {...source}
-          onClick={open}
-          onKeyDown={(e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}
-          className={cn(
-            'relative flex min-w-0 flex-col justify-center rounded-[5px] px-1.5 text-left outline-offset-1 select-none',
-            SEAT_FILL,
-            roomy ? 'h-[44px]' : 'h-[38px]',
-            source.draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-            canceled && 'opacity-45',
-            seat.status === 'no_show' && 'opacity-70',
-            b.lifted === seat.id && 'opacity-30',
-          )}
-          style={{
-            ...seatVars(color),
-            boxShadow: `${special && level ? `inset 3px 0 0 ${levelColor(level, b.levels).dot}, ` : ''}inset 0 0 0 1px rgb(0 0 0 / 0.06)`,
-          }}
-        >
-          <span className={cn('flex min-w-0 items-center gap-1', roomy ? 'text-[10.5px] leading-[14px]' : 'text-[10px] leading-[13px]')}>
-            <span className={cn('min-w-0 truncate', special ? 'font-semibold' : 'font-medium opacity-80')}>{top}</span>
-            {own ? <span className="ml-auto shrink-0 font-medium tabular-nums opacity-90">{own}</span> : null}
-            <StatusDot status={seat.status} className={own ? undefined : 'ml-auto'} />
-          </span>
-          <span className={cn('truncate font-semibold', roomy ? 'text-[12.5px] leading-[17px]' : 'text-[11.5px] leading-[15px]', canceled && 'line-through decoration-[1.5px]')}>
-            {shortName(seat.studentName)}
-          </span>
-        </div>
+        <ContextMenuFor entries={editable ? seatContextActions(b, seat, v) : []}>
+          <div
+            role="button"
+            tabIndex={0}
+            data-seat-id={seat.id}
+            data-status={seat.status}
+            {...source}
+            onClick={open}
+            onKeyDown={(e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}
+            className={cn(
+              'relative flex min-w-0 flex-col justify-center rounded-[5px] px-1.5 text-left outline-offset-1 select-none',
+              noShow ? 'bg-zinc-200/80 text-zinc-700 dark:bg-zinc-700/70 dark:text-zinc-200' : SEAT_FILL,
+              roomy ? 'h-[44px]' : 'h-[38px]',
+              source.draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+              canceled && 'opacity-45',
+              b.lifted === seat.id && 'opacity-30',
+            )}
+            style={{
+              ...(noShow ? {} : seatVars(color)),
+              boxShadow: `${special && level && !noShow ? `inset 3px 0 0 ${levelColor(level, b.levels).dot}, ` : ''}inset 0 0 0 1px rgb(0 0 0 / 0.06)`,
+            }}
+          >
+            <span className={cn('flex min-w-0 items-center gap-1', roomy ? 'text-[10.5px] leading-[14px]' : 'text-[10px] leading-[13px]')}>
+              <span className={cn('min-w-0 truncate', special ? 'font-semibold' : 'font-medium opacity-80')}>{top}</span>
+              {own ? <span className="ml-auto shrink-0 font-medium tabular-nums opacity-90">{own}</span> : null}
+              <StatusDot status={seat.status} className={own ? undefined : 'ml-auto'} />
+            </span>
+            <span className={cn('truncate font-semibold', roomy ? 'text-[12.5px] leading-[17px]' : 'text-[11.5px] leading-[15px]', canceled && 'line-through decoration-[1.5px]')}>
+              {shortName(seat.studentName)}
+            </span>
+          </div>
+        </ContextMenuFor>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-[11px]">
         <div className="space-y-0.5 py-0.5">

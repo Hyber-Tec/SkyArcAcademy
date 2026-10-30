@@ -31,7 +31,6 @@ import { ClassSheet } from './ClassSheet'
 import { DayList } from './DayList'
 import { DayHoursDialog } from './dialogs/DayHoursDialog'
 import { DuplicateDialog } from './dialogs/DuplicateDialog'
-import { EventDialog, type EventDialogState } from './dialogs/EventDialog'
 import { TrashDialog } from './dialogs/TrashDialog'
 import { type ClassViewMode, SchedulePanel, ViewSwitch } from './SchedulePanel'
 import { coachColor } from './seatParts'
@@ -122,7 +121,6 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   const [hoursDay, setHoursDay] = useState<DateKey | null>(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [dupOpen, setDupOpen] = useState(false)
-  const [eventDialog, setEventDialog] = useState<EventDialogState>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
 
   // A class opened from elsewhere (Home, a student's page) arrives as ?class=…, a day (a notification's link) as ?date=…
@@ -173,7 +171,6 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     inOn: data.inOn,
     isOpen: (d) => data.hoursOf(d).isOpen,
     hoursOf: data.hoursOf,
-    eventsOn: (d) => data.eventsByDate.get(d) ?? [],
     student: (id) => studentById.get(id),
     staffName: (id, fallback) => staffById.get(id)?.name ?? fallback ?? (admin ? 'Former staff' : 'A coach'),
     staffColor: (id) => coachColor(id, staffById.get(id)?.color),
@@ -197,7 +194,6 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     addSeat: setSeatFor,
     addClass: (d) => setNewClass({ dateKey: d, key: Date.now() }),
     editWhosIn: setWhosIn,
-    openEvent: admin ? (e) => setEventDialog({ mode: 'edit', event: e }) : undefined,
     setStatus: (s, status: SessionStatus) => void run(() => setSeatStatus(ctx, s, status)),
     setLabel: (s, l) => void run(() => setSeatLabel(ctx, s, l)),
     move: (s, to) => void run(() => moveSeat(ctx, s, to, nextOrder(classById(to.id))), `${s.studentName} moved to ${formatDateKey(to.dateKey, 'weekdayMedium')}, ${formatMinutesShort(to.startMin)}`),
@@ -396,16 +392,6 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
                     <DropdownMenuItem onSelect={() => setNewClass({ dateKey: date, key: Date.now() })}>
                       <LuPlus /> Add a class
                     </DropdownMenuItem>
-                    {data.hoursOf(date).isOpen ? (
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          const h = data.hoursOf(date)
-                          setEventDialog({ mode: 'create', dateKey: date, startMin: h.openMin, endMin: Math.min(h.openMin + settings.schedule.events.defaultMinutes, h.closeMin) })
-                        }}
-                      >
-                        <LuPlus /> Add an event
-                      </DropdownMenuItem>
-                    ) : null}
                     <DropdownMenuItem onSelect={() => setHoursDay(date)}>
                       <LuCalendarCog /> Opening hours this day
                     </DropdownMenuItem>
@@ -520,7 +506,6 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
           />
           <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} />
           <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={date} />
-          <EventDialog state={eventDialog} onClose={() => setEventDialog(null)} ctx={ctx} />
         </>
       ) : null}
       {confirmDialog}

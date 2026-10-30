@@ -166,10 +166,12 @@ Carried over from HyberCRM, adapted to one academy:
 - **Settings:** defaults live in code (`shared/src/settings/defaults.ts`); the academy stores only its overrides; always read settings through the resolver. Never hard-code values the academy hasn't confirmed.
 - **Time:** the academy's IANA time zone only, never the browser's. Wall-clock `dateKey` (`YYYY-MM-DD`) + `startMin`/`endMin`, plus absolute `startAt`/`endAt`.
 - **Audit:** every schedule, availability, people, pay and settings change writes an append-only `auditLog` entry in the same batch.
-- **Schedule UI:** a timeline (Goo's pick, `docs/DECISIONS.md` §23): Day and Week, a row per person in with their
-  hours and clock-in behind it, each class one block across its coaches' rows with its students as cards coloured by
-  level (`shared/src/schedule/seatColors.ts`; the layout's sums in `shared/src/schedule/timeline.ts`), and the panel on
-  the right (calendar, who's in, legend) that opens and closes. Narrow screens keep the sheets' layout (§21).
+- **Schedule UI:** a timeline (Goo's pick, `docs/DECISIONS.md` §23 and §25): Day and Week, a row per person in with
+  their hours and clock-in behind it, each class one block across the rows of everyone in at its time (admins and
+  owners too), its students, requests and open seats one under the other, each a student card's size, coloured by
+  level (`shared/src/schedule/seatColors.ts`; the layout's sums in `shared/src/schedule/timeline.ts`), the same menus
+  on a right-click as on ⋯ (`web/src/features/schedule/menus.ts`), and the panel on the right (calendar, who's in,
+  legend) that opens and closes. Narrow screens keep the sheets' layout (§21). The website shows no events (§25).
 - **Availability:** a coach's day holds times, or "not available" (an answer), or nothing (still to set). Only open days
   with nothing set count as days to set (the reminders, Home's to-do); write through `shared/src/availabilityWrites.ts`.
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say

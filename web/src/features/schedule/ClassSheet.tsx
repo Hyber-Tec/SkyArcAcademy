@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useBoard } from './board'
-import { SeatMenu } from './DayList'
+import { SeatMenu } from './SeatMenu'
 import { CoachBadge, KindTag, LevelChip, SeatCount, classRange, gradeLabel } from './seatParts'
 import type { ClassView } from './useClassData'
 

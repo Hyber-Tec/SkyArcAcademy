@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NO_COACH_ROW, type TimelinePerson, classPieces, clockSpan, gridColumns, gridHeight, piecesCount, rowHeights, runsOf, timelineRange, timelineRows } from './timeline'
+import { NO_COACH_ROW, type TimelinePerson, classPieces, classRows, classSlots, clockSpan, piecesCount, rowHeights, runsOf, stackHeight, timelineRange, timelineRows } from './timeline'
 
 const t = (h: number, m = 0) => h * 60 + m
 const coach = (id: string, firstMin = t(16), name = id): TimelinePerson => ({ id, teaches: true, firstMin, name })
@@ -24,7 +24,7 @@ describe('the timeline’s rows', () => {
     ]
     const rows = timelineRows(people, classes)
     expect(piecesCount(rows, classes)).toBe(2)
-    for (const c of classes) expect(classPieces(rows, c.coachIds)).toHaveLength(1)
+    for (const c of classes) expect(classPieces(rows, c)).toHaveLength(1)
   })
 
   it('breaks a class into pieces when no order can keep every class together', () => {
@@ -36,7 +36,45 @@ describe('the timeline’s rows', () => {
     ]
     const rows = timelineRows(people, classes)
     expect(piecesCount(rows, classes)).toBe(4)
-    expect(classes.filter((c) => classPieces(rows, c.coachIds).length === 2)).toHaveLength(1)
+    expect(classes.filter((c) => classPieces(rows, c).length === 2)).toHaveLength(1)
+  })
+
+  it('draws a class across everyone in at its time: the admin who’s in shares its block', () => {
+    // The owner's day: two coaches teach every class and the admin is in all evening (2026-10-29).
+    const people = [admin('paige', t(16, 30)), coach('daniel', t(16, 30)), coach('hannah', t(16, 30))]
+    const all = ['daniel', 'hannah', 'paige']
+    const classes = ['c5', 'c6', 'c7'].map((id) => ({ id, coachIds: ['daniel', 'hannah'], inIds: all }))
+    const rows = timelineRows(people, classes)
+    expect(rows).toEqual(['daniel', 'hannah', 'paige'])
+    for (const c of classes) expect(classPieces(rows, c)).toEqual([[0, 2]])
+    // Without who's in, a class spans its coaches only.
+    expect(classRows({ id: 'x', coachIds: ['daniel'] })).toEqual(['daniel'])
+  })
+
+  it('keeps the coaches above the people who don’t teach unless that breaks a block', () => {
+    // Elena leaves at 6:15: in natural order (coaches, then the admin) the last class would break in two around her.
+    const people = [admin('paige', t(15, 55)), coach('daniel', t(16)), coach('hannah', t(15, 55)), coach('elena', t(16, 5))]
+    const classes = [
+      { id: 'c430', coachIds: ['daniel', 'elena', 'hannah'], inIds: ['daniel', 'elena', 'hannah', 'paige'] },
+      { id: 'c6', coachIds: ['daniel', 'elena', 'hannah'], inIds: ['daniel', 'elena', 'hannah', 'paige'] },
+      { id: 'c7', coachIds: ['daniel', 'hannah'], inIds: ['daniel', 'hannah', 'paige'] },
+    ]
+    const rows = timelineRows(people, classes)
+    expect(piecesCount(rows, classes)).toBe(3)
+    // Every coach above the admin; Elena, in for the fewest classes, on top.
+    expect(rows).toEqual(['elena', 'hannah', 'daniel', 'paige'])
+  })
+
+  it('moves someone who doesn’t teach up between coaches when that keeps every block whole', () => {
+    // The admin is in for Alex's class and for Blake's: only the admin between them keeps both whole.
+    const people = [coach('alex', t(15)), coach('blake', t(16)), admin('admin', t(15))]
+    const classes = [
+      { id: 'early', coachIds: ['alex'], inIds: ['alex', 'admin'] },
+      { id: 'late', coachIds: ['blake'], inIds: ['blake', 'admin'] },
+    ]
+    const rows = timelineRows(people, classes)
+    expect(piecesCount(rows, classes)).toBe(2)
+    expect(rows[1]).toBe('admin')
   })
 
   it('works for any number of coaches, many included', () => {
@@ -54,14 +92,29 @@ describe('the timeline’s rows', () => {
     expect(piecesCount(timelineRows(people, classes), classes)).toBe(classes.length)
   })
 
-  it('puts coaches without a class next, then the no-coach row, then people who don’t teach', () => {
-    const people = [admin('manager', t(15)), coach('idle', t(15)), coach('teacher', t(16))]
+  it('puts the no-coach row under the classes’ rows, then the people in at no class’s time, coaches first', () => {
+    const people = [admin('manager', t(15)), coach('idle', t(15)), coach('teacher', t(16)), admin('owner', t(17))]
     const classes = [
-      { id: 'c1', coachIds: ['teacher'] },
+      { id: 'c1', coachIds: ['teacher'], inIds: ['teacher', 'owner'] },
       { id: 'c2', coachIds: [] },
     ]
-    expect(timelineRows(people, classes)).toEqual(['teacher', 'idle', NO_COACH_ROW, 'manager'])
-    expect(classPieces(timelineRows(people, classes), [])).toEqual([[2, 2]])
+    const rows = timelineRows(people, classes)
+    expect(rows).toEqual(['teacher', 'owner', NO_COACH_ROW, 'idle', 'manager'])
+    expect(classPieces(rows, classes[1])).toEqual([[2, 2]])
+  })
+
+  it('draws a class nobody teaches across who’s in at its time and the “No coach in” row', () => {
+    // The manager is in for the coach's class and for the last one, which has no coach.
+    const people = [admin('manager', t(16)), coach('coach', t(16))]
+    const classes = [
+      { id: 'taught', coachIds: ['coach'], inIds: ['coach', 'manager'] },
+      { id: 'late', coachIds: [], inIds: ['manager'] },
+    ]
+    expect(classRows(classes[1])).toEqual(['manager', NO_COACH_ROW])
+    const rows = timelineRows(people, classes)
+    expect(rows).toEqual(['coach', 'manager', NO_COACH_ROW])
+    expect(classPieces(rows, classes[0])).toEqual([[0, 1]])
+    expect(classPieces(rows, classes[1])).toEqual([[1, 2]])
   })
 
   it('finds runs of adjacent rows', () => {
@@ -86,13 +139,31 @@ describe('the rows’ heights', () => {
     expect(h[0] + h[1] + h[2] - 12).toBeGreaterThanOrEqual(400)
   })
 
-  it('lays student cards out across a block’s width', () => {
-    expect(gridColumns(200, 188, 6)).toBe(1)
-    expect(gridColumns(390, 188, 6)).toBe(2)
-    expect(gridColumns(40, 188, 6)).toBe(1)
-    expect(gridHeight([54, 54, 40, 40], 2, 6)).toBe(54 + 6 + 40)
-    expect(gridHeight([54, 40, 54], 1, 6)).toBe(54 + 40 + 54 + 12)
-    expect(gridHeight([], 2, 6)).toBe(0)
+  it('stacks a block’s slots one under the other', () => {
+    expect(stackHeight(6, 56, 6)).toBe(6 * 56 + 5 * 6)
+    expect(stackHeight(1, 56, 6)).toBe(56)
+    expect(stackHeight(0, 56, 6)).toBe(0)
+  })
+})
+
+describe('a class block’s slots', () => {
+  const students = ['ana', 'ben', 'cal', 'dee']
+  const pending = (id: string) => ({ id, status: 'pending' })
+  const offered = (id: string) => ({ id, status: 'offered' })
+
+  it('puts a request in an open seat’s place: six seats, four taken, one request', () => {
+    expect(classSlots(students, 2, [pending('r1')])).toEqual({ cells: students, requests: [pending('r1')], open: 1 })
+  })
+
+  it('lists requests waiting on the office first, then those suggested to a family', () => {
+    const slots = classSlots(students, 2, [offered('s1'), pending('r1'), offered('s2'), pending('r2')])
+    expect(slots.requests.map((r) => r.id)).toEqual(['r1', 'r2', 's1', 's2'])
+    // More requests than open seats: they all show, and no open seat is left.
+    expect(slots.open).toBe(0)
+  })
+
+  it('keeps every seat open when nobody asks', () => {
+    expect(classSlots([], 6, [])).toEqual({ cells: [], requests: [], open: 6 })
   })
 })
 
