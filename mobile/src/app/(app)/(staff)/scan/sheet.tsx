@@ -240,7 +240,13 @@ export default function CompetitionSheetScreen() {
         <View style={styles.inset}>
           <SegmentedControl testID="sheet-kind" value={kind} options={RESULT_KINDS.map((k) => ({ value: k, label: RESULT_KIND_LABELS[k] }))} onChange={setKind} />
         </View>
-        <SwitchRow title="Decimal scoring" subtitle="Totals with tenths (587.4) rather than whole numbers (478)" value={decimal} onValueChange={setDecimal} testID="sheet-decimal" />
+        <SwitchRow
+          title="Totals with a decimal point"
+          subtitle="On for totals like 587.4, off for whole numbers like 478 (most junior matches). Set from the sheet: change it only if it's wrong."
+          value={decimal}
+          onValueChange={setDecimal}
+          testID="sheet-decimal"
+        />
       </ListSection>
 
       {rows.map((r, i) => {

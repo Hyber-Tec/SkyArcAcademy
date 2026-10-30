@@ -123,7 +123,7 @@ describe('competitions and positions in a report', () => {
     expect(series.map((p) => p.id)).toEqual(['p1'])
     expect(facts.evaluations.total).toBe(1)
     expect(facts.average).toBe(89)
-    expect(facts.competitions).toEqual([{ id: 'c1', dateKey: '2026-09-12', match: 'Lakeside Fall', position: 'standing', shots: 10, total: 99.5, innerTens: 3, decimal: true, wholePer10: 95 }])
+    expect(facts.competitions).toEqual([{ id: 'c1', dateKey: '2026-09-12', match: 'Lakeside Fall', position: 'standing', shots: 10, total: 99.5, innerTens: 3, decimal: true, wholePer10: 95, since: null }])
   })
 
   it('measures the change since the last report over the positions both periods shot', () => {
@@ -135,5 +135,24 @@ describe('competitions and positions in a report', () => {
     expect(reportFacts(now, [], both).facts.deltaAverage).toBe(2)
     // A report from before positions were kept: the averages, as before.
     expect(reportFacts(now, [], { reportId: 'r0', periodLabel: 'September 2026', average: 90, evaluations: 3 }).facts.deltaAverage).toBe(7)
+  })
+})
+
+describe('competitions in a report, each against the match before it', () => {
+  const match = (id: string, dateKey: string, position: 'kneeling' | 'prone', total: number) =>
+    ({ id, studentId: 's', studentName: 'S', source: 'sheet', kind: 'competition', position, dateKey, timeMin: null, shots: 20, total, wholeTotal: total, innerTens: 3, mpi: null, groupMm: null, series: [], sighters: 0, fileId: null, note: '', problems: [], sius: null, match: { name: `Match ${id}`, course: '3x20' } }) as unknown as Evaluation & { id: string }
+
+  it('compares with the same position’s last match, before the period too', () => {
+    const earlier = [match('a', '2026-09-12', 'kneeling', 160), match('b', '2026-09-12', 'prone', 180)]
+    const now = [match('c', '2026-10-24', 'kneeling', 170), match('d', '2026-10-30', 'kneeling', 174)]
+    const { facts } = reportFacts(now, [], null, earlier)
+    const byId = new Map(facts.competitions!.map((c) => [c.id, c]))
+    expect(byId.get('c')!.since).toEqual({ dateKey: '2026-09-12', match: 'Match a', wholePer10: 80 })
+    expect(byId.get('d')!.since).toEqual({ dateKey: '2026-10-24', match: 'Match c', wholePer10: 85 })
+  })
+
+  it('says nothing for the first match in a position', () => {
+    const { facts } = reportFacts([match('c', '2026-10-24', 'prone', 170)], [], null, [])
+    expect(facts.competitions![0].since).toBeNull()
   })
 })

@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { COL } from '@shared/paths'
 import type { FactsSession, PreviousReport } from '@shared/reports/facts'
 import type { ProgressReportDoc } from '@shared/reports/types'
-import type { Evaluation } from '@shared/shooting/evaluation'
+import { type Evaluation, kindOf } from '@shared/shooting/evaluation'
 import type { DateKey } from '@shared/time'
 import type { Member, Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -88,10 +88,11 @@ export async function loadComposeInputs(branchId: string, studentId: string, fro
     getDocs(query(branchCol(branchId, COL.sessions), where('studentId', '==', studentId), where('dateKey', '>=', from), where('dateKey', '<=', to))),
     getDocs(query(branchCol(branchId, COL.progressReports), where('studentId', '==', studentId))),
   ])
-  const evaluations = evalSnap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Evaluation) }))
-    .filter((e) => e.dateKey >= from && e.dateKey <= to && e.shots > 0)
+  const all = evalSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Evaluation) }))
+  const evaluations = all.filter((e) => e.dateKey >= from && e.dateKey <= to && e.shots > 0)
+  // Earlier matches, for each of the period's to be compared with the one before it.
+  const earlier = all.filter((e) => e.dateKey < from && e.shots > 0 && kindOf(e) === 'competition')
   const sessions = factsSessions(sessionSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Session) })))
   const reports = reportSnap.docs.map((d) => ({ id: d.id, ...(d.data() as ProgressReportDoc) }))
-  return { evaluations, sessions, previous: previousReport(reports, from) }
+  return { evaluations, sessions, previous: previousReport(reports, from), earlier }
 }

@@ -1,6 +1,6 @@
 import type { EvaluationPoint } from "@shared/reports/types";
 import { type Evaluation, pointOf } from "@shared/shooting/evaluation";
-import { replayShots } from "@shared/shooting/replay";
+import { replayShots, showsTenths } from "@shared/shooting/replay";
 import type { ShotPoint } from "@shared/shooting/target";
 import { monthDay } from "@/features/schedule/format";
 
@@ -28,7 +28,7 @@ export interface PlayShot {
 
 /** One result's shots (SIUS series by series, a paper card bull by bull), with the running total. */
 export function evaluationShots(e: Pick<Evaluation, "source" | "series">): PlayShot[] {
-  const decimal = e.source === "sius";
+  const decimal = showsTenths(e);
   const shots = replayShots(e);
   return shots.map((s) => ({
     n: s.n,

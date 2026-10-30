@@ -105,6 +105,11 @@ export interface CompetitionFact {
   innerTens: number | null
   decimal: boolean
   wholePer10: number
+  /**
+   * The same position's match before it (the owner, 2026-10-29: "compare a competition with the one a month before, as
+   * we compare scores"), from before the period too; null for the first. Missing on reports made before.
+   */
+  since?: { dateKey: DateKey; match: string; wholePer10: number } | null
 }
 
 export interface ReportGoal {

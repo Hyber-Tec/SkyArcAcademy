@@ -29,6 +29,7 @@ import { CompareCard } from "@/features/scores/CompareCard";
 import { deleteScoreMessage, scoreTitle } from "@/features/scores/format";
 import { ScoreHead, scoreFacts, useCardPicture } from "@/features/scores/ScoreParts";
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
+import { MatchCard, matchResults } from "@/features/scores/MatchCard";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
@@ -215,7 +216,10 @@ export default function ScoreScreen() {
           facts={scoreFacts(preview, totals?.missing ?? 0)}
         />
 
-        {canReplay(preview) ? (
+        {/* A competition from its sheet: the whole match, series by series, each played on its own. */}
+        {e.source === "sheet" ? <MatchCard evaluation={{ ...preview, id: e.id }} results={matchResults({ ...preview, id: e.id }, others.data)} testID="score-match" /> : null}
+
+        {canReplay(preview) && e.source !== "sheet" ? (
           <Card style={styles.center}>
             <ShotReplay evaluation={preview} color={POSITION_COLORS[draft.position]} size={target} onStep={sius ? setCurrent : undefined} />
           </Card>
