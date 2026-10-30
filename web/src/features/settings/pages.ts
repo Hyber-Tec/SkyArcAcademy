@@ -72,7 +72,7 @@ export const PAGES: SettingsPageDef[] = [
   {
     key: 'pay',
     title: 'Pay & time clock',
-    description: 'When a coach’s paid time starts and ends, the pay periods, and the kiosk. Each person’s rate is on Employees → Pay Rates.',
+    description: 'When a coach’s paid time starts and ends, the pay periods, and the kiosk. Each person’s rate is on their page in Employees → Directory.',
     home: 'day',
     groups: [
       { title: 'Paid time', items: [b('payRule'), f('timeClock.arrivalMinutes'), f('timeClock.payEndsAtLastClass'), f('timeClock.autoClockOut.enabled'), f('timeClock.autoClockOut.localTime')] },

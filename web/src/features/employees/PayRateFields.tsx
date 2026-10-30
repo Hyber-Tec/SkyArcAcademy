@@ -15,7 +15,7 @@ export function PayRateFields({ role, value, onChange, idPrefix }: { role: Staff
     return (
       <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
         <LuCircleAlert className="mt-0.5 size-4 shrink-0" />
-        Someone with access to Pay Rates needs to set their hourly rate before payroll.
+        Someone who can see pay rates needs to set their hourly rate on their page (Employees → Directory) before payroll.
       </p>
     )
   }
@@ -33,7 +33,7 @@ export function PayRateFields({ role, value, onChange, idPrefix }: { role: Staff
         </InputGroupAddon>
       </InputGroup>
       <FieldDescription>
-        {rateHelp(role)} {role === 'owner' ? 'You can set it later on Pay Rates.' : 'Required, so their time is never paid $0. You can change it later on Pay Rates.'}
+        {rateHelp(role)} {role === 'owner' ? 'You can set it later on their page in Employees → Directory.' : 'Required, so their time is never paid $0. You can change it later on their page in Employees → Directory.'}
       </FieldDescription>
     </Field>
   )

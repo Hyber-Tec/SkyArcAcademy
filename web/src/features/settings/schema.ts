@@ -158,7 +158,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     key: 'payroll',
     title: 'Pay & time clock',
-    description: 'When paid time starts and ends, the automatic clock-out, pay periods and the kiosk. Everyone is paid their hourly rate (Employees → Pay Rates).',
+    description: 'When paid time starts and ends, the automatic clock-out, pay periods and the kiosk. Everyone is paid their hourly rate (on their page in Employees → Directory).',
     fields: [
       {
         kind: 'number',
