@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { CalendarClock, ChevronRight, CircleCheck, type LucideIcon, Megaphone } from "lucide-react-native";
+import { CalendarClock, ChevronRight, CircleCheck, ListTodo, type LucideIcon, Megaphone } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SectionTitle } from "@/components/SectionTitle";
@@ -40,7 +40,7 @@ export function ToDoCard() {
 
   return (
     <View style={styles.section} testID="today-todo">
-      <SectionTitle title="To do" detail={total ? String(total) : undefined} />
+      <SectionTitle title="To do" icon={ListTodo} tone="amber" detail={total ? String(total) : undefined} />
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {t.loading ? (
           <View style={styles.head} testID="today-todo-loading">

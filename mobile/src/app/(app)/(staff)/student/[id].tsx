@@ -1,11 +1,12 @@
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { CalendarDays, ExternalLink, FileImage, FileText, Folder, Trophy, UserRoundX } from "lucide-react-native";
+import { CalendarDays, ExternalLink, HardDrive, Info, Target, Trophy, UserRoundX, Users } from "lucide-react-native";
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { categoryOf } from "@shared/drive/files";
 import { totalWithTens } from "@shared/shooting/evaluation";
 import { formatBytes } from "@shared/drive/model";
 import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel, parentLabel } from "@shared/people";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
+import type { SessionStatus } from "@shared/settings/defaults";
 import { formatDateKey, formatInstant } from "@shared/time";
 import { showActions } from "@/components/ActionSheet";
 import { Avatar } from "@/components/Avatar";
@@ -16,7 +17,7 @@ import { confirmAsync } from "@/components/Confirm";
 import { ContactButtons } from "@/components/ContactButtons";
 import { EmptyState } from "@/components/EmptyState";
 import { FactRow } from "@/components/FactRow";
-import { ListRow, ListSection, RowIcon } from "@/components/List";
+import { ListRow, ListSection, RowIcon, ToneIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { Skeleton } from "@/components/Skeleton";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
@@ -25,12 +26,13 @@ import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useSt
 import { timeRange } from "@/features/schedule/format";
 import { deleteEvaluation } from "@/features/scores/api";
 import { ResultKindChip } from "@/features/scores/kinds";
-import { deleteScoreMessage, scorePer10, scoreTitle } from "@/features/scores/format";
+import { FileGlyph } from "@/features/drive/DriveIcons";
+import { deleteScoreMessage, scorePer10, scoreTitle, scoreTones } from "@/features/scores/format";
 import { studentLine } from "@/features/students/format";
 import { openWebsite } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
-import { radius, space, useColors } from "@/theme";
+import { radius, space, useColors, useStatusColors } from "@/theme";
 
 const SCORES_SHOWN = 6;
 const FILES_SHOWN = 8;
@@ -53,6 +55,7 @@ export default function StudentScreen() {
   const classes = useStudentClasses(id ?? null, today);
   const scores = useStudentEvaluations(id ?? null);
   const files = useStudentFiles(id ?? null);
+  const tones = useMemo(() => scoreTones(scores.data), [scores.data]);
   const s = student.data;
 
   if (student.loading) {
@@ -103,7 +106,7 @@ export default function StudentScreen() {
         </Card>
 
         {isAdmin ? (
-          <ListSection title="Family" testID="student-family">
+          <ListSection title="Family" icon={Users} tone="green" testID="student-family">
             {/* A parent's name is optional (F3): "Avery's parent", as the website says it, with their email under it. */}
             {parents.map((x, i) => (
               <ListRow
@@ -129,12 +132,12 @@ export default function StudentScreen() {
           </ListSection>
         ) : null}
 
-        <ListSection title="Classes" testID="student-classes">
+        <ListSection title="Classes" icon={CalendarDays} tone="red" testID="student-classes">
           {next.map((c) => (
             <ListRow
               key={c.id}
               title={`${formatDateKey(c.dateKey, c.dateKey === today ? "monthDay" : "weekdayMedium")}${c.dateKey === today ? " (today)" : ""} · ${timeRange(c.startMin, c.endMin, hour12)}`}
-              subtitle={[SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
+              subtitle={<StatusLine status={c.status} rest={[c.note?.trim()]} />}
               onPress={c.classId ? () => router.push({ pathname: "/class/[id]", params: { id: c.classId } }) : undefined}
               testID={`student-class-${c.id}`}
             />
@@ -144,17 +147,13 @@ export default function StudentScreen() {
             <ListRow
               key={c.id}
               title={`${formatDateKey(c.dateKey, "weekdayMedium")} · ${timeRange(c.startMin, c.endMin, hour12)}`}
-              subtitle={["Last time", SESSION_STATUS_LABELS[c.status], c.note?.trim()].filter(Boolean).join(" · ")}
+              subtitle={<StatusLine lead="Last time" status={c.status} rest={[c.note?.trim()]} />}
               onPress={c.classId ? () => router.push({ pathname: "/class/[id]", params: { id: c.classId } }) : undefined}
               testID={`student-class-${c.id}`}
             />
           ))}
           <ListRow
-            icon={
-              <RowIcon>
-                <CalendarDays size={17} color={colors.foreground} />
-              </RowIcon>
-            }
+            icon={<ToneIcon icon={CalendarDays} tone="red" />}
             title="Calendar"
             subtitle="Every class, month by month"
             onPress={() => router.push({ pathname: "/student/calendar", params: { id: s.id } })}
@@ -164,6 +163,8 @@ export default function StudentScreen() {
 
         <ListSection
           title="Scores"
+          icon={Target}
+          tone="blue"
           detail={scores.data.length > SCORES_SHOWN ? `Latest ${SCORES_SHOWN} of ${scores.data.length}` : undefined}
           footer={scores.data.length ? "Swipe a score to the left to delete it, or hold it for more." : undefined}
           testID="student-scores"
@@ -199,7 +200,9 @@ export default function StudentScreen() {
                   subtitle={subtitle}
                   right={
                     <View style={styles.per10}>
-                      <T variant="label">{scorePer10(e) ?? "–"}</T>
+                      <T variant="label" style={tones.get(e.id) === "high" ? { color: colors.success } : tones.get(e.id) === "low" ? { color: colors.warning } : undefined}>
+                        {scorePer10(e) ?? "–"}
+                      </T>
                       <T variant="tiny" tone="muted">
                         per 10
                       </T>
@@ -212,7 +215,7 @@ export default function StudentScreen() {
           })}
           {!scores.loading && !scores.data.length ? <ListRow title="No scores yet" subtitle="Scan a paper target, or add SIUS results on the website." /> : null}
           <ListRow
-            icon={<Trophy size={18} color={colors.foreground} />}
+            icon={<ToneIcon icon={Trophy} tone="amber" />}
             title="Add a competition"
             subtitle="From a photo of the results sheet"
             onPress={() => router.push({ pathname: "/scan/sheet", params: { studentId: s.id } })}
@@ -220,16 +223,15 @@ export default function StudentScreen() {
           />
         </ListSection>
 
-        <ListSection title="Drive" detail={files.data.length > FILES_SHOWN ? `Newest ${FILES_SHOWN} of ${files.data.length}` : undefined} testID="student-files">
+        <ListSection title="Drive" icon={HardDrive} tone="amber" detail={files.data.length > FILES_SHOWN ? `Newest ${FILES_SHOWN} of ${files.data.length}` : undefined} testID="student-files">
           {files.data.slice(0, FILES_SHOWN).map((f) => {
-            const Icon = categoryOf(f.kind) === "image" ? FileImage : categoryOf(f.kind) === "pdf" ? FileText : Folder;
             const when = (f.uploadedAt as { toMillis?: () => number } | null)?.toMillis?.();
             return (
               <ListRow
                 key={f.id}
                 icon={
                   <RowIcon>
-                    <Icon size={17} color={colors.foreground} />
+                    <FileGlyph kind={f.kind} size={18} />
                   </RowIcon>
                 }
                 title={f.name}
@@ -243,7 +245,7 @@ export default function StudentScreen() {
         </ListSection>
 
         {/* The website's Info tab, the part coaches see: the student's own record (contacts and family stay the office's). */}
-        <ListSection title="Info" footer={isAdmin ? "Coaches see these too. Change them on the website." : "What admins have on file for this student."} testID="student-info">
+        <ListSection title="Info" icon={Info} footer={isAdmin ? "Coaches see these too. Change them on the website." : "What admins have on file for this student."} testID="student-info">
           <FactRow label="First name" value={s.firstName || "—"} />
           <FactRow label="Last name" value={s.lastName || "—"} />
           <FactRow label="Grade" value={s.grade ? gradeLabel(s.grade) : "—"} />
@@ -262,6 +264,21 @@ export default function StudentScreen() {
         </Button>
       </Screen>
     </>
+  );
+}
+
+/** A class row's line: its status in the status's colour (here blue, pending amber, canceled red), then the rest. */
+function StatusLine({ lead, status, rest }: { lead?: string; status: SessionStatus; rest: (string | undefined)[] }) {
+  const tones = useStatusColors();
+  const after = rest.filter(Boolean).join(" · ");
+  return (
+    <T variant="small" tone="muted" numberOfLines={2}>
+      {lead ? `${lead} · ` : ""}
+      <T variant="small" style={{ color: tones[status].text, fontWeight: "600" }}>
+        {SESSION_STATUS_LABELS[status]}
+      </T>
+      {after ? ` · ${after}` : ""}
+    </T>
   );
 }
 

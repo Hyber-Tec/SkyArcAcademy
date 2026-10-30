@@ -42,7 +42,7 @@ function dayList(days: DateKey[], max = 3): string {
 /**
  * The coach's availability, as clean as the owner's True Education design: months stacked vertically and scrolled
  * like the phone's Calendar (permanent rule), each day only its number, in a light green circle when the coach is
- * available, struck through in grey when they marked it not available. Tap a day to set it (the day sheet). The top
+ * available, in light red when they marked it not available. Tap a day to set it (the day sheet). The top
  * says the academy's rule, which days in the notice window aren't answered yet (one tap marks them all not available),
  * and what the marks mean; Today and the ⋯ menu (Copy last week, Repeat weekly) sit by the title. A day opens as a sheet
  * (`/availability-day?date=…`), which Home's to-do opens directly too.

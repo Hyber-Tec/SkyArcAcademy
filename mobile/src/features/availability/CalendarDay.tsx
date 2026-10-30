@@ -15,8 +15,14 @@ export interface DayLook {
   times: string;
 }
 
-/** Available days' green: the schedule's confirmed green, a little stronger on black so it reads beside the grey. */
+/** Available days' green: the schedule's confirmed green, a little stronger on black so it reads beside the red. */
 const GREEN_ON_DARK = "#22c55e40";
+/**
+ * Not available days' red (the owner, 2026-10-29: a grey day couldn't be told from a day not set yet): the schedule's
+ * canceled red, its fill and its number, a little stronger on black.
+ */
+const RED = { fill: "#fee2e2", text: "#b91c1c" };
+const RED_ON_DARK = { fill: "#ef444447", text: "#fecaca" };
 
 /** The circle's size at most, and the room under it for the "not set yet" dot. */
 const CIRCLE = 42;
@@ -24,7 +30,7 @@ const DOT_ROOM = 10;
 
 /**
  * One day of the availability calendar, as clean as the owner's True Education design: only its number, in a light
- * green circle when the coach is available, a grey one when they marked it not available, plain when nothing is set
+ * green circle when the coach is available, a light red one when they marked it not available, plain when nothing is set
  * (with an amber dot when it's inside the notice window and still to answer). Closed and past days are light grey (no
  * circle); today's number is the academy's red. A tap opens the day (closed days say so instead).
  */
@@ -43,13 +49,14 @@ export const CalendarDay = memo(function CalendarDay({
 }) {
   const colors = useColors();
   const status = useStatusColors();
-  const green = useIsDark() ? GREEN_ON_DARK : status.confirmed.bg;
+  const dark = useIsDark();
+  const green = dark ? GREEN_ON_DARK : status.confirmed.bg;
+  const red = dark ? RED_ON_DARK : RED;
   const { mark, isToday, isPast, needs } = look;
   const size = Math.max(28, Math.min(CIRCLE, width - 6, height - DOT_ROOM - 4));
-  // Not available is a grey that shows on the page's grey (the muted one is the page's own colour).
-  const fill = mark === "available" ? green : mark === "unavailable" ? colors.border : "transparent";
+  const fill = mark === "available" ? green : mark === "unavailable" ? red.fill : "transparent";
   const faded = isPast || mark === "closed";
-  const color = isToday ? colors.brandText : mark === "unavailable" ? colors.mutedForeground : colors.foreground;
+  const color = isToday ? colors.brandText : mark === "unavailable" ? red.text : colors.foreground;
   const state = mark === "closed" ? "closed" : mark === "available" ? `available ${look.times}` : mark === "unavailable" ? "not available" : needs ? "not set yet" : "not set";
   return (
     <Pressable
@@ -75,11 +82,10 @@ export const CalendarDay = memo(function CalendarDay({
 export function LegendMark({ mark }: { mark: "available" | "unavailable" | "needs" }) {
   const colors = useColors();
   const status = useStatusColors();
-  const green = useIsDark() ? GREEN_ON_DARK : status.confirmed.bg;
+  const dark = useIsDark();
+  const green = dark ? GREEN_ON_DARK : status.confirmed.bg;
   if (mark === "needs") return <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />;
-  return (
-    <View style={[styles.legendCircle, { backgroundColor: mark === "available" ? green : colors.border }]} />
-  );
+  return <View style={[styles.legendCircle, { backgroundColor: mark === "available" ? green : (dark ? RED_ON_DARK : RED).fill }]} />;
 }
 
 const styles = StyleSheet.create({

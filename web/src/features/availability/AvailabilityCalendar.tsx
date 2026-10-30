@@ -656,7 +656,7 @@ export function AvailabilityCalendar({
                 {extra > 0 ? <div className="text-center text-[11px] text-muted-foreground">+{extra} more</div> : null}
                 {mark === 'unavailable' ? (
                   <div
-                    className="flex flex-1 items-center justify-center gap-1 rounded-md border border-dashed border-muted-foreground/30 bg-muted/50 px-0.5 py-1.5 text-center text-[10.5px] leading-tight font-medium text-balance text-muted-foreground sm:rounded-lg sm:text-xs"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-md border border-red-200 bg-red-50 px-0.5 py-1.5 text-center text-[10.5px] leading-tight font-semibold text-balance text-red-700 sm:rounded-lg sm:text-xs dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
                     data-testid="availability-not-available"
                   >
                     <LuBan className="hidden size-3.5 shrink-0 sm:block" aria-hidden /> Not available

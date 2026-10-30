@@ -1,21 +1,40 @@
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, type LucideIcon } from "lucide-react-native";
 import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
-import { radius, space, useColors } from "@/theme";
+import { type Accent, radius, space, useAccents, useColors } from "@/theme";
 
 /**
  * A group of rows under a small title, as in the phone's own Settings. `detail` sits at the right of the title (a
- * count, a total); `footer` below the group.
+ * count, a total); `footer` below the group. With `icon`, the title shows it and takes its `tone` (the accents that tell
+ * a page's parts apart: theme/index.ts).
  */
-export function ListSection({ title, detail, footer, children, testID }: { title?: string; detail?: ReactNode; footer?: ReactNode; children: ReactNode; testID?: string }) {
+export function ListSection({
+  title,
+  detail,
+  footer,
+  icon: Icon,
+  tone = "grey",
+  children,
+  testID,
+}: {
+  title?: string;
+  detail?: ReactNode;
+  footer?: ReactNode;
+  icon?: LucideIcon;
+  tone?: Accent;
+  children: ReactNode;
+  testID?: string;
+}) {
   const colors = useColors();
+  const accent = useAccents()[tone];
   const rows = Children.toArray(children).filter(isValidElement) as ReactElement<{ divider?: boolean }>[];
   return (
     <View style={styles.section} testID={testID}>
       {(title || detail) && (
         <View style={styles.head}>
-          <T variant="small" tone="muted" style={styles.title}>
+          {Icon ? <Icon size={14} color={accent.fg} strokeWidth={2.4} style={styles.headIcon} /> : null}
+          <T variant="small" tone="muted" style={[styles.title, Icon && { color: accent.fg }]}>
             {title?.toUpperCase()}
           </T>
           {typeof detail === "string" ? (
@@ -126,9 +145,20 @@ export function RowIcon({ children, color }: { children: ReactNode; color?: stri
   return <View style={[styles.rowIcon, { backgroundColor: color ?? colors.secondary }]}>{children}</View>;
 }
 
+/** A row's icon in one of the app's accents: the icon in its colour on its tint. */
+export function ToneIcon({ icon: Icon, tone, size = 17 }: { icon: LucideIcon; tone: Accent; size?: number }) {
+  const accent = useAccents()[tone];
+  return (
+    <RowIcon color={accent.bg}>
+      <Icon size={size} color={accent.fg} />
+    </RowIcon>
+  );
+}
+
 const styles = StyleSheet.create({
   section: { gap: space.sm },
-  head: { flexDirection: "row", alignItems: "baseline", paddingHorizontal: space.xs },
+  head: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: space.xs },
+  headIcon: { marginTop: -1 },
   title: { flex: 1, fontWeight: "600", letterSpacing: 0.5 },
   detail: { fontWeight: "600", fontVariant: ["tabular-nums"] },
   group: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },

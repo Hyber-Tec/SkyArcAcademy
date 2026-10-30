@@ -1,13 +1,13 @@
 import { personalBestIds } from "@shared/shooting/progress";
 import { type DateKey, addDays } from "@shared/time";
 import { router } from "expo-router";
-import { CalendarX2, Target } from "lucide-react-native";
+import { CalendarDays, CalendarX2, Megaphone, Target } from "lucide-react-native";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { SkyArcLockup } from "@/components/brand/SkyArc";
 import { Card } from "@/components/Card";
 import { DemoBadge } from "@/components/DemoBadge";
-import { ListRow, ListSection, RowIcon } from "@/components/List";
+import { ListRow, ListSection, ToneIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
 import { SkeletonCards } from "@/components/Skeleton";
@@ -22,6 +22,7 @@ import { useFamilyNews, useIsNewNews } from "@/features/family/news";
 import { InboxBell } from "@/features/notifications/InboxBell";
 import { NewsRow } from "@/features/family/NewsRow";
 import { ScoreRow } from "@/features/family/ScoreRow";
+import { scoreTones } from "@/features/scores/format";
 import { familyClassId, familyClasses } from "@/features/family/classes";
 import { longDay } from "@/features/schedule/format";
 import { useBranch } from "@/state/BranchProvider";
@@ -73,6 +74,8 @@ export default function FamilyHomeScreen() {
   const nothingFor = family.shown.filter((id) => !nextOf.has(id));
 
   // The latest scores of each student shown (newest first), and which were a personal best when they were shot.
+  // Each result's number against its student's usual in that position.
+  const tones = useMemo(() => scoreTones(scores.data), [scores.data]);
   const latestScores = useMemo(() => {
     const each = family.shown.length > 1 ? LATEST_EACH : LATEST_ONE;
     const rows: EvaluationDoc[] = family.shown.flatMap((id) => scores.data.filter((e) => e.studentId === id).slice(0, each));
@@ -120,7 +123,7 @@ export default function FamilyHomeScreen() {
           <ChildSwitcher />
 
           <View style={styles.section}>
-            <SectionTitle title={nextGroups.length > 1 ? "Next classes" : "Next class"} />
+            <SectionTitle title={nextGroups.length > 1 ? "Next classes" : "Next class"} icon={CalendarDays} tone="red" />
             {sessions.loading ? (
               <SkeletonCards count={1} height={150} />
             ) : sessions.error ? (
@@ -154,7 +157,7 @@ export default function FamilyHomeScreen() {
 
           <AcademyNews today={today} />
 
-          <ListSection title="Latest scores" testID="family-home-scores">
+          <ListSection title="Latest scores" icon={Target} tone="blue" testID="family-home-scores">
             {scores.loading ? (
               <ListRow title="Loading scores…" />
             ) : latestScores.rows.length ? (
@@ -165,6 +168,7 @@ export default function FamilyHomeScreen() {
                     evaluation={e}
                     name={parent && family.shown.length > 1 ? family.firstName(e.studentId, e.studentName) : null}
                     best={latestScores.best.has(e.id)}
+                    tone={tones.get(e.id)}
                     onPress={() => router.push({ pathname: "/score/[id]", params: { id: e.id } })}
                     testID={`family-home-score-${e.id}`}
                   />
@@ -173,11 +177,7 @@ export default function FamilyHomeScreen() {
                   ? [
                       <ListRow
                         key="none"
-                        icon={
-                          <RowIcon>
-                            <Target size={17} color={colors.mutedForeground} />
-                          </RowIcon>
-                        }
+                        icon={<ToneIcon icon={Target} tone="blue" />}
                         title={`No scores yet for ${namesList(latestScores.none.map((id) => family.firstName(id)))}`}
                         testID="family-home-scores-none"
                       />,
@@ -187,11 +187,7 @@ export default function FamilyHomeScreen() {
               ]
             ) : (
               <ListRow
-                icon={
-                  <RowIcon>
-                    <Target size={17} color={colors.mutedForeground} />
-                  </RowIcon>
-                }
+                icon={<ToneIcon icon={Target} tone="blue" />}
                 title="No scores yet"
                 subtitle="Results show here after classes, once the coach adds them."
                 testID="family-home-no-scores"
@@ -216,7 +212,7 @@ function AcademyNews({ today }: { today: DateKey }) {
   const fresh = news.data.filter((a) => isNew(a.id)).length;
   const shown = news.data.slice(0, LATEST_NEWS);
   return (
-    <ListSection title="From the academy" detail={fresh ? `${fresh} new` : undefined} testID="family-home-news">
+    <ListSection title="From the academy" icon={Megaphone} tone="teal" detail={fresh ? `${fresh} new` : undefined} testID="family-home-news">
       {[
         ...shown.map((a) => (
           <NewsRow key={a.id} post={a} isNew={isNew(a.id)} today={today} onPress={() => router.push({ pathname: "/news/[id]", params: { id: a.id } })} testID={`family-home-news-${a.id}`} />
