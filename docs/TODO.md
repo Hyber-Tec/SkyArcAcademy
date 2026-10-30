@@ -23,8 +23,7 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
    moves its classes around the day).
 5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
-   together; both get the demo academy for the demo logins, the schedule by Day or Week with its events (#41), and the
-   marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
+   together; both get the demo academy for the demo logins, the schedule by Day or Week (#41), and the marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
@@ -34,11 +33,18 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
      blank contract, nicknames, the academy owner's email. No rush.
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
+8. **AI for report text** (`docs/DECISIONS.md` §26): you're the super admin. On the website, **Settings → AI**:
+   - **Models:** Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month). Gemini is cheaper, but its
+     API terms bar apps that under-18s use; check them before choosing it.
+   - **Keys:** add the chosen provider's API key (the page links where to make one), then **Test**, turn Report text
+     **on** and **Save**. Then a draft report → **Write with AI**.
 
 ## Product questions waiting for the owner
 
-- **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0. Owners in both academies could
-  also get the website's Demo data switch on the phone, if wanted.
+- **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0, and a super admin switches to it
+  with View the app as (§27). Other owners in both academies could get a switch too, if wanted.
+- **AI and families:** should a shared report say its words were drafted with AI and checked by the academy? Today it
+  doesn't (only staff see it). Anthropic's guidance for apps that serve minors asks to tell users when AI is involved.
 - **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
   recorded: languages, push, the stores; the public website is live since 2026-10-20, `docs/DECISIONS.md` §18):
   - **Families cancel, and request a class or a makeup in an open seat:** the second meeting's `S1`–`S3`

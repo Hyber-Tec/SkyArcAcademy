@@ -22,6 +22,15 @@ with the same password.
 Until 2026-10-26 there were four sample people (an office, a coach, a parent and a student, made by
 `npx tsx scripts/review-logins.ts`); their passwords stay in the same file, for if they're made again.
 
+**Before the next submission (1.1.0), two changes to the notes below** (2026-10-29), keeping them under 4,000
+characters:
+- The last line says "No payment, advertising or AI services". The website can now draft a progress report's words with
+  an AI service, on Sky Arc's server, for the academy's staff to check before sharing (`docs/DECISIONS.md` §26): say
+  "No payment or advertising services. Progress reports' text can be drafted on our server by an AI service, then
+  checked by the academy's staff before families see it."
+- "View the app as" is only for HyberTec's super admins (`docs/DECISIONS.md` §27); the review login isn't one, so it
+  doesn't see it. No line is needed, but say so if Apple asks about features the reviewer can't see.
+
 ## Apple: App Review Information
 
 - **Sign-in required:** Yes. **User name:** the office email. **Password:** the office password.

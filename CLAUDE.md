@@ -22,6 +22,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 ### AI naming (permanent rule)
 - The app **never names the AI model or provider** in labels, settings, messages, or errors. It is always **"AI."**
+  The one exception is **Settings → AI**, which only super admins see: it names the providers and models they choose
+  from (`docs/DECISIONS.md` §26).
 
 ### UI
 - **shadcn/ui** components.

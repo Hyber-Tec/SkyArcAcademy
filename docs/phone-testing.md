@@ -7,8 +7,8 @@ one checklist covers both. When something looks wrong, tell Claude Code (the las
 ## 1. Get the newest app
 
 **iPhone, through TestFlight:** open **TestFlight** → **Sky Arc** → **Update** (or **Install**). The newest build is
-**1.1.0 (6)**; it reaches the HyberTec group by itself once Apple has processed it (up to about half an hour after
-the upload). In the app, **More → Version** shows `1.1.0 (6)`.
+**1.1.0 (8)**; it reaches the HyberTec group by itself once Apple has processed it (up to about half an hour after
+the upload). In the app, **More → Version** shows `1.1.0 (8)`.
 
 **Android, over the cable** (Google Play and its review of 1.0.0 stay untouched):
 
@@ -36,9 +36,12 @@ nothing you do there reaches a real family.
 | A student (Seoyeon Lim) | `seoyeon.lim@skyarc-sample.test` | The same tabs, for the student's own classes |
 
 - **The password** is the demo logins' one password, in `docs/internal/` on the Mac mini. It's never written in git.
-- **To change who you are:** More → **Sign out**, then sign in with another email.
-- **Your own account shows the real academy** (the phone has no demo switch). Use it only to look, or for the
-  manager's real cards (section 5): anything it changes notifies real families.
+- **To change who you are:** More → **Sign out**, then sign in with another email. Or, signed in with your own account
+  (a super admin): More → **View the app as…** → the academy or **Demo** → anyone in it. The app shows their tabs with
+  "As Jiyeon" beside each title; tap that, then **Yourself**, to go back. Only the view changes: what you do is done
+  with your own access, and recorded as yours.
+- **Your own account shows the real academy**, unless you view the demo through View the app as. Use the real
+  academy only to look, or for the manager's real cards (section 5): anything it changes notifies real families.
 - **Never use `paige.sutton@skyarc-sample.test`:** it's the App Store's review login, and its password must not change
   while the stores review the app.
 - **Don't delete an account** (More → Delete my account) unless you're testing exactly that: the demo login is gone
@@ -54,7 +57,8 @@ logins; your own account switches to the demo from the account menu, **Demo data
 
 - **SIUS PDFs:** drag them into the Drive; the app reads each one and files it in the student's folder.
 - A class itself (its time, seats and note), Settings, payroll and pay rates, people and access, contracts, writing
-  posts, and making progress reports.
+  posts, and making progress reports (**Write with AI** on a draft, once a super admin sets AI up in **Settings → AI**:
+  keys, models, spend and the log of requests).
 
 ## 4. What to check
 
@@ -67,6 +71,10 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
 - [ ] More → **Appearance**: light, dark, and the phone's setting.
 - [ ] News: write a post on the website (in the demo) with headings, a list, a link and a picture, then open it on the
       phone: it looks the same (`M8`).
+- [ ] **Colour:** each page's parts have their colour (classes red, scores blue, the Drive and competitions amber,
+      reports violet, news teal, people green), in light and dark.
+- [ ] **View the app as** (your own account only): an admin, a coach, a parent, a student, in the academy and the demo;
+      the badge; **Yourself**.
 
 **A parent and a student** (`M1`)
 - [ ] **Classes:** the list and the month (the whole page; a tap on a day opens its sheet from the bottom: its classes or
@@ -99,12 +107,15 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
       and Evaluation.
 - [ ] A student's **⋯**: **Move to another class** that week, and **Take out of this class** (it asks first).
 - [ ] **Students:** search by name, and by a nickname ("Goes by …").
-- [ ] A student's page: family, classes, calendar, scores, files.
-- [ ] **Drive:** folders, moving a file, a new folder; the Contracts folder (the office's only).
+- [ ] A student's page: family, classes (each status in its colour), calendar, scores (a score green above the student's
+      usual in that position, amber below), files with their kind's icon.
+- [ ] **Drive:** folders, moving a file, a new folder; each student's **Contracts** folder inside their folder (owners
+      and admins only; a signed contract lands there).
 
 **A coach** (`M7`)
 - [ ] Home: today's classes and their students; hours and pay are in More → **Payroll**.
-- [ ] **Availability:** set a day more than 7 days ahead (times, not available, repeat every week).
+- [ ] **Availability:** set a day more than 7 days ahead (times, not available, repeat every week). A day marked not
+      available is **red**; a day not set yet stays plain.
 - [ ] Inside the 7 days: **Add time** only, with **Undo** for 10 seconds; removing time isn't offered.
 - [ ] Marking a day not available when you're the only coach in: it asks first.
 - [ ] Schedule: Day and Week, who's in with their clock-ins, a class's sheet.
@@ -113,8 +124,9 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
 **Scan: a paper card** (the office and coaches; `M6`, `P1`)
 - [ ] The Scan tab: the paper card first (**Take a photo**, **Choose from Photos**), then **Add a competition result**,
       the latest cards, and the tips folded at the bottom.
-- [ ] Lay the card flat on its own, on any desk (white, wood or black), nothing over the bulls; photograph it from
-      straight above, filling the frame.
+- [ ] Lay the card flat on any desk (white, wood or black, or on a pile of cards), nothing over the bulls; photograph it
+      from above, filling the frame. A slant, a shadow over part of the card, or other cards' bulls showing beside it
+      no longer stop it ("the card's bulls didn't line up").
 - [ ] The total, the bulls worth a look (orange), and the card with a circle on each hole.
 - [ ] A bull up close: the green circle hugs the hole, and it says how big the hole is ("hole 4.2 mm across").
 - [ ] Drag a shot: its score follows, at that hole's size. **Remove** a shot, and **Type the score instead**.
@@ -123,7 +135,12 @@ Tick them off as you go (on GitHub's page they're boxes). The section letters ar
 - [ ] **What it was:** Practice, Competition or Evaluation; the student (search by a nickname too), position and date;
       **Save**.
 - [ ] Open the saved score (a student's page → Scores): change its note and save; its kind and written score stay.
-- [ ] **Add a competition:** photograph a results sheet; check what it read (the total, inner tens), then save.
+- [ ] **Add a competition:** photograph a results sheet; check what it read (the total, inner tens; "Totals with a
+      decimal point" is set from the sheet), then save.
+- [ ] Open the saved competition (a student's page → Scores): **the match** (its total and inner tens, each position's),
+      then each series of ten ("K1–K10 · 71 - 1"); tap a series: its shots (inner tens starred) and the replay on the
+      target (each shot's place is read from the sheet's own target pictures: "Every shot's place found on the sheet's
+      targets" when you add it). The website shows the same under the result.
 
 ## 5. The manager's real cards
 
