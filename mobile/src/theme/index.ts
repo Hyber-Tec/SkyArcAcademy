@@ -116,6 +116,37 @@ export function useStatusColors(): typeof STATUS_LIGHT {
   return useColorScheme() === "dark" ? STATUS_DARK : STATUS_LIGHT;
 }
 
+/**
+ * Accents that tell the app's places apart at a glance (the owner, 2026-10-29: "a little more colour, so we can tell
+ * what we're looking at"): classes and calendars red, scores blue, competitions and folders amber, reports violet, news
+ * teal, people green. An icon takes its accent on the accent's tint; text stays the foreground.
+ */
+const ACCENTS_LIGHT = {
+  red: { fg: "#dc2626", bg: "#fee2e2" },
+  blue: { fg: "#2563eb", bg: "#dbeafe" },
+  amber: { fg: "#d97706", bg: "#fef3c7" },
+  violet: { fg: "#7c3aed", bg: "#ede9fe" },
+  teal: { fg: "#0d9488", bg: "#ccfbf1" },
+  green: { fg: "#16a34a", bg: "#dcfce7" },
+  grey: { fg: "#525252", bg: "#f0f0f0" },
+};
+
+const ACCENTS_DARK: typeof ACCENTS_LIGHT = {
+  red: { fg: "#f87171", bg: "#ef444433" },
+  blue: { fg: "#60a5fa", bg: "#3b82f633" },
+  amber: { fg: "#fbbf24", bg: "#f59e0b2e" },
+  violet: { fg: "#a78bfa", bg: "#8b5cf633" },
+  teal: { fg: "#2dd4bf", bg: "#14b8a62e" },
+  green: { fg: "#4ade80", bg: "#22c55e2b" },
+  grey: { fg: "#d4d4d4", bg: "#ffffff14" },
+};
+
+export type Accent = keyof typeof ACCENTS_LIGHT;
+
+export function useAccents(): typeof ACCENTS_LIGHT {
+  return useColorScheme() === "dark" ? ACCENTS_DARK : ACCENTS_LIGHT;
+}
+
 export const radius = { sm: 6, md: 10, lg: 14, xl: 20, full: 999 } as const;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 

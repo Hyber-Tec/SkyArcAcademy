@@ -23,6 +23,7 @@ export function ScoreRow({
   name,
   who,
   best,
+  tone,
   divider = false,
   onPress,
   testID,
@@ -33,6 +34,8 @@ export function ScoreRow({
   /** Whose it is, first (staff's lists of everyone's scores): the name leads, the position follows it. */
   who?: string | null;
   best: boolean;
+  /** How it compares with the student's usual in that position (scoreTones): its number green or amber. */
+  tone?: "high" | "low";
   divider?: boolean;
   onPress: () => void;
   testID?: string;
@@ -81,7 +84,7 @@ export function ScoreRow({
         </T>
       </View>
       <View style={styles.score}>
-        <T variant="subheading" style={styles.number}>
+        <T variant="subheading" style={[styles.number, tone === "high" ? { color: colors.success } : tone === "low" ? { color: colors.warning } : null]}>
           {whole !== null ? one(whole) : "–"}
           {decimal !== null ? (
             <T variant="tiny" tone="muted">

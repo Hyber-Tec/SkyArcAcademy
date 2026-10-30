@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { Bell, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
-import { ListRow, ListSection, RowIcon } from "@/components/List";
+import { ListRow, ListSection, RowIcon, ToneIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
@@ -59,22 +59,14 @@ export default function FamilyMoreScreen() {
           testID="family-more-account"
         />
         <ListRow
-          icon={
-            <RowIcon>
-              <KeyRound size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<ToneIcon icon={KeyRound} tone="grey" />}
           title="Sign-in & security"
           subtitle={signInLine(methods)}
           onPress={() => router.push("/more/security")}
           testID="family-more-security"
         />
         <ListRow
-          icon={
-            <RowIcon>
-              <Bell size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<ToneIcon icon={Bell} tone="red" />}
           title="Notifications"
           subtitle="On this phone, and what you’re told about"
           onPress={() => router.push("/more/notifications")}
@@ -141,33 +133,21 @@ export default function FamilyMoreScreen() {
 
       <ListSection title="About">
         <ListRow
-          icon={
-            <RowIcon>
-              <Globe size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<ToneIcon icon={Globe} tone="blue" />}
           title="Open the website"
           subtitle="The same, on a bigger screen, and reports to download as PDFs"
           onPress={() => void openWebsite(`/${portal}`)}
           testID="family-more-website"
         />
         <ListRow
-          icon={
-            <RowIcon>
-              <LifeBuoy size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<ToneIcon icon={LifeBuoy} tone="blue" />}
           title="Help"
           subtitle="Whom to ask, signing in, and reporting a problem with the app"
           onPress={() => void openWebsite("/help")}
           testID="family-more-help"
         />
         <ListRow
-          icon={
-            <RowIcon>
-              <ShieldCheck size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<ToneIcon icon={ShieldCheck} tone="grey" />}
           title="Privacy policy"
           onPress={() => void openWebsite("/privacy")}
           testID="family-more-privacy"

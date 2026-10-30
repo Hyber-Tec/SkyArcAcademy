@@ -18,6 +18,7 @@ import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { ResultKindFilter } from "@/features/scores/kinds";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { ScoreRow } from "@/features/family/ScoreRow";
+import { scoreTones } from "@/features/scores/format";
 import { PositionTiles, ScoresChart, ShotPattern } from "@/features/family/ScoreSummary";
 import { monthYear, plural } from "@/features/schedule/format";
 import { radius, space, useColors } from "@/theme";
@@ -48,6 +49,8 @@ export default function FamilyScoresScreen() {
     for (const id of family.ids) for (const x of personalBestIds(scores.data.filter((e) => e.studentId === id))) ids.add(x);
     return ids;
   }, [scores.data, family.ids]);
+  // Each result's number against its student's usual in that position.
+  const tones = useMemo(() => scoreTones(scores.data), [scores.data]);
   const theirs = useMemo(() => {
     const shown = new Set(family.shown);
     return scores.data.filter((e) => shown.has(e.studentId));
@@ -147,6 +150,7 @@ export default function FamilyScoresScreen() {
                       evaluation={e}
                       name={showNames ? family.firstName(e.studentId, e.studentName) : null}
                       best={best.has(e.id)}
+                      tone={tones.get(e.id)}
                       onPress={() => open(e.id)}
                       testID={`family-score-row-${e.id}`}
                     />

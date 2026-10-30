@@ -6,7 +6,7 @@ import { Bell, ChartLine, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphon
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
-import { ListRow, ListSection, RowIcon } from "@/components/List";
+import { ListRow, ListSection, RowIcon, ToneIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
@@ -17,7 +17,7 @@ import { openWebsite } from "@/lib/links";
 import { type AppearancePref, useAppearance } from "@/state/AppearanceProvider";
 import { useAuth } from "@/state/AuthProvider";
 import { useBranch } from "@/state/BranchProvider";
-import { space, useColors } from "@/theme";
+import { type Accent, space, useColors } from "@/theme";
 
 /** "Oct 16, 2026, 5:41 PM" for when this copy was built. */
 function builtWhen(iso: string): string {
@@ -25,14 +25,9 @@ function builtWhen(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-/** A list row's icon: the lucide picture in the row's rounded square. */
-function Icon({ as: Picture }: { as: typeof Globe }) {
-  const colors = useColors();
-  return (
-    <RowIcon>
-      <Picture size={17} color={colors.foreground} />
-    </RowIcon>
-  );
+/** A list row's icon: the lucide picture in its accent, in the row's rounded square. */
+function Icon({ as: Picture, tone }: { as: typeof Globe; tone: Accent }) {
+  return <ToneIcon icon={Picture} tone={tone} />;
 }
 
 /**
@@ -66,21 +61,21 @@ export default function MoreScreen() {
           screens are named with their group where an address is shared. */}
       <ListSection title={isCoach ? "Your work" : "The academy"}>
         {/* Coaches' tabs hold Availability where the office's hold Students, so their Students is here, first. */}
-        {isCoach ? <ListRow icon={<Icon as={UsersRound} />} title="Students" subtitle="Every student, their classes and scores" onPress={() => router.push("/more/students")} testID="more-students" /> : null}
-        {isCoach ? null : <ListRow icon={<Icon as={Users} />} title="Coaches" subtitle="Who teaches, with their phone and email" onPress={() => router.push("/more/coaches")} testID="more-coaches" />}
+        {isCoach ? <ListRow icon={<Icon as={UsersRound} tone="green" />} title="Students" subtitle="Every student, their classes and scores" onPress={() => router.push("/more/students")} testID="more-students" /> : null}
+        {isCoach ? null : <ListRow icon={<Icon as={Users} tone="green" />} title="Coaches" subtitle="Who teaches, with their phone and email" onPress={() => router.push("/more/coaches")} testID="more-coaches" />}
         <ListRow
-          icon={<Icon as={Megaphone} />}
+          icon={<Icon as={Megaphone} tone="teal" />}
           title="News"
           subtitle="The academy’s announcements"
           right={unreadNews ? <Badge tone="destructive">{unreadNews}</Badge> : undefined}
           onPress={() => router.push("/news")}
           testID="more-news"
         />
-        <ListRow icon={<Icon as={HardDrive} />} title="Drive" subtitle="Every student’s folder: results, cards and files" onPress={() => router.push("/drive")} testID="more-drive" />
-        <ListRow icon={<Icon as={ChartLine} />} title="Reports" subtitle="Progress reports, and sharing them with families" onPress={() => router.push("/(app)/(staff)/reports")} testID="more-reports" />
-        {isCoach ? <ListRow icon={<Icon as={Wallet} />} title="Payroll" subtitle="Your pay, by pay period" onPress={() => router.push("/more/payroll")} testID="more-payroll" /> : null}
+        <ListRow icon={<Icon as={HardDrive} tone="amber" />} title="Drive" subtitle="Every student’s folder: results, cards and files" onPress={() => router.push("/drive")} testID="more-drive" />
+        <ListRow icon={<Icon as={ChartLine} tone="violet" />} title="Reports" subtitle="Progress reports, and sharing them with families" onPress={() => router.push("/(app)/(staff)/reports")} testID="more-reports" />
+        {isCoach ? <ListRow icon={<Icon as={Wallet} tone="green" />} title="Payroll" subtitle="Your pay, by pay period" onPress={() => router.push("/more/payroll")} testID="more-payroll" /> : null}
         <ListRow
-          icon={<Icon as={Globe} />}
+          icon={<Icon as={Globe} tone="blue" />}
           title="Open the website"
           subtitle={isCoach ? "The same, on a bigger screen" : "Everything else: the schedule’s changes, people, payroll, settings"}
           onPress={() => void openWebsite(`/${portal}`)}
@@ -90,14 +85,14 @@ export default function MoreScreen() {
 
       <ListSection title="Settings">
         <ListRow
-          icon={<Icon as={Bell} />}
+          icon={<Icon as={Bell} tone="red" />}
           title="Notifications"
           subtitle="On this phone, and what you’re told about"
           right={isCoach ? notificationsSummary(staff?.notificationPrefs) : undefined}
           onPress={() => router.push("/more/notifications")}
           testID="more-notifications"
         />
-        <ListRow icon={<Icon as={KeyRound} />} title="Sign-in & security" subtitle="How you sign in, and your password" onPress={() => router.push("/more/security")} testID="more-security" />
+        <ListRow icon={<Icon as={KeyRound} tone="grey" />} title="Sign-in & security" subtitle="How you sign in, and your password" onPress={() => router.push("/more/security")} testID="more-security" />
       </ListSection>
 
       <ListSection title="Appearance">
@@ -117,22 +112,14 @@ export default function MoreScreen() {
 
       <ListSection title="About">
         <ListRow
-          icon={
-            <RowIcon>
-              <LifeBuoy size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<Icon as={LifeBuoy} tone="blue" />}
           title="Help"
           subtitle="Whom to ask, signing in, and reporting a problem with the app"
           onPress={() => void openWebsite("/help")}
           testID="more-help"
         />
         <ListRow
-          icon={
-            <RowIcon>
-              <ShieldCheck size={17} color={colors.foreground} />
-            </RowIcon>
-          }
+          icon={<Icon as={ShieldCheck} tone="grey" />}
           title="Privacy policy"
           onPress={() => void openWebsite("/privacy")}
           testID="more-privacy"

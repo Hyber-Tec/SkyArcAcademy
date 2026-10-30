@@ -23,7 +23,8 @@ export default function StaffTabs() {
       <NativeTabs.Trigger name="schedule" testID="tab-schedule">
         <NativeTabs.Trigger.Label>Schedule</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "calendar", selected: "calendar" }} md="calendar_month" />
-        <NativeTabs.Trigger.Badge hidden={!waiting}>{String(waiting)}</NativeTabs.Trigger.Badge>
+        {/* No text when nothing waits: the native tabs show any text they're given, "0" too, whatever `hidden` says. */}
+        <NativeTabs.Trigger.Badge hidden={!waiting}>{waiting ? String(waiting) : undefined}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="availability" hidden={!isCoach} testID="tab-availability">
         <NativeTabs.Trigger.Label>Availability</NativeTabs.Trigger.Label>

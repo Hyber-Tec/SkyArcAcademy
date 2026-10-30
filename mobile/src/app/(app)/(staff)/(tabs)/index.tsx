@@ -2,7 +2,7 @@ import { effectiveRanges } from "@shared/availability";
 import { takesSeat } from "@shared/schedule/classes";
 import { type DateKey, addDays } from "@shared/time";
 import { router } from "expo-router";
-import { CalendarCheck, Camera, ChevronRight, Coffee } from "lucide-react-native";
+import { CalendarCheck, CalendarDays, Camera, ChevronRight, Coffee, Target } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,7 +23,7 @@ import { teaches } from "@/features/schedule/classes";
 import { clock, longDay, plural, shortDay, timeRange } from "@/features/schedule/format";
 import { useStaffLook } from "@/features/schedule/parts";
 import { useBranch } from "@/state/BranchProvider";
-import { radius, space, useColors } from "@/theme";
+import { radius, space, useAccents, useColors } from "@/theme";
 
 function greeting(nowMin: number): string {
   if (nowMin < 12 * 60) return "Good morning";
@@ -45,6 +45,7 @@ const AHEAD_DAYS = 14;
 export default function TodayScreen() {
   const { actor, staff, settings, isCoach, staffId } = useBranch();
   const colors = useColors();
+  const accents = useAccents();
   const insets = useSafeAreaInsets();
   const hour12 = settings.general.timeFormat !== "24h";
   const { today, nowMin } = useAcademyNow();
@@ -132,7 +133,8 @@ export default function TodayScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHead}>
-          <T variant="small" tone="muted" style={styles.sectionTitle}>
+          <CalendarDays size={14} color={accents.red.fg} strokeWidth={2.4} style={styles.sectionIcon} />
+          <T variant="small" tone="muted" style={[styles.sectionTitle, { color: accents.red.fg }]}>
             {me ? "YOUR CLASSES TODAY" : "TODAY’S CLASSES"}
           </T>
           {me && myRanges.length ? (
@@ -203,7 +205,7 @@ function LatestScores({ today }: { today: string }) {
   const recent = useRecentEvaluations(today);
   if (!recent.loading && !recent.data.length) return null;
   return (
-    <ListSection title="Latest scores" detail={recent.loading ? undefined : `${recent.data.length} in ${recent.days} days`} testID="today-latest-scores">
+    <ListSection title="Latest scores" icon={Target} tone="blue" detail={recent.loading ? undefined : `${recent.data.length} in ${recent.days} days`} testID="today-latest-scores">
       {recent.loading ? (
         <ListRow title="Loading scores…" />
       ) : (
@@ -277,7 +279,8 @@ const styles = StyleSheet.create({
   scan: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.xl, padding: space.lg },
   scanIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   section: { gap: space.sm },
-  sectionHead: { flexDirection: "row", alignItems: "baseline", paddingHorizontal: space.xs },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: space.xs },
+  sectionIcon: { marginTop: -1 },
   sectionTitle: { flex: 1, fontWeight: "600", letterSpacing: 0.5 },
   sectionDetail: { fontWeight: "600", fontVariant: ["tabular-nums"] },
   free: { flexDirection: "row", alignItems: "center", gap: space.md },

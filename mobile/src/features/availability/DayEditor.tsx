@@ -480,10 +480,11 @@ function SavedDay({ mark, ranges }: { mark: DayMark; ranges: AvailabilityRange[]
   const colors = useColors();
   const status = useStatusColors();
   const available = mark === "available" && ranges.length > 0;
+  const off = mark === "unavailable";
   return (
-    <View style={[styles.savedDay, { borderColor: colors.border, backgroundColor: available ? status.confirmed.bg : colors.card }]} testID="availability-saved">
-      {mark === "unavailable" ? <Ban size={17} color={colors.mutedForeground} /> : null}
-      <T variant="label" tone={available ? "default" : "muted"}>
+    <View style={[styles.savedDay, { borderColor: colors.border, backgroundColor: available ? status.confirmed.bg : off ? status.canceled.bg : colors.card }]} testID="availability-saved">
+      {off ? <Ban size={17} color={status.canceled.text} /> : null}
+      <T variant="label" tone={available ? "default" : "muted"} style={off ? { color: status.canceled.text } : undefined}>
         {available ? describeRanges(ranges) : mark === "unavailable" ? "Not available" : "Nothing set on this day"}
       </T>
     </View>
