@@ -49,6 +49,20 @@ function PortalStack() {
       <Stack.Protected guard={false}>
         <Stack.Screen name="no-access" />
       </Stack.Protected>
+      {/* A super admin's "View the app as": over either part, since it moves the app from one to the other. After them,
+          so the app still opens on its tabs (a stack opens on its first screen). */}
+      <Stack.Screen
+        name="view-as"
+        options={{
+          presentation: "modal",
+          headerShown: true,
+          title: "View the app as",
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: colors.grouped },
+          headerTintColor: colors.foreground,
+          contentStyle: { backgroundColor: colors.grouped },
+        }}
+      />
     </Stack>
   );
 }

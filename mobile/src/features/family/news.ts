@@ -68,9 +68,10 @@ const written = new Set<string>();
  * leaves it new for the student.
  */
 export function useReadReceipt(post: NewsPost | null): void {
-  const { branchId, actor } = useBranch();
+  const { branchId, actor, viewAs } = useBranch();
   const id = post?.id ?? null;
-  const path = id ? `${ROOT.branches}/${branchId}/${COL.announcements}/${id}/reads/${actor.email}` : null;
+  // A super admin viewing the app as a family leaves no receipt (as the website's View as): it isn't their reading.
+  const path = id && !viewAs?.person ? `${ROOT.branches}/${branchId}/${COL.announcements}/${id}/reads/${actor.email}` : null;
   // Their own receipt, read by its path: "none" only once the server says so.
   const mine = useDoc<AnnouncementRead>(path);
   const absent = !!path && !mine.loading && !mine.data && !mine.error;

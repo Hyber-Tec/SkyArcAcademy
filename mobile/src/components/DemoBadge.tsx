@@ -1,21 +1,42 @@
-import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
 import { useOptionalBranch } from "@/state/BranchProvider";
-import { radius, useColors } from "@/theme";
+import { VIEW_AS_ROLE_LABELS } from "@/state/viewAs";
+import { radius, useAccents, useColors } from "@/theme";
 
 /**
  * "Demo" beside the lockup and each tab's title while the app shows the demo academy (docs/DECISIONS.md §22), as the
  * website's top bar marks it (web/src/components/app/DemoBadge.tsx), so its made-up people are never taken for the
- * academy's own. Nothing otherwise.
+ * academy's own. While a super admin views the app as someone, "As Jiyeon" beside it too; tapping it opens View as.
+ * Nothing otherwise.
  */
 export function DemoBadge() {
   const branch = useOptionalBranch();
   const colors = useColors();
-  if (!branch?.isDemo) return null;
+  const violet = useAccents().violet;
+  const person = branch?.viewAs?.person ?? null;
+  if (!branch?.isDemo && !person) return null;
   return (
-    <View style={[styles.pill, { backgroundColor: colors.demoTint }]} accessible accessibilityLabel="Demo data: made-up students and classes" testID="demo-badge">
-      <T style={[styles.text, { color: colors.demo }]}>Demo</T>
-    </View>
+    <>
+      {branch?.isDemo ? (
+        <View style={[styles.pill, { backgroundColor: colors.demoTint }]} accessible accessibilityLabel="Demo data: made-up students and classes" testID="demo-badge">
+          <T style={[styles.text, { color: colors.demo }]}>Demo</T>
+        </View>
+      ) : null}
+      {person ? (
+        <Pressable
+          onPress={() => router.push("/view-as")}
+          style={[styles.pill, { backgroundColor: violet.bg }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Viewing the app as ${person.name}, ${VIEW_AS_ROLE_LABELS[person.role]}. Change or stop.`}
+          hitSlop={8}
+          testID="view-as-badge"
+        >
+          <T style={[styles.text, { color: violet.fg }]} numberOfLines={1}>{`As ${person.name.split(/\s+/)[0]}`}</T>
+        </Pressable>
+      ) : null}
+    </>
   );
 }
 

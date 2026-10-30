@@ -3,7 +3,7 @@ import { ROLE_LABELS } from "@shared/roles";
 import { formatDateKey } from "@shared/time";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Bell, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
+import { Bell, Eye, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ListRow, ListSection, RowIcon, ToneIcon } from "@/components/List";
@@ -40,7 +40,7 @@ function signInLine(methods: SignInMethods): string {
  * the website, which version this is, signing out, and deleting the account: the website's Profile, for families.
  */
 export default function FamilyMoreScreen() {
-  const { actor, member, name, portal } = useBranch();
+  const { actor, member, name, portal, canViewAs, viewAs } = useBranch();
   const { email, methods, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const family = useFamily();
@@ -58,6 +58,15 @@ export default function FamilyMoreScreen() {
           subtitle={`${email} · ${ROLE_LABELS[actor.role]}`}
           testID="family-more-account"
         />
+        {canViewAs ? (
+          <ListRow
+            icon={<ToneIcon icon={Eye} tone="violet" />}
+            title="View the app as…"
+            subtitle={viewAs?.person ? `Now: ${viewAs.person.name}` : "An admin, a coach, a parent or a student"}
+            onPress={() => router.push("/view-as")}
+            testID="family-more-view-as"
+          />
+        ) : null}
         <ListRow
           icon={<ToneIcon icon={KeyRound} tone="grey" />}
           title="Sign-in & security"

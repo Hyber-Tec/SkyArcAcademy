@@ -6,10 +6,11 @@ import { type BusinessRules, resolveBusinessRules } from "@shared/settings/busin
 import type { BranchSettings } from "@shared/settings/defaults";
 import { resolveSettings } from "@shared/settings/resolve";
 import type { Branch, Member, Staff } from "@shared/types";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { db } from "@/lib/firebase";
 import { useDoc } from "@/lib/firestore";
 import { useAuth } from "./AuthProvider";
+import { SUPER_ADMINS, type ViewAs, loadViewAs, saveViewAs } from "./viewAs";
 
 /** Who does something, as the audit log records it (web/src/lib/audit.ts). */
 export interface Actor {
@@ -47,6 +48,13 @@ export interface BranchState {
   studentId: string | null;
   studentIds: string[];
   actor: Actor;
+  /** A super admin (the owner's own account): they may view the app as someone else (More → View the app as). */
+  canViewAs: boolean;
+  /** Who the app is shown as, for a super admin who chose someone (null: themself, in the academy they'd see). */
+  viewAs: ViewAs | null;
+  setViewAs: (next: ViewAs | null) => void;
+  /** Whether the signed-in person can open the demo academy too (a member of both): View as offers it. */
+  canSwitchDemo: boolean;
 }
 
 const BranchContext = createContext<BranchState | null>(null);
@@ -86,15 +94,44 @@ export function BranchProvider({
   const realState = useDoc<Member>(email ? `${ROOT.branches}/${ACADEMY_ID}/${COL.members}/${email}` : null);
   const demoState = useDoc<Member>(email ? `${ROOT.branches}/${DEMO_ACADEMY_ID}/${COL.members}/${email}` : null);
   const realKnown = !realState.loading && (!realState.error || refused(realState.error));
-  const isDemo = realKnown && showsDemo(realState.data, demoState.data);
+
+  // A super admin's "View the app as": their own document says they are one (only they and other super admins read it).
+  const superState = useDoc<{ email: string }>(email ? `${SUPER_ADMINS}/${email}` : null);
+  const canViewAs = !!superState.data;
+  const [chosen, setChosen] = useState<{ email: string; v: ViewAs | null } | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    let live = true;
+    void loadViewAs(email).then((v) => live && setChosen({ email, v }));
+    return () => {
+      live = false;
+    };
+  }, [email]);
+  const setViewAs = useCallback(
+    (next: ViewAs | null) => {
+      if (!email) return;
+      setChosen({ email, v: next });
+      saveViewAs(email, next);
+    },
+    [email],
+  );
+  const viewAs = canViewAs && chosen?.email === email ? (chosen?.v ?? null) : null;
+  const realActive = realState.data?.status === "active";
+  const demoActive = demoState.data?.status === "active";
+  const canSwitchDemo = realActive && demoActive;
+  // The academy shown: the one a super admin chose when they're a member of it, else as everyone gets it (§22).
+  const isDemo = realKnown && (viewAs && canSwitchDemo ? viewAs.demo : showsDemo(realState.data, demoState.data));
   const branchId = isDemo ? DEMO_ACADEMY_ID : ACADEMY_ID;
   const memberState = isDemo ? demoState : realState;
   // Not in the academy: wait for the demo's answer before saying there's no access.
-  const deciding = realState.loading || (realKnown && !realState.data && demoState.loading);
+  // A super admin's choice is read from the phone first, so the app opens as it was left rather than flipping to it.
+  const deciding = realState.loading || (realKnown && !realState.data && demoState.loading) || superState.loading || (canViewAs && chosen?.email !== email);
   const active = memberState.data?.status === "active";
   // The academy's own document is open to its members only: read once the member doc says so.
   const branchState = useDoc<Branch>(active ? `${ROOT.branches}/${branchId}` : null);
-  const staffId = memberState.data?.staffId ?? null;
+  // Viewing as someone: their staff record (a coach's), their children (a parent's) or their own (a student's).
+  const person = viewAs?.person ?? null;
+  const staffId = person ? (person.role === "coach" ? person.staffId : null) : (memberState.data?.staffId ?? null);
   const staffState = useDoc<Staff>(active && staffId ? `${ROOT.branches}/${branchId}/${COL.staff}/${staffId}` : null);
 
   const member = memberState.data;
@@ -114,7 +151,7 @@ export function BranchProvider({
   const value = useMemo<BranchState | null>(() => {
     const branch = branchState.data;
     if (!branch || !member || !user || !email || member.status !== "active") return null;
-    const role = member.role;
+    const role = person?.role ?? member.role;
     return {
       branchId,
       isDemo,
@@ -129,13 +166,18 @@ export function BranchProvider({
       isAdmin: isAdminRole(role),
       isCoach: role === "coach",
       isStaff: isAdminRole(role) || role === "coach",
-      staffId: member.staffId ?? null,
+      staffId,
       staff: staffState.data,
-      studentId: member.studentId ?? null,
-      studentIds: member.studentIds ?? [],
-      actor: { uid: user.uid, email, name: member.displayName || user.displayName || email, role },
+      studentId: person ? (person.role === "student" ? person.studentId : null) : (member.studentId ?? null),
+      studentIds: person ? (person.role === "parent" ? person.studentIds : []) : (member.studentIds ?? []),
+      // The audit log keeps who really did it, as on the website.
+      actor: { uid: user.uid, email, name: member.displayName || user.displayName || email, role: member.role },
+      canViewAs,
+      viewAs,
+      setViewAs,
+      canSwitchDemo,
     };
-  }, [branchState.data, member, staffState.data, user, email, branchId, isDemo]);
+  }, [branchState.data, member, staffState.data, staffId, person, user, email, branchId, isDemo, canViewAs, viewAs, setViewAs, canSwitchDemo]);
 
   // Still opening after a while: say so, with a way to sign out (the screen opens the app by itself if it gets through).
   const opening = deciding || (member?.status === "active" && (!branchState.data || (!!staffId && staffState.loading)) && !branchState.error);
