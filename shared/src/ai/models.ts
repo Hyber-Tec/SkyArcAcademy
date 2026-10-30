@@ -13,8 +13,6 @@ export interface AiProviderInfo {
   keyWhere: string
   /** Where the provider lists its models and prices, to check this list. */
   pricesUrl: string
-  /** Something a super admin should know before choosing it, shown on the AI page. */
-  caution?: string
 }
 
 /** The only place outside the AI page's own text that names providers: the AI page (super admins only). */
@@ -24,9 +22,6 @@ export const AI_PROVIDER_INFO: Record<AiProvider, AiProviderInfo> = {
     keyUrl: 'https://aistudio.google.com/apikey',
     keyWhere: 'Google AI Studio → Get API key',
     pricesUrl: 'https://ai.google.dev/gemini-api/docs/pricing',
-    // The Gemini API terms (ai.google.dev/gemini-api/terms, updated 2026-04-28), read on 2026-10-30.
-    caution:
-      'Google’s Gemini API terms say it may not be used in an app "directed towards or likely to be accessed by individuals under the age of 18", and the academy’s students use this app. Check those terms before choosing Gemini (Google Cloud’s Vertex AI has its own).',
   },
   anthropic: {
     label: 'Anthropic Claude',

@@ -1,4 +1,5 @@
 import { AggregateField, FieldValue, type Transaction } from 'firebase-admin/firestore'
+import { logger } from 'firebase-functions/v2'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { ACADEMY_ID } from '@shared/academy'
 import { type ResolvedAiConfig, publicAiDoc, resolveAiConfig } from '@shared/ai/config'
@@ -51,12 +52,26 @@ async function academyTimeZone(): Promise<string> {
   return zone.value
 }
 
-/** What this month's requests cost so far, from the log. */
+/** gRPC's FAILED_PRECONDITION: what Firestore answers when a query's index is missing or still building. */
+const NEEDS_INDEX = 9
+
+/**
+ * What this month's requests cost so far, from the log. The sum needs its index (`aiUsage`: `at`, `costUsd`;
+ * firestore.indexes.json); until Firestore has built it, the month's requests are added up here instead.
+ */
 export async function spentThisMonth(): Promise<number> {
   const tz = await academyTimeZone()
   const start = toInstant(startOfMonth(todayKey(tz)), 0, tz)
-  const snap = await db.collection(AI_COL.aiUsage).where('at', '>=', start).aggregate({ total: AggregateField.sum('costUsd') }).get()
-  return Number(snap.data().total ?? 0)
+  const month = db.collection(AI_COL.aiUsage).where('at', '>=', start)
+  try {
+    const snap = await month.aggregate({ total: AggregateField.sum('costUsd') }).get()
+    return Number(snap.data().total ?? 0)
+  } catch (e) {
+    if ((e as { code?: unknown })?.code !== NEEDS_INDEX) throw e
+    logger.warn('The AI spending total has no index yet: adding up the month’s requests instead', { error: (e as Error).message })
+    const snap = await month.select('costUsd').get()
+    return snap.docs.reduce((n, d) => n + (Number(d.get('costUsd')) || 0), 0)
+  }
 }
 
 /**

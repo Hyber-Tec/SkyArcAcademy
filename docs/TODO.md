@@ -34,8 +34,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
 8. **AI for report text** (`docs/DECISIONS.md` §26): you're the super admin. On the website, **Settings → AI**:
-   - **Models:** Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month). Gemini is cheaper, but its
-     API terms bar apps that under-18s use; check them before choosing it.
+   - **Models:** Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month); Gemini 3.5 Flash-Lite is
+     about $1 (fine to choose: only adults use AI, §26).
    - **Keys:** add the chosen provider's API key (the page links where to make one), then **Test**, turn Report text
      **on** and **Save**. Then a draft report → **Write with AI**.
 

@@ -219,11 +219,6 @@ function FeatureCard({ feature, config }: { feature: AiFeature; config: Resolved
             </Select>
           </Field>
         </div>
-        {AI_PROVIDER_INFO[draft.provider].caution ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-testid="ai-provider-caution">
-            {AI_PROVIDER_INFO[draft.provider].caution}
-          </p>
-        ) : null}
 
         {other ? (
           <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-3">
