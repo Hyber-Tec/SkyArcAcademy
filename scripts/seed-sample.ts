@@ -1,8 +1,8 @@
 /**
  * Sample data for trying the app before the academy's real data arrives (shared/src/sample/data.ts): fictional
  * coaches, a manager, students and families, ten weeks of classes around today in the academy's weekly layout (taught
- * together by the coaches in, with make-ups, practice and trials among their seats), who's in each day, time entries,
- * announcements and events; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic PDFs in the
+ * together by the coaches in, with make-ups, practice and trials among their seats), who's in each day, time entries
+ * and announcements; and their shooting (shared/src/sample/scores.ts): SIUS results as synthetic PDFs in the
  * students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the card in the
  * Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
  * It also has a few trial requests and questions sent from the website, and families' requests for classes (waiting for
@@ -99,6 +99,8 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
 
 /** The sample's schedule, which each run replaces with the weeks around its today (the families' requests are for its classes). */
 const SCHEDULE = [COL.classes, COL.classSeats, COL.sessions, COL.availability, COL.clockShifts, COL.classRequests] as const
+/** What the sample no longer makes, which each run deletes: its events (the website stopped showing them, 2026-10-29). */
+const RETIRED = [COL.events] as const
 
 /** Sub-collections that go with a removed document. */
 const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }
@@ -124,10 +126,10 @@ async function add() {
   const shooting = await sampleShooting(docs, academy, timezone, settings.students.levels, now)
   const messages = buildSampleMessages({ academyId, now, manager: SAMPLE_MANAGER.email })
   // The sample's schedule from an earlier run that this one doesn't rewrite (other weeks, or from before classes were
-  // taught together): this run's weeks replace it.
+  // taught together): this run's weeks replace it. Its events from earlier runs go too.
   const keep = new Set(docs.map((d) => d.path))
   const stale: string[] = []
-  for (const col of SCHEDULE) {
+  for (const col of [...SCHEDULE, ...RETIRED]) {
     for (const d of await listDocuments(`${base}/${col}`)) if (SAMPLE_RULES[col](d.id, d.data) && !keep.has(d.path)) stale.push(d.path)
   }
   if (stale.length) {

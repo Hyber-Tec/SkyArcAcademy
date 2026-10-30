@@ -251,9 +251,10 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
           <div className="space-y-2" data-testid="pay-rule">
             <div className="text-sm font-medium">Everyone is paid by the hour, at their own rate</div>
             <p className="text-sm text-muted-foreground">{describePay(draft)}</p>
+            {/* Each person's rate is on their page in Employees → Directory (the page's description says so). */}
             <Button asChild variant="outline" size="sm">
-              <Link to="/admin/employees/pay-rates">
-                <LuExternalLink /> Pay rates
+              <Link to="/admin/employees/directory">
+                <LuExternalLink /> Employees
               </Link>
             </Button>
           </div>,

@@ -9,7 +9,6 @@ import {
   LuHouse,
   LuMegaphone,
   LuSettings,
-  LuShieldCheck,
   LuTarget,
   LuUserCog,
   LuUsers,
@@ -63,7 +62,7 @@ export const ADMIN_NAV: PortalNav = {
       children: [
         { key: 'employeeDirectory', label: 'Directory', to: 'employees/directory' },
         { key: 'employeeCalendar', label: 'Calendar', to: 'employees/calendar' },
-        { key: 'payRates', label: 'Pay Rates', to: 'employees/pay-rates', restrict: 'payRates' },
+        // Pay Rates (employees/pay-rates) is off the menu since 2026-10-29: a person's rate is on their page here.
         { key: 'payroll', label: 'Payroll', to: 'employees/payroll', restrict: 'payroll' },
         { key: 'timeEntries', label: 'Time Entries', to: 'employees/time-entries', restrict: 'timeEntries' },
       ],
@@ -71,7 +70,7 @@ export const ADMIN_NAV: PortalNav = {
   ],
   secondary: [
     { key: 'account', label: 'Account', to: 'account', icon: LuUserCog },
-    { key: 'accessControl', label: 'Access Control', to: 'access-control', icon: LuShieldCheck, restrict: 'accessControl' },
+    // Access Control (access-control) is off the menu since 2026-10-29, kept working by its address in case it's needed.
     { key: 'settings', label: 'Settings', to: 'settings', icon: LuSettings },
   ],
 }

@@ -3,31 +3,34 @@ import type { ClockShift } from '../types'
 
 /**
  * The schedule's timeline (V2, the owner's pick of the second round of designs, 2026-10-28): a row per person in that
- * day, with their hours and their clock-in behind it, and each class as one block across the rows of the coaches who
- * teach it. These are its sums, kept pure: the order of the rows, the pieces a class breaks into, the rows' heights,
- * the time range and the clocked-in stretches.
+ * day, with their hours and their clock-in behind it, and each class as one block across the rows of everyone in at its
+ * time, whether they teach it or not (the owner, 2026-10-29). These are its sums, kept pure: the order of the rows, the
+ * pieces a class breaks into, the rows' heights, a block's slots, the time range and the clocked-in stretches.
  */
 
 /** Someone in that day, as a row. */
 export interface TimelinePerson {
   id: string
-  /** Teaches (a coach). Owners and admins can be in without teaching: their rows go at the bottom. */
+  /** Teaches (a coach). Owners and admins can be in without teaching: their rows go under the coaches' where they can. */
   teaches: boolean
   /** When they're first in that day (minutes after midnight), for the natural order. */
   firstMin: number
   name: string
 }
 
-/** A class, as the rows see it: who teaches it (empty: nobody is in). */
+/** A class, as the rows see it. */
 export interface TimelineClass {
   id: string
+  /** Who teaches it (empty: no coach is in, and it shows on the "No coach in" row). */
   coachIds: readonly string[]
+  /** Everyone in at its time, teaching or not: its block spans their rows. Its coaches when left out. */
+  inIds?: readonly string[]
 }
 
-/** The row for the classes nobody is in for. */
+/** The row for the classes nobody is in to teach. */
 export const NO_COACH_ROW = '_none'
 
-/** Past this many coaches the order is found by moving rows one at a time, not by trying every order. */
+/** Past this many rows the order is found by moving rows one at a time, not by trying every order. */
 const EXHAUSTIVE_MAX = 7
 
 /** Runs of adjacent rows, as [first, last] index pairs, top to bottom. */
@@ -41,44 +44,71 @@ export function runsOf(indices: readonly number[]): [number, number][] {
   return runs
 }
 
-/** The pieces of a class with this row order: the runs of its coaches' rows (the no-coach row for a class nobody's in for). */
-export function classPieces(order: readonly string[], coachIds: readonly string[]): [number, number][] {
-  const ids = coachIds.length ? coachIds : [NO_COACH_ROW]
-  return runsOf(ids.map((id) => order.indexOf(id)).filter((i) => i >= 0))
+/** The rows a class's block spans: everyone in at its time, and the "No coach in" row when none of them teaches it. */
+export function classRows(c: TimelineClass): string[] {
+  const ids = [...new Set([...c.coachIds, ...(c.inIds ?? [])])]
+  return c.coachIds.length ? ids : [...ids, NO_COACH_ROW]
 }
 
-/** How many pieces the classes break into with this order (one per class when every class's coaches are adjacent). */
+/** The pieces of a class with this row order: the runs of the rows it spans. */
+export function classPieces(order: readonly string[], c: TimelineClass): [number, number][] {
+  return runsOf(classRows(c).map((id) => order.indexOf(id)).filter((i) => i >= 0))
+}
+
+/** How many pieces the classes break into with this order (one per class when every class's rows are adjacent). */
 export function piecesCount(order: readonly string[], classes: readonly TimelineClass[]): number {
-  return classes.reduce((n, c) => n + classPieces(order, c.coachIds).length, 0)
+  return classes.reduce((n, c) => n + classPieces(order, c).length, 0)
 }
 
 const naturalOrder = (a: TimelinePerson, b: TimelinePerson) => a.firstMin - b.firstMin || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
 
 /**
- * The rows, top to bottom: the coaches who teach that day, ordered so each class's coaches sit next to each other (the
- * fewest pieces; between orders as good, the one closest to who's in first, then by name); then coaches in without a
- * class; then the "No coach in" row when a class has nobody; then the people who don't teach (owners, admins).
+ * The rows, top to bottom. First everyone in at a class's time, and the "No coach in" row when a class has nobody in to
+ * teach it, ordered so each class's rows sit next to each other (the fewest pieces); between orders as good, the coaches
+ * above the people who don't teach (owners, admins), then the one closest to who's in first, then by name. Then the
+ * people in that day at no class's time, coaches first.
  */
 export function timelineRows(people: readonly TimelinePerson[], classes: readonly TimelineClass[]): string[] {
-  const teaching = new Set(classes.flatMap((c) => c.coachIds))
   const sorted = [...people].sort(naturalOrder)
-  const coaches = sorted.filter((p) => p.teaches && teaching.has(p.id)).map((p) => p.id)
-  const idle = sorted.filter((p) => p.teaches && !teaching.has(p.id)).map((p) => p.id)
-  const others = sorted.filter((p) => !p.teaches).map((p) => p.id)
-  const none = classes.some((c) => !c.coachIds.length) ? [NO_COACH_ROW] : []
-  return [...bestOrder(coaches, classes), ...idle, ...none, ...others]
+  const inClass = new Set(classes.flatMap(classRows))
+  const coaches = sorted.filter((p) => p.teaches && inClass.has(p.id)).map((p) => p.id)
+  const others = sorted.filter((p) => !p.teaches && inClass.has(p.id)).map((p) => p.id)
+  const none = inClass.has(NO_COACH_ROW) ? [NO_COACH_ROW] : []
+  const idle = [...sorted.filter((p) => p.teaches && !inClass.has(p.id)), ...sorted.filter((p) => !p.teaches && !inClass.has(p.id))].map((p) => p.id)
+  return [...bestOrder([...coaches, ...others, ...none], new Set(coaches), classes), ...idle]
 }
 
-/** The coaches' order with the fewest pieces, then the least moved from their natural order. */
-function bestOrder(natural: readonly string[], classes: readonly TimelineClass[]): string[] {
+type Score = [pieces: number, coachesBelow: number, moved: number]
+
+/**
+ * The order with the fewest pieces; between those, the fewest coaches under a row that isn't a coach's (someone who
+ * doesn't teach, or "No coach in"); then the least moved from the natural order.
+ */
+function bestOrder(natural: readonly string[], coaches: ReadonlySet<string>, classes: readonly TimelineClass[]): string[] {
   if (natural.length < 3) return [...natural]
   const home = new Map(natural.map((id, i) => [id, i]))
+  // Each class's rows, once: the search below tries thousands of orders.
+  const spans = classes.map(classRows).filter((ids) => ids.some((id) => home.has(id)))
+  const pieces = (order: readonly string[]) => {
+    const at = new Map(order.map((id, i) => [id, i]))
+    return spans.reduce((n, ids) => n + runsOf(ids.flatMap((id) => at.get(id) ?? [])).length, 0)
+  }
   const moved = (order: readonly string[]) => order.reduce((n, id, i) => n + Math.abs(i - (home.get(id) ?? i)), 0)
-  const score = (order: readonly string[]): [number, number] => [piecesCount(order, classes), moved(order)]
-  const better = (a: [number, number], b: [number, number]) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])
+  const coachesBelow = (order: readonly string[]) => {
+    let n = 0
+    let others = 0
+    for (const id of order) {
+      if (coaches.has(id)) n += others
+      else others++
+    }
+    return n
+  }
+  const score = (order: readonly string[]): Score => [pieces(order), coachesBelow(order), moved(order)]
+  const better = (a: Score, b: Score) => (a[0] !== b[0] ? a[0] < b[0] : a[1] !== b[1] ? a[1] < b[1] : a[2] < b[2])
   let best = [...natural]
   let bestScore = score(best)
-  if (bestScore[0] === classes.filter((c) => c.coachIds.length).length) return best
+  // The natural order (coaches on top) with one piece per class: nothing does better.
+  if (bestScore[0] === spans.length) return best
   if (natural.length <= EXHAUSTIVE_MAX) {
     for (const order of permutations(natural)) {
       const s = score(order)
@@ -89,7 +119,7 @@ function bestOrder(natural: readonly string[], classes: readonly TimelineClass[]
     }
     return best
   }
-  // Many coaches: move one row at a time while that helps.
+  // Many rows: move one at a time while that helps.
   for (let improved = true; improved; ) {
     improved = false
     for (let from = 0; from < best.length; from++) {
@@ -149,17 +179,29 @@ export function rowHeights(base: readonly number[], pieces: readonly PieceNeed[]
   return h
 }
 
-/** How many items fit across a width (at least one). */
-export function gridColumns(width: number, minItem: number, gap: number): number {
-  return Math.max(1, Math.floor((width + gap) / (minItem + gap)))
+/** A class block's slots, top to bottom, every one the size of a student's card. */
+export interface ClassSlots<S, R> {
+  /** Its students (a canceled one too, in its place). */
+  cells: S[]
+  /** Families' requests for it: those waiting on the office first, then those suggested to a family. */
+  requests: R[]
+  /** The seats still open once each request has taken one's place. */
+  open: number
 }
 
-/** The height of a grid of items `cols` across: each row as tall as its tallest item, `gap` between rows. */
-export function gridHeight(heights: readonly number[], cols: number, gap: number): number {
-  let total = 0
-  for (let i = 0; i < heights.length; i += cols) total += Math.max(...heights.slice(i, i + cols))
-  const rows = Math.ceil(heights.length / cols)
-  return total + Math.max(0, rows - 1) * gap
+/**
+ * A class block's slots, in one column (the owner, 2026-10-29): its students, then families' requests, each in an open
+ * seat's place (six seats, four taken, one request: the four, the request, one open seat; more requests than open seats
+ * go on under them), then the seats still open.
+ */
+export function classSlots<S, R extends { status: string }>(cells: readonly S[], open: number, requests: readonly R[]): ClassSlots<S, R> {
+  const waiting = [...requests].sort((a, b) => Number(a.status !== 'pending') - Number(b.status !== 'pending'))
+  return { cells: [...cells], requests: waiting, open: Math.max(0, open - waiting.length) }
+}
+
+/** How tall `n` slots of `size` are, one under the other with `gap` between them. */
+export function stackHeight(n: number, size: number, gap: number): number {
+  return n > 0 ? n * size + (n - 1) * gap : 0
 }
 
 /** A stretch of a day, in minutes after midnight. */

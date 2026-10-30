@@ -55,7 +55,7 @@ export const PAGES: SettingsPageDef[] = [
     home: 'day',
     groups: [
       { title: 'Families', items: [f('schedule.autoConfirm.hoursBefore'), f('schedule.autoConfirm.enabled'), f('schedule.requests.daysAhead')] },
-      { title: 'A new class', items: [b('seats'), f('schedule.defaultSessionMinutes'), f('schedule.events.titlePresets')] },
+      { title: 'A new class', items: [b('seats'), f('schedule.defaultSessionMinutes')] },
       { title: 'The schedule', items: [f('general.weekStartsOn'), f('schedule.defaultView')] },
     ],
     more: ['schedule.snapMinutes', 'schedule.pasteStatus', 'trash.retentionDays'],
@@ -72,7 +72,7 @@ export const PAGES: SettingsPageDef[] = [
   {
     key: 'pay',
     title: 'Pay & time clock',
-    description: 'When a coach’s paid time starts and ends, the pay periods, and the kiosk. Each person’s rate is on Employees → Pay Rates.',
+    description: 'When a coach’s paid time starts and ends, the pay periods, and the kiosk. Each person’s rate is on their page in Employees → Directory.',
     home: 'day',
     groups: [
       { title: 'Paid time', items: [b('payRule'), f('timeClock.arrivalMinutes'), f('timeClock.payEndsAtLastClass'), f('timeClock.autoClockOut.enabled'), f('timeClock.autoClockOut.localTime')] },

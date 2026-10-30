@@ -1,22 +1,14 @@
-import { LuArrowRightLeft, LuBan, LuCheck, LuChevronRight, LuEllipsis, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTrash2, LuUserX } from 'react-icons/lu'
+import { LuBan, LuCheck, LuChevronRight, LuPlus, LuRotateCcw, LuUserX } from 'react-icons/lu'
 import { seatKind } from '@shared/schedule/classes'
 import { levelColor } from '@shared/schedule/seatColors'
-import { type DateKey, addDays, formatDateKey, formatMinutes, formatTimeRange } from '@shared/time'
+import { type DateKey, formatDateKey, formatMinutes } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
+import { ContextMenuFor } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { REFUSAL, cellsOf, freeSeats, useBoard, useDragSource, useDropTarget } from './board'
+import { REFUSAL, cellsOf, useBoard, useDragSource, useDropTarget } from './board'
+import { seatContextActions } from './menus'
+import { SeatMenu } from './SeatMenu'
 import { CoachBadge, KindTag, NowPill, SEAT_FILL, SeatCount, abbreviate, classRange, gradeLabel, seatVars, shortName } from './seatParts'
 import type { ClassView } from './useClassData'
 
@@ -32,18 +24,11 @@ const WASH = {
 export function DayList({ dateKey }: { dateKey: DateKey }) {
   const b = useBoard()
   const classes = b.byDate.get(dateKey) ?? []
-  const events = b.eventsOn(dateKey)
   if (!b.isOpen(dateKey) && !classes.length) {
     return <div className="hatch-off rounded-xl border border-dashed py-16 text-center text-sm text-muted-foreground">Closed on {formatDateKey(dateKey, 'weekdayLong').split(',')[0]}.</div>
   }
   return (
     <div className="space-y-3" data-testid="day-list">
-      {events.map((e) => (
-        <div key={e.id} className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
-          <span className="font-semibold">{e.title}</span>
-          <span className="text-sky-800/80 dark:text-sky-300/80">{formatTimeRange(e.startMin, e.endMin)}</span>
-        </div>
-      ))}
       {classes.map((v) => (
         <DayClass key={v.c.id} v={v} />
       ))}
@@ -161,7 +146,11 @@ function DayClass({ v }: { v: ClassView }) {
   )
 }
 
-/** A seat, large: the level's colour with the rifle, the name and grade, the label and own time, and the marks. */
+/**
+ * A seat, large: the level's colour with the rifle, the name and grade, the label and own time, and the marks. A no-show
+ * turns the whole seat grey (the owner, 2026-10-29: "no-show must be obvious"). The office right-clicks it for the
+ * marks and the seat's actions.
+ */
 function DaySeat({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   const b = useBoard()
   const source = useDragSource(seat)
@@ -177,164 +166,104 @@ function DaySeat({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   // Here / no-show belong to the day of the class: a class next week has nothing to mark yet.
   const markable = editable && seat.dateKey <= b.today
   return (
-    <div
-      data-seat-id={seat.id}
-      {...source}
-      className={cn(
-        'group/seat @container flex h-[60px] min-w-0 items-stretch overflow-hidden rounded-lg border bg-card transition-opacity',
-        kind !== 'regular' && WASH[kind],
-        source.draggable && 'cursor-grab active:cursor-grabbing',
-        b.lifted === seat.id && 'opacity-30',
-      )}
-    >
-      <div className={cn('flex w-[72px] shrink-0 flex-col justify-center px-2.5 @min-[420px]:w-[100px]', SEAT_FILL, canceled && 'opacity-50')} style={seatVars(levelColor(level, b.levels))}>
-        <span className="truncate text-[11px] leading-4 font-semibold">
-          {level ? (
-            <>
-              <span className="@min-[420px]:hidden">{abbreviate(level)}</span>
-              <span className="hidden @min-[420px]:inline">{level}</span>
-            </>
-          ) : (
-            'New'
-          )}
-        </span>
-        <span className={cn('truncate leading-4', st?.rifle ? 'text-[13px] font-bold tabular-nums' : 'text-[10px] font-medium opacity-75')}>{st?.rifle || (level ? 'Own rifle' : 'No rifle')}</span>
-      </div>
-      <button type="button" onClick={() => b.openClass(v.c.id)} className={cn('flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 text-left', canceled && 'opacity-55')} title="Open the class">
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className={cn('truncate text-[14px] font-semibold', canceled && 'line-through', noShow && 'text-muted-foreground')}>{seat.studentName}</span>
-          <span className="shrink-0 text-[12px] text-muted-foreground">{gradeLabel(st?.grade ?? seat.studentGrade)}</span>
-        </span>
-        {kind !== 'regular' || own || (label && kind === 'regular') ? (
-          <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
-            <KindTag note={seat.note} />
-            {own ? <span className="shrink-0 tabular-nums">{own}</span> : null}
-            {label && kind === 'regular' ? <span className="min-w-0 truncate">{label}</span> : null}
-          </span>
-        ) : null}
-      </button>
-      <div className="flex shrink-0 items-center gap-1 pr-1.5">
-        {canceled ? (
-          <>
-            <span className="hidden items-center gap-1 text-[12px] font-medium text-red-600 @min-[470px]:inline-flex dark:text-red-400">
-              <LuBan className="size-3.5" /> Canceled
-            </span>
-            {editable ? (
-              <Button variant="outline" size="xs" onClick={() => b.setStatus(seat, 'confirmed')}>
-                <LuRotateCcw /> Restore
-              </Button>
-            ) : null}
-          </>
-        ) : markable ? (
-          <div className="flex items-center rounded-md border bg-background p-0.5" role="group" aria-label="Mark">
-            <button
-              type="button"
-              aria-pressed={present}
-              aria-label="Here"
-              title={present ? 'Here (click to undo)' : 'Mark here'}
-              onClick={() => b.setStatus(seat, present ? 'confirmed' : 'present')}
-              className={cn(
-                'inline-flex h-6 items-center gap-1 rounded-[5px] px-2 text-[12px] font-medium transition-colors',
-                present
-                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <LuCheck className="size-3.5" />
-              <span className="hidden @min-[470px]:inline">Here</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={noShow}
-              aria-label="No-show"
-              title={noShow ? 'No-show (click to undo)' : 'Mark no-show'}
-              onClick={() => b.setStatus(seat, noShow ? 'confirmed' : 'no_show')}
-              className={cn(
-                'inline-flex h-6 items-center gap-1 rounded-[5px] px-2 text-[12px] font-medium transition-colors',
-                noShow ? 'bg-zinc-100 text-zinc-800 ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-zinc-700' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <LuUserX className="size-3.5" />
-              <span className="hidden @min-[470px]:inline">No-show</span>
-            </button>
-          </div>
-        ) : seat.status === 'present' ? (
-          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 dark:text-emerald-400">
-            <LuCheck className="size-3.5" /> Here
-          </span>
-        ) : seat.status === 'no_show' ? (
-          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
-            <LuUserX className="size-3.5" /> No-show
-          </span>
-        ) : null}
-        {editable ? <SeatMenu seat={seat} v={v} /> : null}
-      </div>
-    </div>
-  )
-}
-
-/** A seat's other actions: open the class, cancel or restore, move to another class this week, take out. `compact`: a smaller button (the timeline's cards). */
-export function SeatMenu({ seat, v, inSheet, compact }: { seat: WithId<Session>; v: ClassView; inSheet?: boolean; compact?: boolean }) {
-  const b = useBoard()
-  const canceled = seat.status === 'canceled'
-  // The rest of the week, from the seat's day: the classes the office can move it to.
-  const days: DateKey[] = []
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(seat.dateKey, i)
-    if ((b.byDate.get(d) ?? []).length && b.canEdit(d)) days.push(d)
-  }
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size={compact ? 'icon-xs' : 'icon-sm'} aria-label={`More for ${seat.studentName}`} className={compact ? 'hover:bg-background/60' : undefined}>
-          <LuEllipsis className={compact ? 'size-4' : undefined} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        {!inSheet ? (
-          <DropdownMenuItem onSelect={() => b.openClass(v.c.id)}>
-            <LuSquareArrowOutUpRight /> Open the class
-          </DropdownMenuItem>
-        ) : null}
-        {canceled ? (
-          <DropdownMenuItem onSelect={() => b.setStatus(seat, 'confirmed')}>
-            <LuRotateCcw /> Restore the seat
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem onSelect={() => b.setStatus(seat, 'canceled')}>
-            <LuBan /> Mark canceled (absent)
-          </DropdownMenuItem>
+    <ContextMenuFor entries={editable ? seatContextActions(b, seat, v) : []}>
+      <div
+        data-seat-id={seat.id}
+        data-status={seat.status}
+        {...source}
+        className={cn(
+          'group/seat @container flex h-[60px] min-w-0 items-stretch overflow-hidden rounded-lg border bg-card transition-opacity',
+          noShow ? 'border-zinc-300 bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-700/60' : kind !== 'regular' && WASH[kind],
+          source.draggable && 'cursor-grab active:cursor-grabbing',
+          b.lifted === seat.id && 'opacity-30',
         )}
-        {!canceled && days.length ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <LuArrowRightLeft /> Move to another class
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="max-h-80 w-64 overflow-y-auto">
-              {days.map((d) => (
-                <div key={d}>
-                  <DropdownMenuLabel className="text-xs">{formatDateKey(d, 'weekdayLong').replace(/, \d{4}$/, '')}</DropdownMenuLabel>
-                  {(b.byDate.get(d) ?? []).map((x) => {
-                    const left = freeSeats(x)
-                    const here = x.c.id === v.c.id
-                    const already = !here && x.seats.some((s) => s.studentId === seat.studentId && s.status !== 'canceled')
-                    return (
-                      <DropdownMenuItem key={x.c.id} disabled={here || already || left <= 0} onSelect={() => b.move(seat, x.c)}>
-                        {classRange(x.c.startMin, x.c.endMin)}
-                        <span className="ml-auto text-xs text-muted-foreground">{here ? 'This class' : already ? 'In it' : left > 0 ? `${left} open` : 'Full'}</span>
-                      </DropdownMenuItem>
-                    )
-                  })}
-                </div>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={() => b.removeSeat(seat)}>
-          <LuTrash2 /> Take out of this class
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      >
+        <div
+          className={cn('flex w-[72px] shrink-0 flex-col justify-center px-2.5 @min-[420px]:w-[100px]', noShow ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-600/70 dark:text-zinc-200' : SEAT_FILL, canceled && 'opacity-50')}
+          style={noShow ? undefined : seatVars(levelColor(level, b.levels))}
+        >
+          <span className="truncate text-[11px] leading-4 font-semibold">
+            {level ? (
+              <>
+                <span className="@min-[420px]:hidden">{abbreviate(level)}</span>
+                <span className="hidden @min-[420px]:inline">{level}</span>
+              </>
+            ) : (
+              'New'
+            )}
+          </span>
+          <span className={cn('truncate leading-4', st?.rifle ? 'text-[13px] font-bold tabular-nums' : 'text-[10px] font-medium opacity-75')}>{st?.rifle || (level ? 'Own rifle' : 'No rifle')}</span>
+        </div>
+        <button type="button" onClick={() => b.openClass(v.c.id)} className={cn('flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 text-left', canceled && 'opacity-55')} title="Open the class">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className={cn('truncate text-[14px] font-semibold', canceled && 'line-through', noShow && 'text-zinc-700 dark:text-zinc-200')}>{seat.studentName}</span>
+            <span className="shrink-0 text-[12px] text-muted-foreground">{gradeLabel(st?.grade ?? seat.studentGrade)}</span>
+          </span>
+          {kind !== 'regular' || own || (label && kind === 'regular') ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+              <KindTag note={seat.note} />
+              {own ? <span className="shrink-0 tabular-nums">{own}</span> : null}
+              {label && kind === 'regular' ? <span className="min-w-0 truncate">{label}</span> : null}
+            </span>
+          ) : null}
+        </button>
+        <div className="flex shrink-0 items-center gap-1 pr-1.5">
+          {canceled ? (
+            <>
+              <span className="hidden items-center gap-1 text-[12px] font-medium text-red-600 @min-[470px]:inline-flex dark:text-red-400">
+                <LuBan className="size-3.5" /> Canceled
+              </span>
+              {editable ? (
+                <Button variant="outline" size="xs" onClick={() => b.setStatus(seat, 'confirmed')}>
+                  <LuRotateCcw /> Restore
+                </Button>
+              ) : null}
+            </>
+          ) : markable ? (
+            <div className="flex items-center rounded-md border bg-background p-0.5" role="group" aria-label="Mark">
+              <button
+                type="button"
+                aria-pressed={present}
+                aria-label="Here"
+                title={present ? 'Here (click to undo)' : 'Mark here'}
+                onClick={() => b.setStatus(seat, present ? 'confirmed' : 'present')}
+                className={cn(
+                  'inline-flex h-6 items-center gap-1 rounded-[5px] px-2 text-[12px] font-medium transition-colors',
+                  present
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <LuCheck className="size-3.5" />
+                <span className="hidden @min-[470px]:inline">Here</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={noShow}
+                aria-label="No-show"
+                title={noShow ? 'No-show (click to undo)' : 'Mark no-show'}
+                onClick={() => b.setStatus(seat, noShow ? 'confirmed' : 'no_show')}
+                className={cn(
+                  'inline-flex h-6 items-center gap-1 rounded-[5px] px-2 text-[12px] font-medium transition-colors',
+                  noShow ? 'bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <LuUserX className="size-3.5" />
+                <span className="hidden @min-[470px]:inline">No-show</span>
+              </button>
+            </div>
+          ) : seat.status === 'present' ? (
+            <span className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 dark:text-emerald-400">
+              <LuCheck className="size-3.5" /> Here
+            </span>
+          ) : seat.status === 'no_show' ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-zinc-700 px-1.5 py-0.5 text-[12px] font-semibold text-white dark:bg-zinc-200 dark:text-zinc-900">
+              <LuUserX className="size-3.5" /> No-show
+            </span>
+          ) : null}
+          {editable ? <SeatMenu seat={seat} v={v} /> : null}
+        </div>
+      </div>
+    </ContextMenuFor>
   )
 }

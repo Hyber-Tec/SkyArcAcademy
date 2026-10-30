@@ -1,21 +1,15 @@
-import { query, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { LuCalendarDays, LuChevronDown, LuSquareArrowOutUpRight } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
-import { COL } from '@shared/paths'
 import { takesSeat } from '@shared/schedule/classes'
 import { CONFLICT_LABELS, type Conflict } from '@shared/schedule/conflicts'
-import { occursOn } from '@shared/schedule/events'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, formatMinutes, formatTimeRange } from '@shared/time'
-import type { WithId } from '@shared/types'
-import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CoachBadge, SeatCount, shortName } from '@/features/schedule/seatParts'
-import type { ClassView, EventDoc } from '@/features/schedule/useClassData'
-import { branchCol, useQuery } from '@/lib/firestore'
+import type { ClassView } from '@/features/schedule/useClassData'
 import { cn } from '@/lib/utils'
 import { StatePill, type Tone, nameList, plural } from './parts'
 
@@ -23,10 +17,6 @@ import { StatePill, type Tone, nameList, plural } from './parts'
 const FIRST_ROWS = 12
 
 type Filter = 'all' | 'now' | 'later'
-
-type Row =
-  | { kind: 'class'; key: string; startMin: number; endMin: number; v: ClassView }
-  | { kind: 'event'; key: string; startMin: number; endMin: number; event: WithId<EventDoc> }
 
 /** Today's classes in order, with a red "now" line: each with its students, its seats and the coaches in (Home option 1). */
 export function TodayCard({
@@ -51,33 +41,22 @@ export function TodayCard({
   /** Opens a class (on the schedule). */
   onOpen: (classId: string) => void
 }) {
-  const { branchId } = useBranch()
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [showEarlier, setShowEarlier] = useState(false)
   const [showAll, setShowAll] = useState(false)
 
-  const oneOffQ = useMemo(() => query(branchCol(branchId, COL.events), where('isRecurring', '==', false), where('dateKey', '==', today)), [branchId, today])
-  const recurringQ = useMemo(() => query(branchCol(branchId, COL.events), where('isRecurring', '==', true)), [branchId])
-  const oneOff = useQuery<EventDoc>(oneOffQ, `home-events-${branchId}-${today}`)
-  const recurring = useQuery<EventDoc>(recurringQ, `sched-revents-${branchId}`)
-
   const day = useMemo(() => {
     const earlier = classes.filter((v) => v.c.endMin <= nowMin)
     const current = classes.filter((v) => v.c.startMin <= nowMin && v.c.endMin > nowMin)
     const later = classes.filter((v) => v.c.startMin > nowMin)
-    const events = [...oneOff.data, ...recurring.data]
-      .filter((e) => occursOn(e, today))
-      .map((event): Row => ({ kind: 'event', key: `event-${event.id}`, startMin: event.startMin, endMin: event.endMin, event }))
-    return { earlier, current, later, events }
-  }, [classes, oneOff.data, recurring.data, today, nowMin])
+    return { earlier, current, later }
+  }, [classes, nowMin])
 
-  const toRow = (v: ClassView): Row => ({ kind: 'class', key: v.c.id, startMin: v.c.startMin, endMin: v.c.endMin, v })
-  const byTime = (a: Row, b: Row) => a.startMin - b.startMin || a.endMin - b.endMin
-  // All: what's on now, the red line, then what's later (events ride along; ended ones drop off).
-  const currentRows =
-    filter === 'later' ? [] : [...day.current.map(toRow), ...(filter === 'all' ? day.events.filter((e) => e.startMin <= nowMin && e.endMin > nowMin) : [])].sort(byTime)
-  const laterRows = filter === 'now' ? [] : [...day.later.map(toRow), ...(filter === 'all' ? day.events.filter((e) => e.startMin > nowMin) : [])].sort(byTime)
+  const byTime = (a: ClassView, b: ClassView) => a.c.startMin - b.c.startMin || a.c.endMin - b.c.endMin
+  // All: what's on now, the red line, then what's later (ended ones drop off).
+  const currentRows = filter === 'later' ? [] : [...day.current].sort(byTime)
+  const laterRows = filter === 'now' ? [] : [...day.later].sort(byTime)
   const list = [...currentRows, ...laterRows]
   const visible = showAll ? list : list.slice(0, FIRST_ROWS)
   const hidden = list.length - visible.length
@@ -147,20 +126,6 @@ export function TodayCard({
       </ContextMenuFor>
     )
   }
-
-  const eventRow = (e: WithId<EventDoc>, key: string) => (
-    <li key={key} className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 bg-sky-50/40 px-4 py-2.5 dark:bg-sky-950/15">
-      <div className="text-sm leading-tight tabular-nums">
-        <div className="font-medium">{formatMinutes(e.startMin)}</div>
-        <div className="text-xs text-muted-foreground">{formatMinutes(e.endMin)}</div>
-      </div>
-      <div className="min-w-0 leading-tight">
-        <div className="truncate text-sm font-medium">{e.title}</div>
-        {e.notes ? <div className="mt-0.5 truncate text-xs text-muted-foreground">{e.notes}</div> : null}
-      </div>
-      <StatePill tone="done">Event</StatePill>
-    </li>
-  )
 
   const nowLine = (
     <li key="now-line" className="flex items-center gap-2 px-4 py-1" aria-label={`Now, ${formatMinutes(nowMin)}`} data-testid="home-now-line">
@@ -235,7 +200,7 @@ export function TodayCard({
             </li>
           ) : null}
           {filter === 'all' && showEarlier ? day.earlier.map((v) => classRow(v, true)) : null}
-          {visible.map((r, i) => [i === lineIndex ? nowLine : null, r.kind === 'class' ? classRow(r.v) : eventRow(r.event, r.key)])}
+          {visible.map((v, i) => [i === lineIndex ? nowLine : null, classRow(v)])}
           {lineIndex >= 0 && lineIndex >= visible.length ? nowLine : null}
           {list.length === 0 && filter === 'all' ? (
             <li className="px-4 py-6 text-center text-sm text-muted-foreground">Nothing else on the schedule today.</li>

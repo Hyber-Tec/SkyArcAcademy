@@ -66,6 +66,19 @@ export function coachesIn(c: ClassTime, day: readonly DayRecord[], hours: DayHou
   return out.sort((a, b) => a.ranges[0].startMin - b.ranges[0].startMin || a.name.localeCompare(b.name))
 }
 
+/**
+ * Everyone in at a class's time, whether they teach it or not (the manager and the owner too): whose hours that day
+ * overlap it, read as `coachesIn` reads them. The website's timeline draws the class across their rows.
+ */
+export function peopleIn(c: ClassTime, day: readonly DayRecord[], hours: DayHours): string[] {
+  const ids = new Set<string>()
+  for (const a of day) {
+    if (a.dateKey !== c.dateKey || a.unavailable) continue
+    if (effectiveRanges(a.ranges ?? [], hours).some((r) => r.startMin < c.endMin && r.endMin > c.startMin)) ids.add(a.staffId)
+  }
+  return [...ids]
+}
+
 /** A class as the schedule shows it: its seats (canceled ones too, in the order booked), and who teaches it. */
 export interface ClassView {
   c: WithId<AcademyClass>

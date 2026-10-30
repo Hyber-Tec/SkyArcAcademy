@@ -3,7 +3,7 @@ import type { ClassRequest } from '@shared/schedule/requests'
 import type { SessionStatus } from '@shared/settings/defaults'
 import type { DateKey } from '@shared/time'
 import type { AcademyClass, Availability, ClockShift, Session, Student, WithId } from '@shared/types'
-import type { ClassView, EventDoc } from './useClassData'
+import type { ClassView } from './useClassData'
 
 /** A seat being dragged to another class. */
 export interface Drag {
@@ -28,7 +28,6 @@ export interface Board {
   /** Everyone with hours that day, earliest first. */
   inOn: (d: DateKey) => WithId<Availability>[]
   isOpen: (d: DateKey) => boolean
-  eventsOn: (d: DateKey) => WithId<EventDoc>[]
   student: (id: string) => WithId<Student> | undefined
   staffName: (staffId: string, fallback?: string) => string
   staffColor: (staffId: string) => string
@@ -53,8 +52,6 @@ export interface Board {
   addSeat: (classId: string) => void
   addClass: (d: DateKey) => void
   editWhosIn: (d: DateKey) => void
-  /** The office opens an event to change it. */
-  openEvent?: (e: WithId<EventDoc>) => void
   setStatus: (s: WithId<Session>, status: SessionStatus) => void
   setLabel: (s: WithId<Session>, label: string) => void
   move: (s: WithId<Session>, to: WithId<AcademyClass>) => void

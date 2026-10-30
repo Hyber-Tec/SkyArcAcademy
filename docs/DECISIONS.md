@@ -804,3 +804,29 @@ Goo tried TestFlight 1.1.0 (5) on an iPhone 15 with the demo logins and asked fo
 - **Cards on any desk** (#80): the reader finds holes whatever is behind the card (white, brown, black). On Goo's cards
   the app stays a point or so over the coaches where a hole touches the next ring's line: the matches' rule Goo chose
   (§23, P1); the closest calls are shown orange for a look.
+
+## 25. Goo's round on the schedule (2026-10-29)
+
+Goo used the website's timeline (§23) and asked for these:
+
+- **Every slot the same size, in one column** ("the empty slot must be the same size as a student's card, underneath,
+  not next to it"): inside a class, its students, families' requests and open seats are each a student card's height
+  and the block's full width, one under the other. First the students, then the requests (those waiting on the office,
+  then those suggested to a family), each in an open seat's place, then the seats still open; more requests than open
+  seats go on under them. A block is as wide as its class is long, and classes with as many seats are as tall.
+- **A no-show is obvious:** the whole card turns grey (like a canceled one, without the line through it), says
+  "No-show" and keeps its mark; Here keeps the level's colour. The narrow day and week do the same.
+- **Everyone in shares the classes** ("just put them in; I know each row gets narrower, I don't mind"): a class's block
+  spans the rows of everyone in at its time, owners and admins too; someone in at no class's time keeps a row of their
+  own. Coaches stay above the people who don't teach wherever that keeps every class in one piece. Who teaches doesn't
+  change: the "No coach in" row and its warning still mean that no coach is in for a class.
+- **Right-click** ("if we can right-click the student session card or other places, that'll be really cool"): a
+  student's card (here or no-show, then what its ⋯ has), a class (open it, add a student, who's in, remove it), an open
+  seat, a request, a person's name and a day's empty space (add a class, who's in) have menus, for the office only. The
+  ⋯ buttons and clicks stay as they were. The Students directory and the Drive had right-click menus already.
+- **No events on the website** ("I never asked for it; just get rid of it"): the timeline's Events row, adding and
+  changing an event, the events on Home and in the narrow day and week, and the event names in Settings are gone.
+  Events' data, rules and the phone app stay as they are; the sample data makes none, and its next run deletes the old.
+- **Two pages off the menu, still at their addresses:** Employees → Pay Rates (a person's rate is on their page in
+  Employees → Directory, where the links that led to Pay Rates go now) and Access Control ("we only have one admin;
+  don't delete it, hide it, in case we need it back").

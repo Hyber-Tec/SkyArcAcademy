@@ -139,7 +139,8 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
       tone: 'red',
       title: `${plural(gaps.length, 'employee')} without a pay rate`,
       subtitle: `${nameList(gaps.map((g) => g.staff.name))} · paid $0 until it’s set`,
-      seeAll: { label: 'Open Pay Rates', to: `${admin}/employees/pay-rates` },
+      // A rate is set on the person's page (Employees → Directory), which has their pay card.
+      seeAll: { label: 'Open Employees', to: `${admin}/employees/directory` },
       items: gaps.map((g) => ({
         key: g.staff.id,
         title: g.staff.name,
@@ -148,7 +149,7 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
         action: { label: 'Set rate', onClick: () => navigate(`${admin}/employees/directory/${g.staff.id}#pay`) },
         actions: menu(
           { label: 'Set their pay rate', icon: LuBadgeDollarSign, onSelect: () => navigate(`${admin}/employees/directory/${g.staff.id}#pay`) },
-          { label: 'Open Pay Rates', onSelect: () => navigate(`${admin}/employees/pay-rates`) },
+          { label: 'Open employee', onSelect: () => navigate(`${admin}/employees/directory/${g.staff.id}`) },
         ),
       })),
     })

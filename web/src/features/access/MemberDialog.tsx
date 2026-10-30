@@ -30,7 +30,7 @@ import { Switch } from '@/components/ui/switch'
 import { saveMember } from './api'
 
 const ROLE_HELP: Record<Role, string> = {
-  owner: 'Runs the academy: everything an admin can, plus admins and Access Control',
+  owner: 'Runs the academy: everything an admin can, plus admins and their access',
   admin: 'Full access to the admin portal',
   coach: 'Teaches: appears on the schedule; coach portal',
   parent: 'Sees their children’s classes',

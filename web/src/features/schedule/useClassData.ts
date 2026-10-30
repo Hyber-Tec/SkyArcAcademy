@@ -3,22 +3,20 @@ import { useCallback, useMemo } from 'react'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
 import { classViews } from '@shared/schedule/classes'
-import { type ScheduleEvent, occursOn } from '@shared/schedule/events'
 import type { DayHours } from '@shared/settings/defaults'
-import { type DateKey, dateRange } from '@shared/time'
-import type { AcademyClass, Availability, Session, WithId } from '@shared/types'
+import type { DateKey } from '@shared/time'
+import type { AcademyClass, Availability, Session } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useDayConfigs } from '@/features/data/hooks'
 import { branchCol, useQuery } from '@/lib/firestore'
-
-export type EventDoc = ScheduleEvent & { isRecurring: boolean; createdBy?: string; updatedAt?: unknown }
 
 /** A class as the schedule shows it: its seats (canceled ones too, in the order booked), and who teaches it. */
 export type { ClassView } from '@shared/schedule/classes'
 
 /**
  * The schedule's data for a range of dates, live: the classes and their students, who's in each day (the coaches'
- * availability), opening hours and events. `isCoach` says who teaches (the manager can be in without teaching).
+ * availability) and opening hours. `isCoach` says who teaches (the manager can be in without teaching). The website
+ * shows no events since 2026-10-29 (the owner never used them).
  */
 export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staffId: string) => boolean; keepPrevious?: boolean }) {
   const { branchId, settings } = useBranch()
@@ -30,14 +28,6 @@ export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staff
   const seats = useQuery<Session>(seatsQ, `cls-seats-${branchId}-${from}-${to}`, keep)
   const availability = useQuery<Availability>(availQ, `cls-avail-${branchId}-${from}-${to}`, keep)
   const dayConfigs = useDayConfigs(from, to, keep)
-
-  const oneOffQ = useMemo(
-    () => query(branchCol(branchId, COL.events), where('isRecurring', '==', false), where('dateKey', '>=', from), where('dateKey', '<=', to)),
-    [branchId, from, to],
-  )
-  const recurringQ = useMemo(() => query(branchCol(branchId, COL.events), where('isRecurring', '==', true)), [branchId])
-  const oneOff = useQuery<EventDoc>(oneOffQ, `cls-events-${branchId}-${from}-${to}`, keep)
-  const recurring = useQuery<EventDoc>(recurringQ, `cls-revents-${branchId}`)
 
   const hoursOf = useCallback((d: DateKey): DayHours => dayHours(d, settings, dayConfigs.map), [settings, dayConfigs.map])
 
@@ -53,16 +43,6 @@ export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staff
     [availability.data],
   )
 
-  const eventsByDate = useMemo(() => {
-    const m = new Map<DateKey, WithId<EventDoc>[]>()
-    const all = [...oneOff.data, ...recurring.data]
-    for (const d of dateRange(from, to)) {
-      const list = all.filter((e) => occursOn(e, d)).sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin)
-      if (list.length) m.set(d, list)
-    }
-    return m
-  }, [oneOff.data, recurring.data, from, to])
-
   const liveSeats = useMemo(() => seats.data.filter((s) => !s.isDeleted), [seats.data])
 
   return {
@@ -72,8 +52,7 @@ export function useClassData(from: DateKey, to: DateKey, opts: { isCoach: (staff
     inOn,
     hoursOf,
     dayConfigs: dayConfigs.map,
-    eventsByDate,
     loading: classes.loading || seats.loading || availability.loading,
-    error: classes.error ?? seats.error ?? availability.error ?? oneOff.error ?? recurring.error,
+    error: classes.error ?? seats.error ?? availability.error,
   }
 }

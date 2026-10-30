@@ -15,8 +15,8 @@ import { chance } from './random'
  * Sample data, for trying the app before the academy's real data arrives: fictional coaches, a manager, students and
  * their families; ten weeks of classes around today in the academy's weekly layout, taught together by the coaches in
  * (each class's students are its seats, labelled as the sheets do: make-ups, practice, trials), with a seat or two open
- * in the coming weeks' classes; families' requests for those seats, in each state; who's in each day, time entries,
- * announcements and events. Everything is made up: the names match nobody at the academy, emails use the
+ * in the coming weeks' classes; families' requests for those seats, in each state; who's in each day, time entries and
+ * announcements. Everything is made up: the names match nobody at the academy, emails use the
  * reserved `.test` domain (no email is ever sent to them), and every document ID starts with `sample-`, so
  * `npm run seed:sample -- --remove` deletes all of it, along with anything the app later made for these people.
  */
@@ -984,30 +984,7 @@ export function buildSampleData(opts: SampleOptions): { docs: SampleDoc[]; summa
     families: true,
   })
 
-  // Events -------------------------------------------------------------------------
-  // `isRecurring` as the website's event dialog saves it: the schedules find one-off and repeating events by it.
-  const firstSunday = days.find((d) => weekdayOf(d) === 'sunday') ?? today
-  add(`${COL.events}/${SAMPLE_PREFIX}e-range-practice`, {
-    title: 'Range Practice',
-    dateKey: firstSunday,
-    startMin: 1050,
-    endMin: 1170,
-    notes: 'Open practice for enrolled students.',
-    recurrence: { frequency: 'weekly', interval: 1, weekdays: ['sunday'], monthDay: null, ends: { type: 'never', endDate: null, occurrences: null } },
-    isRecurring: true,
-    ...stamp,
-  })
-  const meeting = days.find((d) => d >= addDays(today, 3) && weekdayOf(d) === 'sunday' && isOpen(d)) ?? addDays(today, 3)
-  add(`${COL.events}/${SAMPLE_PREFIX}e-parent-meeting`, {
-    title: 'Parent Meeting',
-    dateKey: meeting,
-    startMin: 810,
-    endMin: 840,
-    notes: 'The fall season and the junior match.',
-    recurrence: null,
-    isRecurring: false,
-    ...stamp,
-  })
+  // No events: the website stopped showing them (the owner, 2026-10-29), and the academy never used them.
 
   const count = (kind: Seat['kind']) => made.filter((m) => m.kind === kind).length
   const summary: SampleSummary = {

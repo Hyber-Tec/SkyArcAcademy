@@ -48,6 +48,8 @@ export type MenuEntry =
       disabled?: boolean
       /** Keyboard hint shown on the right, e.g. "⌘C". */
       shortcut?: string
+      /** A word on the right, e.g. "2 open" or "Full". */
+      hint?: string
       separatorBefore?: boolean
     }
   | { kind: 'sub'; label: string; icon?: IconType; entries: MenuEntry[]; disabled?: boolean; separatorBefore?: boolean }
@@ -153,6 +155,7 @@ function Entries({ entries, p }: { entries: MenuEntry[]; p: Primitives }) {
         <p.Item variant={e.destructive ? 'destructive' : 'default'} disabled={e.disabled} onSelect={e.onSelect}>
           {Icon ? <Icon /> : null}
           {e.label}
+          {e.hint ? <span className="ml-auto pl-3 text-xs text-muted-foreground">{e.hint}</span> : null}
           {e.shortcut ? <p.Shortcut>{e.shortcut}</p.Shortcut> : null}
         </p.Item>
       </Fragment>
