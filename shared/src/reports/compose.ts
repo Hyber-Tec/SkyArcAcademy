@@ -14,6 +14,8 @@ export interface ComposeInput {
   /** The student's classes inside the period. */
   sessions: readonly FactsSession[]
   previous: PreviousReport | null
+  /** The student's competitions before the period, to compare the period's matches with. */
+  earlier?: readonly (Evaluation & { id: string })[]
   by: ReportPerson
 }
 
@@ -22,7 +24,7 @@ export type ComposedReport = Omit<ProgressReportDoc, 'generatedAt' | 'updatedAt'
 
 export function composeReport(input: ComposeInput): ComposedReport {
   const label = periodLabel(input.period.from, input.period.to)
-  const { facts, series } = reportFacts(input.evaluations, input.sessions, input.previous)
+  const { facts, series } = reportFacts(input.evaluations, input.sessions, input.previous, input.earlier)
   const narrative = templateNarrative(facts, input.student.firstName, label)
   return {
     schemaVersion: 1,

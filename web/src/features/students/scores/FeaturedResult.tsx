@@ -220,7 +220,7 @@ export function FeaturedResult({
             <ul className="space-y-1 text-sm">
               {e.series.map((s) => (
                 <li key={s.n} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="w-16 shrink-0 text-xs text-muted-foreground">Bulls</span>
+                  <span className="w-16 shrink-0 text-xs text-muted-foreground">{e.source === 'sheet' ? `Series ${s.n}` : 'Bulls'}</span>
                   <span className="font-medium tabular-nums">{one(s.total)}</span>
                   <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
                     {s.shots.map((t, i) => (

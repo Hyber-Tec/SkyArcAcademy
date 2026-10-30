@@ -1,6 +1,6 @@
 import type { EvaluationPoint } from '@shared/reports/types'
 import { type Evaluation, pointOf } from '@shared/shooting/evaluation'
-import { type ReplayShot, replayShots } from '@shared/shooting/replay'
+import { type ReplayShot, replayShots, showsTenths } from '@shared/shooting/replay'
 import { type ShotPoint, offsetWords, targetViewMm } from '@shared/shooting/target'
 import { formatDateKey } from '@shared/time'
 
@@ -29,7 +29,7 @@ const scoreText = (sius: boolean, v: number) => (sius ? v.toFixed(1) : String(Ma
 
 /** One result's shots (SIUS series by series, a paper card bull by bull). */
 export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>): PlayShot[] {
-  const sius = e.source === 'sius'
+  const sius = showsTenths(e)
   const shots = replayShots(e)
   return shots.map((s) => ({
     n: s.n,

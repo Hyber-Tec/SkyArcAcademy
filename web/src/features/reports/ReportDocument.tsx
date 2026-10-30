@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { LuArrowRight, LuCheck, LuCrosshair, LuFlag, LuGitCompareArrows, LuMessageSquareQuote, LuTable2, LuTarget, LuTrendingUp, LuTrophy } from 'react-icons/lu'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from '@shared/shooting/evaluation'
-import { formatDateKey, formatInstant } from '@shared/time'
+import { type DateKey, formatDateKey, formatInstant } from '@shared/time'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { cn } from '@/lib/utils'
 import { DistributionBar, TrendChart } from './charts'
@@ -307,6 +307,7 @@ export function ReportDocument({
                     <th className="pb-1.5 font-medium">Position</th>
                     <th className="pb-1.5 text-right font-medium">Score</th>
                     <th className="pb-1.5 text-right font-medium">Per 10</th>
+                    {f.competitions.some((c) => c.since) ? <th className="pb-1.5 text-right font-medium">Since the last match</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -321,12 +322,17 @@ export function ReportDocument({
                         <span style={{ color: INK.muted }}> / {c.shots}</span>
                       </td>
                       <td className="py-1.5 text-right font-semibold tabular-nums">{c.wholePer10.toFixed(1)}</td>
+                      {f.competitions?.some((x) => x.since) ? (
+                        <td className="py-1.5 text-right tabular-nums" title={c.since ? `${c.since.match || 'Competition'}, ${formatDateKey(c.since.dateKey, 'monthDay')}: ${c.since.wholePer10.toFixed(1)} per 10` : undefined}>
+                          {c.since ? <SinceLast change={c.wholePer10 - c.since.wholePer10} dateKey={c.since.dateKey} /> : <span style={{ color: INK.muted }}>First</span>}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="mt-2 text-[11px]" style={{ color: INK.muted }}>
-                Matches are listed apart from practice; the figures above are from practice and evaluations. The score is the total, then the inner tens.
+                Matches are listed apart from practice; the figures above are from practice and evaluations. The score is the total, then the inner tens; each match is compared, per 10 shots, with the same position&rsquo;s match before it.
               </p>
             </div>
           ) : null}
@@ -371,5 +377,19 @@ export function ReportDocument({
         </div>
       </section>
     </div>
+  )
+}
+
+/** A match against the same position's match before it: up green, down red, per 10 shots. */
+function SinceLast({ change, dateKey }: { change: number; dateKey: DateKey }) {
+  const v = Math.round(change * 10) / 10
+  const color = v > 0 ? '#15803d' : v < 0 ? '#b91c1c' : INK.muted
+  return (
+    <span>
+      <span className="font-semibold" style={{ color }}>
+        {v > 0 ? `+${v.toFixed(1)}` : v < 0 ? `−${Math.abs(v).toFixed(1)}` : '±0'}
+      </span>
+      <span style={{ color: INK.muted }}> vs {formatDateKey(dateKey, 'monthDay')}</span>
+    </span>
   )
 }

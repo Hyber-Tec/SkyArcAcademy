@@ -3,6 +3,7 @@ import { LuFileText, LuMessageSquareQuote, LuPencil, LuPencilLine, LuScanSearch,
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10, totalWithTens } from '@shared/shooting/evaluation'
+import { matchResults } from '@shared/scores/match'
 import { wasScanned } from '@shared/targets/flat'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -20,6 +21,7 @@ import { MiniTarget } from '@/features/scores/TargetPlot'
 import { ResultKindChip } from '@/features/scores/kinds'
 import { cn } from '@/lib/utils'
 import { BestBadge, FeaturedResult } from './FeaturedResult'
+import { MatchCard } from './MatchCard'
 import { SiusEditDialog } from './SiusEditDialog'
 
 /** Rows shown before "Show all". */
@@ -132,6 +134,8 @@ export function ResultsPanel({
           onOriginal={onOriginal}
           insight={insight?.(selected)}
         />
+        {/* A competition from its sheet: the whole match, series by series. */}
+        {selected.source === 'sheet' ? <MatchCard evaluation={selected} results={matchResults(selected, rows)} /> : null}
       </div>
 
       <div className="border-t" data-testid="results-list">

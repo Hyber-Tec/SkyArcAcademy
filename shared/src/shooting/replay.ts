@@ -29,6 +29,14 @@ export function replayShots(e: Pick<Evaluation, 'source' | 'series'>): ReplaySho
   return out
 }
 
+/**
+ * Whether a result's shots read in tenths: SIUS's, and a match sheet's printed with them ("8.9"); a paper card's are
+ * whole numbers.
+ */
+export function showsTenths(e: Pick<Evaluation, 'source' | 'series'>): boolean {
+  return e.source === 'sius' || (e.source === 'sheet' && e.series.some((s) => s.shots.some((t) => !Number.isInteger(t.v))))
+}
+
 /** Whether a result has shots with a place on the target, so it can be played back. */
 export function canReplay(e: Pick<Evaluation, 'source' | 'series'>): boolean {
   return replayShots(e).some((s) => s.point !== null)

@@ -50,6 +50,7 @@ export async function createReport(opts: {
     evaluations: inputs.evaluations,
     sessions: inputs.sessions,
     previous: inputs.previous,
+    earlier: inputs.earlier,
     by: person(actor),
   })
   const id = doc(branchCol(branchId, COL.progressReports)).id
@@ -96,7 +97,7 @@ export async function setOption(branchId: string, actor: Actor, r: Report, key: 
 export async function refreshFigures(branchId: string, actor: Actor, r: Report) {
   const inputs = await loadComposeInputs(branchId, r.studentId, r.startDate, r.endDate)
   if (!inputs.evaluations.length) throw new Error('There are no scored evaluations in this period any more.')
-  const { facts, series } = reportFacts(inputs.evaluations, inputs.sessions, inputs.previous)
+  const { facts, series } = reportFacts(inputs.evaluations, inputs.sessions, inputs.previous, inputs.earlier)
   const fresh = templateNarrative(facts, r.student.firstName, r.period.label)
   const edited = r.narrativeMeta?.sections ?? {}
   const narrative = Object.fromEntries(NARRATIVE_KEYS.map((k) => [k, edited[k]?.source === 'staff' ? r.narrative[k] : fresh[k]])) as unknown as ReportNarrative

@@ -252,13 +252,13 @@ function CompetitionForm({ studentId, studentName, onDone }: { studentId: string
               <Input id="comp-course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. 3x20 Air Rifle" maxLength={80} />
             </Field>
             <Field>
-              <FieldLabel>Scoring</FieldLabel>
+              <FieldLabel>Totals</FieldLabel>
               <ToggleGroup type="single" variant="outline" size="sm" value={decimal ? 'decimal' : 'whole'} onValueChange={(v) => v && setDecimal(v === 'decimal')}>
                 <ToggleGroupItem value="whole" className="flex-1">
-                  Whole numbers
+                  Whole (478)
                 </ToggleGroupItem>
                 <ToggleGroupItem value="decimal" className="flex-1">
-                  Decimals
+                  With tenths (587.4)
                 </ToggleGroupItem>
               </ToggleGroup>
             </Field>

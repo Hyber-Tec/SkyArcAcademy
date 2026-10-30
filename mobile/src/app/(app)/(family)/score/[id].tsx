@@ -25,6 +25,7 @@ import { CompareCard } from "@/features/scores/CompareCard";
 import { scoreTitle } from "@/features/scores/format";
 import { BestBadge, ScoreHead, scoreFacts, useCardPicture } from "@/features/scores/ScoreParts";
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
+import { MatchCard, matchResults } from "@/features/scores/MatchCard";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
@@ -118,7 +119,10 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
           </View>
         </ScoreHead>
 
-        {canReplay(e) ? (
+        {/* A competition from its sheet: the whole match, series by series, each played on its own. */}
+        {e.source === "sheet" ? <MatchCard evaluation={e} results={matchResults(e, own.data)} testID="family-score-match" /> : null}
+
+        {canReplay(e) && e.source !== "sheet" ? (
           <Card style={styles.center} testID="family-score-replay">
             <ShotReplay evaluation={e} color={color} size={target} autoPlay={!reduced} onStep={sius ? setCurrent : undefined} />
           </Card>

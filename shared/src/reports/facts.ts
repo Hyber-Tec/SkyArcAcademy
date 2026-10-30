@@ -123,13 +123,27 @@ export function attendanceFacts(sessions: readonly FactsSession[]): ReportFacts[
   }
 }
 
+/** The same position's latest match on an earlier day (another match the same day isn't "before" it). */
+function lastMatchBefore(e: Evaluation, matches: readonly Evaluation[]): CompetitionFact['since'] {
+  const prior = matches.filter((m) => m.position === e.position && m.dateKey < e.dateKey && m.shots > 0)
+  const last = prior.reduce<Evaluation | null>((best, m) => (!best || m.dateKey > best.dateKey ? m : best), null)
+  return last ? { dateKey: last.dateKey, match: last.match?.name ?? '', wholePer10: per10(last.wholeTotal, last.shots) ?? 0 } : null
+}
+
 /** The period's figures from its evaluations (already in the period), its classes and the last shared report. */
-export function reportFacts(evaluations: readonly (Evaluation & { id: string })[], sessions: readonly FactsSession[], previous: PreviousReport | null): { facts: ReportFacts; series: EvaluationPoint[] } {
+export function reportFacts(
+  evaluations: readonly (Evaluation & { id: string })[],
+  sessions: readonly FactsSession[],
+  previous: PreviousReport | null,
+  /** The student's competitions before the period, each match compared with the one before it. */
+  earlier: readonly (Evaluation & { id: string })[] = [],
+): { facts: ReportFacts; series: EvaluationPoint[] } {
   // Competitions stand apart from practice (§23): listed on their own, left out of the figures and the charts.
   const ordered = inOrder(evaluations)
+  const before = inOrder(earlier).filter((e) => kindOf(e) === 'competition')
   const competitions: CompetitionFact[] = ordered
     .filter((e) => kindOf(e) === 'competition')
-    .map((e) => ({
+    .map((e, _, all) => ({
       id: e.id,
       dateKey: e.dateKey,
       match: e.match?.name ?? '',
@@ -139,6 +153,7 @@ export function reportFacts(evaluations: readonly (Evaluation & { id: string })[
       innerTens: e.innerTens,
       decimal: e.source !== 'paper' && !Number.isInteger(e.total),
       wholePer10: per10(e.wholeTotal, e.shots) ?? 0,
+      since: lastMatchBefore(e, [...before, ...all]),
     }))
   const series = ordered.filter((e) => kindOf(e) !== 'competition').map(toPoint)
   const positions = POSITIONS.map((pos) => positionFacts(pos, series.filter((p) => p.position === pos))).filter((p) => p.evaluations > 0)
