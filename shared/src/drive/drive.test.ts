@@ -19,7 +19,17 @@ import {
   trashQuestion,
   updatedText,
 } from './model'
-import { CONTRACTS_FOLDER_ID, type DriveFile, type DriveFolder, accessOf, studentFolderId } from './types'
+import {
+  type DriveFile,
+  type DriveFolder,
+  OLD_CONTRACTS_FOLDER_ID,
+  accessOf,
+  contractsFolderId,
+  contractsFolderStudent,
+  isContractsFolder,
+  isFixedFolder,
+  studentFolderId,
+} from './types'
 
 const at = (ms: number) => ({ seconds: ms / 1000, nanoseconds: 0, toDate: () => new Date(ms), toMillis: () => ms })
 const by = { uid: 'u', email: 'paige@example.test', name: 'Paige Sutton' }
@@ -198,7 +208,7 @@ describe('who sees what: folders only owners and admins see', () => {
     buildDriveIndex(
       [
         folder(studentFolderId('mia'), null, { studentId: 'mia' }),
-        folder(CONTRACTS_FOLDER_ID, null, { name: 'Contracts', access: 'admins' }),
+        folder(OLD_CONTRACTS_FOLDER_ID, null, { name: 'Contracts', access: 'admins' }),
         folder('office', null, { name: 'Office' }),
         // Made theirs by an admin, inside a folder everyone on staff sees; and a folder inside it.
         folder('pay', 'office', { name: 'Payroll', access: 'admins' }),
@@ -209,7 +219,7 @@ describe('who sees what: folders only owners and admins see', () => {
         ...extraFolders,
       ],
       [
-        file('signed', CONTRACTS_FOLDER_ID, { access: 'admins' }),
+        file('signed', OLD_CONTRACTS_FOLDER_ID, { access: 'admins' }),
         file('payslip', 'pay', { access: 'admins' }),
         file('old-payslip', 'pay-old', { access: 'admins' }),
         file('plan', 'plans'),
@@ -225,15 +235,15 @@ describe('who sees what: folders only owners and admins see', () => {
     expect(accessOf({})).toBe('staff')
     expect(accessOf(null)).toBe('staff')
     expect(idx().accessIn(null)).toBe('staff')
-    expect(idx().accessIn(CONTRACTS_FOLDER_ID)).toBe('admins')
+    expect(idx().accessIn(OLD_CONTRACTS_FOLDER_ID)).toBe('admins')
     expect(idx().accessIn(studentFolderId('leo'))).toBe('staff')
   })
 
   it('makes a file moved into their folder theirs, and everyone’s on staff again out of one', () => {
-    const into = planMove(idx(), [], ['plan'], CONTRACTS_FOLDER_ID)
-    expect(into.files).toEqual([{ id: 'plan', patch: { folderId: CONTRACTS_FOLDER_ID, studentId: null, access: 'admins' } }])
+    const into = planMove(idx(), [], ['plan'], OLD_CONTRACTS_FOLDER_ID)
+    expect(into.files).toEqual([{ id: 'plan', patch: { folderId: OLD_CONTRACTS_FOLDER_ID, studentId: null, access: 'admins' } }])
     expect(into.access).toBe('admins')
-    expect(moveAccessNote(idx(), [], ['plan'], CONTRACTS_FOLDER_ID)).toBe('Only owners and admins will see it there.')
+    expect(moveAccessNote(idx(), [], ['plan'], OLD_CONTRACTS_FOLDER_ID)).toBe('Only owners and admins will see it there.')
     const out = planMove(idx(), [], ['signed'], 'office')
     expect(out.files).toEqual([{ id: 'signed', patch: { folderId: 'office', studentId: null, access: 'staff' } }])
     expect(moveAccessNote(idx(), [], ['signed', 'payslip'], 'office')).toBe('Everyone on staff, coaches too, will see them there.')
@@ -243,9 +253,9 @@ describe('who sees what: folders only owners and admins see', () => {
   })
 
   it('takes everything in a moved folder along, the Trash included', () => {
-    const plan = planMove(idx(), ['plans'], [], CONTRACTS_FOLDER_ID)
+    const plan = planMove(idx(), ['plans'], [], OLD_CONTRACTS_FOLDER_ID)
     expect(plan.folders).toEqual([
-      { id: 'plans', patch: { parentId: CONTRACTS_FOLDER_ID, access: 'admins' } },
+      { id: 'plans', patch: { parentId: OLD_CONTRACTS_FOLDER_ID, access: 'admins' } },
       { id: 'drafts', patch: { access: 'admins' } },
       { id: 'gone', patch: { access: 'admins' } },
     ])
@@ -278,10 +288,11 @@ describe('who sees what: folders only owners and admins see', () => {
     expect(accessRefusal(idx([folder('mia-old', mia, { name: 'Old' })]), 'mia-old', 'admins')).toBe('A student’s folder is for everyone on staff, and so is everything in it.')
   })
 
-  it('keeps the Contracts folder at the top, for owners and admins', () => {
-    expect(moveRefusal(idx(), [CONTRACTS_FOLDER_ID], [], 'office')).toBe('The Contracts folder stays at the top.')
-    expect(() => planMove(idx(), [CONTRACTS_FOLDER_ID], [], 'office')).toThrow()
-    expect(accessRefusal(idx(), CONTRACTS_FOLDER_ID, 'staff')).toBe('The Contracts folder is for owners and admins only.')
+  it('keeps the Contracts folder from before at the top, for owners and admins, until it’s emptied', () => {
+    expect(isFixedFolder({ id: OLD_CONTRACTS_FOLDER_ID })).toBe(true)
+    expect(moveRefusal(idx(), [OLD_CONTRACTS_FOLDER_ID], [], 'office')).toBe('The Contracts folder stays at the top.')
+    expect(() => planMove(idx(), [OLD_CONTRACTS_FOLDER_ID], [], 'office')).toThrow()
+    expect(accessRefusal(idx(), OLD_CONTRACTS_FOLDER_ID, 'staff')).toBe('The Contracts folder is for owners and admins only.')
   })
 
   it('makes a folder theirs with everything in it, and opens it the same way', () => {
@@ -313,6 +324,117 @@ describe('who sees what: folders only owners and admins see', () => {
       ['a', 'admins'],
       ['b', 'staff'],
     ])
+  })
+})
+
+describe('each student’s Contracts folder', () => {
+  const mia = studentFolderId('mia')
+  const miaContracts = contractsFolderId('mia')
+  const idx = (options = { contractsFolders: true }) =>
+    buildDriveIndex(
+      [
+        folder(mia, null, { studentId: 'mia', access: 'staff' }),
+        folder(miaContracts, mia, { name: 'Contracts', access: 'admins' }),
+        // A folder the office made in it for paper contracts.
+        folder('paper', miaContracts, { name: 'Paper', access: 'admins' }),
+        folder('old', mia, { name: 'Old', access: 'staff' }),
+        folder('office', null, { name: 'Office', access: 'staff' }),
+        folder('pay', 'office', { name: 'Payroll', access: 'admins' }),
+      ],
+      [
+        file('signed', miaContracts, { access: 'admins' }),
+        file('result', mia, { studentId: 'mia', evaluationId: 'e1', access: 'staff' }),
+        file('card', 'old', { studentId: 'mia', evaluationId: 'e2', access: 'staff' }),
+        file('memo', 'office', { access: 'staff' }),
+      ],
+      students,
+      options,
+    )
+
+  it('knows its student by its ID, and the one from before as a Contracts folder too', () => {
+    expect(miaContracts).toBe('contracts-mia')
+    expect(contractsFolderStudent(miaContracts)).toBe('mia')
+    expect(contractsFolderStudent(OLD_CONTRACTS_FOLDER_ID)).toBeNull()
+    expect(contractsFolderStudent('contracts-')).toBeNull()
+    expect(contractsFolderStudent(mia)).toBeNull()
+    expect(contractsFolderStudent(null)).toBeNull()
+    expect(isContractsFolder(miaContracts)).toBe(true)
+    expect(isContractsFolder(OLD_CONTRACTS_FOLDER_ID)).toBe(true)
+    expect(isContractsFolder(mia)).toBe(false)
+    expect(isContractsFolder('office')).toBe(false)
+    expect(isFixedFolder({ id: miaContracts, studentId: null })).toBe(true)
+  })
+
+  it('sits in the student’s folder, owners’ and admins’ only, and what’s in it is no student’s file', () => {
+    const i = idx()
+    expect(i.folderOf(miaContracts)?.parentId).toBe(mia)
+    expect(i.pathOf('paper').map((c) => c.name)).toEqual(['Mia Larkin', 'Contracts', 'Paper'])
+    expect(i.accessIn(miaContracts)).toBe('admins')
+    expect(i.studentOf(mia)).toBe('mia')
+    expect(i.studentOf('old')).toBe('mia')
+    // What's filed in it gets no student: a coach's list of a student's files never finds it.
+    expect(i.studentOf(miaContracts)).toBeNull()
+    expect(i.studentOf('paper')).toBeNull()
+    expect(i.countsOf(mia)).toEqual({ folders: 3, files: 3, bytes: 3000 })
+  })
+
+  it('stays in the student’s folder, for owners and admins', () => {
+    expect(idx().canMoveInto([miaContracts], 'office')).toBe(false)
+    expect(moveRefusal(idx(), [miaContracts], [], null)).toBe('A student’s Contracts folder stays in their folder.')
+    expect(moveRefusal(idx(), [miaContracts], [], studentFolderId('leo'))).toBe('A student’s Contracts folder stays in their folder.')
+    expect(() => planMove(idx(), [miaContracts], [], 'office')).toThrow()
+    expect(accessRefusal(idx(), miaContracts, 'staff')).toBe('The Contracts folder is for owners and admins only.')
+    expect(accessRefusal(idx(), miaContracts, 'admins')).toBeNull()
+    expect(accessRefusal(idx(), 'paper', 'staff')).toBe('It’s inside “Contracts”, which only owners and admins see.')
+    // A student's folder is still everyone's on staff, with the rest of what's in it.
+    expect(accessRefusal(idx(), mia, 'admins')).toBe('A student’s folder is for everyone on staff, and so is everything in it.')
+    expect(accessRefusal(idx(), 'old', 'admins')).toBe('A student’s folder is for everyone on staff, and so is everything in it.')
+  })
+
+  it('makes what goes in owners’ and admins’ and no student’s, and what comes out the student’s again', () => {
+    // A result moved in stops being a score's file, so neither family sees it.
+    expect(planMove(idx(), [], ['result'], miaContracts)).toMatchObject({
+      student: null,
+      files: [{ id: 'result', patch: { folderId: miaContracts, studentId: null, evaluationId: null, access: 'admins' } }],
+      access: 'admins',
+    })
+    expect(moveAccessNote(idx(), [], ['result'], miaContracts)).toBe('Only owners and admins will see it there.')
+    // A folder only owners and admins see may go in (it's theirs there too), though not in the student's folder itself.
+    expect(moveRefusal(idx(), ['pay'], [], miaContracts)).toBeNull()
+    expect(moveRefusal(idx(), ['pay'], [], mia)).not.toBeNull()
+    expect(moveRefusal(idx(), ['old'], [], miaContracts)).toBeNull()
+    expect(planMove(idx(), ['old'], [], miaContracts)).toMatchObject({
+      folders: [{ id: 'old', patch: { parentId: miaContracts, access: 'admins' } }],
+      files: [{ id: 'card', patch: { studentId: null, evaluationId: null, access: 'admins' } }],
+    })
+    // Out into the student's folder: the student's, and everyone's on staff.
+    expect(planMove(idx(), [], ['signed'], mia).files).toEqual([{ id: 'signed', patch: { folderId: mia, studentId: 'mia', access: 'staff' } }])
+    expect(moveAccessNote(idx(), [], ['signed'], mia)).toBe('Everyone on staff, coaches too, will see it there.')
+    expect(planMove(idx(), ['paper'], [], mia).folders).toEqual([{ id: 'paper', patch: { parentId: mia, access: 'staff' } }])
+  })
+
+  it('is in every student’s folder for owners and admins, a stand-in until something is filed in it', () => {
+    const leo = contractsFolderId('leo')
+    const i = idx()
+    expect(i.folderOf(leo)).toMatchObject({ name: 'Contracts', parentId: studentFolderId('leo'), studentId: null, access: 'admins', virtual: true })
+    expect(i.folderOf(miaContracts)?.virtual).toBeUndefined()
+    expect(i.foldersIn(studentFolderId('leo')).map((f) => f.id)).toEqual([leo])
+    expect(i.nameTaken(studentFolderId('leo'), ' contracts')).toBe(true)
+    // Not for a finished student with nothing filed (no folder), and not in coaches' Drive (nor the phone's).
+    expect(i.folderOf(contractsFolderId('old'))).toBeNull()
+    expect(idx({ contractsFolders: false }).folderOf(leo)).toBeNull()
+    expect(idx({ contractsFolders: false }).folderOf(miaContracts)?.name).toBe('Contracts')
+  })
+
+  it('keeps a finished student’s folder while their Contracts folder is there', () => {
+    const i = buildDriveIndex([folder(contractsFolderId('old'), studentFolderId('old'), { name: 'Contracts', access: 'admins' })], [], students)
+    expect(i.foldersIn(null).map((f) => f.name)).toEqual(['Ava Old', 'Leo Grant', 'Mia Larkin'])
+    expect(i.pathOf(contractsFolderId('old')).map((c) => c.name)).toEqual(['Ava Old', 'Contracts'])
+  })
+
+  it('says in the Trash where a contract was', () => {
+    const entries = trashEntries([folder(mia, null, { studentId: 'mia' }), folder(miaContracts, mia, { name: 'Contracts', access: 'admins' })], [file('signed', miaContracts, { access: 'admins', trashed: true })], students)
+    expect(entries.map((e) => [e.id, e.from, e.access])).toEqual([['signed', 'Mia Larkin / Contracts', 'admins']])
   })
 })
 

@@ -19,8 +19,9 @@ export interface DriveActor {
  * admins only. Admins choose it for a folder, and it covers everything inside: each folder and file carries its own, so
  * the security rules can check it (coaches' lists ask for `access == 'staff'`). Moving something into a folder only
  * owners and admins see makes it theirs; out of one, it's everyone's on staff again. A student's folder, and everything
- * in it, is everyone's on staff. Documents from before (and the phone app's, until it writes it) have none: they read
- * as `staff`, and a function writes it in (functions/src/drive.ts).
+ * in it, is everyone's on staff, but for the student's Contracts folder (contractsFolderId) and what's in it. Documents
+ * from before (and the phone app's, until it writes it) have none: they read as `staff`, and a function writes it in
+ * (functions/src/drive.ts).
  */
 export type DriveAccess = 'staff' | 'admins'
 
@@ -35,16 +36,42 @@ export function accessOf(item: { access?: DriveAccess | null } | null | undefine
 }
 
 /**
- * The Contracts folder (F5): signed enrollment contracts, at the top, only owners and admins see it. It's made when an
- * admin opens Settings → Enrollment contract, or when the first contract is signed, and it can't be moved, renamed or
- * put in the Trash.
+ * A student's Contracts folder (F5; the owner, 2026-10-29: "each student needs a contract folder, that's where we hold
+ * that student's contract"): `contracts-{studentId}`, right in the student's folder, for owners and admins only. Their
+ * signed enrollment contracts land in it: the server makes it (and the student's folder, if need be) with the first one
+ * (functions/src/contracts.ts), and until then the website shows owners and admins a stand-in in every student's folder.
+ * It can't be renamed, moved, put in the Trash or opened to coaches. What's in it carries no `studentId`: a coach's list
+ * of one student's files (the phone's student page) asks by student alone, so the rules let coaches list a file with a
+ * student only because every such file is everyone's on staff (firestore.rules).
  */
-export const CONTRACTS_FOLDER_ID = 'contracts'
+export function contractsFolderId(studentId: string): string {
+  return `contracts-${studentId}`
+}
+
 export const CONTRACTS_FOLDER_NAME = 'Contracts'
 
-/** A folder that stays as it is (a student's, or the Contracts folder): no renaming, moving or Trash. */
+/**
+ * The one Contracts folder at the top that held every student's signed contract before each had theirs.
+ * scripts/contracts-to-students.ts moves each into its student's Contracts folder and removes it; until then it stays
+ * as it was: at the top, owners' and admins' only, fixed.
+ */
+export const OLD_CONTRACTS_FOLDER_ID = 'contracts'
+
+const CONTRACTS_PREFIX = 'contracts-'
+
+/** The student whose Contracts folder this is (null: it isn't a student's Contracts folder). */
+export function contractsFolderStudent(folderId: string | null | undefined): string | null {
+  return folderId && folderId.startsWith(CONTRACTS_PREFIX) && folderId.length > CONTRACTS_PREFIX.length ? folderId.slice(CONTRACTS_PREFIX.length) : null
+}
+
+/** A Contracts folder: a student's, or the one at the top from before. */
+export function isContractsFolder(folderId: string | null | undefined): boolean {
+  return folderId === OLD_CONTRACTS_FOLDER_ID || contractsFolderStudent(folderId) !== null
+}
+
+/** A folder that stays as it is (a student's, or a Contracts folder): no renaming, moving or Trash. */
 export function isFixedFolder(folder: { id: string; studentId?: string | null }): boolean {
-  return !!folder.studentId || folder.id === CONTRACTS_FOLDER_ID
+  return !!folder.studentId || isContractsFolder(folder.id)
 }
 
 /** `branches/{b}/driveFolders/{id}`. */
@@ -79,7 +106,10 @@ export interface DriveFile {
   /** Why an upload failed. */
   error?: string | null
   folderId: string | null
-  /** The student whose folder holds it, at any depth; null elsewhere. Kept in step when it moves. */
+  /**
+   * The student whose folder holds it, at any depth; null elsewhere, and in the student's Contracts folder (owners' and
+   * admins', see contractsFolderId). Kept in step when it moves.
+   */
   studentId: string | null
   /** Who sees it: its folder's (`staff` at the top); missing reads as `staff`. */
   access?: DriveAccess

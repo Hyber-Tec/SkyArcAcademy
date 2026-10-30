@@ -29,7 +29,7 @@
  */
 import { parseArgs } from 'node:util'
 import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
-import { driveObjectPath, studentFolderId } from '../shared/src/drive/types'
+import { contractsFolderStudent, driveObjectPath, studentFolderId } from '../shared/src/drive/types'
 import { COL, DOC } from '../shared/src/paths'
 import { composeReport } from '../shared/src/reports/compose'
 import { presetPeriod } from '../shared/src/reports/period'
@@ -89,9 +89,9 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.dayConfigs]: (_, d) => d.createdBy === SAMPLE_AUTHOR && d.updatedBy === SAMPLE_AUTHOR,
   [COL.auditLog]: (id, d) => isSample(id) || isSample(d.entityId) || isSample(d.studentId) || isSample(d.coachId),
   // The sample students' Drive folders and files (with their bytes), scores and reports, and whatever the app added
-  // for them since.
-  [COL.driveFolders]: (id, d) => isSample(id) || isSample(d.studentId),
-  [COL.driveFiles]: (id, d) => isSample(id) || isSample(d.studentId),
+  // for them since: their Contracts folders and the contracts in them too (no studentId: by the folder's ID).
+  [COL.driveFolders]: (id, d) => isSample(id) || isSample(d.studentId) || isSample(contractsFolderStudent(id)),
+  [COL.driveFiles]: (id, d) => isSample(id) || isSample(d.studentId) || isSample(contractsFolderStudent(typeof d.folderId === 'string' ? d.folderId : null)),
   [COL.evaluations]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.progressReports]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.websiteMessages]: (id) => isSample(id),

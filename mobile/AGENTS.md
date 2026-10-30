@@ -188,7 +188,8 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   and admins only (shown with a lock and "Owners and admins"). What the phone makes takes its folder's access (a
   scanned card and a student's folder are everyone's on staff), and a move follows where it lands (`planMove`); the
   rules check each write against its folder, at most 10 folders a batch (`src/features/drive/api.ts`, as the website).
-  The Contracts folder (signed enrollment contracts) can't be renamed, moved, trashed or moved into.
+  A Contracts folder (each student's, in their folder: their signed enrollment contracts) can't be renamed, moved,
+  trashed or moved into.
 - **A coach's availability** is the website's: one record a day (`availability/{staffId}_{dateKey}`), holding times or
   "not available" (an answer: the day no longer counts as one to set), removed when the day is cleared, written through
   `@shared/availabilityWrites` with their name and role (`staffName`, `staffRole`: the other coaches see who's in with

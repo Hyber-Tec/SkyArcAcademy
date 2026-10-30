@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { LuCopy, LuExternalLink, LuMail, LuSend, LuX } from 'react-icons/lu'
+import { LuCopy, LuExternalLink, LuLock, LuMail, LuSend, LuX } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { signUrl, signedOnText, studentContract } from '@shared/contracts/signing'
 import { SIGNER_RELATIONS } from '@shared/contracts/types'
+import { contractsFolderId } from '@shared/drive/types'
 import { formatInstant } from '@shared/time'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -26,6 +27,7 @@ const STATE: Record<'none' | 'sent' | 'expired' | 'signed', { label: string; cla
 /**
  * A student's enrollment contract, on their page (owners and admins; F4): not sent, waiting (since when, until when,
  * with Copy link, Email and Cancel), expired, or signed (by whom, when, and the signed PDF, which opens from the Drive).
+ * Its foot leads to the student's Contracts folder, where the signed copies are (and where the office files a paper one).
  */
 export function StudentContractCard({ student, priv }: { student: WithId<Student>; priv: StudentPrivateProfile | null }) {
   const { branchId, actor, timezone } = useBranch()
@@ -145,6 +147,13 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
           ) : null}
         </p>
       ) : null}
+      <Link
+        to={`/admin/drive/f/${contractsFolderId(student.id)}`}
+        className="flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        data-testid="student-contracts-folder"
+      >
+        <LuLock className="size-3.5" aria-hidden /> {first}’s Contracts folder, in the Drive
+      </Link>
       {dialog ? <SendContractDialog studentId={student.id} studentFirst={first} priv={priv} link={dialog === 'email' ? c.link : null} onClose={() => setDialog(null)} /> : null}
       {confirmDialog}
     </div>

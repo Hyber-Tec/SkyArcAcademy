@@ -1,9 +1,9 @@
-import { doc, getDoc, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
+import { doc, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { ref as storageRef, uploadBytes } from 'firebase/storage'
 import { useMemo } from 'react'
 import { CONTRACT_MAX_BYTES, type ContractLink, type ContractTemplate } from '@shared/contracts/types'
-import { CONTRACTS_FOLDER_ID, CONTRACTS_FOLDER_NAME, type DriveActor } from '@shared/drive/types'
+import type { DriveActor } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -14,9 +14,9 @@ import { pdfjs } from '@/lib/pdfjs'
 
 /**
  * The enrollment contract on the website (docs/DECISIONS.md §23, F4): the academy's blank contract (Settings →
- * Enrollment contract), the signing links sent from a student's page, and the Drive's Contracts folder where the signed
- * copies go. Links are made and emailed on the server (functions/src/contracts.ts); uploading the contract and
- * canceling a link are written here, each with its audit entry.
+ * Enrollment contract) and the signing links sent from a student's page. The signed copies go in each student's
+ * Contracts folder in the Drive, which the server makes with the first one (functions/src/contracts.ts), as it makes
+ * and emails the links; uploading the contract and canceling a link are written here, each with its audit entry.
  */
 
 const actorOf = (a: Actor): DriveActor => ({ uid: a.uid, email: a.email, name: a.name })
@@ -97,25 +97,6 @@ export async function uploadTemplate(branchId: string, actor: Actor, file: File,
     entityType: 'contractTemplate',
     entityId: ref.id,
     summary: replacing ? `Uploaded a new enrollment contract (“${name}”), replacing “${replacing.name}”` : `Uploaded the enrollment contract (“${name}”)`,
-  })
-  await batch.commit()
-}
-
-/**
- * The Drive's Contracts folder (F5): made the first time an admin opens the contract's settings (or by the first
- * signature), at the top, only owners and admins see it.
- */
-export async function ensureContractsFolder(branchId: string, actor: Actor) {
-  const ref = branchDocRef(branchId, COL.driveFolders, CONTRACTS_FOLDER_ID)
-  if ((await getDoc(ref)).exists()) return
-  const batch = writeBatch(db)
-  batch.set(ref, { name: CONTRACTS_FOLDER_NAME, parentId: null, studentId: null, access: 'admins', createdAt: serverTimestamp(), createdBy: actorOf(actor) })
-  addAudit(batch, branchId, actor, {
-    action: 'drive.folder_create',
-    category: 'drive',
-    entityType: 'driveFolder',
-    entityId: CONTRACTS_FOLDER_ID,
-    summary: `Made the folder “${CONTRACTS_FOLDER_NAME}” for signed enrollment contracts (owners and admins only)`,
   })
   await batch.commit()
 }

@@ -3,11 +3,11 @@ import { resolve } from 'node:path'
 import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 // Folders only owners and admins see (docs/DECISIONS.md §23, F6 and F5): coaches never read, list or change them, what's
 // in them, or their files' bytes; only admins make something theirs; what's in a folder of theirs is theirs; a
-// student's folder, and the Contracts folder, keep their own.
+// student's folder, and the Contracts folders (each student's, and the one from before at the top), keep their own.
 
 let env: RulesTestEnvironment
 const A = 'alpha-academy'
@@ -195,15 +195,88 @@ describe('what admins do', () => {
     await assertFails(setDoc(doc(a, `branches/${A}/driveFiles/f5`), fileRecord(ADMIN, { folderId: 'office', studentId: 's1', access: 'admins' })))
   })
 
-  it('keep the Contracts folder theirs, at the top and out of the Trash', async () => {
+  it('keep the Contracts folder from before theirs, at the top and out of the Trash, and never make it again', async () => {
     const a = db(ADMIN)
     await assertFails(updateDoc(doc(a, `branches/${A}/driveFolders/contracts`), { access: 'staff' }))
     await assertFails(updateDoc(doc(a, `branches/${A}/driveFolders/contracts`), { parentId: 'open' }))
     await assertFails(updateDoc(doc(a, `branches/${A}/driveFolders/contracts`), { trashed: true }))
     await assertFails(deleteDoc(doc(a, `branches/${A}/driveFolders/contracts`)))
+    // Its Updated still moves while it holds contracts (until scripts/contracts-to-students.ts empties it).
+    await assertSucceeds(updateDoc(doc(a, `branches/${A}/driveFolders/contracts`), { updatedAt: serverTimestamp(), updatedBy: actor(ADMIN) }))
+    // Once it's gone, nobody makes it again: each student has their own.
     await env.withSecurityRulesDisabled((c) => deleteDoc(doc(c.firestore(), `branches/${A}/driveFolders/contracts`)))
     await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts`), folderRecord(ADMIN, { name: 'Contracts' })))
-    await assertSucceeds(setDoc(doc(a, `branches/${A}/driveFolders/contracts`), folderRecord(ADMIN, { name: 'Contracts', access: 'admins' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts`), folderRecord(ADMIN, { name: 'Contracts', access: 'admins' })))
+  })
+})
+
+describe('a student’s Contracts folder', () => {
+  const contracts = (email: string, extra: Record<string, unknown> = {}) => folderRecord(email, { name: 'Contracts', parentId: 'student-s1', access: 'admins', ...extra })
+  const putContracts = () => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), `branches/${A}/driveFolders/contracts-s1`), { ...contracts(ADMIN), createdAt: null }))
+
+  it('is made by owners and admins only, right in its student’s folder, as theirs', async () => {
+    const a = db(ADMIN)
+    await assertFails(setDoc(doc(db(COACH), `branches/${A}/driveFolders/contracts-s1`), contracts(COACH)))
+    await assertFails(setDoc(doc(db(COACH), `branches/${A}/driveFolders/contracts-s1`), contracts(COACH, { access: 'staff' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN, { access: 'staff' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN, { parentId: null })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN, { parentId: 'open' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN, { studentId: 's1' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN, { trashed: true })))
+    // Another student's Contracts folder doesn't go in this student's folder.
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s2`), contracts(ADMIN)))
+    // It's the only folder right in a student's folder that isn't everyone's on staff.
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFolders/n6`), contracts(ADMIN)))
+    await assertSucceeds(setDoc(doc(a, `branches/${A}/driveFolders/contracts-s1`), contracts(ADMIN)))
+  })
+
+  it('stays theirs, in the student’s folder and out of the Trash', async () => {
+    await putContracts()
+    const a = db(ADMIN)
+    const folder = doc(a, `branches/${A}/driveFolders/contracts-s1`)
+    await assertFails(updateDoc(folder, { access: 'staff' }))
+    await assertFails(updateDoc(folder, { parentId: null }))
+    await assertFails(updateDoc(folder, { parentId: 'open' }))
+    await assertFails(updateDoc(folder, { trashed: true }))
+    await assertFails(deleteDoc(folder))
+    await assertFails(updateDoc(doc(db(COACH), `branches/${A}/driveFolders/contracts-s1`), { name: 'Mine' }))
+    // Its Updated moves when something lands in it.
+    await assertSucceeds(updateDoc(folder, { updatedAt: serverTimestamp(), updatedBy: actor(ADMIN) }))
+  })
+
+  it('is never seen by coaches, nor what’s in it, and a coach’s list of the student’s files never finds it', async () => {
+    await putContracts()
+    await env.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), `branches/${A}/driveFiles/s1-signed`), { ...fileRecord(ADMIN, { folderId: 'contracts-s1', access: 'admins', status: 'ready' }), uploadedAt: null })
+      await uploadBytes(ref(c.storage(), `branches/${A}/drive/s1-signed`), PDF, { contentType: 'application/pdf' })
+    })
+    const c = db(COACH)
+    await assertFails(getDoc(doc(c, `branches/${A}/driveFolders/contracts-s1`)))
+    await assertFails(getDoc(doc(c, `branches/${A}/driveFiles/s1-signed`)))
+    await assertFails(getBytes(ref(storage(COACH), `branches/${A}/drive/s1-signed`)))
+    // The phone's student page lists one student's files: the contract isn't one of them.
+    const theirs = await assertSucceeds(getDocs(query(files(COACH), where('studentId', '==', 's1'))))
+    expect(theirs.docs.map((d) => d.id)).toEqual(['result'])
+    const open = await assertSucceeds(getDocs(query(folders(COACH), where('access', '==', 'staff'))))
+    expect(open.docs.map((d) => d.id)).not.toContain('contracts-s1')
+    await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/driveFiles/s1-signed`)))
+    await assertSucceeds(getBytes(ref(storage('owner@a.test'), `branches/${A}/drive/s1-signed`)))
+    await assertFails(getBytes(ref(storage('parent@a.test'), `branches/${A}/drive/s1-signed`)))
+    // Filed as the student's (with their studentId), a coach's list would find it: the rules refuse that.
+    await assertFails(setDoc(doc(db(ADMIN), `branches/${A}/driveFiles/f6`), fileRecord(ADMIN, { folderId: 'contracts-s1', studentId: 's1', access: 'admins' })))
+  })
+
+  it('takes what owners and admins add or move in, as theirs and no student’s; coaches add nothing', async () => {
+    await putContracts()
+    const a = db(ADMIN)
+    // A paper contract the office adds.
+    await assertSucceeds(setDoc(doc(a, `branches/${A}/driveFiles/paper`), fileRecord(ADMIN, { folderId: 'contracts-s1', access: 'admins' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/driveFiles/paper2`), fileRecord(ADMIN, { folderId: 'contracts-s1', access: 'staff' })))
+    // A file of the student's moved in stops being the student's.
+    await assertFails(updateDoc(doc(a, `branches/${A}/driveFiles/result`), { folderId: 'contracts-s1', access: 'admins' }))
+    await assertSucceeds(updateDoc(doc(a, `branches/${A}/driveFiles/result`), { folderId: 'contracts-s1', studentId: null, evaluationId: null, access: 'admins' }))
+    await assertFails(setDoc(doc(db(COACH), `branches/${A}/driveFiles/c1`), fileRecord(COACH, { folderId: 'contracts-s1' })))
+    await assertFails(updateDoc(doc(db(COACH), `branches/${A}/driveFiles/memo`), { folderId: 'contracts-s1' }))
   })
 })
 

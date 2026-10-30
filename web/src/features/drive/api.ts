@@ -1,8 +1,20 @@
 import { type WriteBatch, deleteDoc, doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { deleteObject, ref as storageRef } from 'firebase/storage'
+import { contractFoldersToMake } from '@shared/contracts/filing'
 import { cleanFileName, cleanFolderName } from '@shared/drive/files'
 import { type DriveIndex, type MovedFile, type MovedFolder, planAccess, planMove } from '@shared/drive/model'
-import { DRIVE_ACCESS_LABELS, type DriveAccess, type DriveActor, type DriveFile, type DriveFolder, accessOf, driveObjectPath, isFixedFolder, studentFolderId } from '@shared/drive/types'
+import {
+  DRIVE_ACCESS_LABELS,
+  type DriveAccess,
+  type DriveActor,
+  type DriveFile,
+  type DriveFolder,
+  accessOf,
+  contractsFolderStudent,
+  driveObjectPath,
+  isFixedFolder,
+  studentFolderId,
+} from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import type { WithId } from '@shared/types'
 import { type Actor, addAudit } from '@/lib/audit'
@@ -57,12 +69,25 @@ const touched = (a: Actor) => ({ updatedAt: serverTimestamp(), updatedBy: driveA
 
 /**
  * Makes sure a folder that will receive files has a document: a student's folder exists from the start as a stand-in
- * until its first file. Adds the write to `writes` and returns nothing when it's already there.
+ * until its first file, and so does a student's Contracts folder (owners and admins), with the student's folder when
+ * that's a stand-in too. The writes that touch the folder (its Updated moves) when it's already there.
  */
 export function folderWrites(branchId: string, index: DriveIndex, folderId: string | null, actor: Actor): ((b: WriteBatch) => void)[] {
   if (!folderId) return []
   const folder = index.folderOf(folderId)
-  if (folder && (folder as { virtual?: boolean }).virtual) {
+  if (folder?.virtual) {
+    const contractsOf = contractsFolderStudent(folderId)
+    if (contractsOf) {
+      const studentFolder = index.folderOf(studentFolderId(contractsOf))
+      const made = contractFoldersToMake({
+        studentId: contractsOf,
+        studentName: studentFolder?.name ?? '',
+        has: { studentFolder: !studentFolder?.virtual, contractsFolder: false },
+        by: driveActor(actor),
+        at: serverTimestamp(),
+      })
+      return made.map((f) => (b: WriteBatch) => b.set(folderRef(branchId, f.id), f.data))
+    }
     const data = { name: folder.name, parentId: null, studentId: folder.studentId, access: 'staff' as const, createdAt: serverTimestamp(), createdBy: driveActor(actor), ...touched(actor) }
     return [(b) => b.set(folderRef(branchId, folderId), data)]
   }

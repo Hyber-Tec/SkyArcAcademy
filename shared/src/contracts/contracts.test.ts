@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { contractEmail } from '../email/contract'
 import type { WithId } from '../types'
 import { checkSigning, contractFileName, isContractToken, linkState, signUrl, signatureFacts, signedOnText, studentContract } from './signing'
+import { contractFilePlace, contractFoldersToMake } from './filing'
 import type { ContractLink } from './types'
 
 const at = (ms: number) => ({ seconds: ms / 1000, nanoseconds: 0, toDate: () => new Date(ms), toMillis: () => ms })
@@ -129,5 +130,22 @@ describe('the signing email', () => {
     const odd = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc', studentFirstName: '<Mia>', url: signUrl('tok'), expiresOn: 'x' })
     expect(odd.html).toContain('&lt;Mia&gt;')
     expect(odd.html).not.toContain('<Mia>')
+  })
+})
+
+describe('where a signed contract is filed', () => {
+  it('goes in the student’s Contracts folder, owners’ and admins’ only, as no student’s file', () => {
+    expect(contractFilePlace('s1')).toEqual({ folderId: 'contracts-s1', studentId: null, access: 'admins' })
+  })
+
+  it('makes the student’s folder and their Contracts folder in it, those not there yet', () => {
+    const made = (has: { studentFolder: boolean; contractsFolder: boolean }) => contractFoldersToMake({ studentId: 's1', studentName: ' Mia  Larkin ', has, by, at: 'now' })
+    expect(made({ studentFolder: false, contractsFolder: false })).toEqual([
+      { id: 'student-s1', data: { name: 'Mia Larkin', parentId: null, studentId: 's1', access: 'staff', createdAt: 'now', createdBy: by, updatedAt: 'now', updatedBy: by } },
+      { id: 'contracts-s1', data: { name: 'Contracts', parentId: 'student-s1', studentId: null, access: 'admins', createdAt: 'now', createdBy: by, updatedAt: 'now', updatedBy: by } },
+    ])
+    expect(made({ studentFolder: true, contractsFolder: false }).map((f) => f.id)).toEqual(['contracts-s1'])
+    expect(made({ studentFolder: true, contractsFolder: true })).toEqual([])
+    expect(contractFoldersToMake({ studentId: 's1', studentName: '', has: { studentFolder: false, contractsFolder: true }, by, at: 1 })[0].data.name).toBe('Student')
   })
 })

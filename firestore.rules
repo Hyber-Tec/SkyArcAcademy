@@ -588,7 +588,10 @@ service cloud.firestore {
       // whatever is in a folder of theirs is theirs too. Coaches list with `access == 'staff'` (or one student's files,
       // all of which are everyone's on staff). A document without `access` (from before, or the phone app until it
       // writes it) is everyone's on staff, and never lands in a folder of the admins'; a function writes it in
-      // (functions/src/drive.ts). The Contracts folder (signed enrollment contracts) is theirs, at the top, for good.
+      // (functions/src/drive.ts). Each student's Contracts folder (`contracts-{studentId}`, their signed enrollment
+      // contracts) is theirs for good, right in the student's folder; what's in it carries no studentId, so a coach's
+      // list of one student's files never finds it. The single Contracts folder there was before (`contracts`) stays
+      // theirs, at the top, until scripts/contracts-to-students.ts empties and removes it; nobody makes it again.
       function byMe(actor) {
         return actor is map && actor.email == emailKey();
       }
@@ -622,13 +625,20 @@ service cloud.firestore {
           && (d.parentId == null || (d.parentId is string && d.parentId != folderId))
           && driveAccess(d) in ['staff', 'admins']
           // A student's folder is named after the student, sits at the top, can't be trashed, and is everyone's on
-          // staff, as is a folder right in it.
+          // staff, as is a folder right in it, but for the student's Contracts folder.
           && (d.studentId == null
               || (d.studentId is string && folderId == 'student-' + d.studentId && d.parentId == null
                   && d.get('trashed', false) == false && driveAccess(d) == 'staff'))
-          && (d.parentId == null || !d.parentId.matches('student-.*') || driveAccess(d) == 'staff')
-          && (folderId != 'contracts'
-              || (d.parentId == null && d.studentId == null && driveAccess(d) == 'admins' && d.get('trashed', false) == false));
+          && (d.parentId == null || !d.parentId.matches('student-.*') || driveAccess(d) == 'staff'
+              || folderId.matches('contracts-.+'))
+          // A Contracts folder is the admins', out of the Trash, and stays where it is: a student's right in the
+          // student's folder (`contracts-{id}` in `student-{id}`), the one from before at the top.
+          && (!(folderId == 'contracts' || folderId.matches('contracts-.+'))
+              || (d.studentId == null && driveAccess(d) == 'admins' && d.get('trashed', false) == false
+                  && (folderId == 'contracts'
+                      ? d.parentId == null
+                      : (d.parentId is string && d.parentId.matches('student-.+')
+                         && folderId == d.parentId.replace('^student-', 'contracts-')))));
       }
 
       match /driveFolders/{folderId} {
@@ -636,6 +646,7 @@ service cloud.firestore {
         allow get: if isAdmin(b) || (isCoach(b) && (resource == null || driveAccess(resource.data) == 'staff'));
         allow list: if isAdmin(b) || (isCoach(b) && resource.data.access == 'staff');
         allow create: if isStaff(b) && validFolder(folderId, request.resource.data)
+          && folderId != 'contracts'
           && request.resource.data.get('trashed', false) == false
           && byMe(request.resource.data.createdBy)
           && accessFits(request.resource.data, request.resource.data.parentId);
