@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ringRadiusMm } from '../shooting/target'
 import { type Mat3, applyH, fitEllipse, fitHomography } from './geometry'
 import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, holeRadiusOf, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
+import { STEP_MM } from './card'
 import { CARD_HOLES, scanCard } from './scan'
 import { MISS_BEYOND_MM, PELLET_RADIUS_MM, scoreAt, scoreHole } from './score'
 import { SYNTHETIC_HOLE_MM, type SyntheticShot, drawSyntheticCard } from './synthetic'
@@ -209,6 +210,37 @@ describe('scanCard on a made-up photo of the card', () => {
     expect(five.found).toBe(false)
     expect(five.shots).toHaveLength(0)
     expect(recordShots(scan).filter((b) => b.found)).toHaveLength(9)
+  })
+
+  it('reads a card in uneven light, its far end in shadow', () => {
+    const scan = scanCard(drawSyntheticCard({ width: 1000, height: 1333, shots: SHOTS, background: 'grey', shadow: 0.6, seed: 5 }))
+    expect(scan.ok).toBe(true)
+    expect(scan.bulls.filter((b) => b.found)).toHaveLength(12)
+    for (const b of recordShots(scan)) {
+      const want = SHOTS.find((s) => s.bull === b.n)!
+      expect(Math.hypot(b.shots[0].x - want.x, b.shots[0].y - want.y), `bull ${b.n}`).toBeLessThan(0.4)
+    }
+  })
+
+  it('reads a card photographed at a slant, its near bulls larger than its far ones', () => {
+    const scan = scanCard(drawSyntheticCard({ width: 1000, height: 1333, shots: SHOTS, tilt: { x: 0, y: -0.0011 } }))
+    expect(scan.ok).toBe(true)
+    expect(scan.bulls.filter((b) => b.found)).toHaveLength(12)
+    for (const b of recordShots(scan)) {
+      const want = SHOTS.find((s) => s.bull === b.n)!
+      expect(Math.hypot(b.shots[0].x - want.x, b.shots[0].y - want.y), `bull ${b.n}`).toBeLessThan(0.5)
+    }
+  })
+
+  it('keeps to the card when other bulls line up beside it', () => {
+    // Another card's bulls peeking out of the pile, one step past the card's last column.
+    const strays = [1, 2].map((row) => ({ x: 3 * STEP_MM.x, y: row * STEP_MM.y }))
+    const scan = scanCard(drawSyntheticCard({ width: 1300, height: 1200, pxPerMm: 3.6, centre: { x: 600, y: 600 }, shots: SHOTS, background: 'white', strays }))
+    expect(scan.ok).toBe(true)
+    for (const b of recordShots(scan)) {
+      const want = SHOTS.find((s) => s.bull === b.n)!
+      expect(Math.hypot(b.shots[0].x - want.x, b.shots[0].y - want.y), `bull ${b.n}`).toBeLessThan(0.5)
+    }
   })
 
   it('says why when there is no card in the photo', () => {
