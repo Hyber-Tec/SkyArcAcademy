@@ -149,6 +149,34 @@ export async function patchDocuments(patches: Patch[]) {
   }
 }
 
+/** One write of an atomic commit (`commitBatch`). */
+export type BatchWrite =
+  /** A new document: the commit fails if it's already there. */
+  | { create: string; data: Record<string, unknown> }
+  /** A whole document, made or replaced. */
+  | { set: string; data: Record<string, unknown> }
+  /** Some fields of a document that's there (the commit fails if it isn't). */
+  | { patch: string; fields: Record<string, unknown> }
+  | { delete: string }
+
+/** Writes in one atomic commit (up to 500): all of them, or none. */
+export async function commitBatch(writes: BatchWrite[]) {
+  if (!writes.length) return
+  if (writes.length > 500) throw new Error('One commit takes up to 500 writes.')
+  const name = (path: string) => `projects/${PROJECT_ID}/databases/(default)/documents/${path}`
+  await request(`${BASE}:commit`, {
+    method: 'POST',
+    body: JSON.stringify({
+      writes: writes.map((w) => {
+        if ('create' in w) return { update: { name: name(w.create), fields: encodeFields(w.data) }, currentDocument: { exists: false } }
+        if ('patch' in w) return { update: { name: name(w.patch), fields: encodeFields(w.fields) }, updateMask: { fieldPaths: Object.keys(w.fields) }, currentDocument: { exists: true } }
+        if ('delete' in w) return { delete: name(w.delete) }
+        return { update: { name: name(w.set), fields: encodeFields(w.data) } }
+      }),
+    }),
+  })
+}
+
 /** Deletes documents by path, in batches. */
 export async function deleteDocuments(paths: string[]) {
   for (let i = 0; i < paths.length; i += 400) {

@@ -113,14 +113,18 @@ export function useDriveLists(enabled = true) {
 
 export type LiveDriveIndex = DriveIndex & { loading: boolean; error: FirestoreError | null; students: DriveStudent[] }
 
-/** The Drive as one index (everything in it is visible: nothing in the Trash or inside a folder that is). */
+/**
+ * The Drive as one index (everything in it is visible: nothing in the Trash or inside a folder that is). Owners and
+ * admins see a Contracts folder in every student's folder, a stand-in until something is filed in it.
+ */
 export function useDriveIndex(): LiveDriveIndex {
+  const { isAdmin } = useBranch()
   const snapshot = useDriveLists()
   const { data: studentList, loading: studentsLoading } = useStudentList()
   const students = useMemo<DriveStudent[]>(() => studentList.map((s) => ({ id: s.id, name: s.name, otherNames: s.otherNames ?? [], finished: s.status === 'finished' })), [studentList])
   return useMemo(() => {
-    const index = buildDriveIndex(snapshot.folders, snapshot.files, students)
+    const index = buildDriveIndex(snapshot.folders, snapshot.files, students, { contractsFolders: isAdmin })
     const loading = !snapshot.error && (snapshot.folders === null || snapshot.files === null || studentsLoading)
     return { ...index, loading, error: snapshot.error, students }
-  }, [snapshot, students, studentsLoading])
+  }, [snapshot, students, studentsLoading, isAdmin])
 }

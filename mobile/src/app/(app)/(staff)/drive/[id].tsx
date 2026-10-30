@@ -1,5 +1,5 @@
 import { DRIVE_DEFAULT_SORT, formatBytes, levelItems, sortDriveItems } from "@shared/drive/model";
-import { CONTRACTS_FOLDER_ID, DRIVE_ACCESS_LABELS, accessOf, isFixedFolder } from "@shared/drive/types";
+import { DRIVE_ACCESS_LABELS, accessOf, isContractsFolder, isFixedFolder } from "@shared/drive/types";
 import { Stack, router, useLocalSearchParams, useNavigation } from "expo-router";
 import { Ellipsis, FolderOpen, FolderX, Lock, Plus, UserRound } from "lucide-react-native";
 import { useMemo } from "react";
@@ -133,7 +133,7 @@ export default function DriveFolderScreen() {
             <View style={styles.admins} testID="drive-folder-admins">
               <Lock size={13} color={colors.mutedForeground} />
               <T variant="small" tone="muted">
-                {folder.id === CONTRACTS_FOLDER_ID ? "Owners and admins: signed enrollment contracts land here." : `${DRIVE_ACCESS_LABELS.admins}, with everything in it.`}
+                {isContractsFolder(folder.id) ? "Owners and admins: signed enrollment contracts land here." : `${DRIVE_ACCESS_LABELS.admins}, with everything in it.`}
               </T>
             </View>
           ) : null}

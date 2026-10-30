@@ -782,7 +782,10 @@ the main product: families do everything they need there, without calling or tex
   signature) by copy or email; the family signs on `/sign/:token` with no account (typed name, relationship, a drawn
   signature, consent); the server adds a signature page (the signer, the time in the academy's zone, the IP address and
   browser, the link, the blank contract's SHA-256) and files the PDF in Contracts, which only owners and admins see.
-  Signers' names are in English letters (the PDF's standard fonts).
+  Signers' names are in English letters (the PDF's standard fonts). **Each student has their own Contracts folder**
+  (the owner, 2026-10-29: "each student needs a contract folder, that's where we hold that student's contract"): it sits
+  in the student's folder, only owners and admins see it, and their signed contracts go there; the one folder at the top
+  that held every contract is emptied into them, and removed, by `scripts/contracts-to-students.ts`.
 
 ## 24. Goo's round on the phones (2026-10-28)
 

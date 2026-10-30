@@ -1,11 +1,9 @@
 import { getBlob, ref as storageRef } from 'firebase/storage'
 import { useEffect, useRef, useState } from 'react'
-import { LuExternalLink, LuFileText, LuLock, LuUpload } from 'react-icons/lu'
-import { Link } from 'react-router'
+import { LuExternalLink, LuFileText, LuUpload } from 'react-icons/lu'
 import { toast } from 'sonner'
 import type { ContractTemplate } from '@shared/contracts/types'
 import { formatBytes } from '@shared/drive/model'
-import { CONTRACTS_FOLDER_ID } from '@shared/drive/types'
 import { formatInstant } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -16,12 +14,12 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { storage } from '@/lib/firebase'
-import { ensureContractsFolder, readContractPdf, uploadTemplate, useContractTemplates } from './api'
+import { readContractPdf, uploadTemplate, useContractTemplates } from './api'
 
 /**
  * Settings → Enrollment contract (owners and admins): the academy's blank contract, as a PDF. A new upload replaces it
  * for the links sent from then on; the earlier ones stay listed, as contracts already signed (and links already sent)
- * keep theirs. Opening it makes the Drive's Contracts folder, where the signed copies go.
+ * keep theirs. The signed copies go in each student's Contracts folder in the Drive (shared/src/contracts/filing.ts).
  */
 export function ContractSettings() {
   const { branchId, actor, timezone } = useBranch()
@@ -32,13 +30,6 @@ export function ContractSettings() {
   const { confirm, dialog } = useConfirm()
   const earlier = templates.filter((t) => !t.current)
 
-  // The Contracts folder, once per academy (a second admin opening it at the same moment is refused by the rules).
-  const folderMade = useRef<string | null>(null)
-  useEffect(() => {
-    if (folderMade.current === branchId) return
-    folderMade.current = branchId
-    ensureContractsFolder(branchId, actor).catch(() => undefined)
-  }, [branchId, actor])
   useEffect(() => () => (preview ? URL.revokeObjectURL(preview.url) : undefined), [preview])
 
   const when = (t: { toMillis?: () => number } | null | undefined) => (t?.toMillis ? formatInstant(t.toMillis(), timezone, { month: 'short', day: 'numeric', year: 'numeric' }) : 'just now')
@@ -78,7 +69,7 @@ export function ContractSettings() {
       <CardHeader>
         <CardTitle>Enrollment contract</CardTitle>
         <CardDescription>
-          The academy’s blank contract, as a PDF. From a student’s page you send the family a link: they read the contract on their phone, type their name and sign with a finger, with no account or app. The signed copy goes to the Drive’s Contracts folder, which only owners and admins see.
+          The academy’s blank contract, as a PDF. From a student’s page you send the family a link: they read the contract on their phone, type their name and sign with a finger, with no account or app. The signed copy goes in the student’s Contracts folder, inside their folder in the Drive, which only owners and admins see.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -106,9 +97,6 @@ export function ContractSettings() {
           <Button onClick={() => input.current?.click()} disabled={busy || loading}>
             {busy ? <Spinner /> : <LuUpload />} {current ? 'Replace with a new PDF…' : 'Upload the contract (PDF)'}
           </Button>
-          <Link to={`/admin/drive/f/${CONTRACTS_FOLDER_ID}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
-            <LuLock className="size-3.5" aria-hidden /> Signed contracts, in the Drive
-          </Link>
         </div>
         <input
           ref={input}

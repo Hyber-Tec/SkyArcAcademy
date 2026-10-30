@@ -6,8 +6,9 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { ACADEMY_ID, DEMO_ACADEMY_ID, isDemoAcademy } from '@shared/academy'
 import { ACADEMY_NAME, isReservedEmail } from '@shared/brand'
 import { checkSigning, contractFileName, isContractToken, linkState, signUrl, signatureFacts, signatureStatement } from '@shared/contracts/signing'
+import { contractFilePlace, contractFoldersToMake } from '@shared/contracts/filing'
 import { CONTRACT_LINK_DAYS, type ContractLink, type ContractTemplate, SIGNED_COPY_DAYS, SIGNER_RELATIONS } from '@shared/contracts/types'
-import { CONTRACTS_FOLDER_ID, CONTRACTS_FOLDER_NAME, type DriveActor, driveObjectPath } from '@shared/drive/types'
+import { type DriveActor, contractsFolderId, driveObjectPath, studentFolderId } from '@shared/drive/types'
 import { contractEmail } from '@shared/email/contract'
 import { COL, ROOT, emailKey } from '@shared/paths'
 import { dateKeyOf, formatDateKey } from '@shared/time'
@@ -20,9 +21,10 @@ import { sendNotifications } from './notify'
 /**
  * The enrollment contract (docs/DECISIONS.md §23, F4): the office sends a family a link from a student's page
  * (`sendContractLink`, owners and admins); the family opens it at /sign/{token} on the website, with no account
- * (`getContractForSigning`), and signs (`signContract`). The signed PDF is a Drive file in the Contracts folder, which
- * only owners and admins see, and they're told in their inbox. A link's document is named by its token's SHA-256, so
- * the token never appears in an address, a log or an audit entry; it works for CONTRACT_LINK_DAYS, for one signature.
+ * (`getContractForSigning`), and signs (`signContract`). The signed PDF is a Drive file in the student's Contracts folder
+ * (in their folder), which only owners and admins see, and they're told in their inbox. A link's document is named by
+ * its token's SHA-256, so the token never appears in an address, a log or an audit entry; it works for
+ * CONTRACT_LINK_DAYS, for one signature.
  * The two public functions check the token and limit how often one network address can ask, as `websiteMessage` does.
  */
 
@@ -280,8 +282,9 @@ export const getContractForSigning = onCall({ timeoutSeconds: 60, memory: '512Mi
  * Signing (anyone with the link, once): the signer's typed name, parent or guardian, the signature they drew and
  * their agreement to sign electronically. The server builds the signed PDF (the contract, then the signature page:
  * the academy, the student, the signer, the date and time in the academy's time zone, their network address and
- * browser, the link and the blank contract's SHA-256), files it in the Drive's Contracts folder (owners and admins
- * only), marks the link signed with an audit entry, and tells the owners and admins.
+ * browser, the link and the blank contract's SHA-256), files it in the student's Contracts folder in the Drive (owners
+ * and admins only; it and the student's folder are made with the first contract), marks the link signed with an audit
+ * entry, and tells the owners and admins.
  */
 export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...LIGHT }, async (req) => {
   const input = (req.data ?? {}) as { token?: unknown; name?: unknown; relation?: unknown; signature?: unknown; agree?: unknown }
@@ -345,24 +348,31 @@ export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...L
 
   const signer = { name, relation, ip, userAgent, templateSha256 }
   const system: DriveActor = { uid: 'contract-signing', email: '', name: 'Contract signing' }
-  const folderRef = db.doc(`${base}/${COL.driveFolders}/${CONTRACTS_FOLDER_ID}`)
+  const folders = db.collection(`${base}/${COL.driveFolders}`)
+  const studentFolderRef = folders.doc(studentFolderId(link.studentId))
+  const contractsRef = folders.doc(contractsFolderId(link.studentId))
   try {
     await db.runTransaction(async (tx) => {
-      const [fresh, folder] = await Promise.all([tx.get(ref), tx.get(folderRef)])
+      const [fresh, studentFolder, contracts] = await Promise.all([tx.get(ref), tx.get(studentFolderRef), tx.get(contractsRef)])
       const now = fresh.data() as ContractLink | undefined
       if (!now || linkState(now, Date.now()) !== 'sent') throw new HttpsError('failed-precondition', 'This link can’t be signed any more.', { state: now ? linkState(now, Date.now()) : 'invalid' })
-      // The Contracts folder, the first time: at the top, owners' and admins' only.
-      if (!folder.exists) tx.create(folderRef, { name: CONTRACTS_FOLDER_NAME, parentId: null, studentId: null, access: 'admins', createdAt: FieldValue.serverTimestamp(), createdBy: system, updatedAt: FieldValue.serverTimestamp(), updatedBy: system })
-      else tx.update(folderRef, { updatedAt: FieldValue.serverTimestamp(), updatedBy: system })
+      // The student's Contracts folder (owners' and admins' only), in their folder, both made with the first contract.
+      const made = contractFoldersToMake({
+        studentId: link.studentId,
+        studentName: link.studentName,
+        has: { studentFolder: studentFolder.exists, contractsFolder: contracts.exists },
+        by: system,
+        at: FieldValue.serverTimestamp(),
+      })
+      for (const f of made) tx.create(folders.doc(f.id), f.data)
+      if (contracts.exists) tx.update(contractsRef, { updatedAt: FieldValue.serverTimestamp(), updatedBy: system })
       tx.create(fileRef, {
         name: fileName,
         size: pdf.length,
         kind: 'pdf',
         mime: 'application/pdf',
         status: 'ready',
-        folderId: CONTRACTS_FOLDER_ID,
-        studentId: null,
-        access: 'admins',
+        ...contractFilePlace(link.studentId),
         evaluationId: null,
         originalName: null,
         uploadedAt: FieldValue.serverTimestamp(),
@@ -379,7 +389,7 @@ export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...L
         category: 'contracts',
         entityType: 'contractLink',
         entityId: id,
-        summary: `${name} (${SIGNER_RELATIONS[relation].toLowerCase()}) signed ${link.studentName}’s enrollment contract; it’s in the Drive’s Contracts folder`,
+        summary: `${name} (${SIGNER_RELATIONS[relation].toLowerCase()}) signed ${link.studentName}’s enrollment contract; it’s in ${link.studentName}’s Contracts folder in the Drive`,
         context: '',
         dateKey: dateKeyOf(signedAt, academy.timezone),
         studentId: link.studentId,
@@ -405,7 +415,7 @@ export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...L
           recipientKey: d.id,
           type: 'contract_signed' as const,
           title: `${link.studentName}’s enrollment contract is signed`,
-          body: `Signed by ${name} (${SIGNER_RELATIONS[relation].toLowerCase()}). The signed copy is in the Drive’s Contracts folder.`,
+          body: `Signed by ${name} (${SIGNER_RELATIONS[relation].toLowerCase()}). The signed copy is in ${link.studentName}’s Contracts folder in the Drive.`,
           link: `admin/students/${link.studentId}`,
           refs: {},
         })),
