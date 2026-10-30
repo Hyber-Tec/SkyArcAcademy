@@ -6,10 +6,7 @@ import { AI_FEATURES, type AiConfigDoc, type AiFeature, type AiFeatureConfig, ty
  * every feature starts off, on its provider's recommended model, until a super admin turns it on.
  */
 
-/**
- * A new feature's start: Claude's recommended model with a little thinking, off (checked 2026-10-30: Google's Gemini API
- * terms bar apps that under-18s use; `AI_PROVIDER_INFO.gemini.caution`).
- */
+/** A new feature's start: Claude's recommended model with a little thinking, off. */
 export function defaultFeature(): AiFeatureConfig {
   return { provider: 'anthropic', model: recommendedModel('anthropic').id, thinking: 'low', enabled: false }
 }

@@ -872,10 +872,12 @@ within that (Goo can overrule any of it):
   2026-10-29, a recommended (cheap) one first; a price typed on the page wins over the list's, as providers change them.
 - **The model list, checked against the providers' pages (2026-10-30, #91):** Claude Sonnet 5.5, Haiku 5.5 and Opus 5.5;
   Gemini 3.5 Flash-Lite, 3.8 Flash, 4 Argon and 3.1 Flash-Lite; OpenAI's GPT-6 Luna and GPT-6.1 Terra and Sol, with the
-  dates their prices change or they shut down. A feature starts on **Claude Sonnet 5.5 at low thinking**, not Gemini:
-  Google's Gemini API terms say it may not be used in an app "directed towards or likely to be accessed by individuals
-  under the age of 18", and students use this app; the AI page says so when Gemini is chosen. At 400 reports a month,
-  that's about $6 (Sonnet 5.5), under $1 (Haiku 5.5) or about $1 (Gemini 3.5 Flash-Lite). Goo chooses (`docs/TODO.md`).
+  dates their prices change or they shut down. A feature starts on **Claude Sonnet 5.5 at low thinking**. At 400 reports
+  a month, that's about $6 (Sonnet 5.5), under $1 (Haiku 5.5) or about $1 (Gemini 3.5 Flash-Lite). Goo chooses
+  (`docs/TODO.md`).
+- **Gemini is fine to choose** (Goo, 2026-10-30): its API terms' line on apps "likely to be accessed by individuals under
+  the age of 18" doesn't stop it here, because only adults use AI: super admins on Settings → AI and the academy's
+  owners and admins with "Write with AI". Students and parents never reach it. The AI page no longer warns about it.
 - **The monthly spending total needs a Firestore index** (`aiUsage`: `at`, `costUsd`), which the emulators don't ask
   for: without it, every Test and "Write with AI" failed on production with "INTERNAL" (2026-10-30). While the index
   builds, the functions add the month's requests up themselves, and a failure of the server's own shows on the Test in
