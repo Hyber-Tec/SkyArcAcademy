@@ -41,7 +41,9 @@ export function ReportRail({
   const f = r.facts
   const level = f.trend?.level ?? null
   const generated = toDate(r.generatedAt)
-  const edited = Object.values(r.narrativeMeta?.sections ?? {}).some((m) => m?.source === 'staff')
+  const sources = Object.values(r.narrativeMeta?.sections ?? {}).map((m) => m?.source)
+  const edited = sources.includes('staff')
+  const byAi = sources.includes('ai')
   const unmarked = f.attendance?.unmarked ?? 0
 
   async function toggle(key: keyof ReportOptions, value: boolean) {
@@ -114,7 +116,7 @@ export function ReportRail({
           <Row label="Prepared">
             {generated ? formatInstant(generated, timezone, { dateStyle: 'medium', timeStyle: 'short' }) : '—'} by {r.generatedBy?.name}
           </Row>
-          <Row label="Written by">{edited ? 'Standard text, edited by staff' : 'Standard text'}</Row>
+          <Row label="Written by">{byAi ? (edited ? 'AI and staff' : 'AI, saved by staff') : edited ? 'Standard text, edited by staff' : 'Standard text'}</Row>
         </dl>
         {r.series?.length ? (
           <ul className="mt-3 max-h-56 divide-y overflow-y-auto rounded-lg border text-xs">
