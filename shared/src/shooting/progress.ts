@@ -70,3 +70,19 @@ export function personalBestIds(evaluations: readonly Scored[]): Set<string> {
   }
   return ids
 }
+
+/**
+ * Personal bests in several students' results (the Scores page): each student's results set against their own earlier
+ * ones only, as `personalBestIds` does for one.
+ */
+export function personalBestIdsByStudent(evaluations: readonly (Scored & { studentId: string })[]): Set<string> {
+  const byStudent = new Map<string, (Scored & { studentId: string })[]>()
+  for (const e of evaluations) {
+    const list = byStudent.get(e.studentId)
+    if (list) list.push(e)
+    else byStudent.set(e.studentId, [e])
+  }
+  const ids = new Set<string>()
+  for (const list of byStudent.values()) for (const id of personalBestIds(list)) ids.add(id)
+  return ids
+}

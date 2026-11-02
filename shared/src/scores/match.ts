@@ -1,4 +1,4 @@
-import { type EvalSeries, type Evaluation, POSITIONS, type Position, inOrder } from '../shooting/evaluation'
+import { type EvalSeries, type Evaluation, POSITIONS, type Position, inOrder, per10 } from '../shooting/evaluation'
 import { isInnerTen, wholeScore } from '../shooting/target'
 
 /**
@@ -8,7 +8,11 @@ import { isInnerTen, wholeScore } from '../shooting/target'
  * the same way.
  */
 
-export type MatchResult = Pick<Evaluation, 'source' | 'position' | 'dateKey' | 'total' | 'wholeTotal' | 'innerTens' | 'shots' | 'series' | 'match'> & { id: string }
+export type MatchResult = Pick<Evaluation, 'source' | 'position' | 'dateKey' | 'total' | 'wholeTotal' | 'innerTens' | 'shots' | 'series' | 'match'> & {
+  id: string
+  /** Whose: a list of several students' results (the Scores page) keeps each student's sheet apart. */
+  studentId?: string
+}
 
 /** A 3×20's order on the sheet: kneeling, prone, standing. */
 export const MATCH_ORDER: readonly Position[] = ['kneeling', 'prone', 'standing']
@@ -16,10 +20,11 @@ export const MATCH_ORDER: readonly Position[] = ['kneeling', 'prone', 'standing'
 /** The sheet's letter for a position's shots ("K1", "P12", "S20"). */
 export const POSITION_LETTER: Record<Position, string> = { kneeling: 'K', prone: 'P', standing: 'S' }
 
-/** The results saved from one match's sheet: the same day, the same match, from the sheet, in the sheet's order. */
+/** The results saved from one match's sheet: the same student, the same day, the same match, in the sheet's order. */
 export function matchResults<E extends MatchResult>(e: E, all: readonly E[]): E[] {
   const name = e.match?.name ?? ''
-  const same = all.filter((x) => x.source === 'sheet' && x.dateKey === e.dateKey && (x.match?.name ?? '') === name)
+  const sameStudent = (x: E) => !e.studentId || !x.studentId || x.studentId === e.studentId
+  const same = all.filter((x) => x.source === 'sheet' && x.dateKey === e.dateKey && (x.match?.name ?? '') === name && sameStudent(x))
   const list = same.some((x) => x.id === e.id) ? same : [e, ...same]
   const order = (p: Position) => (MATCH_ORDER.includes(p) ? MATCH_ORDER.indexOf(p) : POSITIONS.indexOf(p))
   return [...list].sort((a, b) => order(a.position) - order(b.position))
@@ -27,7 +32,10 @@ export function matchResults<E extends MatchResult>(e: E, all: readonly E[]): E[
 
 /** One line of a student's results: a result, or a match's results sheet with all its positions. */
 export interface ResultRow<E> {
-  /** The result's ID, or for a results sheet its match ("sheet:2026-10-17:Fall Junior 3P"), which stays as its results change. */
+  /**
+   * The result's ID, or for a results sheet its student's match ("sheet:stu1:2026-10-17:Fall Junior 3P"), which stays as
+   * its results change.
+   */
   key: string
   /** The result, or the sheet's results in the sheet's order. */
   results: E[]
@@ -35,12 +43,13 @@ export interface ResultRow<E> {
   match: boolean
 }
 
-/** The key of the row a results sheet's result is in. */
-export const matchKey = (e: Pick<Evaluation, 'dateKey' | 'match'>) => `sheet:${e.dateKey}:${e.match?.name ?? ''}`
+/** The key of the row a results sheet's result is in: the student's (when known), the day's and the match's. */
+export const matchKey = (e: Pick<MatchResult, 'dateKey' | 'match' | 'studentId'>) => `sheet:${e.studentId ? `${e.studentId}:` : ''}${e.dateKey}:${e.match?.name ?? ''}`
 
 /**
  * A student's results as their list shows them, newest first (by date, then time): each result a row of its own, but a
- * competition's results sheet one row for all its positions, as the sheet has them (`matchResults`).
+ * competition's results sheet one row for all its positions, as the sheet has them (`matchResults`). Several students'
+ * results (the Scores page) give each student's sheet its own row.
  */
 export function resultRows<E extends MatchResult & { timeMin?: number | null }>(evaluations: readonly E[]): ResultRow<E>[] {
   const rows: ResultRow<E>[] = []
@@ -76,6 +85,14 @@ export function seriesLabel(position: Position, s: Pick<EvalSeries, 'n' | 'shots
 
 /** A shot's label on the sheet ("K14"). */
 export const shotLabel = (position: Position, series: number, index: number) => `${POSITION_LETTER[position]}${(series - 1) * 10 + index + 1}`
+
+/** A row's score per 10 shots, in whole numbers: its result's, or its match's over every shot of its positions. */
+export function rowPer10(results: readonly Pick<Evaluation, 'wholeTotal' | 'shots'>[]): number | null {
+  return per10(
+    results.reduce((n, r) => n + r.wholeTotal, 0),
+    results.reduce((n, r) => n + r.shots, 0),
+  )
+}
 
 /** The match's total and inner tens over its results (inner tens only when every result has them). */
 export function matchTotal(results: readonly MatchResult[]): { total: number; innerTens: number | null; whole: boolean } {

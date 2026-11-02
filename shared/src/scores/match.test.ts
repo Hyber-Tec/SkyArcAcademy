@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type MatchResult, matchKey, matchResults, matchTotal, resultRows, seriesInnerTens, seriesLabel, seriesTotalText } from './match'
+import { type MatchResult, matchKey, matchResults, matchTotal, resultRows, rowPer10, seriesInnerTens, seriesLabel, seriesTotalText } from './match'
 import { sheetSeriesOf } from './sheetSave'
 
 const shots = (vs: number[]) => vs.map((v) => ({ v, a: null }))
@@ -55,6 +55,23 @@ describe('a match from its results sheet', () => {
       ['sheet:2026-08-01:Made-up Open', ['e'], true],
     ])
     expect(matchKey(p)).toBe(rows[2].key)
+  })
+
+  it('keeps each student’s sheet of the same match apart, in a list of several students’ results', () => {
+    const mine = [k, s, p].map((r) => ({ ...r, studentId: 'ana' }))
+    const theirs = [{ ...k, id: 'k2', studentId: 'ben' }, { ...p, id: 'p2', studentId: 'ben' }]
+    const rows = resultRows([...mine, ...theirs])
+    expect(rows.map((r) => [r.key, r.results.map((x) => x.id)])).toEqual([
+      ['sheet:ana:2026-08-22:Made-up Open', ['k', 'p', 's']],
+      ['sheet:ben:2026-08-22:Made-up Open', ['k2', 'p2']],
+    ])
+    expect(matchResults(theirs[0], [...mine, ...theirs]).map((r) => r.id)).toEqual(['k2', 'p2'])
+  })
+
+  it('gives a row’s score per 10 over every shot of its positions', () => {
+    expect(rowPer10([k])).toBe(Math.round(k.wholeTotal * 10) / 10)
+    expect(rowPer10([{ wholeTotal: 170, shots: 20 }, { wholeTotal: 90, shots: 10 }])).toBe(86.7)
+    expect(rowPer10([])).toBeNull()
   })
 })
 
