@@ -1,14 +1,17 @@
-import { LuHardDrive, LuLock, LuUsers } from 'react-icons/lu'
+import { LuArrowRight, LuLock, LuUsers } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { categoryOf } from '@shared/drive/files'
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
+import { scoreTotal } from '@shared/drive/scores'
 import { DRIVE_ACCESS_LABELS, type DriveAccess, accessOf, isFixedFolder } from '@shared/drive/types'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from '@shared/shooting/evaluation'
 import { canReplay } from '@shared/shooting/replay'
 import { formatDateKey, formatInstant, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { DriveIcon } from '@/components/app/DriveIcon'
 import { useStudentList } from '@/features/data/hooks'
+import { scorePath } from '@/features/scores/card/parts'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { FileGlyph, FolderGlyph, PersonChip } from './parts'
 
@@ -58,7 +61,8 @@ export function DetailsPanel({
   index: DriveIndex
   folderId: string | null
   selected: DriveItem | null
-  scoresByFile: Map<string, WithId<Evaluation>>
+  /** Every score made from each file (a results sheet makes one for each position). */
+  scoresByFile: Map<string, WithId<Evaluation>[]>
   /** Owners and admins: change who sees a folder. */
   onAccess?: (folderId: string) => void
 }) {
@@ -75,7 +79,7 @@ export function DetailsPanel({
     const c = index.countsOf(null)
     body = (
       <>
-        <Header icon={<LuHardDrive className="size-6" />} name="Drive" />
+        <Header icon={<DriveIcon className="size-6" />} name="Drive" />
         <dl className="space-y-3">
           <Row label="Folders">{String(c.folders)}</Row>
           <Row label="Files">{`${c.files} · ${formatBytes(c.bytes)}`}</Row>
@@ -116,25 +120,29 @@ export function DetailsPanel({
     )
   } else {
     const f = shown.file
-    const e = scoresByFile.get(f.id)
+    // A results sheet's file holds a score for each position it lists: each has its own card.
+    const scores = scoresByFile.get(f.id) ?? []
     body = (
       <>
         <Header icon={<FileGlyph kind={f.kind} />} name={f.name} />
-        {e ? (
-          <div className="space-y-3 rounded-lg border p-3">
+        {scores.map((e) => (
+          <div key={e.id} className="space-y-3 rounded-lg border p-3">
             {canReplay(e) ? <ShotReplay key={e.id} evaluation={e} color={POSITION_COLORS[e.position]} size={228} highlightLast={e.source === 'sius'} className="mx-auto" /> : null}
             <dl className="grid grid-cols-2 gap-3">
               <Row label="Position">{POSITION_LABELS[e.position]}</Row>
               <Row label="Shot">{`${formatDateKey(e.dateKey, 'medium')}${e.timeMin !== null ? `, ${formatMinutes(e.timeMin)}` : ''}`}</Row>
-              <Row label={`${SOURCE_LABELS[e.source]} total`}>{`${e.source === 'sius' ? e.total.toFixed(1) : e.total} (${e.shots} shots)`}</Row>
+              <Row label={`${SOURCE_LABELS[e.source]} total`}>{`${scoreTotal(e)} (${e.shots} shots)`}</Row>
               <Row label="Per 10 shots">{e.source === 'sius' ? `${per10(e.total, e.shots)} · ${wholePer10(e)} whole` : String(wholePer10(e))}</Row>
               {e.innerTens !== null ? <Row label="Inner tens">{String(e.innerTens)}</Row> : null}
               {e.groupMm !== null ? <Row label="Group">{`${e.groupMm} mm`}</Row> : null}
             </dl>
             {e.problems.length ? <p className="text-xs text-amber-800 dark:text-amber-300">{e.problems.join(' ')}</p> : null}
             {e.sius?.clockFixMin ? <p className="text-xs text-muted-foreground">Time moved {e.sius.clockFixMin / 60} hours from the SIUS computer’s clock ({e.sius.printed}).</p> : null}
+            <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={scorePath(portal, e)}>
+              Open the score <LuArrowRight className="size-3.5" />
+            </Link>
           </div>
-        ) : null}
+        ))}
         <dl className="space-y-3">
           <Row label="Type">{`${CATEGORY[categoryOf(f.kind)]} · ${formatBytes(f.size)}`}</Row>
           {isAdmin ? <AccessRow access={accessOf(f)} note={f.folderId ? 'Like the folder it’s in.' : undefined} /> : null}

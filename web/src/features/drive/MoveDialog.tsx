@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { LuChevronRight, LuHardDrive, LuLock, LuUsers } from 'react-icons/lu'
+import { LuChevronRight, LuLock, LuUsers } from 'react-icons/lu'
 import { type DriveIndex, moveAccessNote, moveRefusal } from '@shared/drive/model'
 import { accessOf } from '@shared/drive/types'
+import { DriveIcon } from '@/components/app/DriveIcon'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -55,7 +56,8 @@ export function MoveDialog({
           <DialogDescription>Open the folder it should go in, then choose Move here.</DialogDescription>
         </DialogHeader>
         <nav className="flex min-w-0 flex-wrap items-center gap-1 text-sm" aria-label="Where">
-          <button type="button" className={cn('rounded px-1.5 py-0.5 hover:bg-muted', !at && 'font-semibold')} onClick={() => setAt(null)}>
+          <button type="button" className={cn('inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-muted', !at && 'font-semibold')} onClick={() => setAt(null)}>
+            <DriveIcon className="size-3.5 shrink-0" />
             Drive
           </button>
           {crumbs.map((c) => (
@@ -81,7 +83,7 @@ export function MoveDialog({
             ))
           ) : (
             <li className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-              <LuHardDrive className="size-5" />
+              <DriveIcon className="size-5" />
               No folders in here.
             </li>
           )}

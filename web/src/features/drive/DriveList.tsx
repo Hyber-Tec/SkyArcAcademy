@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { LuArrowDown, LuArrowUp, LuFolder } from 'react-icons/lu'
+import { Link } from 'react-router'
 import { isViewableImage } from '@shared/drive/files'
 import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
+import { scoreTotal } from '@shared/drive/scores'
 import { accessOf, isFixedFolder } from '@shared/drive/types'
 import { POSITION_COLORS, POSITION_LABELS, type Evaluation, per10 } from '@shared/shooting/evaluation'
 import type { WithId } from '@shared/types'
@@ -9,6 +11,7 @@ import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, ItemMenuButton, type MenuEntry } from '@/components/app/ItemMenu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
+import { scorePath } from '@/features/scores/card/parts'
 import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import { DropTargetWrapper, type DroppedEntry } from './dropzone'
@@ -37,9 +40,16 @@ const COLUMNS: { col: DriveColumn; label: string; className: string }[] = [
 
 /**
  * The columns follow the list's own width (it's an `@container`), not the window's: a tablet beside the sidebar, or the
- * Details panel open, leaves the name its room. Narrow, the name takes what the row's menu doesn't need.
+ * Details panel open, leaves the name its room. Narrow, the name takes what the row's menu doesn't need. A student's
+ * folder has a Score column after the name once there's room for it (until then each file's scores sit under its
+ * name), and its Owner column waits for more room still.
  */
 const GRID = 'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_13rem_5rem_4.5rem] items-center gap-3'
+const SCORE_GRID =
+  'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_13rem_11rem_5rem_4.5rem] @6xl:grid-cols-[1.5rem_minmax(0,1fr)_13rem_11rem_13rem_5rem_4.5rem] items-center gap-3'
+/** Where the Owner column shows (its heading, then its cells): later in a student's folder, where Score comes first. */
+const ownerHead = (scores: boolean) => (scores ? 'hidden @6xl:flex' : 'hidden @4xl:flex')
+const ownerCell = (scores: boolean) => (scores ? 'hidden @6xl:block' : 'hidden @4xl:block')
 
 export interface ListApi {
   index: DriveIndex
@@ -52,23 +62,53 @@ export interface ListApi {
   openItem: (it: DriveItem) => void
   selected: Set<string>
   toggle: (id: string) => void
-  /** Evaluations of the files on screen, by file ID (a student's folder). */
-  scoresByFile: Map<string, WithId<Evaluation>>
+  /** Every score made from each file on screen, by file ID (a student's folder; a results sheet makes several). */
+  scoresByFile: Map<string, WithId<Evaluation>[]>
+  /** The folder open is a student's (or in one): the list has a Score column. */
+  scoreColumn: boolean
   dropFiles: (folderId: string, entries: DroppedEntry[]) => void
   refuseDrop: () => void
   canDropInto: (itemId: string, targetId: string | null) => boolean
   moveInto: (itemId: string, targetId: string | null) => void
 }
 
-function ScoreChip({ e }: { e: Evaluation }) {
-  const p10 = per10(e.total, e.shots)
+/**
+ * A score made from the file, as a link to it on the student's Scores tab (the row or card around it opens the file):
+ * "● Prone 187.1", with its average per 10 shots when it isn't 10 shots. In the Score column (`cell`), as a chip under
+ * the name where the list is too narrow for the column (`chip`), or shorter on a grid card (`card`). Its position's
+ * colour is mixed with the text's, so it reads in dark mode too.
+ */
+function ScoreLink({ e, variant, className }: { e: WithId<Evaluation>; variant: 'cell' | 'chip' | 'card'; className?: string }) {
+  const { portal } = useBranch()
+  const color = POSITION_COLORS[e.position]
+  const chip = variant === 'chip'
+  const p10 = e.shots !== 10 ? per10(e.total, e.shots) : null
+  const text = `${POSITION_LABELS[e.position]} ${scoreTotal(e)}${p10 !== null ? ` · ${p10} per 10` : ''}`
   return (
-    <span className="inline-flex max-w-full min-w-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums" style={{ borderColor: `${POSITION_COLORS[e.position]}55`, color: POSITION_COLORS[e.position] }}>
+    <Link
+      to={scorePath(portal, e)}
+      // A drag from it moves the row, and a click opens the score, not the file.
+      draggable={false}
+      onClick={(ev) => ev.stopPropagation()}
+      title="Open this score"
+      aria-label={`Open the score: ${text}`}
+      data-testid="drive-score"
+      className={cn(
+        'inline-flex max-w-full min-w-0 items-center tabular-nums transition-colors outline-none hover:bg-foreground/[0.07] focus-visible:ring-2 focus-visible:ring-ring',
+        chip ? 'rounded-full border px-2 py-0.5 text-[11px] font-medium' : '-mx-1.5 gap-1.5 rounded-md px-1.5 py-0.5',
+        variant === 'cell' ? 'text-[13px]' : variant === 'card' ? 'text-xs' : null,
+        className,
+      )}
+      style={{ borderColor: chip ? `${color}55` : undefined, color: `color-mix(in oklab, ${color} 80%, var(--foreground))` }}
+    >
+      {chip ? null : <span className="size-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden />}
       <span className="truncate">
-        {POSITION_LABELS[e.position]} · {e.source === 'sius' ? e.total.toFixed(1) : e.total}
-        {e.shots !== 10 && p10 !== null ? <span className="text-muted-foreground"> · {p10} per 10</span> : null}
+        <span className={chip ? undefined : 'font-medium'}>{POSITION_LABELS[e.position]}</span>
+        {chip ? ' · ' : ' '}
+        <span className={chip ? undefined : 'font-semibold'}>{scoreTotal(e)}</span>
+        {p10 !== null && variant !== 'card' ? <span className="font-normal text-muted-foreground"> · {p10} per 10</span> : null}
       </span>
-    </span>
+    </Link>
   )
 }
 
@@ -104,15 +144,23 @@ function dragStart(id: string) {
 
 export function DriveListHead({ api, controls }: { api: ListApi; controls: React.ReactNode }) {
   return (
-    <div className={cn(GRID, 'sticky top-0 z-10 rounded-t-xl border-b bg-background px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase')} role="row">
+    <div className={cn(api.scoreColumn ? SCORE_GRID : GRID, 'sticky top-0 z-10 rounded-t-xl border-b bg-background px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase')} role="row">
       <span />
       {COLUMNS.map(({ col, label, className }) => {
         const active = api.sort.col === col
         return (
-          <button key={col} type="button" onClick={() => api.onSort(col)} className={cn('flex items-center gap-1 py-2 text-left uppercase hover:text-foreground', active && 'text-foreground', className)} title={`Sort by ${label.toLowerCase()}`}>
-            {label}
-            {active ? api.sort.dir === 'asc' ? <LuArrowUp className="size-3.5" /> : <LuArrowDown className="size-3.5" /> : null}
-          </button>
+          <Fragment key={col}>
+            <button
+              type="button"
+              onClick={() => api.onSort(col)}
+              className={cn('flex items-center gap-1 py-2 text-left uppercase hover:text-foreground', active && 'text-foreground', col === 'owner' ? ownerHead(api.scoreColumn) : className)}
+              title={`Sort by ${label.toLowerCase()}`}
+            >
+              {label}
+              {active ? api.sort.dir === 'asc' ? <LuArrowUp className="size-3.5" /> : <LuArrowDown className="size-3.5" /> : null}
+            </button>
+            {col === 'name' && api.scoreColumn ? <span className="hidden items-center py-2 @4xl:flex">Score</span> : null}
+          </Fragment>
         )
       })}
       <span className="flex justify-end">{controls}</span>
@@ -129,7 +177,7 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
   const file = it.kind === 'file' ? it.file : null
   const flight = file ? flightOf(file.id) : null
   const uploading = file?.status === 'uploading'
-  const score = file ? api.scoresByFile.get(file.id) : undefined
+  const scores = (file && api.scoresByFile.get(file.id)) || []
   const changed = itemUpdated(it, api.index)
   const draggable = api.canWrite && !uploading && !fixed(it)
   const size = isFolder ? api.index.countsOf(it.id).bytes : (file?.size ?? 0)
@@ -153,7 +201,7 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
       onClick={() => api.openItem(it)}
       {...(isFolder ? dropHandlers(api, it.id, setHot) : {})}
       className={cn(
-        GRID,
+        api.scoreColumn ? SCORE_GRID : GRID,
         'group min-h-[3.25rem] cursor-pointer border-b border-border/60 px-3 py-2 transition-colors hover:bg-accent/60',
         api.selected.has(it.id) && 'bg-brand/5',
         hot && 'bg-brand/10 ring-2 ring-brand/50 ring-inset',
@@ -168,13 +216,15 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
       <span className="flex min-w-0 items-center gap-3">
         {isFolder ? <FolderGlyph student={!!it.folder.studentId} locked={adminsOnly(it)} /> : <FileGlyph kind={file!.kind} />}
         <span className="min-w-0 flex-1">
-          {/* The score (or "Owners and admins") goes under the name when both don't fit on one line; on phones a long
-              name takes two lines. */}
+          {/* The scores (or "Owners and admins") go under the name when they don't fit on one line with it; on phones a
+              long name takes two lines. Where the Score column shows, the scores are there instead. */}
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="line-clamp-2 max-w-full text-sm font-semibold wrap-anywhere @xl:line-clamp-1" title={isFolder ? it.folder.name : file!.name}>
               {isFolder ? it.folder.name : file!.name}
             </span>
-            {score ? <ScoreChip e={score} /> : null}
+            {scores.map((e) => (
+              <ScoreLink key={e.id} e={e} variant="chip" className={api.scoreColumn ? '@4xl:hidden' : undefined} />
+            ))}
             {adminsOnly(it) ? <AccessBadge /> : null}
           </span>
           {where !== null ? (
@@ -185,7 +235,12 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
           ) : null}
         </span>
       </span>
-      <span className="hidden min-w-0 text-[13px] text-muted-foreground @4xl:block">
+      {api.scoreColumn ? (
+        <span className="hidden min-w-0 flex-col items-start gap-0.5 @4xl:flex">
+          {scores.length ? scores.map((e) => <ScoreLink key={e.id} e={e} variant="cell" />) : <span className="text-[13px] text-muted-foreground/50">—</span>}
+        </span>
+      ) : null}
+      <span className={cn('min-w-0 text-[13px] text-muted-foreground', ownerCell(api.scoreColumn))}>
         <PersonChip person={itemOwner(it)} />
       </span>
       <span className="hidden truncate text-[13px] text-muted-foreground @xl:block">{updatedCell}</span>
@@ -232,13 +287,14 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
   const menu = api.menuOf(it)
   const isFolder = it.kind === 'folder'
   const file = it.kind === 'file' ? it.file : null
-  const score = file ? api.scoresByFile.get(file.id) : undefined
+  const scores = (file && api.scoresByFile.get(file.id)) || []
+  const score = scores[0]
   const uploading = file?.status === 'uploading'
   const flight = file ? flightOf(file.id) : null
   const draggable = api.canWrite && !uploading && !fixed(it)
   const c = isFolder ? api.index.countsOf(it.id) : null
   const where = api.whereOf(it)
-  const meta = where !== null ? where || 'Drive' : isFolder ? `${c!.folders + c!.files} ${c!.folders + c!.files === 1 ? 'item' : 'items'}` : score ? `${POSITION_LABELS[score.position]} · ${score.source === 'sius' ? score.total.toFixed(1) : score.total}` : formatBytes(file!.size)
+  const meta = where !== null ? where || 'Drive' : isFolder ? `${c!.folders + c!.files} ${c!.folders + c!.files === 1 ? 'item' : 'items'}` : formatBytes(file!.size)
   const picture = isFolder ? (
     <FolderGlyph student={!!it.folder.studentId} locked={adminsOnly(it)} className="size-14" />
   ) : score && score.source === 'sius' ? (
@@ -267,7 +323,16 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
           <div className="line-clamp-2 text-sm leading-snug font-medium break-words" title={isFolder ? it.folder.name : file!.name}>
             {isFolder ? it.folder.name : file!.name}
           </div>
-          <div className="truncate text-xs text-muted-foreground">{meta}</div>
+          {/* A result's scores, each opening its score (a search says where the file is instead). */}
+          {scores.length && where === null ? (
+            <div className="flex min-w-0 flex-wrap gap-x-3">
+              {scores.map((e) => (
+                <ScoreLink key={e.id} e={e} variant="card" />
+              ))}
+            </div>
+          ) : (
+            <div className="truncate text-xs text-muted-foreground">{meta}</div>
+          )}
         </div>
         <span onClick={(e) => e.stopPropagation()}>
           <ItemMenuButton entries={menu} className="text-muted-foreground" />
