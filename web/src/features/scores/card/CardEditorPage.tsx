@@ -7,7 +7,7 @@ import { COL } from '@shared/paths'
 import { type Evaluation, POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition } from '@shared/shooting/evaluation'
 import { canReplay } from '@shared/shooting/replay'
 import { offsetWords } from '@shared/shooting/target'
-import { FLAT_SIZE, cardEvaluation, editModeOf, isFlatCard, savedReview, wasScanned } from '@shared/targets/flat'
+import { FLAT_SIZE, cardEvaluation, editModeOf, isFlatCard, keepOnResave, savedReview, wasScanned } from '@shared/targets/flat'
 import { type CardReview, placeShot, reviewTotals } from '@shared/targets/review'
 import { type DateKey, formatDateKey, todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { fileBlob } from '@/features/drive/FilePreview'
 import { type NewEvaluation, deleteEvaluation, updateEvaluation } from '@/features/scores/api'
+import { readCardPhoto } from '@/features/scores/photos/reader'
 import { prefersReducedMotion } from '@/features/scores/playback'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { branchDocRef, useDoc } from '@/lib/firestore'
@@ -44,14 +45,18 @@ interface Draft {
 const draftOf = (e: Evaluation): Draft => ({ position: e.position, dateKey: e.dateKey, note: e.note ?? '', review: savedReview(e)! })
 const versionOf = (e: Evaluation) => JSON.stringify([e.position, e.dateKey, e.note, e.total, e.series])
 
-/** The card as it will be saved, rebuilt from the draft as the phone app's score screen does it. */
+/**
+ * The card as it will be saved, rebuilt from the draft as the phone app's score screen does it, keeping what the
+ * rebuild doesn't know: what it was (a competition stays one) and the score written on the card.
+ */
 function changed(e: WithId<Evaluation>, d: Draft): NewEvaluation {
-  return cardEvaluation({ student: { id: e.studentId, name: e.studentName }, position: d.position, dateKey: d.dateKey, note: d.note, review: d.review, total: null }, e.fileId)
+  return keepOnResave(e, cardEvaluation({ student: { id: e.studentId, name: e.studentName }, position: d.position, dateKey: d.dateKey, note: d.note, review: d.review, total: null }, e.fileId))
 }
 
 /**
- * Students → a student → Scores → a scanned paper card: its picture, to check and correct what the phone app found
- * (CardEditor). Loaded by ID, so a reload or a shared link opens it again; admins and coaches alike.
+ * Students → a student → Scores → a paper card read from its photo (by the phone app's scanner, or Add paper scores on
+ * the website): its picture, to check and correct what the reader found (CardEditor). Loaded by ID, so a reload or a
+ * shared link opens it again; admins and coaches alike.
  */
 export function CardEditorPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const { studentId = '', evaluationId = '' } = useParams()
@@ -92,27 +97,36 @@ const CARD_FRAME = {
 }
 
 /**
- * A scanned card's picture: the Drive's flattened copy, read through the Storage rules (never a download link). Why
- * it can't be shown when it can't (not in the Drive yet, in the Trash, not a flattened card), as the phone app says it.
+ * A scanned card's picture, read through the Storage rules (never a download link): the Drive's flattened copy as the
+ * phone app saves it, or a photo of the card (one already in the Drive when its scores were read on the website), read
+ * again with the card reader to flatten it the same way, so the shots draw in their places. Why it can't be shown when
+ * it can't (not in the Drive yet, in the Trash, no card found in it), as the phone app says it.
  */
 function useCardPicture(scanned: boolean, fileId: string | null): Picture {
   const { branchId } = useBranch()
   const ref = useMemo(() => (fileId ? branchDocRef(branchId, COL.driveFiles, fileId) : null), [branchId, fileId])
   const { data: file, loading } = useDoc<DriveFile>(ref)
   const ready = !!file && file.status === 'ready' && !file.trashed
-  const [read, setRead] = useState<{ id: string; image: ImageBitmap | null } | null>(null)
+  const name = file?.name ?? ''
+  const [read, setRead] = useState<{ id: string; image: ImageBitmap | null; noCard?: boolean } | null>(null)
 
   useEffect(() => {
     if (!fileId || !ready) return
     let alive = true
     fileBlob(branchId, fileId)
-      .then((blob) => createImageBitmap(blob))
-      .then((image) => alive && setRead({ id: fileId, image }))
+      .then(async (blob) => {
+        const image = await createImageBitmap(blob).catch(() => null)
+        if (image && isFlatCard(image.width, image.height)) return { id: fileId, image }
+        image?.close()
+        const card = await readCardPhoto(blob, name)
+        return card.found ? { id: fileId, image: card.image } : { id: fileId, image: null, noCard: true }
+      })
+      .then((r) => alive && setRead(r))
       .catch(() => alive && setRead({ id: fileId, image: null }))
     return () => {
       alive = false
     }
-  }, [branchId, fileId, ready])
+  }, [branchId, fileId, ready, name])
 
   if (!scanned) return { kind: 'none' }
   if (loading) return { kind: 'loading' }
@@ -121,8 +135,8 @@ function useCardPicture(scanned: boolean, fileId: string | null): Picture {
   if (file.status === 'error') return { kind: 'note', text: `The card’s picture didn’t reach the Drive. ${CHANGEABLE}` }
   if (file.status === 'uploading') return { kind: 'note', text: 'The card’s picture is on its way to the Drive; it shows here once it’s there.' }
   if (read?.id !== fileId) return { kind: 'loading' }
+  if (read.noCard) return { kind: 'note', text: `No card could be found in the card’s picture, so the shots can’t be drawn on it. ${CHANGEABLE}` }
   if (!read.image) return { kind: 'note', text: `The card’s picture couldn’t be opened. ${CHANGEABLE}` }
-  if (!isFlatCard(read.image.width, read.image.height)) return { kind: 'note', text: `The card’s picture isn’t the flattened card the phone app saves, so the shots can’t be drawn on it. ${CHANGEABLE}` }
   return { kind: 'ready', image: read.image }
 }
 
@@ -339,7 +353,7 @@ function CardEditor({ e, mode, back }: { e: WithId<Evaluation>; mode: 'admin' | 
           <h1 className="text-2xl font-semibold tracking-tight">Check the card</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {POSITION_LABELS[draft.position]} paper card of {formatDateKey(draft.dateKey, 'medium')}
-            {scanned ? ', scanned with the phone' : ', typed in'}
+            {scanned ? ', read from its photo' : ', typed in'}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

@@ -31,9 +31,15 @@ const emit = () => {
   for (const l of [...listeners]) l()
 }
 
+/** While anything uploads, closing or reloading the page asks first: what hasn't gone up would be lost. */
+const hold = (e: BeforeUnloadEvent) => e.preventDefault()
+
 function setFlight(fileId: string, flight: Flight | null) {
+  const before = flights.size
   if (flight) flights.set(fileId, flight)
   else flights.delete(fileId)
+  if (!before && flights.size) window.addEventListener('beforeunload', hold)
+  if (before && !flights.size) window.removeEventListener('beforeunload', hold)
   emit()
 }
 
@@ -81,18 +87,35 @@ async function sendBytes(branchId: string, up: PlannedUpload) {
   }
 }
 
-/** Sends the bytes of uploads whose records are written, three at a time; resolves with the failures. */
-export async function sendAll(branchId: string, ups: PlannedUpload[]): Promise<string[]> {
-  const failures: string[] = []
+/** An upload that didn't go up, and why. */
+export interface FailedUpload {
+  up: PlannedUpload
+  message: string
+}
+
+/** Sends the bytes of uploads whose records are written, three at a time; resolves with the ones that failed. */
+async function sendEach(branchId: string, ups: PlannedUpload[]): Promise<FailedUpload[]> {
+  const failures: FailedUpload[] = []
   let next = 0
   const worker = async () => {
     while (next < ups.length) {
       const up = ups[next++]
-      await sendBytes(branchId, up).catch((e: Error) => failures.push(e.message))
+      await sendBytes(branchId, up).catch((e: Error) => failures.push({ up, message: e.message }))
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ups.length) }, worker))
   return failures
+}
+
+/** Sends the bytes of uploads whose records are written, three at a time; resolves with the failures. */
+export async function sendAll(branchId: string, ups: PlannedUpload[]): Promise<string[]> {
+  return (await sendEach(branchId, ups)).map((f) => f.message)
+}
+
+/** Sends again what didn't go up (its record back to "uploading", as the Storage rules want it); resolves with what failed again. */
+export async function resend(branchId: string, ups: PlannedUpload[]): Promise<FailedUpload[]> {
+  await Promise.all(ups.map((up) => updateDoc(branchDocRef(branchId, COL.driveFiles, up.fileId), { status: 'uploading', error: null })))
+  return sendEach(branchId, ups)
 }
 
 /** The record of a file about to be uploaded. */
@@ -186,4 +209,38 @@ export async function saveSheetResults(branchId: string, actor: Actor, index: Dr
   evaluations.forEach((e, i) => writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...e, fileId: up?.fileId ?? null })))
   await commitAll(writes)
   return up ? sendAll(branchId, [up]) : []
+}
+
+/** A paper card read from its photo on the website (scores/photos/AddPaperScores.tsx), ready to save. */
+export interface CardSave {
+  evaluation: Omit<Evaluation, keyof AuditStamp>
+  /** Its picture, filed in the student's folder: the card flattened like a scan, or the photo when no card was found… */
+  up: PlannedUpload | null
+  /** …or the photo already in the Drive, which keeps its file and becomes the score's. */
+  driveFileId: string | null
+}
+
+/**
+ * Paper cards read from their photos, saved as the phone app saves a scanned card (mobile/src/features/scan/save.ts):
+ * each card's scores and its picture's record in the student's folder, pointing at each other, in one write with the
+ * audit entries; then the pictures go up. It returns at once with the new scores' IDs: the page shows them while the
+ * server confirms (`saved`), and the uploads follow (`uploaded`, with what failed).
+ */
+export function saveCards(branchId: string, actor: Actor, index: DriveIndex, cards: CardSave[]): { ids: string[]; saved: Promise<void>; uploaded: Promise<FailedUpload[]> } {
+  const by = driveActor(actor)
+  const ids = cards.map(() => newEvaluationId(branchId))
+  const ups = cards.flatMap((c) => (c.up ? [c.up] : []))
+  const writes: DriveWrite[] = []
+  for (const id of new Set(ups.map((up) => up.record.folderId))) writes.push(...folderWrites(branchId, index, id, actor))
+  cards.forEach((c, i) => {
+    const fileId = c.up?.fileId ?? c.driveFileId
+    if (c.up) writes.push(recordWrite(branchId, index, c.up, { evaluationId: ids[i], uploadedAt: serverTimestamp(), uploadedBy: by }))
+    else if (c.driveFileId) {
+      const ref = branchDocRef(branchId, COL.driveFiles, c.driveFileId)
+      writes.push((b) => b.update(ref, { evaluationId: ids[i], updatedAt: serverTimestamp(), updatedBy: by }))
+    }
+    writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...c.evaluation, fileId }, 'read from its photo on the website'))
+  })
+  const saved = commitAll(writes)
+  return { ids, saved, uploaded: saved.then(() => sendEach(branchId, ups)) }
 }

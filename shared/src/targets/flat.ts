@@ -1,8 +1,9 @@
 import type { AuditStamp } from '../types'
-import { type Evaluation, type Position, paperEvaluation } from '../shooting/evaluation'
+import { type Evaluation, POSITION_LABELS, type Position, paperEvaluation } from '../shooting/evaluation'
 import type { DateKey } from '../time'
 import { CARD_BULLS, CARD_EDGES_MM, bullCentreMm } from './card'
-import type { Vec } from './geometry'
+import type { Mat3, Vec } from './geometry'
+import { type RgbaImage, sampleRgb } from './image'
 import { type CardReview, reviewFromShots, reviewShots } from './review'
 import type { ScannedBull } from './scan'
 
@@ -31,6 +32,43 @@ export function isFlatCard(width: number, height: number): boolean {
 /** Where a point of the card (millimetres from the top-left bull, x right, y down) is on the flattened card. */
 export function flatPoint(xMm: number, yMm: number): { x: number; y: number } {
   return { x: (xMm - FLAT_LEFT) * FLAT.pxPerMm, y: (yMm - FLAT_TOP) * FLAT.pxPerMm }
+}
+
+/**
+ * The card flattened and cropped as a scanner would give it, from a photo through the scan's perspective
+ * (`cardToImage`: card millimetres to photo pixels): each pixel taken from the photo between its pixels, white where
+ * the photo ends. The website makes the Drive's copy of a card read from a photo with it, as the phone app does with its
+ * own image code (mobile/src/features/scan/photo.ts), so a card's shots draw on it in the same places either way.
+ */
+export function flattenPhoto(img: RgbaImage, cardToImage: Mat3): RgbaImage {
+  const { width, height } = FLAT_SIZE
+  const data = new Uint8ClampedArray(width * height * 4)
+  const [a, b, c, d, e, f, g, h, k] = cardToImage
+  const rgb = [255, 255, 255]
+  for (let py = 0; py < height; py++) {
+    // Each pixel's middle, in card millimetres; the photo's pixels have their middles at whole coordinates (image.ts).
+    const ym = (py + 0.5) / FLAT.pxPerMm + FLAT_TOP
+    for (let px = 0; px < width; px++) {
+      const xm = (px + 0.5) / FLAT.pxPerMm + FLAT_LEFT
+      const w = g * xm + h * ym + k
+      const i = (py * width + px) * 4
+      if (!sampleRgb(img, (a * xm + b * ym + c) / w, (d * xm + e * ym + f) / w, rgb)) {
+        rgb[0] = 255
+        rgb[1] = 255
+        rgb[2] = 255
+      }
+      data[i] = rgb[0]
+      data[i + 1] = rgb[1]
+      data[i + 2] = rgb[2]
+      data[i + 3] = 255
+    }
+  }
+  return { width, height, data }
+}
+
+/** A card's name in the Drive: its date and position, so the website can tell the position from it (as the phone names it). */
+export function cardFileName(dateKey: DateKey, position: Position): string {
+  return `${dateKey} ${POSITION_LABELS[position]} paper card.jpg`
 }
 
 /** Where record bull `n` is on the flattened card, as a review places it (its centre, and a millimetre's pixels). */
@@ -67,6 +105,24 @@ export function wasScanned(e: Pick<Evaluation, 'source' | 'series'>): boolean {
 export function savedReview(e: Pick<Evaluation, 'source' | 'series'>): CardReview | null {
   if (editModeOf(e) !== 'card') return null
   return reviewFromShots(shotsOf(e), wasScanned(e) ? flatBull : () => null)
+}
+
+const STAMPS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy']
+
+/**
+ * A saved card rebuilt from its checked bulls (`cardEvaluation`) keeps what the rebuild doesn't know, as the phone app
+ * saves it: what it was (a competition or an evaluation stays one), and the score the coach wrote on the card, still the
+ * official one, with the new reading as its reference (and no longer marked once the reading agrees with it).
+ */
+export function keepOnResave(saved: Evaluation & { id?: string }, rebuilt: Omit<Evaluation, keyof AuditStamp>): Omit<Evaluation, keyof AuditStamp> {
+  const kept = Object.fromEntries(Object.entries(saved).filter(([k]) => !STAMPS.includes(k))) as Omit<Evaluation, keyof AuditStamp>
+  const next = { ...kept, ...rebuilt }
+  if (saved.official) {
+    next.total = saved.total
+    next.wholeTotal = saved.wholeTotal
+    next.official = rebuilt.total === saved.total ? null : { ...saved.official, appTotal: rebuilt.total }
+  }
+  return next
 }
 
 /** One card's scores, as the evaluation keeps them: its reviewed shots, or only its total. */

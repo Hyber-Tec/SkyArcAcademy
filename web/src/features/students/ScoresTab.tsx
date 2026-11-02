@@ -21,8 +21,8 @@ import { one, stateLabel, trendSeries } from '@/features/reports/model'
 import { CompetitionDialog } from '@/features/scores/CompetitionDialog'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { ResultKindFilter } from '@/features/scores/kinds'
-import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { prefersReducedMotion } from '@/features/scores/playback'
+import { AddPaperScoresDialog } from '@/features/scores/photos/AddPaperScores'
 import { ResultListHead, ResultRow } from '@/features/scores/ResultRow'
 import { rowOf, shortDate, useOpenRows } from '@/features/scores/results'
 import { useResultActions } from '@/features/scores/useResultActions'
@@ -33,9 +33,10 @@ import { useOpenSections } from './scores/sections'
 
 const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`
 
-/** Brings a row of the list into view (a link to one result, Show on a message). */
-function showRow(key: string, smooth: boolean) {
-  const el = document.querySelector(`[data-row="${CSS.escape(key)}"]`)
+/** Brings a row of the list into view (a link to one result; Show on a message: the first of the rows named). */
+function showRow(keys: string | readonly string[], smooth: boolean) {
+  const wanted = new Set(typeof keys === 'string' ? [keys] : keys)
+  const el = [...document.querySelectorAll<HTMLElement>('[data-row]')].find((x) => wanted.has(x.dataset.row ?? ''))
   el?.scrollIntoView({ block: 'start', behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto' })
 }
 
@@ -69,18 +70,42 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const { data: reports } = useStudentReports(student.id)
   const actions = useResultActions(mode)
   const openRows = useOpenRows()
+  const { show } = openRows
   const [sections, toggleSection] = useOpenSections()
   const [adding, setAdding] = useState(false)
   const [competing, setCompeting] = useState(false)
   const [creating, setCreating] = useState(false)
   const name = student.firstName || student.name
+  // Results just added: marked "Just added" for a little while, and the first of them in the list (the newest) opens
+  // as soon as the list has it.
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set())
+  const [toOpen, setToOpen] = useState<ReadonlySet<string> | null>(null)
+  const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const added = (ids: string[]) => {
+    if (!ids.length) return
+    setKind('all')
+    setFresh(new Set(ids))
+    setToOpen(new Set(ids))
+    if (freshTimer.current) clearTimeout(freshTimer.current)
+    freshTimer.current = setTimeout(() => setFresh(new Set()), 9000)
+  }
+  useEffect(
+    () => () => {
+      if (freshTimer.current) clearTimeout(freshTimer.current)
+    },
+    [],
+  )
+  const firstNew = toOpen ? rows.find((r) => toOpen.has(r.key)) : null
+  if (toOpen && firstNew) {
+    setToOpen(null)
+    show(firstNew.key)
+  }
 
   // A link to one result (`?score=`, from Home's latest scores and the Drive's Score column): its row opens and comes
   // into view, once.
   const [params] = useSearchParams()
   const asked = params.get('score')
   const arrived = useRef<string | null>(null)
-  const { show } = openRows
   useEffect(() => {
     if (loading || !asked || arrived.current === asked) return
     arrived.current = asked
@@ -138,7 +163,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             <ResultListHead />
             <ul className="border-t @xl:border-t-0" data-testid="results-list">
               {rows.map((row) => (
-                <ResultRow key={row.key} row={row} mode={mode} open={openRows.isOpen(row.key)} onToggle={() => openRows.toggle(row.key)} entries={actions.entriesOf(row)} bests={bests} />
+                <ResultRow key={row.key} row={row} mode={mode} open={openRows.isOpen(row.key)} onToggle={() => openRows.toggle(row.key)} entries={actions.entriesOf(row)} bests={bests} fresh={fresh.has(row.key)} />
               ))}
             </ul>
           </>
@@ -197,7 +222,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
         </FoldedSection>
       </div>
 
-      {adding ? <PaperScoreDialog open onOpenChange={setAdding} studentId={student.id} /> : null}
+      <AddPaperScoresDialog open={adding} onOpenChange={setAdding} studentId={student.id} onSaved={added} savedAction={(ids) => ({ label: 'Show', onClick: () => showRow(ids, true) })} />
       <CompetitionDialog open={competing} onOpenChange={setCompeting} studentId={student.id} studentName={student.name} />
       {creating ? <NewReportDialog open onOpenChange={setCreating} studentId={student.id} reports={reports} /> : null}
       {actions.element}

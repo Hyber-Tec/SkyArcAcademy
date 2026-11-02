@@ -43,7 +43,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { scorePath } from '@/features/scores/card/parts'
-import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
+import { AddPaperScoresDialog } from '@/features/scores/photos/AddPaperScores'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { branchCol } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
@@ -69,7 +69,7 @@ type Dialog =
   | { kind: 'renameFile'; id: string }
   | { kind: 'move'; folderIds: string[]; fileIds: string[] }
   | { kind: 'access'; id: string }
-  | { kind: 'paper'; studentId: string | null; fileId: string | null; position: Position | null }
+  | { kind: 'paper'; studentId: string | null; photo: WithId<DriveFile> | null }
   | { kind: 'refused'; refused: { name: string; reason: string }[]; added: number }
 
 /** "2026-10-07 Prone 186.8.pdf": a SIUS result is filed under its date, so a student's folder sorts by date. */
@@ -475,7 +475,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
         : scores.length
           ? { kind: 'sub', label: 'Scores', icon: LuTarget, entries: scores.map((e) => ({ label: POSITION_LABELS[e.position], hint: scoreTotal(e), onSelect: () => navigate(scorePath(portal, e)) })) }
           : null,
-      canWrite && photo && !scores.length && fileReady ? { label: 'Add paper scores…', icon: LuClipboardPen, onSelect: () => setDialog({ kind: 'paper', studentId: f.studentId, fileId: f.id, position: positionFromName(f.name) }) } : null,
+      canWrite && photo && !scores.length && fileReady ? { label: 'Add paper scores…', icon: LuClipboardPen, onSelect: () => setDialog({ kind: 'paper', studentId: f.studentId, photo: f }) } : null,
       canWrite && { label: 'Rename…', icon: LuPencilLine, disabled: !settled, separatorBefore: true, onSelect: () => setDialog({ kind: 'renameFile', id: f.id }) },
       canWrite && { label: 'Move to…', icon: LuFolderInput, disabled: !settled, onSelect: () => setDialog({ kind: 'move', folderIds: [], fileIds: [f.id] }) },
       canWrite && (f.status === 'error' || stale) ? { label: 'Remove', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void removeFailedUpload(branchId, f).catch((e: Error) => toast.error(e.message)) } : null,
@@ -492,7 +492,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
       { label: 'New folder', icon: LuFolderPlus, onSelect: () => setDialog({ kind: 'newFolder', parentId: folderId }) },
       { label: 'Upload files', icon: LuUpload, onSelect: () => choose(uploadInput, folderId) },
       { label: 'Upload folder', icon: LuFolderUp, onSelect: () => choose(folderInput, folderId) },
-      { label: 'Add paper scores…', icon: LuClipboardPen, separatorBefore: true, onSelect: () => setDialog({ kind: 'paper', studentId: index.studentOf(folderId), fileId: null, position: null }) },
+      { label: 'Add paper scores…', icon: LuClipboardPen, separatorBefore: true, onSelect: () => setDialog({ kind: 'paper', studentId: index.studentOf(folderId), photo: null }) },
     )
   const backgroundMenu = menu(
     ...(canWrite && ready ? newItems(cwd) : []),
@@ -875,7 +875,17 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
         />
       ) : null}
       {dialog?.kind === 'paper' ? (
-        <PaperScoreDialog open onOpenChange={(o) => !o && setDialog(null)} studentId={dialog.studentId} fileId={dialog.fileId} position={dialog.position} />
+        // A photo of a card is read as it is on the student's Scores tab; the folder's menus open the same dialog.
+        <AddPaperScoresDialog
+          open
+          onOpenChange={(o) => !o && setDialog(null)}
+          studentId={dialog.studentId}
+          drivePhotos={dialog.photo ? [dialog.photo] : undefined}
+          savedAction={(ids) => {
+            const studentId = dialog.photo?.studentId ?? dialog.studentId
+            return studentId ? { label: 'See the scores', onClick: () => navigate(scorePath(portal, { id: ids[0], studentId })) } : undefined
+          }}
+        />
       ) : null}
       {dialog?.kind === 'refused' ? <RefusedDialog refused={dialog.refused} added={dialog.added} onClose={() => setDialog(null)} /> : null}
       {confirmDialog}

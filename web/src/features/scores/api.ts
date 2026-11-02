@@ -19,15 +19,15 @@ export function newEvaluationId(branchId: string): string {
   return doc(branchCol(branchId, COL.evaluations)).id
 }
 
-/** Adds an evaluation to a batch, with its audit entry. */
-export function addEvaluation(batch: WriteBatch, branchId: string, actor: Actor, id: string, data: NewEvaluation) {
+/** Adds an evaluation to a batch, with its audit entry (`how` it came, when it says more: "read from its photo"). */
+export function addEvaluation(batch: WriteBatch, branchId: string, actor: Actor, id: string, data: NewEvaluation, how?: string) {
   batch.set(branchDocRef(branchId, COL.evaluations, id), { ...data, createdAt: serverTimestamp(), createdBy: actor.email, updatedAt: serverTimestamp(), updatedBy: actor.email })
   addAudit(batch, branchId, actor, {
     action: 'evaluation.add',
     category: 'reports',
     entityType: 'evaluation',
     entityId: id,
-    summary: `Added ${data.studentName}'s ${describe(data)}`,
+    summary: `Added ${data.studentName}'s ${describe(data)}${how ? `, ${how}` : ''}`,
     dateKey: data.dateKey,
     studentId: data.studentId,
     studentName: data.studentName,
