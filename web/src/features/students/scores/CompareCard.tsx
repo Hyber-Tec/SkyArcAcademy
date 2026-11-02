@@ -19,8 +19,11 @@ const MODES: [CompareMode, string][] = [
 
 const pointLabel = (p: EvaluationPoint) => `${formatDateKey(p.dateKey, 'medium')} · ${one(p.wholePer10)}${p.source === 'sius' ? ` (${one(p.per10)})` : ''}`
 
-/** Two evaluations of one position side by side, picked the way families ask ("how far has she come?"). */
-export function CompareCard({ evaluations }: { evaluations: WithId<Evaluation>[] }) {
+/**
+ * Two evaluations of one position side by side, picked the way families ask ("how far has she come?"). `bare`: without
+ * its own card and title, inside a section that has them (a student's Scores tab, where it folds away).
+ */
+export function CompareCard({ evaluations, bare = false }: { evaluations: WithId<Evaluation>[]; bare?: boolean }) {
   // The modes and the pairs they compare: shared/src/reports/compare.ts (the phone app compares the same way).
   const positions = useMemo(() => comparablePositions(evaluations), [evaluations])
   const latestPosition = useMemo(() => latestComparablePosition(evaluations), [evaluations])
@@ -32,33 +35,40 @@ export function CompareCard({ evaluations }: { evaluations: WithId<Evaluation>[]
   const [pickB, setPickB] = useState<string | null>(null)
   const pair = comparePair(list, mode, { picks: [pickA, pickB] })
 
-  return (
-    <section className="overflow-hidden rounded-xl border bg-card" data-testid="compare-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <LuGitCompareArrows className="size-4 text-muted-foreground" /> Compare
-        </h2>
-        {positions.length > 1 ? (
-          <div className="inline-flex rounded-lg bg-muted p-0.5 text-xs" role="group" aria-label="Position">
-            {positions.map((p) => (
-              <button
-                key={p}
-                type="button"
-                aria-pressed={position === p}
-                onClick={() => setPosition(p)}
-                className={cn('inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 font-medium', position === p ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
-              >
-                <span className="size-2 rounded-full" style={{ background: POSITION_COLORS[p] }} />
-                {POSITION_LABELS[p]}
-              </button>
-            ))}
-          </div>
-        ) : null}
+  const switcher =
+    positions.length > 1 ? (
+      <div className="inline-flex rounded-lg bg-muted p-0.5 text-xs" role="group" aria-label="Position">
+        {positions.map((p) => (
+          <button
+            key={p}
+            type="button"
+            aria-pressed={position === p}
+            onClick={() => setPosition(p)}
+            className={cn('inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 font-medium', position === p ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+          >
+            <span className="size-2 rounded-full" style={{ background: POSITION_COLORS[p] }} />
+            {POSITION_LABELS[p]}
+          </button>
+        ))}
       </div>
-      {list.length < 2 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">Two evaluations in the same position are needed to compare.</p>
+    ) : null
+
+  return (
+    <section className={bare ? undefined : 'overflow-hidden rounded-xl border bg-card'} data-testid="compare-card">
+      {bare ? (
+        switcher ? <div className="pb-3">{switcher}</div> : null
       ) : (
-        <div className="space-y-4 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <LuGitCompareArrows className="size-4 text-muted-foreground" /> Compare
+          </h2>
+          {switcher}
+        </div>
+      )}
+      {list.length < 2 ? (
+        <p className={cn('text-center text-sm text-muted-foreground', bare ? 'py-6' : 'px-5 py-8')}>Two evaluations in the same position are needed to compare.</p>
+      ) : (
+        <div className={cn('space-y-4', bare ? undefined : 'p-5')}>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Compare">
             {MODES.map(([m, label]) => (
               <button

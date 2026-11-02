@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { LuChevronDown, LuPencilLine, LuTrophy } from 'react-icons/lu'
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from '@shared/scores/match'
 import { POSITION_COLORS, POSITION_LABELS, evaluationPoints } from '@shared/shooting/evaluation'
@@ -13,15 +13,16 @@ import { cn } from '@/lib/utils'
  * sections: click one and see all its shots and the animation"): the match's total and inner tens, then each series of
  * ten as the sheet prints it ("K1–K10 · 71 - 1") with its shots on a small target when the sheet's pictures gave their
  * places. Opening a series shows its shots and plays them back. The phone shows the same (mobile/src/features/scores/
- * MatchCard.tsx); the sums are shared (shared/src/scores/match.ts).
+ * MatchCard.tsx); the sums are shared (shared/src/scores/match.ts). Staff open it under its row in a student's results,
+ * with its menu beside the total (`aside`).
  */
-export function MatchCard({ evaluation, results }: { evaluation: MatchResult; results: MatchResult[] }) {
+export function MatchCard({ evaluation, results, aside, className = 'border-t px-5 py-4' }: { evaluation: MatchResult; results: MatchResult[]; aside?: ReactNode; className?: string }) {
   const [open, setOpen] = useState<string | null>(null)
   const { total, innerTens, whole } = matchTotal(results)
   const rows = results.flatMap((r) => r.series.map((s) => ({ key: `${r.id}-${s.n}`, r, s, points: evaluationPoints({ series: [s] }) })))
   const shown = rows.find((x) => x.key === open) ?? null
   return (
-    <section className="border-t px-5 py-4" aria-label="The match" data-testid="match-card">
+    <section className={className} aria-label="The match" data-testid="match-card">
       <div className="flex items-center gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
           <LuTrophy className="size-4.5" />
@@ -37,6 +38,7 @@ export function MatchCard({ evaluation, results }: { evaluation: MatchResult; re
           </div>
           <div className="text-[11px] text-muted-foreground">{results.length > 1 ? 'the match' : POSITION_LABELS[evaluation.position]}</div>
         </div>
+        {aside}
       </div>
 
       {results.length > 1 ? (

@@ -199,6 +199,46 @@ export function typeScores(r: CardReview, n: number, values: number[]): CardRevi
   }))
 }
 
+/**
+ * A close call settled by a person (`closeCall`; the website's "Keep 9" or "Make it 8"): kept as read, the shot then
+ * checked; or counted one ring lower, its hole moved straight out from the centre until its edge clears the line it
+ * touched (by 0.05 mm, a few hundredths beyond the photo's own error), so its place and its score still agree.
+ */
+export function settleCloseCall(r: CardReview, n: number, index: number, keep: boolean): CardReview {
+  return withBull(r, n, (b) => ({
+    ...b,
+    shots: b.shots.map((s, i) => {
+      if (i !== index) return s
+      if (keep || s.x === null || s.y === null || s.value < 1) return { ...s, confidence: 1, manual: true }
+      const radius = holeRadiusOf(s, r)
+      const d = Math.sqrt(s.x * s.x + s.y * s.y)
+      const out = ringRadiusMm(s.value) + radius + 0.05
+      return d > 0 ? placedShot((s.x * out) / d, (s.y * out) / d, radius) : placedShot(out, 0, radius)
+    }),
+  }))
+}
+
+/**
+ * A bull a person has looked at and found right as read (the website's "Looks right"): its shots checked, and the other
+ * marks the scan saw set aside, so it no longer asks for a look.
+ */
+export function confirmBull(r: CardReview, n: number): CardReview {
+  return withBull(r, n, (b) => ({ ...b, shots: b.shots.map((s) => ({ ...s, confidence: 1, manual: true })), extra: [] }))
+}
+
+/**
+ * A bull's scores as typed in its box (a card read from a photo, checked on the website): unchanged when they're its
+ * scores already, the shots as the scan read them (with their places) when they're the scan's, otherwise typed scores
+ * without places, the coach's word.
+ */
+export function retypeBull(r: CardReview, read: CardReview, n: number, values: number[]): CardReview {
+  const same = (b: ReviewBull | undefined) => !!b && b.shots.length === values.length && b.shots.every((s, i) => s.value === values[i])
+  if (same(r.bulls.find((b) => b.n === n))) return r
+  const scanned = read.bulls.find((b) => b.n === n)
+  if (scanned && same(scanned)) return withBull(r, n, () => scanned)
+  return typeScores(r, n, values)
+}
+
 /** One or two shots per bull: extra shots move to the marks, and marks fill a bull that's now short. */
 export function changeShotsPerBull(r: CardReview, shotsPerBull: number): CardReview {
   const k = Math.max(1, Math.min(3, Math.round(shotsPerBull)))

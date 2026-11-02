@@ -32,13 +32,26 @@ export function toPoint(e: Evaluation & { id: string }): EvaluationPoint {
   }
 }
 
-/** Second half of the list against the first (whole per 10); null with fewer than two. */
-export function halvesChange(points: readonly EvaluationPoint[]): number | null {
+/**
+ * The newer half of the results against the older half, in date order, each half's results averaged (whole per 10):
+ * with an odd number the middle one is in neither half. Null with fewer than two.
+ */
+export function halves(points: readonly Pick<EvaluationPoint, 'wholePer10'>[]): { older: number; newer: number; size: number; change: number } | null {
   if (points.length < 2) return null
   const mid = Math.floor(points.length / 2)
-  const first = avg(points.slice(0, mid).map((p) => p.wholePer10))
-  const second = avg(points.slice(points.length - mid).map((p) => p.wholePer10))
-  return first === null || second === null ? null : round1(second - first)
+  const older = avg(points.slice(0, mid).map((p) => p.wholePer10))
+  const newer = avg(points.slice(points.length - mid).map((p) => p.wholePer10))
+  return older === null || newer === null ? null : { older, newer, size: mid, change: round1(newer - older) }
+}
+
+/** Second half of the list against the first (whole per 10); null with fewer than two. */
+export function halvesChange(points: readonly Pick<EvaluationPoint, 'wholePer10'>[]): number | null {
+  return halves(points)?.change ?? null
+}
+
+/** A change per 10 shots in words: improving from +1, dipping from −1.5, steady between. */
+export function trendLevel(change: number): TrendLevel {
+  return change >= TREND_UP ? 'improving' : change <= TREND_DOWN ? 'dipping' : 'steady'
 }
 
 function positionFacts(position: Position, points: EvaluationPoint[]): PositionFacts {
@@ -74,7 +87,7 @@ export function trendOf(positions: readonly PositionFacts[]): { level: TrendLeve
   if (!counted.length) return { level: null, change: null }
   const weight = counted.reduce((n, p) => n + p.evaluations, 0)
   const change = round1(counted.reduce((n, p) => n + (p.change as number) * p.evaluations, 0) / weight)
-  return { level: change >= TREND_UP ? 'improving' : change <= TREND_DOWN ? 'dipping' : 'steady', change }
+  return { level: trendLevel(change), change }
 }
 
 export interface FactsSession {

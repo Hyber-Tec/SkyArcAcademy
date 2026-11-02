@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ringRadiusMm } from '../shooting/target'
 import { type Mat3, applyH, fitEllipse, fitHomography } from './geometry'
-import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, holeRadiusOf, placeShot, placedShot, removeShot, reviewFromShots, reviewShots, reviewTotals, startReview, takeExtra, typeScores } from './review'
+import { type CardReview, type ReviewBull, bullState, changeShotsPerBull, closeCall, confirmBull, holeRadiusOf, placeShot, placedShot, removeShot, retypeBull, reviewFromShots, reviewShots, reviewTotals, settleCloseCall, startReview, takeExtra, typeScores } from './review'
 import { STEP_MM } from './card'
 import { CARD_HOLES, scanCard } from './scan'
 import { MISS_BEYOND_MM, PELLET_RADIUS_MM, scoreAt, scoreHole } from './score'
@@ -380,6 +380,41 @@ describe('close calls and saved cards', () => {
     const bull = (manual: boolean): ReviewBull => ({ n: 1, found: true, center: { x: 0, y: 0 }, axes: [1, 0, 0, 1], shots: [{ ...placedShot(0, 7.4), manual }], extra: [] })
     expect(bullState(bull(false), 1)).toBe('check')
     expect(bullState(bull(true), 1)).toBe('ok')
+  })
+
+  it('settles a close call as read, or one ring lower with its hole just clear of the line', () => {
+    // A 2 mm hole 4.6 mm out (up and to the right) touches the 9's line (2.75 mm) by 0.15 mm: read as 9.
+    const shot = { ...placedShot(3.0, 3.49, 2), confidence: 0.9, manual: false }
+    const review: CardReview = { shotsPerBull: 1, holeRadius: 2, bulls: [{ n: 1, found: true, center: { x: 0, y: 0 }, axes: [1, 0, 0, 1], shots: [shot], extra: [] }] }
+    expect(closeCall(shot, review)?.ring).toBe(9)
+    expect(bullState(review.bulls[0], 1, review)).toBe('check')
+    const kept = settleCloseCall(review, 1, 0, true).bulls[0]
+    expect(kept.shots[0]).toMatchObject({ value: 9, x: 3.0, y: 3.49, manual: true })
+    expect(bullState(kept, 1, review)).toBe('ok')
+    const lower = settleCloseCall(review, 1, 0, false).bulls[0].shots[0]
+    expect(lower).toMatchObject({ value: 8, manual: true, radius: 2 })
+    // Straight out from the centre, and only as far as it takes.
+    expect(Math.atan2(lower.y!, lower.x!)).toBeCloseTo(Math.atan2(3.49, 3.0), 2)
+    expect(Math.hypot(lower.x!, lower.y!) - Math.hypot(3.0, 3.49)).toBeLessThan(0.25)
+  })
+
+  it('takes a bull found right as read: checked, its other marks set aside', () => {
+    const unsure = { ...placedShot(1, 1), confidence: 0.3, manual: false }
+    const review: CardReview = { shotsPerBull: 1, bulls: [{ n: 4, found: true, center: { x: 0, y: 0 }, axes: [1, 0, 0, 1], shots: [unsure], extra: [placedShot(6, 6)] }] }
+    expect(bullState(review.bulls[0], 1, review)).toBe('check')
+    const ok = confirmBull(review, 4).bulls[0]
+    expect(bullState(ok, 1, review)).toBe('ok')
+    expect(ok.shots[0]).toMatchObject({ x: 1, y: 1, value: unsure.value, manual: true })
+    expect(ok.extra).toEqual([])
+  })
+
+  it('takes a typed box: the scan’s own shot when it’s the scan’s score, else a typed score', () => {
+    const read: CardReview = { shotsPerBull: 1, holeRadius: 2, bulls: [{ n: 1, found: true, center: { x: 0, y: 0 }, axes: [1, 0, 0, 1], shots: [placedShot(0, 4.5, 2)], extra: [] }] }
+    expect(read.bulls[0].shots[0].value).toBe(9)
+    const typed = retypeBull(read, read, 1, [7])
+    expect(typed.bulls[0].shots).toEqual([{ x: null, y: null, value: 7, decimal: null, confidence: 1, manual: true }])
+    expect(retypeBull(typed, read, 1, [9]).bulls[0]).toBe(read.bulls[0])
+    expect(retypeBull(read, read, 1, [9])).toBe(read)
   })
 
   it('rebuilds a saved card bull by bull, one or two shots each', () => {

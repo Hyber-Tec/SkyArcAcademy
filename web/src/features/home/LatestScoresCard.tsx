@@ -22,7 +22,7 @@ const newestFirst = (a: Evaluation, b: Evaluation) =>
 /**
  * Home's latest scores, for admins and coaches: the newest results across the academy (each SIUS result and paper card
  * of the last two weeks), each with its target in small, whose it is, the position and the score per 10 shots. A
- * result opens the student's Scores with it chosen.
+ * result opens the student's Scores with it open in its row.
  */
 export function LatestScoresCard({ portal }: { portal: 'admin' | 'coach' }) {
   const { branchId, timezone } = useBranch()

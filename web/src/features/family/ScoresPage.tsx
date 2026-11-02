@@ -22,8 +22,8 @@ import { ResultOriginal } from './ResultOriginal'
 import { PositionCards, ScoresOverTime, ShotPattern } from './ScoreWidgets'
 
 /**
- * Parent and Student → Scores: every result (SIUS results and paper cards), as staff see them on the student's Scores
- * tab but read-only: each position at a glance, the result picked played back on the target shot by shot with the
+ * Parent and Student → Scores: every result (SIUS results and paper cards), read-only: each position at a glance,
+ * the result picked played back on the target shot by shot with the
  * coach's note, every result with its target in small (personal bests marked), the scores over time, where the shots
  * land, and any two compared. A result's original (the SIUS PDF, the card's picture) opens in place. Parents with more
  * than one child pick whose, one at a time. The child, the result and the open original are in the address
@@ -183,7 +183,7 @@ export function FamilyScoresPage() {
                 {plural(mine.length, 'result')}. Scores are per 10 shots: whole numbers out of 100, and decimals for SIUS results.
               </p>
             </div>
-            <ResultsPanel key={kid} evaluations={mine} mode="family" selectedId={fromScore?.id ?? null} onSelect={select} bests={bests} onOriginal={openOriginal} insight={insight} />
+            <ResultsPanel key={kid} evaluations={mine} selectedId={fromScore?.id ?? null} onSelect={select} bests={bests} onOriginal={openOriginal} insight={insight} />
           </section>
           <ScoresOverTime evaluations={mine} today={todayKey(timezone)} label={`${student ? 'Your' : `${name}’s`} scores per 10 shots over time`} />
           <ShotPattern key={`pattern-${kid}`} evaluations={mine} />

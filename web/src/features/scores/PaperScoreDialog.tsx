@@ -1,5 +1,5 @@
 import { type Timestamp, serverTimestamp } from 'firebase/firestore'
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { studentLabel } from '@shared/people'
 import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition, kindOf, paperEvaluation } from '@shared/shooting/evaluation'
@@ -22,22 +22,7 @@ import { ResultKindPicker } from './kinds'
 
 const BULLS = 10
 
-/**
- * A paper card's scores, typed in: the student, the position, the date written on the card, and either the ten
- * bulls or just the total. Cards scanned with the phone app open here too: one box per shot (two per bull on some
- * cards), and a shot whose score stays keeps its place on the target.
- */
-export function PaperScoreDialog({
-  open,
-  onOpenChange,
-  studentId: fixedStudent = null,
-  fileId = null,
-  position: suggestedPosition = null,
-  existing = null,
-  onSaved,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface PaperScoreProps {
   /** The student, when it's already known (their folder or page). */
   studentId?: string | null
   /** The card's photo in the Drive. */
@@ -45,10 +30,46 @@ export function PaperScoreDialog({
   position?: Position | null
   existing?: WithId<Evaluation> | null
   onSaved?: (evaluationId: string) => void
-}) {
+}
+
+/**
+ * A paper card's scores, typed in: the student, the position, the date written on the card, and either the ten
+ * bulls or just the total. Cards scanned with the phone app open here too: one box per shot (two per bull on some
+ * cards), and a shot whose score stays keeps its place on the target. Adding paper scores types them on its own tab
+ * (photos/AddPaperScores.tsx, with PaperScoreForm).
+ */
+export function PaperScoreDialog({ open, onOpenChange, ...props }: PaperScoreProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{props.existing ? 'Paper card scores' : 'Add paper card scores'}</DialogTitle>
+          <DialogDescription>Type the scores written on the card. Use the date on the card, not the photo’s.</DialogDescription>
+        </DialogHeader>
+        {open ? <PaperScoreForm {...props} onDone={() => onOpenChange(false)} /> : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** The fields, in a scrolling part of their own when the dialog around them asks for one. */
+function Body({ className, children }: { className?: string; children: ReactNode }) {
+  return className ? <div className={className}>{children}</div> : children
+}
+
+/** The typed scores' fields and their Cancel and Save, inside a dialog (`bodyClassName`: the fields' scrolling part). */
+export function PaperScoreForm({
+  studentId: fixedStudent = null,
+  fileId = null,
+  position: suggestedPosition = null,
+  existing = null,
+  onSaved,
+  onDone,
+  bodyClassName,
+}: PaperScoreProps & { onDone: () => void; bodyClassName?: string }) {
   const { branchId, actor, timezone } = useBranch()
   const today = todayKey(timezone)
-  const { data: students } = useStudentList(open)
+  const { data: students } = useStudentList(true)
   const existingShots = existing?.series[0]?.shots ?? []
   const slots = Math.max(BULLS, existingShots.length)
   const firstShots = existingShots.map((s) => String(s.v))
@@ -115,7 +136,7 @@ export function PaperScoreDialog({
       else id = await createEvaluation(branchId, actor, data)
       toast.success(existing ? 'Scores saved' : `Scores added for ${student.name}`)
       onSaved?.(id)
-      onOpenChange(false)
+      onDone()
     } catch (e) {
       toast.error('Could not save the scores', { description: (e as Error).message })
     } finally {
@@ -124,12 +145,8 @@ export function PaperScoreDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{existing ? 'Paper card scores' : 'Add paper card scores'}</DialogTitle>
-          <DialogDescription>Type the scores written on the card. Use the date on the card, not the photo’s.</DialogDescription>
-        </DialogHeader>
+    <>
+      <Body className={bodyClassName}>
         <FieldGroup>
           <Field>
             <FieldLabel>Student</FieldLabel>
@@ -223,15 +240,15 @@ export function PaperScoreDialog({
             <FieldDescription>The student and their parents see this note with the score.</FieldDescription>
           </Field>
         </FieldGroup>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={() => void save()} disabled={!ready || busy}>
-            {busy ? <Spinner /> : null} Save scores
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Body>
+      <DialogFooter>
+        <Button variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button onClick={() => void save()} disabled={!ready || busy}>
+          {busy ? <Spinner /> : null} Save scores
+        </Button>
+      </DialogFooter>
+    </>
   )
 }

@@ -91,6 +91,9 @@ export default defineConfig({
     },
   },
   server: { port: 5173 },
+  // The card reader's worker (src/features/scores/photos) loads the HEIC decoder (2 MB) only when it reads a HEIC photo:
+  // built as an ES module, the worker keeps the decoder in a chunk of its own.
+  worker: { format: 'es' },
   build: {
     rollupOptions: {
       input: { index: path.resolve(import.meta.dirname, 'index.html'), app: path.resolve(import.meta.dirname, 'app.html') },

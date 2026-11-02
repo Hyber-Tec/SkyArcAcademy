@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type MatchResult, matchResults, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText } from './match'
+import { type MatchResult, matchKey, matchResults, matchTotal, resultRows, seriesInnerTens, seriesLabel, seriesTotalText } from './match'
 import { sheetSeriesOf } from './sheetSave'
 
 const shots = (vs: number[]) => vs.map((v) => ({ v, a: null }))
@@ -40,6 +40,21 @@ describe('a match from its results sheet', () => {
   it('names a series by its shots, as the sheet does', () => {
     expect(seriesLabel('kneeling', k.series[0])).toBe('K1–K10')
     expect(seriesLabel('prone', { n: 2, shots: shots([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) })).toBe('P11–P20')
+  })
+
+  it('lists a student’s results newest first, a sheet’s positions as one row', () => {
+    const card = { ...result('c', 'standing', [[8, 7, 9, 6, 8, 7, 8, 9, 7, 8]]), source: 'paper' as const, dateKey: '2026-08-25', match: null }
+    const sius = { ...result('x', 'prone', [[9.1, 9.4, 10.2, 8.8, 9.9, 10.0, 9.3, 9.6, 8.7, 10.4]]), source: 'sius' as const, dateKey: '2026-08-22', timeMin: 1100, match: null }
+    const earlier = { ...result('e', 'prone', [[9, 9, 9, 9, 9, 9, 9, 9, 9, 9]]), dateKey: '2026-08-01' }
+    const rows = resultRows([s, card, earlier, k, sius, p, other])
+    expect(rows.map((r) => [r.key, r.results.map((x) => x.id), r.match])).toEqual([
+      ['c', ['c'], false],
+      ['x', ['x'], false],
+      ['sheet:2026-08-22:Made-up Open', ['k', 'p', 's'], true],
+      ['sheet:2026-08-22:Another match', ['o'], true],
+      ['sheet:2026-08-01:Made-up Open', ['e'], true],
+    ])
+    expect(matchKey(p)).toBe(rows[2].key)
   })
 })
 
