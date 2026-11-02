@@ -936,3 +936,32 @@ Goo's asks after trying the website:
   the Drive does inside it (folders, uploads and drops, SIUS results filed as theirs, the menus, a search of their
   folder alone); **Open in the Drive** opens the same folder on the Drive page. Coaches have it too, without the
   Contracts folder (owners' and admins' only). A finished student whose folder is empty shows that it is.
+
+## 29. Goo's round of 2026-11-02
+
+Goo's asks after using the website. All of it is the website's: the phone app doesn't change.
+
+- **The schedule's panel floats** (#97): over the schedule's right side, never beside it, so opening or closing it moves
+  nothing. The header keeps ‹ Today › and Day/Week whether it's open or not, and has no panel button any more: closed,
+  the panel leaves a small round button in the schedule's top-right corner, and Escape opens and closes it as before.
+  It still starts open on a wide window until the office closes it (that's remembered).
+- **The Drive's icon is Google Drive's** (`SiGoogledrive`, Goo's choice) wherever the website shows the Drive. The phone
+  keeps its own: its icon set has no such mark.
+- **A Score column in the Drive** (#98): in a student's folder, each file's scores sit beside its name ("● Prone 187.1 ·
+  93.6 per 10"; a results sheet's positions one under the other), and a score opens the student's Scores tab with that
+  result first, not the file. Lists too narrow for the column keep them under the name.
+- **HyberTec's other developer is a super admin** (§26), set up as Goo is: an owner sign-in (HyberTec's support access,
+  which the academy sees on the Account page, §3) without an employee record, so he isn't on Employees, the schedule or
+  payroll; in the demo academy too. Done on production on 2026-11-02 (the employee record he'd been given had nothing
+  attached to it).
+- **Three designs each, for Goo to pick** (demo pages with made-up data, kept on the Mac mini, not committed): a
+  student's **Scores tab**, a **Scores page** in the menu, and the **Students list** (`docs/TODO.md`). Whatever he picks:
+  - **The Scores tab** starts with a summary (each position's average per 10, best and trend), then every result in a
+    list. A result opens and closes under its own row, several at once, its target played back, and nothing scrolls;
+    the latest result is no longer shown large on top. Add paper scores, Add a competition and New report stay, and
+    **Add paper scores takes photos** of the cards, from the computer or the student's Drive folder: the website reads
+    them as the phone's scanner does, for the coach to check and save. Typing the scores stays.
+  - **The Scores page** (staff only) shows every student's latest results, found by student, position, kind and date,
+    opened in place, and added from there (SIUS PDFs, card photos, results sheets).
+  - **The Students list** shows each student's status as a dot by the name (green: enrolled) instead of a Status
+    column, with fewer columns.

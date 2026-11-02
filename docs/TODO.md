@@ -27,17 +27,23 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
-   - **The schedule (`V2`) and the hole sizes (`P1`)** are being built (Goo's picks of 2026-10-28): review their pull
-     requests when they're up (the hole sizes: #68). The manager isn't asked about the scoring rule.
+   - **The schedule (`V2`) and the hole sizes (`P1`)** are merged (#67, #68, and the phone's part in #71). The manager
+     isn't asked about the scoring rule.
    - **The manager's files**, when he sends them (Section 7): the SIUS folder, past schedules, the latest sheet, the
      blank contract, nicknames, the academy owner's email. No rush.
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
-8. **AI for report text** (`docs/DECISIONS.md` §26): you're the super admin. On the website, **Settings → AI**:
+8. **AI for report text** (`docs/DECISIONS.md` §26): you're a super admin (HyberTec's other developer too, §29). On
+   the website, **Settings → AI**:
    - **Models:** Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month); Gemini 3.5 Flash-Lite is
      about $1 (fine to choose: only adults use AI, §26).
    - **Keys:** add the chosen provider's API key (the page links where to make one), then **Test**, turn Report text
      **on** and **Save**. Then a draft report → **Write with AI**.
+9. **Your round of 2026-11-02** (`docs/DECISIONS.md` §29):
+   - **Pick three designs.** On the Mac mini, open these from the repository's folder (each has three options, made-up
+     data): `scores-tab-options.html` (a student's Scores tab), `scores-page-options.html` (the new Scores page) and
+     `students-directory-options.html` (the Students list). Say which option for each; the picks are then built.
+   - **Review two pull requests:** the schedule's floating panel (#97) and the Drive's Score column and icon (#98).
 
 ## Product questions waiting for the owner
 
