@@ -1,6 +1,6 @@
 import { query, where } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightClose, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
@@ -41,8 +41,8 @@ import { WeekGrid } from './WeekGrid'
 import { WhosInDialog } from './WhosInDialog'
 
 const PANEL_KEY = 'skyarc:schedule-panel'
-/** The page is this wide or wider: the panel sits beside the classes; narrower, it floats over them. */
-const DOCK_FROM = 1100
+/** Until the office opens or closes the panel, it starts open where the schedule is this wide or wider. */
+const OPEN_FROM = 1100
 
 function readPanel(): boolean | null {
   try {
@@ -60,8 +60,8 @@ export function SchedulePage() {
 
 /**
  * The schedule, as the academy's sheets lay it out (docs/DECISIONS.md §21): a week of classes, six seats each, every
- * student in their level's colour, or a day larger to mark who's here; a panel on the right with the calendar and
- * who's in. Coaches see the same, read-only.
+ * student in their level's colour, or a day larger to mark who's here; a panel floating on the right with the calendar
+ * and who's in. Coaches see the same, read-only.
  */
 export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; basePath: string }) {
   const branch = useBranch()
@@ -258,15 +258,20 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   }, [route])
 
   // -------------------------------------------------------------- panel
+  // The panel floats over the schedule, never beside it (the owner, 2026-11-02): opening or closing it moves nothing.
   const [areaRef, areaWidth] = useElementWidth<HTMLDivElement>()
   const [contentRef, contentWidth] = useElementWidth<HTMLDivElement>()
-  // Before the first measure, a guess from the window (the sidebar takes about 300 px), so the panel doesn't flash.
-  const docked = (areaWidth || window.innerWidth - 300) >= DOCK_FROM
   const [shown, setShownState] = useState<boolean | null>(() => readPanel())
-  const panelOpen = !isMobile && (shown ?? docked)
+  // Before the first measure, a guess from the window (the sidebar takes about 300 px), so the panel doesn't flash.
+  const panelOpen = !isMobile && (shown ?? (areaWidth || window.innerWidth - 300) >= OPEN_FROM)
   // The timeline (the owner's pick, 2026-10-28) where there's room for it; on a phone, the list as before.
-  const wide = !isMobile && (contentWidth || window.innerWidth - (panelOpen ? 620 : 320)) >= TIMELINE_MIN_WIDTH
+  const wide = !isMobile && (contentWidth || window.innerWidth - 320) >= TIMELINE_MIN_WIDTH
+  // The panel's × and the button that opens it share a spot: when the one in use goes, the other takes the focus.
+  const openRef = useRef<HTMLButtonElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const handOff = useRef(false)
   const setShown = useCallback((open: boolean) => {
+    handOff.current = !!document.activeElement && (document.activeElement === openRef.current || document.activeElement === closeRef.current)
     setShownState(open)
     try {
       localStorage.setItem(PANEL_KEY, open ? 'open' : 'closed')
@@ -274,6 +279,11 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
       /* not kept */
     }
   }, [])
+  useEffect(() => {
+    if (!handOff.current) return
+    handOff.current = false
+    ;(panelOpen ? closeRef : openRef).current?.focus({ preventScroll: true })
+  }, [panelOpen])
 
   // ←/→ step through days or weeks; Escape folds or opens the panel.
   const keys = useRef({ step, panelOpen, setShown })
@@ -308,6 +318,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   const savedOn = (d: DateKey) => new Map<string, Availability>(data.availability.filter((a) => a.dateKey === d).map((a) => [a.staffId, a]))
   const people = staff.filter((s) => s.status === 'active')
 
+  // A phone's sheet holds it; elsewhere it floats over the schedule's right side: over the timeline as tall as the
+  // schedule (it scrolls inside), over the lists as tall as it needs.
   const panel = (inSheet: boolean) => (
     <SchedulePanel
       view={view}
@@ -325,8 +337,9 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
       onNext={() => step(1)}
       onToday={goToday}
       onClose={() => (inSheet ? setSheetOpen(false) : setShown(false))}
+      closeRef={inSheet ? undefined : closeRef}
       timeline={wide && !inSheet}
-      className={inSheet ? 'rounded-none border-0 shadow-none' : wide ? 'max-h-full' : 'max-h-[calc(100svh-7rem)]'}
+      className={inSheet ? 'rounded-none border-0 shadow-none' : cn('absolute top-3 right-3 z-30 w-[min(280px,calc(100%-1.5rem))] shadow-xl', wide ? 'bottom-3' : 'max-h-[calc(100%-1.5rem)]')}
     />
   )
 
@@ -349,36 +362,19 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             {/* Owners and admins change any day (docs/DECISIONS.md §24); coaches only look. */}
             {view === 'day' && date < today ? <span className="hidden text-xs text-muted-foreground sm:inline">{admin ? 'Past' : 'Past · view only'}</span> : null}
           </div>
-          {!panelOpen ? (
-            <>
-              <div className="hidden items-center gap-1 sm:flex">
-                <Button variant="ghost" size="icon-sm" aria-label="Previous" title="Previous (←)" onClick={() => step(-1)}>
-                  <LuChevronLeft />
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-full" onClick={goToday}>
-                  Today
-                </Button>
-                <Button variant="ghost" size="icon-sm" aria-label="Next" title="Next (→)" onClick={() => step(1)}>
-                  <LuChevronRight />
-                </Button>
-              </div>
-              <ViewSwitch view={view} onView={onView} compact />
-            </>
-          ) : null}
-          {!isMobile ? (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-pressed={panelOpen}
-              aria-label={panelOpen ? 'Hide the panel' : 'Show the panel'}
-              title={`${panelOpen ? 'Hide' : 'Show'} the calendar panel (Esc)`}
-              onClick={() => setShown(!panelOpen)}
-              data-testid="panel-toggle"
-            >
-              {panelOpen ? <LuPanelRightClose /> : <LuPanelRightOpen />}
-              <span className="hidden lg:inline">{panelOpen ? 'Hide panel' : 'Show panel'}</span>
+          {/* They stay whether the panel is open or not (it has its own), so the header never changes with it. */}
+          <div className="hidden items-center gap-1 sm:flex">
+            <Button variant="ghost" size="icon-sm" aria-label="Previous" title="Previous (←)" onClick={() => step(-1)}>
+              <LuChevronLeft />
             </Button>
-          ) : null}
+            <Button variant="outline" size="sm" className="rounded-full" onClick={goToday}>
+              Today
+            </Button>
+            <Button variant="ghost" size="icon-sm" aria-label="Next" title="Next (→)" onClick={() => step(1)}>
+              <LuChevronRight />
+            </Button>
+          </div>
+          <ViewSwitch view={view} onView={onView} compact />
           {admin ? <RequestsButton /> : null}
           {admin ? (
             <DropdownMenu>
@@ -413,30 +409,45 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             </DropdownMenu>
           ) : null}
         </div>
-        <div ref={areaRef} className={cn('relative flex min-h-0 flex-1 items-start gap-5 px-3 pt-4 sm:px-5', wide ? 'overflow-hidden pb-4' : 'overflow-auto pb-16')} data-testid="schedule-area">
-          <div
-            ref={contentRef}
-            data-timeline-scroller={wide ? '' : undefined}
-            className={cn('min-w-0 flex-1', wide && 'h-full overflow-auto overscroll-contain', wide && view === 'day' && 'rounded-xl border bg-card shadow-xs')}
-          >
-            {wide ? (
-              view === 'week' ? (
-                <TimelineWeek days={week} width={contentWidth} />
+        {/* The schedule scrolls under the panel, which floats in this frame's corner and never takes its width. */}
+        <div ref={areaRef} className="relative min-h-0 flex-1" data-testid="schedule-area">
+          {/* Its own layer, so the timeline's sticky rows never come over the panel. */}
+          <div className={cn('relative isolate flex h-full items-start px-3 pt-4 sm:px-5', wide ? 'overflow-hidden pb-4' : 'overflow-auto pb-16')}>
+            <div
+              ref={contentRef}
+              data-timeline-scroller={wide ? '' : undefined}
+              className={cn('min-w-0 flex-1', wide && 'h-full overflow-auto overscroll-contain', wide && view === 'day' && 'rounded-xl border bg-card shadow-xs')}
+            >
+              {wide ? (
+                view === 'week' ? (
+                  <TimelineWeek days={week} width={contentWidth} />
+                ) : (
+                  <TimelineDay dateKey={date} width={contentWidth} />
+                )
+              ) : view === 'week' ? (
+                <WeekGrid days={week} />
               ) : (
-                <TimelineDay dateKey={date} width={contentWidth} />
-              )
-            ) : view === 'week' ? (
-              <WeekGrid days={week} />
-            ) : (
-              <DayList dateKey={date} />
-            )}
+                <DayList dateKey={date} />
+              )}
+            </div>
           </div>
           {panelOpen ? (
-            docked ? (
-              <div className={cn('w-[280px] shrink-0', wide ? 'h-full' : 'sticky top-0')}>{panel(false)}</div>
-            ) : (
-              <div className="absolute top-4 right-4 z-30 w-[min(300px,calc(100%-2rem))]">{panel(false)}</div>
-            )
+            panel(false)
+          ) : !isMobile ? (
+            // Closed, it leaves a round button in the corner where its × was, tucked in a little further so it never
+            // covers the hours along the timeline's top.
+            <Button
+              ref={openRef}
+              variant="outline"
+              size="icon-sm"
+              className="absolute top-1.5 right-1.5 z-30 rounded-full bg-card shadow-lg hover:bg-muted dark:bg-card dark:hover:bg-muted"
+              aria-label="Show the panel"
+              title="Show the calendar panel (Esc)"
+              onClick={() => setShown(true)}
+              data-testid="panel-toggle"
+            >
+              <LuPanelRightOpen />
+            </Button>
           ) : null}
         </div>
       </div>

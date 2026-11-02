@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { LuBan, LuCheck, LuChevronLeft, LuChevronRight, LuPencil, LuUserX, LuX } from 'react-icons/lu'
 import { KIND_COLORS, levelColor } from '@shared/schedule/seatColors'
 import { type DateKey, type Weekday, WEEKDAY_SHORT, formatDateKey, formatMinutes, formatMinutesShort, weekDays, weekdayOf } from '@shared/time'
@@ -14,10 +14,14 @@ const clock = (min: number) => formatMinutesShort(min).replace(/\s?[AP]M$/i, '')
 const hours = (min: number) => `${String(Math.round((min / 60) * 10) / 10).replace(/\.0$/, '')}h`
 
 /**
- * The schedule's panel, floating on the right (the owner's pick, 2026-10-26): the day and the view, the scrolling
- * month calendar, who's in, and what the colours mean. It closes with the cross; the page's header opens it again.
+ * The schedule's panel, floating over the schedule's right side (the owner's picks, 2026-10-26 and 2026-11-02): the day
+ * and the view, the scrolling month calendar, who's in, and what the colours mean. It closes with the cross, and a
+ * round button in the same corner opens it again; Escape does both.
  */
-export function SchedulePanel(p: {
+export function SchedulePanel({
+  closeRef,
+  ...p
+}: {
   view: ClassViewMode
   date: DateKey
   weekStartsOn: Weekday
@@ -27,6 +31,8 @@ export function SchedulePanel(p: {
   onNext: () => void
   onToday: () => void
   onClose: () => void
+  /** The cross, for the page to hand it the focus when the panel opens from its button. */
+  closeRef?: Ref<HTMLButtonElement>
   /** The timeline is showing: the legend says what its background means too. */
   timeline?: boolean
   className?: string
@@ -44,7 +50,7 @@ export function SchedulePanel(p: {
           <div className="truncate text-2xl font-semibold tracking-tight">{title}</div>
           <div className="text-sm text-muted-foreground">{subtitle}</div>
         </div>
-        <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Close the panel" title="Close the panel (Esc)" onClick={p.onClose}>
+        <Button ref={closeRef} variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Close the panel" title="Close the panel (Esc)" onClick={p.onClose}>
           <LuX />
         </Button>
       </div>
