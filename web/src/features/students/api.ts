@@ -52,11 +52,15 @@ export async function createStudent(
   return ref.id
 }
 
-export async function setStudentStatus(branchId: string, actor: Actor, student: WithId<Student>, status: StudentStatus) {
+/**
+ * Sets a student's status by hand (the automatic rules then leave it alone). An undo passes `source`, the one it had,
+ * so a status the rules kept goes back to them.
+ */
+export async function setStudentStatus(branchId: string, actor: Actor, student: WithId<Student>, status: StudentStatus, source: Student['statusSource'] = 'manual') {
   const batch = writeBatch(db)
   batch.update(branchDocRef(branchId, COL.students, student.id), {
     status,
-    statusSource: 'manual',
+    statusSource: source,
     updatedAt: serverTimestamp(),
     updatedBy: actor.email,
   })
