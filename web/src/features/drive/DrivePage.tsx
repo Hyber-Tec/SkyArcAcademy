@@ -8,7 +8,6 @@ import {
   LuFolderInput,
   LuFolderPlus,
   LuFolderUp,
-  LuHardDrive,
   LuLayoutGrid,
   LuList,
   LuLock,
@@ -27,6 +26,7 @@ import { toast } from 'sonner'
 import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
 import { studentNamedIn } from '@shared/drive/suggest'
 import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, moveAccessNote, moveRefusal, searchWithin, sortDriveItems, trailFrom } from '@shared/drive/model'
+import { scoreTotal, scoresByFile } from '@shared/drive/scores'
 import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
@@ -34,6 +34,7 @@ import { type Evaluation, POSITION_LABELS, type Position, type ResultKind } from
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { DriveIcon } from '@/components/app/DriveIcon'
 import { ContextMenuFor, type MenuEntry, menu } from '@/components/app/ItemMenu'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { scorePath } from '@/features/scores/card/parts'
 import { PaperScoreDialog } from '@/features/scores/PaperScoreDialog'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { branchCol } from '@/lib/firestore'
@@ -167,9 +169,9 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     else if (linkedFile && outside(linkedFile.folderId)) navigate(base, { replace: true })
   }, [ready, routeFolder, linkedFile, rootId, index, navigate, base])
 
-  // A student's folder shows each result's scores.
+  // A student's folder shows each result's scores (a results sheet has one for each position), in a column of their own.
   const { data: evaluations } = useStudentEvaluations(studentHere)
-  const scoresByFile = useMemo(() => new Map(evaluations.filter((e) => e.fileId).map((e) => [e.fileId as string, e])), [evaluations])
+  const fileScores = useMemo(() => scoresByFile(evaluations), [evaluations])
 
   const query_ = q.trim()
   const hits = useMemo(() => (query_ && ready ? searchWithin(index, query_, rootId) : []), [index, query_, ready, rootId])
@@ -461,14 +463,19 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     const f = it.file
     const settled = f.status !== 'uploading'
     const fileReady = f.status === 'ready'
-    const score = scoresByFile.get(f.id)
+    const scores = fileScores.get(f.id) ?? []
     const photo = isViewableImage(f.kind) || f.kind === 'heic' || f.kind === 'heif'
     const stale = f.status === 'uploading' && !uploadsInFlight()
     return menu(
       { label: 'Open', icon: LuExternalLink, disabled: !fileReady, onSelect: () => setPreview(f) },
       { label: 'Download', icon: LuDownload, disabled: !fileReady, onSelect: () => void downloadFile(branchId, f).catch(() => toast.error('Couldn’t download it.')) },
-      score && f.studentId ? { label: 'Scores', icon: LuTarget, onSelect: () => navigate(`/${portal}/students/${f.studentId}/scores`) } : null,
-      canWrite && photo && !score && fileReady ? { label: 'Add paper scores…', icon: LuClipboardPen, onSelect: () => setDialog({ kind: 'paper', studentId: f.studentId, fileId: f.id, position: positionFromName(f.name) }) } : null,
+      // Scores opens the file's score, shown first on the student's Scores tab; a results sheet's, the one picked.
+      scores.length === 1
+        ? { label: 'Scores', icon: LuTarget, onSelect: () => navigate(scorePath(portal, scores[0])) }
+        : scores.length
+          ? { kind: 'sub', label: 'Scores', icon: LuTarget, entries: scores.map((e) => ({ label: POSITION_LABELS[e.position], hint: scoreTotal(e), onSelect: () => navigate(scorePath(portal, e)) })) }
+          : null,
+      canWrite && photo && !scores.length && fileReady ? { label: 'Add paper scores…', icon: LuClipboardPen, onSelect: () => setDialog({ kind: 'paper', studentId: f.studentId, fileId: f.id, position: positionFromName(f.name) }) } : null,
       canWrite && { label: 'Rename…', icon: LuPencilLine, disabled: !settled, separatorBefore: true, onSelect: () => setDialog({ kind: 'renameFile', id: f.id }) },
       canWrite && { label: 'Move to…', icon: LuFolderInput, disabled: !settled, onSelect: () => setDialog({ kind: 'move', folderIds: [], fileIds: [f.id] }) },
       canWrite && (f.status === 'error' || stale) ? { label: 'Remove', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => void removeFailedUpload(branchId, f).catch((e: Error) => toast.error(e.message)) } : null,
@@ -524,7 +531,8 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
         else next.add(id)
         return next
       }),
-    scoresByFile,
+    scoresByFile: fileScores,
+    scoreColumn: !!studentHere,
     dropFiles,
     refuseDrop,
     canDropInto,
@@ -562,7 +570,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
   else if (!rows.length && !query_)
     state = (
       <div className="flex flex-col items-center gap-2 p-12 text-center text-sm text-muted-foreground">
-        <LuHardDrive className="size-6" />
+        <DriveIcon className="size-6" />
         {rootMissing ? 'This student has finished, and their folder is empty.' : cwd ? 'This folder is empty.' : 'Nothing in the Drive yet.'}
         {canWrite ? <span>Drop files here, or use New (or a right-click).</span> : null}
       </div>
@@ -582,9 +590,18 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
           {i ? <span aria-hidden>/</span> : null}
           <ContextMenuFor entries={crumbMenu(c.id)}>
             {i === crumbs.length - 1 ? (
-              <span className="truncate px-1 font-medium text-foreground">{c.name}</span>
+              <span className={cn('truncate px-1 font-medium text-foreground', c.id === null && 'inline-flex items-center gap-1.5')}>
+                {c.id === null ? <DriveIcon className="size-3.5 shrink-0" /> : null}
+                {c.name}
+              </span>
             ) : (
-              <button type="button" className={cn('truncate rounded px-1 hover:text-foreground', hotCrumb === c.id && 'bg-brand/10 text-foreground')} onClick={() => go(c.id)} {...dropHandlers(api, c.id, (h) => setHotCrumb(h ? c.id : undefined))}>
+              <button
+                type="button"
+                className={cn('truncate rounded px-1 hover:text-foreground', c.id === null && 'inline-flex items-center gap-1.5', hotCrumb === c.id && 'bg-brand/10 text-foreground')}
+                onClick={() => go(c.id)}
+                {...dropHandlers(api, c.id, (h) => setHotCrumb(h ? c.id : undefined))}
+              >
+                {c.id === null ? <DriveIcon className="size-3.5 shrink-0" /> : null}
                 {c.name}
               </button>
             )}
@@ -635,7 +652,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
-                    {folder ? <FolderGlyph student={!!folder.studentId} locked={accessOf(folder) === 'admins'} className="size-6" /> : <LuHardDrive className="size-5" />}
+                    {folder ? <FolderGlyph student={!!folder.studentId} locked={accessOf(folder) === 'admins'} className="size-6" /> : <DriveIcon className="size-5" />}
                   </span>
                   <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
                   {folder && accessOf(folder) === 'admins' ? <AccessBadge /> : null}
@@ -775,7 +792,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
                 index={index}
                 folderId={cwd}
                 selected={selectedRows.length === 1 ? selectedRows[0] : null}
-                scoresByFile={scoresByFile}
+                scoresByFile={fileScores}
                 onAccess={isAdmin ? (id) => setDialog({ kind: 'access', id }) : undefined}
               />
             ) : null}

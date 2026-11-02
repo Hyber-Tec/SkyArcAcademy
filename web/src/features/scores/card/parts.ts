@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { Portal } from '@shared/roles'
 import type { Evaluation } from '@shared/shooting/evaluation'
 import type { BullState } from '@shared/targets/review'
 import type { WithId } from '@shared/types'
@@ -6,6 +7,11 @@ import type { WithId } from '@shared/types'
 /** A scanned card's page, where its shots are checked on its picture: under the student, in either staff portal. */
 export function cardPath(mode: 'admin' | 'coach', e: Pick<WithId<Evaluation>, 'id' | 'studentId'>): string {
   return `/${mode}/students/${e.studentId}/scores/${e.id}`
+}
+
+/** A score on the student's Scores tab, shown first there (the tab reads `?score=`): where the Drive's scores lead. */
+export function scorePath(portal: Portal, e: Pick<WithId<Evaluation>, 'id' | 'studentId'>): string {
+  return `/${portal}/students/${e.studentId}/scores?score=${e.id}`
 }
 
 /** The colours a bull's state shows in, on the photo and its tile (as the phone app's): they read on black and on buff paper. */

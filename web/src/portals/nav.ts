@@ -5,7 +5,6 @@ import {
   LuChartLine,
   LuCircleUserRound,
   LuGraduationCap,
-  LuHardDrive,
   LuHouse,
   LuMegaphone,
   LuSettings,
@@ -15,6 +14,7 @@ import {
   LuWallet,
 } from 'react-icons/lu'
 import type { Portal, RestrictablePage } from '@shared/roles'
+import { DriveIcon } from '@/components/app/DriveIcon'
 
 export interface NavLeaf {
   key: string
@@ -53,7 +53,7 @@ export const ADMIN_NAV: PortalNav = {
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
-    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: DriveIcon },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     {
       key: 'employees',
@@ -86,7 +86,7 @@ export const COACH_NAV: PortalNav = {
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
-    { key: 'drive', label: 'Drive', to: 'drive', icon: LuHardDrive },
+    { key: 'drive', label: 'Drive', to: 'drive', icon: DriveIcon },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'payroll', label: 'Payroll', to: 'payroll', icon: LuWallet },
   ],

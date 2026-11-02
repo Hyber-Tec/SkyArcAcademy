@@ -1,7 +1,7 @@
 import { serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useEffect, useMemo, useRef } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowLeft, LuCalendarDays, LuHardDrive, LuNotebookPen, LuTarget, LuUserRound } from 'react-icons/lu'
+import { LuArrowLeft, LuCalendarDays, LuNotebookPen, LuTarget, LuUserRound } from 'react-icons/lu'
 import { Link, useNavigate, useParams } from 'react-router'
 import { dayHours } from '@shared/availability'
 import { studentFolderId } from '@shared/drive/types'
@@ -9,6 +9,7 @@ import { COL } from '@shared/paths'
 import { type DateKey, addDays } from '@shared/time'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
+import { DriveIcon } from '@/components/app/DriveIcon'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDayConfigs, useStaffList } from '@/features/data/hooks'
@@ -29,7 +30,7 @@ const TABS: { key: ProfileTab; label: string; icon: IconType; adminOnly: boolean
   { key: 'scores', label: 'Scores', icon: LuTarget, adminOnly: false },
   { key: 'info', label: 'Info', icon: LuUserRound, adminOnly: false },
   { key: 'calendar', label: 'Calendar', icon: LuCalendarDays, adminOnly: false },
-  { key: 'drive', label: 'Drive', icon: LuHardDrive, adminOnly: false },
+  { key: 'drive', label: 'Drive', icon: DriveIcon, adminOnly: false },
 ]
 
 export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
