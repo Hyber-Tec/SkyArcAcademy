@@ -172,8 +172,9 @@ Carried over from HyberCRM, adapted to one academy:
   their hours and clock-in behind it, each class one block across the rows of everyone in at its time (admins and
   owners too), its students, requests and open seats one under the other, each a student card's size, coloured by
   level (`shared/src/schedule/seatColors.ts`; the layout's sums in `shared/src/schedule/timeline.ts`), the same menus
-  on a right-click as on ⋯ (`web/src/features/schedule/menus.ts`), and the panel on the right (calendar, who's in,
-  legend) that opens and closes. Narrow screens keep the sheets' layout (§21). The website shows no events (§25).
+  on a right-click as on ⋯ (`web/src/features/schedule/menus.ts`), and the panel (calendar, who's in, legend)
+  floating over the right side, never beside it: Escape or its corner button opens and closes it (§29). Narrow
+  screens keep the sheets' layout (§21). The website shows no events (§25).
 - **Availability:** a coach's day holds times, or "not available" (an answer), or nothing (still to set). Only open days
   with nothing set count as days to set (the reminders, Home's to-do); write through `shared/src/availabilityWrites.ts`.
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say
