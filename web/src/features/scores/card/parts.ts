@@ -9,7 +9,7 @@ export function cardPath(mode: 'admin' | 'coach', e: Pick<WithId<Evaluation>, 'i
   return `/${mode}/students/${e.studentId}/scores/${e.id}`
 }
 
-/** A score on the student's Scores tab, shown first there (the tab reads `?score=`): where the Drive's scores lead. */
+/** A score on the student's Scores tab, opened there and brought into view (the tab reads `?score=`): where the Drive's scores lead. */
 export function scorePath(portal: Portal, e: Pick<WithId<Evaluation>, 'id' | 'studentId'>): string {
   return `/${portal}/students/${e.studentId}/scores?score=${e.id}`
 }

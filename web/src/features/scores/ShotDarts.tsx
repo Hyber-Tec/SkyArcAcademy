@@ -11,12 +11,31 @@ import { LAST_SHOT_FILL, MiniTarget, NewestShot, ShotMark, TargetFace } from './
 /** The shot dialog's target, in pixels (it shrinks on a phone). */
 const BIG_PX = 320
 
+/** A shot's score as the darts and the shot dialog show it: tenths (SIUS), or a paper card's whole number. */
+const scoreText = (v: number, whole: boolean) => (whole ? String(Math.round(v)) : v.toFixed(1))
+
 /**
- * A SIUS series' shots as "darts", in firing order: each a small target at the replay's scale with that shot alone on
- * it in the position's color, and its score under it. Ten to a row where there's room, five on a phone. `active` rings
- * the shot a replay is showing; a dart opens its shot (`onOpen`). Needs a container (`@container`) around it.
+ * A series' shots as "darts", in firing order (a SIUS series, or a scanned card's bulls with `whole`): each a small
+ * target at the replay's scale with that shot alone on it in the position's color, and its score under it. Ten to a
+ * row where there's room, five on a phone. `active` rings the shot a replay is showing; a dart opens its shot
+ * (`onOpen`). Needs a container (`@container`) around it.
  */
-export function SeriesDarts({ shots, view, color, active, onOpen }: { shots: readonly ReplayShot[]; view: number; color: string; active: number | null; onOpen: (n: number) => void }) {
+export function SeriesDarts({
+  shots,
+  view,
+  color,
+  active,
+  onOpen,
+  whole = false,
+}: {
+  shots: readonly ReplayShot[]
+  view: number
+  color: string
+  active: number | null
+  onOpen: (n: number) => void
+  /** Whole-number scores (a paper card's). */
+  whole?: boolean
+}) {
   return (
     <ol className="grid max-w-[22rem] grid-cols-5 gap-2 @[37rem]:max-w-[44.5rem] @[37rem]:grid-cols-10">
       {shots.map((s) => {
@@ -26,7 +45,7 @@ export function SeriesDarts({ shots, view, color, active, onOpen }: { shots: rea
             <button
               type="button"
               onClick={() => onOpen(s.n)}
-              aria-label={`Shot ${s.n}: ${s.value.toFixed(1)}${s.point ? '' : ', no place on the target'}. Open it`}
+              aria-label={`Shot ${s.n}: ${scoreText(s.value, whole)}${s.point ? '' : ', no place on the target'}. Open it`}
               aria-current={on ? 'step' : undefined}
               className={cn(
                 'flex w-full flex-col items-center gap-1.5 rounded-xl p-1 pb-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
@@ -37,7 +56,7 @@ export function SeriesDarts({ shots, view, color, active, onOpen }: { shots: rea
                 <MiniTarget points={s.point ? [s.point] : []} view={view} size={DART_PX} color={on ? LAST_SHOT_FILL : color} className="block h-auto w-full" />
               </span>
               <span className={cn('text-xs leading-none tabular-nums', on ? 'font-semibold text-[#8a6400] dark:text-[#f2c94c]' : s.value >= 10 ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
-                {s.value.toFixed(1)}
+                {scoreText(s.value, whole)}
               </span>
             </button>
           </li>
@@ -58,6 +77,7 @@ export function ShotDialog({
   onShot,
   color,
   description,
+  whole = false,
 }: {
   shots: readonly ReplayShot[]
   /** The shot shown (1…n); null closes the dialog. */
@@ -65,6 +85,8 @@ export function ShotDialog({
   onShot: (n: number | null) => void
   color: string
   description: string
+  /** Whole-number scores (a paper card's). */
+  whole?: boolean
 }) {
   // While the dialog closes, it keeps showing the last shot.
   const [shown, setShown] = useState<number | null>(shot)
@@ -103,7 +125,7 @@ export function ShotDialog({
               <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
             <div className="mx-auto w-full max-w-[328px] rounded-xl bg-white p-1">
-              <TargetFace view={view} size={BIG_PX} label={`Shot ${current.n}: ${current.value.toFixed(1)}`} className="block h-auto w-full">
+              <TargetFace view={view} size={BIG_PX} label={`Shot ${current.n}: ${scoreText(current.value, whole)}`} className="block h-auto w-full">
                 {placed
                   .filter((s) => s.n !== current.n)
                   .map((s) => (
@@ -115,7 +137,7 @@ export function ShotDialog({
             <dl className="grid grid-cols-3 divide-x rounded-xl border text-center" aria-live="polite">
               <div className="px-2 py-2.5">
                 <dt className="text-xs text-muted-foreground">Score</dt>
-                <dd className="mt-0.5 text-2xl leading-tight font-semibold tabular-nums">{current.value.toFixed(1)}</dd>
+                <dd className="mt-0.5 text-2xl leading-tight font-semibold tabular-nums">{scoreText(current.value, whole)}</dd>
               </div>
               <div className="px-2 py-2.5">
                 <dt className="text-xs text-muted-foreground">From the centre</dt>

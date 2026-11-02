@@ -469,7 +469,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     return menu(
       { label: 'Open', icon: LuExternalLink, disabled: !fileReady, onSelect: () => setPreview(f) },
       { label: 'Download', icon: LuDownload, disabled: !fileReady, onSelect: () => void downloadFile(branchId, f).catch(() => toast.error('Couldn’t download it.')) },
-      // Scores opens the file's score, shown first on the student's Scores tab; a results sheet's, the one picked.
+      // Scores opens the file's score on the student's Scores tab, in its row; a results sheet's, the one picked.
       scores.length === 1
         ? { label: 'Scores', icon: LuTarget, onSelect: () => navigate(scorePath(portal, scores[0])) }
         : scores.length

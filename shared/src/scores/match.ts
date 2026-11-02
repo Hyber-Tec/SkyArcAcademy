@@ -1,4 +1,4 @@
-import { type EvalSeries, type Evaluation, POSITIONS, type Position } from '../shooting/evaluation'
+import { type EvalSeries, type Evaluation, POSITIONS, type Position, inOrder } from '../shooting/evaluation'
 import { isInnerTen, wholeScore } from '../shooting/target'
 
 /**
@@ -23,6 +23,39 @@ export function matchResults<E extends MatchResult>(e: E, all: readonly E[]): E[
   const list = same.some((x) => x.id === e.id) ? same : [e, ...same]
   const order = (p: Position) => (MATCH_ORDER.includes(p) ? MATCH_ORDER.indexOf(p) : POSITIONS.indexOf(p))
   return [...list].sort((a, b) => order(a.position) - order(b.position))
+}
+
+/** One line of a student's results: a result, or a match's results sheet with all its positions. */
+export interface ResultRow<E> {
+  /** The result's ID, or for a results sheet its match ("sheet:2026-10-17:Fall Junior 3P"), which stays as its results change. */
+  key: string
+  /** The result, or the sheet's results in the sheet's order. */
+  results: E[]
+  /** A competition from its results sheet, its positions together. */
+  match: boolean
+}
+
+/** The key of the row a results sheet's result is in. */
+export const matchKey = (e: Pick<Evaluation, 'dateKey' | 'match'>) => `sheet:${e.dateKey}:${e.match?.name ?? ''}`
+
+/**
+ * A student's results as their list shows them, newest first (by date, then time): each result a row of its own, but a
+ * competition's results sheet one row for all its positions, as the sheet has them (`matchResults`).
+ */
+export function resultRows<E extends MatchResult & { timeMin?: number | null }>(evaluations: readonly E[]): ResultRow<E>[] {
+  const rows: ResultRow<E>[] = []
+  const seen = new Set<string>()
+  for (const e of inOrder(evaluations).reverse()) {
+    if (e.source !== 'sheet') {
+      rows.push({ key: e.id, results: [e], match: false })
+      continue
+    }
+    const key = matchKey(e)
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push({ key, results: matchResults(e, evaluations), match: true })
+  }
+  return rows
 }
 
 /** A whole-number match ("486 - 15") keeps its totals whole; a decimal one ("587.4") its tenths. */
