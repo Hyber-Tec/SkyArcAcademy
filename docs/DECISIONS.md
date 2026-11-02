@@ -954,14 +954,22 @@ Goo's asks after using the website. All of it is the website's: the phone app do
   which the academy sees on the Account page, §3) without an employee record, so he isn't on Employees, the schedule or
   payroll; in the demo academy too. Done on production on 2026-11-02 (the employee record he'd been given had nothing
   attached to it).
-- **Three designs each, for Goo to pick** (demo pages with made-up data, kept on the Mac mini, not committed): a
-  student's **Scores tab**, a **Scores page** in the menu, and the **Students list** (`docs/TODO.md`). Whatever he picks:
-  - **The Scores tab** starts with a summary (each position's average per 10, best and trend), then every result in a
-    list. A result opens and closes under its own row, several at once, its target played back, and nothing scrolls;
-    the latest result is no longer shown large on top. Add paper scores, Add a competition and New report stay, and
-    **Add paper scores takes photos** of the cards, from the computer or the student's Drive folder: the website reads
-    them as the phone's scanner does, for the coach to check and save. Typing the scores stays.
-  - **The Scores page** (staff only) shows every student's latest results, found by student, position, kind and date,
-    opened in place, and added from there (SIUS PDFs, card photos, results sheets).
-  - **The Students list** shows each student's status as a dot by the name (green: enrolled) instead of a Status
-    column, with fewer columns.
+- **Goo's picks of three designs each** (demo pages with made-up data, kept on the Mac mini, not committed):
+  - **The Students list: options 1 and 2 together** (#100), "list vs grid", switched with a button the website
+    remembers. The list is the quiet one, easy to read (each student's status as a dot by the name, green for enrolled,
+    and fewer columns); the grid shows the students as cards. Group by level works in both and is remembered for each
+    (off in the list, on in the grid).
+  - **A student's Scores tab: option 1** (#101). A summary on top (each position's average per 10, its best, and its
+    trend by the progress reports' rule, so the two never disagree), then every result in a list. A result opens and
+    closes under its own row, several at once, its target played back, and nothing scrolls; the latest result is no
+    longer shown large on top. Scores over time, Compare and Progress reports fold under the list (remembered). Add
+    paper scores, Add a competition and New report stay, and **Add paper scores takes photos** of the cards, from the
+    computer or the student's Drive folder: the website reads them with the phone's reader, for the coach to check card
+    by card and save. Typing the scores stays. Families' Scores page is unchanged.
+  - **The Scores page: option 1, "Feed"** (#102), for admins and coaches, in the menu after Students: every student's
+    results, newest first, by day and then by week, found by student, position, kind, level and dates (the last 30
+    days to start), and opened in place as on the Scores tab. Beside them: the last 7 days against the week before, the
+    week's new bests, and what needs a look (results marked Check, enrolled students without a score for 30 days).
+    **Add scores** takes SIUS PDFs, card photos and results sheets together, dropped anywhere on the page, and asks
+    only what the files don't say. A card's student and position come from the photo's file name when it says them
+    (the reader doesn't read handwriting), else they're asked.

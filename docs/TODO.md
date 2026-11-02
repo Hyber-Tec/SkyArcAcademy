@@ -39,14 +39,20 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
      about $1 (fine to choose: only adults use AI, §26).
    - **Keys:** add the chosen provider's API key (the page links where to make one), then **Test**, turn Report text
      **on** and **Save**. Then a draft report → **Write with AI**.
-9. **Your round of 2026-11-02** (`docs/DECISIONS.md` §29):
-   - **Pick three designs.** On the Mac mini, open these from the repository's folder (each has three options, made-up
-     data): `scores-tab-options.html` (a student's Scores tab), `scores-page-options.html` (the new Scores page) and
-     `students-directory-options.html` (the Students list). Say which option for each; the picks are then built.
-   - **Review two pull requests:** the schedule's floating panel (#97) and the Drive's Score column and icon (#98).
+9. **Your round of 2026-11-02** (`docs/DECISIONS.md` §29): your three picks are built. The Students list (#100) and
+   the Scores tab (#101) are merged; **review the Scores page (#102)**. What they left for you to decide is the first
+   three questions below.
 
 ## Product questions waiting for the owner
 
+- **Card photos picked from the Drive** (#101): the photo becomes the score's file, so nothing is copied, and the
+  website shows it with the bulls' scores. The phone app and a family's view show it as a plain photo. Either save a
+  straightened copy of the card beside it, as the phone's scanner does (the folder gets a second file for that card;
+  Claude Code's suggestion, no phone work), or keep one file and have the phone app (on the MacBook Pro) and the
+  family view draw the scores on the photo.
+- **Families' Scores page:** the staff's new Scores tab design (§29) for families too, or as it is?
+- **"To check" on the Scores page** (#102): results the reader marked Check show there for 30 days, since nothing
+  clears the mark yet. A button to say a result is right would clear it.
 - **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0, and a super admin switches to it
   with View the app as (§27). Other owners in both academies could get a switch too, if wanted.
 - **AI and families:** should a shared report say its words were drafted with AI and checked by the academy? Today it
