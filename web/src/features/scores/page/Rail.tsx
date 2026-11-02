@@ -1,5 +1,5 @@
-import { type ReactNode, useState } from 'react'
-import { LuChevronRight, LuCircleAlert, LuTrendingDown, LuTrendingUp, LuTrophy } from 'react-icons/lu'
+import { type ReactNode, useRef, useState } from 'react'
+import { LuChevronRight, LuCircleAlert, LuTrendingDown, LuTrendingUp, LuTrophy, LuUpload } from 'react-icons/lu'
 import { type QuietStudent, type WeekNumbers, dayWords, shortDay } from '@shared/scores/feed'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, wholePer10 } from '@shared/shooting/evaluation'
 import type { DateKey } from '@shared/time'
@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { one } from '@/features/reports/model'
 import { initialsOf } from '@/features/schedule/seatParts'
 import { cn } from '@/lib/utils'
+import { ACCEPTED_FILES } from './files'
 
 const plural = (n: number, word: string, words = `${word}s`) => `${n} ${n === 1 ? word : words}`
 
@@ -65,6 +66,44 @@ function Few<T>({ items, render, empty, first = 6 }: { items: readonly T[] | nul
 }
 
 const ITEM = 'grid w-[calc(100%+1rem)] -mx-2 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+
+/**
+ * Add scores' drop place: files dropped here (or anywhere on the page) or chosen are read, each filed in its student's
+ * Drive folder with its result. `hot` while files are dragged over the page.
+ */
+export function DropCard({ hot, onFiles }: { hot: boolean; onFiles: (files: File[]) => void }) {
+  const input = useRef<HTMLInputElement>(null)
+  // A phone or a tablet has nothing to drop: its files are chosen.
+  const [touch] = useState(() => window.matchMedia('(pointer: coarse)').matches)
+  return (
+    <div
+      className={cn('flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] border-dashed bg-card px-4 py-5 text-center transition-colors', hot ? 'border-foreground/70 bg-muted' : 'border-border')}
+      data-testid="scores-drop"
+    >
+      <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted">
+        <LuUpload className="size-[18px]" aria-hidden />
+      </span>
+      <p className="font-semibold">{touch ? 'Add scores' : 'Drop files to add scores'}</p>
+      <p className="text-[13px] leading-snug text-balance text-muted-foreground">SIUS PDFs, photos of paper cards, or a results sheet</p>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        accept={ACCEPTED_FILES}
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          e.target.value = ''
+          if (files.length) onFiles(files)
+        }}
+        data-testid="scores-drop-input"
+      />
+      <Button variant="outline" size="sm" className="mt-2" onClick={() => input.current?.click()}>
+        Choose files
+      </Button>
+    </div>
+  )
+}
 
 /** The last seven days: how many results from how many students, against the week before, and each position's average. */
 export function WeekCard({ week, today }: { week: WeekNumbers; today: DateKey }) {

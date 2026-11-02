@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { LuArrowRight, LuTarget } from 'react-icons/lu'
+import { LuArrowRight, LuTarget, LuUpload } from 'react-icons/lu'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { FEED_SORTS, type FeedGroup, dayWords, feedGroups, lastScores, lastSevenDays, quietStudents, rangeDates, rangeLabel, recentBests, sortFeed } from '@shared/scores/feed'
 import { type ResultRow as Row, resultRows } from '@shared/scores/match'
@@ -13,16 +13,18 @@ import { PageHeader } from '@/components/app/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useStudentList } from '@/features/data/hooks'
+import { useFileDropZone, useWindowDropGuard } from '@/features/drive/dropzone'
 import { LevelChip } from '@/features/schedule/seatParts'
 import { prefersReducedMotion } from '@/features/scores/playback'
 import { ResultRow } from '@/features/scores/ResultRow'
 import { noTimeWords, rowOf, useOpenRows } from '@/features/scores/results'
 import { useResultActions } from '@/features/scores/useResultActions'
 import { cn } from '@/lib/utils'
-import { useScoresData } from './data'
+import { type AddRequest, AddScoresDialog } from './add/AddScores'
+import { type EarlierScore, scoreOf, useScoresData } from './data'
 import { FRESH_FIND, type Find, NO_LEVEL, findFromParams, findParams, isFiltered, levelChoices } from './find'
 import { FindBar } from './FindBar'
-import { BestsCard, LookCard, WeekCard } from './Rail'
+import { BestsCard, DropCard, LookCard, WeekCard } from './Rail'
 
 type Result = WithId<Evaluation>
 
@@ -76,9 +78,10 @@ function useWidth<T extends HTMLElement>() {
  * Found by student (any of their names), position, kind, level and days (the last 30 to start), and sorted by when, by
  * score or by name; the find is kept in the address, so Back from a student's page comes back to it.
  *
- * Beside the list (under it on narrower screens): the last seven days against the seven before, their new personal
- * bests, and what needs a look (results marked Check, enrolled students without a score for 30 days). A "New best" is
- * set against the student's own earlier results, all of them, not only the ones on screen.
+ * Beside the list (under it on narrower screens): Add scores (files dropped anywhere on the page land there too), the
+ * last seven days against the seven before, their new personal bests, and what needs a look (results marked Check,
+ * enrolled students without a score for 30 days). A "New best" is set against the student's own earlier results, all
+ * of them, not only the ones on screen. Results just added show at the top, marked New, until Done.
  */
 export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const { timezone, settings } = useBranch()
@@ -117,11 +120,11 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const byId = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
   const actions = useResultActions(mode)
 
-  // Every result known, newest list over the older scores: personal bests and last scores are each student's own.
+  // Every result known, the live list over the older scores: personal bests and last scores are each student's own.
   const known = useMemo(() => {
-    const all = new Map<string, Pick<Evaluation, 'studentId' | 'position' | 'dateKey' | 'timeMin' | 'wholeTotal' | 'shots'> & { id: string }>()
+    const all = new Map<string, EarlierScore>()
     for (const e of data.earlier ?? []) all.set(e.id, e)
-    for (const e of data.results) all.set(e.id, e)
+    for (const e of data.results) all.set(e.id, scoreOf(e.id, e))
     return [...all.values()]
   }, [data.earlier, data.results])
   const ready = data.earlier !== null
@@ -137,12 +140,29 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
     return level ? <LevelChip level={level} levels={ladder} /> : null
   }
 
+  // ------------------------------------------------------------ adding scores
+  const [adding, setAdding] = useState<AddRequest | null>(null)
+  const asks = useRef(0)
+  const add = (files: File[] | null) => setAdding({ id: ++asks.current, files })
+  useWindowDropGuard()
+  const drop = useFileDropZone({ canWrite: true, onFiles: (entries) => add(entries.map((e) => e.file)), disabled: !!adding })
+  // Results just added, at the top until Done. The page shows its own copy until the live list has one (a result dated
+  // before the list's first day never comes), and drops one the live list had and no longer has (deleted meanwhile).
+  const [just, setJust] = useState<Result[]>([])
+  const liveById = useMemo(() => new Map(data.results.map((e) => [e.id, e])), [data.results])
+  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set())
+  const liveJust = just.filter((e) => liveById.has(e.id) && !seen.has(e.id))
+  if (liveJust.length) setSeen(new Set([...seen, ...liveJust.map((e) => e.id)]))
+  const justShown = useMemo(() => just.flatMap((e) => (liveById.has(e.id) ? [liveById.get(e.id)!] : seen.has(e.id) ? [] : [e])), [just, liveById, seen])
+  const justRows = useMemo(() => resultRows(justShown), [justShown])
+  const justIds = useMemo(() => new Set(just.map((e) => e.id)), [just])
+
   // ------------------------------------------------------------ the feed
   const { rows, also } = useMemo(() => {
     const also = new Map<string, string>()
     const query = q.trim()
     const keep = (e: Result) => {
-      if (e.dateKey < range.from || e.dateKey > range.to) return false
+      if (justIds.has(e.id) || e.dateKey < range.from || e.dateKey > range.to) return false
       if (shown.position !== 'all' && e.position !== shown.position) return false
       if (shown.kind !== 'all' && kindOf(e) !== shown.kind) return false
       const s: Pick<Student, 'name' | 'nameLower' | 'otherNames' | 'level'> | undefined = byId.get(e.studentId)
@@ -158,7 +178,7 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
     return { rows: list, also }
     // nameOf reads byId.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.results, range.from, range.to, shown.position, shown.kind, shown.level, shown.sort, q, byId])
+  }, [data.results, justIds, range.from, range.to, shown.position, shown.kind, shown.level, shown.sort, q, byId])
 
   const byDay = shown.sort === 'new' || shown.sort === 'old'
   const groups: FeedGroup<Row<Result>>[] = useMemo(() => {
@@ -191,13 +211,14 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   // A result picked in the rail: its row opens and comes into view, the filters cleared first when they hide it.
   const [toShow, setToShow] = useState<string | null>(null)
   const openResult = (id: string) => {
-    if (!rowOf(rows, id)) {
+    if (!rowOf(rows, id) && !rowOf(justRows, id)) {
       setQ('')
       setParams(findParams({ ...FRESH_FIND, sort: byDay ? find.sort : 'new' }), { replace: true })
     }
     setToShow(id)
   }
-  const target = toShow ? rowOf(rows, toShow) : null
+  // Under "Just added", or in the list.
+  const target = toShow ? (rowOf(justRows, toShow) ?? rowOf(rows, toShow)) : null
   const { show } = opened
   useEffect(() => {
     if (!target) return
@@ -226,7 +247,7 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   const loading = data.loading || studentsLoading
   const dayDates = useMemo(() => new Set(known.map((e) => e.dateKey)), [known])
 
-  const rowFor = (row: Row<Result>, inDay: boolean) => {
+  const rowFor = (row: Row<Result>, inDay: boolean, fresh = false) => {
     const e = row.results[0]
     const time = e.timeMin !== null && !row.match ? formatMinutes(e.timeMin) : null
     const when = inDay ? (time ?? noTimeWords(e)) : `${dayWords(e.dateKey, today)}${time ? `, ${time}` : ''}`
@@ -239,6 +260,8 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
         onToggle={() => opened.toggle(row.key)}
         entries={actions.entriesOf(row)}
         bests={bests}
+        fresh={fresh}
+        freshLabel="New"
         student={{ name: nameOf(e), level: levelOf(e.studentId), when, also: also.get(e.studentId) ?? null, highlight: q }}
         footer={
           <Button variant="ghost" size="sm" className="-ml-2.5 h-8 gap-1.5 px-2.5 text-[13px]" asChild>
@@ -250,6 +273,21 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
       />
     )
   }
+
+  const justAdded = justRows.length ? (
+    <section className="mt-5" aria-label="Just added" data-testid="scores-just-added">
+      <div className="mx-0.5 mb-2 flex items-center gap-2">
+        <h2 className="shrink-0 text-[15px] font-semibold">Just added</h2>
+        <span className="min-w-0 truncate text-[13px] text-muted-foreground">
+          {plural(justShown.length, 'result')}, filed in {new Set(justShown.map((e) => e.studentId)).size === 1 ? `${firstOf(justShown[0])}’s` : 'each student’s'} Drive folder
+        </span>
+        <Button variant="outline" size="xs" className="ml-auto" onClick={() => setJust([])} data-testid="scores-just-done">
+          Done
+        </Button>
+      </div>
+      <ul className="overflow-hidden rounded-xl border bg-card">{justRows.map((r) => rowFor(r, false, true))}</ul>
+    </section>
+  ) : null
 
   let body: ReactNode
   if (loading)
@@ -307,6 +345,7 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
 
   const rail = (
     <>
+      <DropCard hot={drop.dragOver} onFiles={add} />
       <WeekCard week={week} today={today} />
       <BestsCard bests={newBests} today={today} nameOf={nameOf} onOpen={openResult} />
       <LookCard
@@ -326,8 +365,17 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
   )
 
   return (
-    <div ref={page.ref} data-testid="scores-page">
-      <PageHeader className="mb-5 flex-row items-end justify-between sm:items-end" title="Scores" description={<span className="hidden sm:inline">Every student’s latest results, newest first. Open one to see its shots.</span>} />
+    <div ref={page.ref} {...drop.handlers} data-testid="scores-page">
+      <PageHeader
+        className="mb-5 flex-row items-end justify-between sm:items-end"
+        title="Scores"
+        description={<span className="hidden sm:inline">Every student’s latest results, newest first. Open one to see its shots.</span>}
+        actions={
+          <Button size="lg" onClick={() => add(null)} data-testid="add-scores">
+            <LuUpload /> Add scores
+          </Button>
+        }
+      />
       <div className={cn(twoColumns ? 'grid grid-cols-[minmax(0,1fr)_21rem] items-start gap-7' : 'block')}>
         <section ref={feed.ref} className="@container min-w-0" aria-label="Results">
           <FindBar
@@ -357,6 +405,7 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
               </button>
             </p>
           ) : null}
+          {justAdded}
           {body}
         </section>
         <aside
@@ -370,6 +419,26 @@ export function ScoresPage({ mode = 'admin' }: { mode?: 'admin' | 'coach' }) {
         </aside>
       </div>
       {actions.element}
+      <AddScoresDialog
+        request={adding}
+        onClose={() => setAdding(null)}
+        onSaved={(added) => {
+          setJust((cur) => [...added, ...cur])
+          window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+        }}
+        students={students}
+        known={known}
+      />
+      {/* Files dragged over the page: they'll be read as scores. */}
+      {drop.dragOver ? (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-background/60 p-6" aria-hidden data-testid="scores-drop-veil">
+          <div className="flex max-w-md flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/60 bg-card px-10 py-8 text-center shadow-lg">
+            <LuUpload className="size-6" />
+            <p className="text-base font-semibold">Drop to add scores</p>
+            <p className="text-sm text-balance text-muted-foreground">SIUS PDFs, photos of paper cards, or a results sheet. You check what was read before it’s saved.</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

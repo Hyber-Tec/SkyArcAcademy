@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 import type { DriveIndex } from '@shared/drive/model'
 import { type DriveAccess, type DriveFile, driveObjectPath } from '@shared/drive/types'
 import { COL } from '@shared/paths'
-import type { Evaluation } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_LABELS } from '@shared/shooting/evaluation'
 import type { AuditStamp } from '@shared/types'
 import { type Actor, addAudit } from '@/lib/audit'
 import { storage } from '@/lib/firebase'
@@ -164,34 +164,60 @@ export interface ResultUpload {
   evaluation: Omit<Evaluation, keyof AuditStamp> | null
 }
 
+/** "2026-10-07 Prone 186.8.pdf": a SIUS result is filed under its date, so a student's folder sorts by date. */
+export function siusFileName(dateKey: string, position: Evaluation['position'] | null, total: number | null): string {
+  return [dateKey, position ? POSITION_LABELS[position] : null, total === null ? 'Sighters' : total.toFixed(1)].filter(Boolean).join(' ') + '.pdf'
+}
+
+/** The folders some files land in, each made (a student's stand-in folder) or touched once. */
+function landingWrites(branchId: string, actor: Actor, index: DriveIndex, ups: readonly PlannedUpload[]): DriveWrite[] {
+  return [...new Set(ups.map((up) => up.record.folderId))].flatMap((id) => folderWrites(branchId, index, id, actor))
+}
+
+/** A SIUS result's file record and its scores (with their audit entry), or the file alone for sighters only. */
+function resultWrites(branchId: string, actor: Actor, index: DriveIndex, r: ResultUpload, evaluationId: string | null): DriveWrite[] {
+  const writes: DriveWrite[] = [recordWrite(branchId, index, r.up, { evaluationId, uploadedAt: serverTimestamp(), uploadedBy: driveActor(actor) })]
+  if (r.evaluation && evaluationId) {
+    const evaluation = { ...r.evaluation, fileId: r.up.fileId }
+    writes.push((b) => addEvaluation(b, branchId, actor, evaluationId, evaluation))
+  } else {
+    // Sighters only: the file is kept, with no scores.
+    const where = index.folderOf(r.up.record.folderId)?.name ?? 'the Drive'
+    writes.push((b) =>
+      addAudit(b, branchId, actor, {
+        action: 'drive.upload',
+        category: 'drive',
+        entityType: 'driveFile',
+        entityId: r.up.fileId,
+        summary: `Filed “${r.up.record.name}” in “${where}” (sighters only, no scores)`,
+        studentId: r.up.record.studentId,
+      }),
+    )
+  }
+  return writes
+}
+
 /** Writes each result's file record and evaluation together, then sends the files. */
 export async function saveResults(branchId: string, actor: Actor, index: DriveIndex, results: ResultUpload[]): Promise<string[]> {
-  const by = driveActor(actor)
-  const writes: DriveWrite[] = []
-  for (const id of new Set(results.map((r) => r.up.record.folderId))) writes.push(...folderWrites(branchId, index, id, actor))
-  for (const r of results) {
-    const evaluationId = r.evaluation ? newEvaluationId(branchId) : null
-    writes.push(recordWrite(branchId, index, r.up, { evaluationId, uploadedAt: serverTimestamp(), uploadedBy: by }))
-    if (r.evaluation && evaluationId) {
-      const evaluation = { ...r.evaluation, fileId: r.up.fileId }
-      writes.push((b) => addEvaluation(b, branchId, actor, evaluationId, evaluation))
-    } else {
-      // Sighters only: the file is kept, with no scores.
-      const where = index.folderOf(r.up.record.folderId)?.name ?? 'the Drive'
-      writes.push((b) =>
-        addAudit(b, branchId, actor, {
-          action: 'drive.upload',
-          category: 'drive',
-          entityType: 'driveFile',
-          entityId: r.up.fileId,
-          summary: `Filed “${r.up.record.name}” in “${where}” (sighters only, no scores)`,
-          studentId: r.up.record.studentId,
-        }),
-      )
-    }
-  }
+  const ups = results.map((r) => r.up)
+  const writes = landingWrites(branchId, actor, index, ups)
+  for (const r of results) writes.push(...resultWrites(branchId, actor, index, r, r.evaluation ? newEvaluationId(branchId) : null))
   await commitAll(writes)
-  return sendAll(branchId, results.map((r) => r.up))
+  return sendAll(branchId, ups)
+}
+
+/** A match's results sheet (its photo or PDF, if one was chosen) and its results, one per position. */
+export interface SheetSave {
+  up: PlannedUpload | null
+  evaluations: Omit<Evaluation, keyof AuditStamp>[]
+}
+
+/** A sheet's file record, pointing at its first result, and its results with their audit entries. */
+function sheetWrites(branchId: string, actor: Actor, index: DriveIndex, s: SheetSave, ids: string[]): DriveWrite[] {
+  const writes: DriveWrite[] = []
+  if (s.up) writes.push(recordWrite(branchId, index, s.up, { evaluationId: ids[0] ?? null, uploadedAt: serverTimestamp(), uploadedBy: driveActor(actor) }))
+  s.evaluations.forEach((e, i) => writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...e, fileId: s.up?.fileId ?? null })))
+  return writes
 }
 
 /**
@@ -199,14 +225,8 @@ export async function saveResults(branchId: string, actor: Actor, index: DriveIn
  * the file is filed in the student's folder and points at the first result; then its bytes are sent.
  */
 export async function saveSheetResults(branchId: string, actor: Actor, index: DriveIndex, up: PlannedUpload | null, evaluations: Omit<Evaluation, keyof AuditStamp>[]): Promise<string[]> {
-  const by = driveActor(actor)
   const ids = evaluations.map(() => newEvaluationId(branchId))
-  const writes: DriveWrite[] = []
-  if (up) {
-    writes.push(...folderWrites(branchId, index, up.record.folderId, actor))
-    writes.push(recordWrite(branchId, index, up, { evaluationId: ids[0] ?? null, uploadedAt: serverTimestamp(), uploadedBy: by }))
-  }
-  evaluations.forEach((e, i) => writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...e, fileId: up?.fileId ?? null })))
+  const writes = [...landingWrites(branchId, actor, index, up ? [up] : []), ...sheetWrites(branchId, actor, index, { up, evaluations }, ids)]
   await commitAll(writes)
   return up ? sendAll(branchId, [up]) : []
 }
@@ -220,6 +240,20 @@ export interface CardSave {
   driveFileId: string | null
 }
 
+/** A card's picture's record (or the Drive photo it came from, now the score's) and its scores, pointing at each other. */
+function cardWrites(branchId: string, actor: Actor, index: DriveIndex, c: CardSave, id: string): DriveWrite[] {
+  const by = driveActor(actor)
+  const writes: DriveWrite[] = []
+  const fileId = c.up?.fileId ?? c.driveFileId
+  if (c.up) writes.push(recordWrite(branchId, index, c.up, { evaluationId: id, uploadedAt: serverTimestamp(), uploadedBy: by }))
+  else if (c.driveFileId) {
+    const ref = branchDocRef(branchId, COL.driveFiles, c.driveFileId)
+    writes.push((b) => b.update(ref, { evaluationId: id, updatedAt: serverTimestamp(), updatedBy: by }))
+  }
+  writes.push((b) => addEvaluation(b, branchId, actor, id, { ...c.evaluation, fileId }, 'read from its photo on the website'))
+  return writes
+}
+
 /**
  * Paper cards read from their photos, saved as the phone app saves a scanned card (mobile/src/features/scan/save.ts):
  * each card's scores and its picture's record in the student's folder, pointing at each other, in one write with the
@@ -227,20 +261,34 @@ export interface CardSave {
  * server confirms (`saved`), and the uploads follow (`uploaded`, with what failed).
  */
 export function saveCards(branchId: string, actor: Actor, index: DriveIndex, cards: CardSave[]): { ids: string[]; saved: Promise<void>; uploaded: Promise<FailedUpload[]> } {
-  const by = driveActor(actor)
-  const ids = cards.map(() => newEvaluationId(branchId))
-  const ups = cards.flatMap((c) => (c.up ? [c.up] : []))
-  const writes: DriveWrite[] = []
-  for (const id of new Set(ups.map((up) => up.record.folderId))) writes.push(...folderWrites(branchId, index, id, actor))
-  cards.forEach((c, i) => {
-    const fileId = c.up?.fileId ?? c.driveFileId
-    if (c.up) writes.push(recordWrite(branchId, index, c.up, { evaluationId: ids[i], uploadedAt: serverTimestamp(), uploadedBy: by }))
-    else if (c.driveFileId) {
-      const ref = branchDocRef(branchId, COL.driveFiles, c.driveFileId)
-      writes.push((b) => b.update(ref, { evaluationId: ids[i], updatedAt: serverTimestamp(), updatedBy: by }))
-    }
-    writes.push((b) => addEvaluation(b, branchId, actor, ids[i], { ...c.evaluation, fileId }, 'read from its photo on the website'))
-  })
+  const { ids, saved, uploaded } = saveScores(branchId, actor, index, { cards })
+  return { ids: ids.cards, saved, uploaded }
+}
+
+/**
+ * Scores of every kind at once (the Scores page's Add scores): SIUS results with their PDFs, paper cards with their
+ * pictures, and results sheets with their results, each filed in its student's folder, in one write with the audit
+ * entries. It returns at once with the new scores' IDs, in the order given; `saved` says when the server has them,
+ * and the files go up after (`uploaded`, with what failed).
+ */
+export function saveScores(
+  branchId: string,
+  actor: Actor,
+  index: DriveIndex,
+  { results = [], cards = [], sheets = [] }: { results?: ResultUpload[]; cards?: CardSave[]; sheets?: SheetSave[] },
+): { ids: { results: (string | null)[]; cards: string[]; sheets: string[][] }; saved: Promise<void>; uploaded: Promise<FailedUpload[]> } {
+  const ups = [...results.map((r) => r.up), ...cards.flatMap((c) => (c.up ? [c.up] : [])), ...sheets.flatMap((s) => (s.up ? [s.up] : []))]
+  const ids = {
+    results: results.map((r) => (r.evaluation ? newEvaluationId(branchId) : null)),
+    cards: cards.map(() => newEvaluationId(branchId)),
+    sheets: sheets.map((s) => s.evaluations.map(() => newEvaluationId(branchId))),
+  }
+  const writes: DriveWrite[] = [
+    ...landingWrites(branchId, actor, index, ups),
+    ...results.flatMap((r, i) => resultWrites(branchId, actor, index, r, ids.results[i])),
+    ...cards.flatMap((c, i) => cardWrites(branchId, actor, index, c, ids.cards[i])),
+    ...sheets.flatMap((s, i) => sheetWrites(branchId, actor, index, s, ids.sheets[i])),
+  ]
   const saved = commitAll(writes)
   return { ids, saved, uploaded: saved.then(() => sendEach(branchId, ups)) }
 }

@@ -228,8 +228,15 @@ export function ResultRow({
         </span>
         <span className="hidden min-w-0 items-center gap-1.5 text-[13px] whitespace-nowrap @2xl:flex">
           {dots}
-          <span className="shrink-0">{what}</span>
-          <span className="min-w-0 truncate text-muted-foreground">· {from}</span>
+          {/* A match is its name (its results sheet is said under the student's name); a result its position and source. */}
+          {match ? (
+            <span className="min-w-0 truncate">{what}</span>
+          ) : (
+            <>
+              <span className="shrink-0">{what}</span>
+              <span className="min-w-0 truncate text-muted-foreground">· {from}</span>
+            </>
+          )}
           <ResultKindChip e={e} />
         </span>
         {/* A column of its own on a wide list, even when empty (the columns after it stay put); a line under the name on a phone. */}

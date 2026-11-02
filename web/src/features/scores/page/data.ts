@@ -27,7 +27,8 @@ export interface EarlierScore {
   printed: string | null
 }
 
-const slim = (id: string, e: Evaluation): EarlierScore => ({
+/** A result kept small: its scores, without its shots. */
+export const scoreOf = (id: string, e: Evaluation): EarlierScore => ({
   id,
   studentId: e.studentId,
   position: e.position,
@@ -47,7 +48,7 @@ function readEarlier(branchId: string, before: DateKey): Promise<EarlierScore[]>
   const key = `${branchId}|${before}`
   const hit = earlierCache.get(key)
   if (hit && Date.now() - hit.at < EARLIER_FOR_MS) return hit.read
-  const read = getDocs(query(branchCol(branchId, COL.evaluations), where('dateKey', '<', before))).then((snap) => snap.docs.map((d) => slim(d.id, d.data() as Evaluation)))
+  const read = getDocs(query(branchCol(branchId, COL.evaluations), where('dateKey', '<', before))).then((snap) => snap.docs.map((d) => scoreOf(d.id, d.data() as Evaluation)))
   earlierCache.set(key, { at: Date.now(), read })
   read.catch(() => earlierCache.delete(key))
   return read
