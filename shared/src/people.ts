@@ -32,6 +32,19 @@ export const STUDENT_STATUS_COLORS: Record<StudentStatus, { bg: string; text: st
   finished: { bg: '#fff1f2', text: '#9f1239', border: '#fecdd3' },
 }
 
+/**
+ * A status as a dot (a stronger tone of its badge) and a small word in its colour, with dark mode's lighter tones: the
+ * Students list's quiet way to show it (the owner, 2026-11-02: "just a green dot next to the name").
+ */
+export const STUDENT_STATUS_TONES: Record<StudentStatus, { dot: string; darkDot: string; word: string; darkWord: string }> = {
+  signed_up: { dot: '#0284c7', darkDot: '#38bdf8', word: '#0369a1', darkWord: '#7dd3fc' },
+  enrolled: { dot: '#16a34a', darkDot: '#22c55e', word: '#15803d', darkWord: '#86efac' },
+  paused: { dot: '#ea580c', darkDot: '#fb923c', word: '#c2410c', darkWord: '#fdba74' },
+  no_answer: { dot: '#94a3b8', darkDot: '#94a3b8', word: '#64748b', darkWord: '#b4bfcd' },
+  not_interested: { dot: '#dc2626', darkDot: '#f87171', word: '#b91c1c', darkWord: '#fca5a5' },
+  finished: { dot: '#be123c', darkDot: '#fb7185', word: '#be123c', darkWord: '#fda4af' },
+}
+
 /** Statuses excluded from grade advancement. */
 export const INACTIVE_STUDENT_STATUSES: readonly StudentStatus[] = ['finished', 'no_answer', 'not_interested']
 
