@@ -7,8 +7,10 @@ import {
   accessRefusal,
   buildDriveIndex,
   cycleDriveSort,
+  dateInName,
   folderNameProblem,
   formatBytes,
+  itemDate,
   levelItems,
   moveAccessNote,
   moveRefusal,
@@ -129,6 +131,32 @@ describe('the Drive index', () => {
     expect(sortDriveItems(levelItems(idx, null), byUpdated, idx).map((i) => i.id)).toEqual(['b', 'a', 'new', 'old'])
     expect(cycleDriveSort(DRIVE_DEFAULT_SORT, 'name')).toEqual({ col: 'name', dir: 'asc' })
     expect(cycleDriveSort({ col: 'name', dir: 'asc' }, 'name')).toEqual({ col: 'name', dir: 'desc' })
+  })
+
+  it('dates a file by its score’s day, or a date in its name, and sorts a student’s folder by it', () => {
+    expect(dateInName('2026-10-15 Kneeling 176.3.pdf')).toBe('2026-10-15')
+    expect(dateInName('Mia Larkin enrollment contract 2026-10-28.pdf')).toBe('2026-10-28')
+    expect(dateInName('photo 20261015.jpg')).toBeNull()
+    expect(dateInName('2026-13-40 nonsense.pdf')).toBeNull()
+    expect(dateInName(null)).toBeNull()
+    const idx = buildDriveIndex(
+      [folder('f', null)],
+      [
+        file('scored', null, { name: 'Chloe - 20shot - Prone.pdf', uploadedAt: at(9000) }),
+        file('named', null, { name: '2026-10-20 Standing 95.0.pdf', uploadedAt: at(1000) }),
+        file('renamed', null, { name: 'My result.pdf', originalName: 'SIUS 2026-10-01.pdf', uploadedAt: at(2000) }),
+        file('plain', null, { name: 'photo.jpg', uploadedAt: at(8000) }),
+      ],
+    )
+    const items = levelItems(idx, null)
+    const scores = new Map([['scored', [{ dateKey: '2026-09-30' }]]])
+    const dateOf = (it: (typeof items)[number]) => itemDate(it, scores.get(it.id) ?? [])
+    expect(Object.fromEntries(items.map((it) => [it.id, dateOf(it)]))).toEqual({ f: null, scored: '2026-09-30', named: '2026-10-20', renamed: '2026-10-01', plain: null })
+    // A student's folder opens with the newest day first; a file without one comes after, newest upload first.
+    expect(sortDriveItems(items, DRIVE_DEFAULT_SORT, idx, dateOf).map((i) => i.id)).toEqual(['f', 'named', 'renamed', 'scored', 'plain'])
+    const byDate = cycleDriveSort(DRIVE_DEFAULT_SORT, 'date')
+    expect(byDate).toEqual({ col: 'date', dir: 'desc' })
+    expect(sortDriveItems(items, { col: 'date', dir: 'asc' }, idx, dateOf).map((i) => i.id)).toEqual(['f', 'scored', 'renamed', 'named', 'plain'])
   })
 
   it('lists the Trash by what was moved there, not what was inside it', () => {

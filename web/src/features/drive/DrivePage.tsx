@@ -1,5 +1,5 @@
 import { getDocs, query, where } from 'firebase/firestore'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LuChevronRight,
   LuClipboardPen,
@@ -25,7 +25,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
 import { studentNamedIn } from '@shared/drive/suggest'
-import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, levelItems, moveAccessNote, moveRefusal, searchWithin, sortDriveItems, trailFrom } from '@shared/drive/model'
+import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, itemDate, levelItems, moveAccessNote, moveRefusal, searchWithin, sortDriveItems, trailFrom } from '@shared/drive/model'
 import { scoreTotal, scoresByFile } from '@shared/drive/scores'
 import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
@@ -57,7 +57,7 @@ import { type DroppedEntry, useFileDropZone, useWindowDropGuard } from './dropzo
 import { FilePreview, downloadFile } from './FilePreview'
 import { MoveDialog } from './MoveDialog'
 import { AccessBadge, FolderGlyph } from './parts'
-import { readSiusFiles } from './sius'
+import { readSiusFiles, siusPrint } from './sius'
 import { type ResultUpload, plannedFile, saveResults, sendAll, siusFileName, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
 import { useDriveIndex } from './useDriveIndex'
 
@@ -165,17 +165,19 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     else if (linkedFile && outside(linkedFile.folderId)) navigate(base, { replace: true })
   }, [ready, routeFolder, linkedFile, rootId, index, navigate, base])
 
-  // A student's folder shows each result's scores (a results sheet has one for each position), in a column of their own.
+  // A student's folder shows each result's scores (a results sheet has one for each position), in a column of their own,
+  // and the day of what each file holds (its score's, or a date in its name), newest first unless a column is picked.
   const { data: evaluations } = useStudentEvaluations(studentHere)
   const fileScores = useMemo(() => scoresByFile(evaluations), [evaluations])
+  const dateOf = useMemo(() => (studentHere ? (it: DriveItem) => itemDate(it, fileScores.get(it.id) ?? []) : undefined), [studentHere, fileScores])
 
   const query_ = q.trim()
   const hits = useMemo(() => (query_ && ready ? searchWithin(index, query_, rootId) : []), [index, query_, ready, rootId])
   const rows = useMemo(() => {
     if (!ready) return []
-    const sorted = sortDriveItems(query_ ? hits : levelItems(index, cwd), sort, index)
+    const sorted = sortDriveItems(query_ ? hits : levelItems(index, cwd), sort, index, dateOf)
     return sorted.slice(0, SEARCH_LIMIT)
-  }, [ready, query_, hits, index, cwd, sort])
+  }, [ready, query_, hits, index, cwd, sort, dateOf])
   const whereOf = (it: DriveItem) => {
     if (!query_) return null
     if (!rootId) return (it as { where?: string }).where ?? ''
@@ -306,25 +308,29 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     return `${path[0] ?? index.students.find((s) => s.id === studentId)?.name ?? 'the student'}’s folder`
   }
 
+  /** A student's results already saved, as the duplicate check knows them. */
+  const savedOf = useCallback(
+    async (studentId: string) => (await getDocs(query(branchCol(branchId, COL.evaluations), where('studentId', '==', studentId)))).docs.map((d) => printOf(d.data() as Evaluation)),
+    [branchId],
+  )
+
   async function confirmResults(list: ResultRow[], kind: ResultKind) {
     if (!results) return
     const studentName = new Map(index.students.map((s) => [s.id, s.name]))
-    // A result already in the student's scores, or the same report twice in this drop (the same printed time and total,
-    // shared/src/scores/duplicates.ts), isn't added again (the third meeting, CP2).
+    // The dialog leaves out a result already in the student's scores, or the same report twice in the drop (the same
+    // printed time and total, shared/src/scores/duplicates.ts), unless someone added it anyway (the third meeting, CP2).
+    // Checked again here, as a result may have been saved meanwhile.
     const known = new Map<string, ResultPrint[]>()
-    for (const id of new Set(list.map((r) => r.studentId as string))) {
-      const snap = await getDocs(query(branchCol(branchId, COL.evaluations), where('studentId', '==', id)))
-      known.set(id, snap.docs.map((d) => printOf(d.data() as Evaluation)))
-    }
+    for (const id of new Set(list.map((r) => r.studentId as string))) known.set(id, await savedOf(id))
     const fresh: ResultRow[] = []
     const repeated: string[] = []
     for (const r of list) {
       const reading = r.sius.reading
-      if (reading.noShots) {
+      if (reading.noShots || r.keepRepeat) {
         fresh.push(r)
         continue
       }
-      const print: ResultPrint = { studentId: r.studentId as string, dateKey: reading.dateKey, position: r.position ?? '', shots: reading.shots, total: reading.total, printed: reading.printed, values: reading.series.flatMap((x) => x.shots.map((t) => t.v)) }
+      const print = siusPrint(r.studentId as string, r.position, reading)
       const theirs = known.get(print.studentId) ?? []
       if (repeatOf(print, theirs)) {
         repeated.push(r.file.name)
@@ -597,7 +603,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
 
   const title = folder ? folder.name : 'Drive'
   // ← and → in the preview step through the folder in the list's order.
-  const siblings = preview ? sortDriveItems(index.filesIn(preview.folderId).map((file) => ({ kind: 'file' as const, id: file.id, file })), sort, index).map((it) => it.file) : []
+  const siblings = preview ? sortDriveItems(index.filesIn(preview.folderId).map((file) => ({ kind: 'file' as const, id: file.id, file })), sort, index, dateOf).map((it) => it.file) : []
   const dialogFolder = dialog?.kind === 'renameFolder' ? index.folderOf(dialog.id) : null
   const dialogFile = dialog?.kind === 'renameFile' ? index.fileOf(dialog.id) : null
 
@@ -791,7 +797,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
                 <>
                   <div className="flex items-center justify-between border-b px-3 py-1.5">
                     <span className="text-xs text-muted-foreground">
-                      {sort.col ? `Sorted by ${sort.col}, ${sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}` : 'Folders A to Z, then the newest files'}
+                      {sort.col ? `Sorted by ${sort.col}, ${sort.dir === 'asc' ? 'A to Z or oldest first' : 'newest or largest first'}` : dateOf ? 'Folders A to Z, then the newest files by their date' : 'Folders A to Z, then the newest files'}
                     </span>
                     {controls}
                   </div>
@@ -837,6 +843,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
           students={index.students}
           fixedStudentId={results.fixedStudentId}
           whereOf={(studentId) => resultWhere(results.baseId, studentId)}
+          savedOf={savedOf}
           onConfirm={confirmResults}
           onClose={() => setResults(null)}
         />

@@ -1,4 +1,4 @@
-import { formatInstant } from '../time'
+import { type DateKey, formatInstant } from '../time'
 import type { WithId } from '../types'
 import { cleanFolderName } from './files'
 import {
@@ -453,9 +453,10 @@ export function trashEntries(rawFolders: readonly WithId<DriveFolder>[], rawFile
 
 // ------------------------------------------------------- listing a level
 
-export type DriveColumn = 'name' | 'owner' | 'updated' | 'size'
+/** `date`: the day of what a file holds (`itemDate`), in a student's folder. */
+export type DriveColumn = 'name' | 'date' | 'owner' | 'updated' | 'size'
 
-export const DRIVE_COLUMNS: readonly DriveColumn[] = ['name', 'owner', 'updated', 'size']
+export const DRIVE_COLUMNS: readonly DriveColumn[] = ['name', 'date', 'owner', 'updated', 'size']
 
 export interface DriveSort {
   /** null: the opening order, no column picked (see DRIVE_DEFAULT_SORT). */
@@ -522,17 +523,37 @@ export const itemOwner = (it: DriveItem): DriveActor | null => (it.kind === 'fol
 
 export const itemName = (it: DriveItem) => (it.kind === 'folder' ? it.folder.name : it.file.name) ?? ''
 
+/** "2026-10-15" in a file's name (results are named by their day; a signed contract ends with its own), or null. */
+export function dateInName(name: string | null | undefined): DateKey | null {
+  const m = /(?:^|\D)((20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))(?!\d)/.exec(name ?? '')
+  return m ? (m[1] as DateKey) : null
+}
+
+/**
+ * The day of what a file holds (Goo, 2026-11-03: "that matters more than when it was uploaded or updated"): its score's
+ * day (the match's or the practice's), or a date in its name (or in the name it came with); null for a folder, and for
+ * a file neither tells.
+ */
+export function itemDate(it: DriveItem, scores: readonly { dateKey: string }[] = []): DateKey | null {
+  if (it.kind !== 'file') return null
+  return (scores[0]?.dateKey as DateKey | undefined) ?? dateInName(it.file.name) ?? dateInName(it.file.originalName)
+}
+
 /**
  * Rows in display order. Folders stay above files; within each the column decides, missing values (a pending stamp,
- * nobody named) sink whichever way the column runs, and ties fall back to the name, so renders never shuffle.
+ * nobody named, no date) sink whichever way the column runs, and ties fall back to the name, so renders never shuffle.
+ * `dateOf` gives each file's day (`itemDate`, where the scores are known: a student's folder); there, files open newest
+ * day first.
  */
-export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: DriveSort, index: DriveIndex | null): T[] {
+export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: DriveSort, index: DriveIndex | null, dateOf?: (it: DriveItem) => DateKey | null): T[] {
   const { col, dir } = sort
   const mul = dir === 'desc' ? -1 : 1
   const valueOf = (it: DriveItem): number | string =>
     col === 'updated'
       ? itemUpdated(it, index).ms
-      : col === 'owner'
+      : col === 'date'
+        ? (dateOf?.(it) ?? '')
+        : col === 'owner'
         ? fold(actorName(itemOwner(it)))
         : col === 'size'
           ? it.kind === 'folder'
@@ -543,6 +564,12 @@ export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: D
     if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1
     if (col === null) {
       if (a.kind === 'folder') return compareNames(itemName(a), itemName(b)) || (a.id < b.id ? -1 : 1)
+      if (dateOf) {
+        const ad = dateOf(a) ?? ''
+        const bd = dateOf(b) ?? ''
+        if (!ad !== !bd) return ad ? -1 : 1
+        if (ad !== bd) return ad < bd ? 1 : -1
+      }
       const am = itemUpdated(a, index).ms
       const bm = itemUpdated(b, index).ms
       if (!am !== !bm) return am ? -1 : 1
@@ -551,7 +578,7 @@ export function sortDriveItems<T extends DriveItem>(items: readonly T[], sort: D
     if (col !== 'name') {
       const av = valueOf(a)
       const bv = valueOf(b)
-      const canBeMissing = col === 'updated' || col === 'owner'
+      const canBeMissing = col === 'updated' || col === 'owner' || col === 'date'
       const am = canBeMissing && !av
       const bm = canBeMissing && !bv
       if (am !== bm) return am ? 1 : -1

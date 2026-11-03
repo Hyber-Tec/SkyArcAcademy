@@ -2,10 +2,11 @@ import { Fragment, useEffect, useState } from 'react'
 import { LuArrowDown, LuArrowUp, LuFolder } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { isViewableImage } from '@shared/drive/files'
-import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
+import { type DriveColumn, type DriveIndex, type DriveItem, type DriveSort, formatBytes, itemDate, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
 import { scoreTotal } from '@shared/drive/scores'
 import { accessOf, isFixedFolder } from '@shared/drive/types'
 import { POSITION_COLORS, POSITION_LABELS, type Evaluation, per10 } from '@shared/shooting/evaluation'
+import { formatDateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { ContextMenuFor, ItemMenuButton, type MenuEntry } from '@/components/app/ItemMenu'
@@ -41,12 +42,13 @@ const COLUMNS: { col: DriveColumn; label: string; className: string }[] = [
 /**
  * The columns follow the list's own width (it's an `@container`), not the window's: a tablet beside the sidebar, or the
  * Details panel open, leaves the name its room. Narrow, the name takes what the row's menu doesn't need. A student's
- * folder has a Score column after the name once there's room for it (until then each file's scores sit under its
- * name), and its Owner column waits for more room still.
+ * folder has a Date column after the name (the day of what each file holds: Goo, 2026-11-03) and a Score column after
+ * it once there's room (until then each file's date and scores sit under its name), and its Owner column waits for
+ * more room still.
  */
 const GRID = 'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_13rem_5rem_4.5rem] items-center gap-3'
 const SCORE_GRID =
-  'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_13rem_11rem_5rem_4.5rem] @6xl:grid-cols-[1.5rem_minmax(0,1fr)_13rem_11rem_13rem_5rem_4.5rem] items-center gap-3'
+  'grid grid-cols-[1.5rem_minmax(0,1fr)_auto] @xl:grid-cols-[1.5rem_minmax(0,1fr)_7rem_11rem_5rem_4.5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_7rem_13rem_11rem_5rem_4.5rem] @6xl:grid-cols-[1.5rem_minmax(0,1fr)_7rem_13rem_11rem_13rem_5rem_4.5rem] items-center gap-3'
 /** Where the Owner column shows (its heading, then its cells): later in a student's folder, where Score comes first. */
 const ownerHead = (scores: boolean) => (scores ? 'hidden @6xl:flex' : 'hidden @4xl:flex')
 const ownerCell = (scores: boolean) => (scores ? 'hidden @6xl:block' : 'hidden @4xl:block')
@@ -64,7 +66,7 @@ export interface ListApi {
   toggle: (id: string) => void
   /** Every score made from each file on screen, by file ID (a student's folder; a results sheet makes several). */
   scoresByFile: Map<string, WithId<Evaluation>[]>
-  /** The folder open is a student's (or in one): the list has a Score column. */
+  /** The folder open is a student's (or in one): the list has the Date and Score columns. */
   scoreColumn: boolean
   dropFiles: (folderId: string, entries: DroppedEntry[]) => void
   refuseDrop: () => void
@@ -146,7 +148,7 @@ export function DriveListHead({ api, controls }: { api: ListApi; controls: React
   return (
     <div className={cn(api.scoreColumn ? SCORE_GRID : GRID, 'sticky top-0 z-10 rounded-t-xl border-b bg-background px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase')} role="row">
       <span />
-      {COLUMNS.map(({ col, label, className }) => {
+      {COLUMNS.filter(({ col }) => col !== 'date').map(({ col, label, className }) => {
         const active = api.sort.col === col
         return (
           <Fragment key={col}>
@@ -159,7 +161,21 @@ export function DriveListHead({ api, controls }: { api: ListApi; controls: React
               {label}
               {active ? api.sort.dir === 'asc' ? <LuArrowUp className="size-3.5" /> : <LuArrowDown className="size-3.5" /> : null}
             </button>
-            {col === 'name' && api.scoreColumn ? <span className="hidden items-center py-2 @4xl:flex">Score</span> : null}
+            {col === 'name' && api.scoreColumn ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => api.onSort('date')}
+                  className={cn('hidden items-center gap-1 py-2 text-left uppercase hover:text-foreground @xl:flex', api.sort.col === 'date' && 'text-foreground')}
+                  title="Sort by the day of what each file holds"
+                  data-testid="drive-sort-date"
+                >
+                  Date
+                  {api.sort.col === 'date' ? api.sort.dir === 'asc' ? <LuArrowUp className="size-3.5" /> : <LuArrowDown className="size-3.5" /> : null}
+                </button>
+                <span className="hidden items-center py-2 @4xl:flex">Score</span>
+              </>
+            ) : null}
           </Fragment>
         )
       })}
@@ -179,6 +195,8 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
   const uploading = file?.status === 'uploading'
   const scores = (file && api.scoresByFile.get(file.id)) || []
   const changed = itemUpdated(it, api.index)
+  // The day of what it holds, where the list has a Date column (a student's folder).
+  const day = api.scoreColumn ? itemDate(it, scores) : null
   const draggable = api.canWrite && !uploading && !fixed(it)
   const size = isFolder ? api.index.countsOf(it.id).bytes : (file?.size ?? 0)
   const updatedCell = uploading ? (
@@ -222,6 +240,11 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
             <span className="line-clamp-2 max-w-full text-sm font-semibold wrap-anywhere @xl:line-clamp-1" title={isFolder ? it.folder.name : file!.name}>
               {isFolder ? it.folder.name : file!.name}
             </span>
+            {day ? (
+              <span className="text-xs text-muted-foreground tabular-nums @xl:hidden" data-testid="drive-date-short">
+                {formatDateKey(day, 'medium')}
+              </span>
+            ) : null}
             {scores.map((e) => (
               <ScoreLink key={e.id} e={e} variant="chip" className={api.scoreColumn ? '@4xl:hidden' : undefined} />
             ))}
@@ -235,6 +258,11 @@ export function DriveRow({ it, api }: { it: DriveItem; api: ListApi }) {
           ) : null}
         </span>
       </span>
+      {api.scoreColumn ? (
+        <span className="hidden truncate text-[13px] tabular-nums @xl:block" data-testid="drive-date">
+          {day ? formatDateKey(day, 'medium') : <span className="text-muted-foreground/50">—</span>}
+        </span>
+      ) : null}
       {api.scoreColumn ? (
         <span className="hidden min-w-0 flex-col items-start gap-0.5 @4xl:flex">
           {scores.length ? scores.map((e) => <ScoreLink key={e.id} e={e} variant="cell" />) : <span className="text-[13px] text-muted-foreground/50">—</span>}
@@ -294,7 +322,9 @@ export function DriveCard({ it, api }: { it: DriveItem; api: ListApi }) {
   const draggable = api.canWrite && !uploading && !fixed(it)
   const c = isFolder ? api.index.countsOf(it.id) : null
   const where = api.whereOf(it)
-  const meta = where !== null ? where || 'Drive' : isFolder ? `${c!.folders + c!.files} ${c!.folders + c!.files === 1 ? 'item' : 'items'}` : formatBytes(file!.size)
+  // In a student's folder a file's card names the day of what it holds first.
+  const day = api.scoreColumn ? itemDate(it, scores) : null
+  const meta = where !== null ? where || 'Drive' : isFolder ? `${c!.folders + c!.files} ${c!.folders + c!.files === 1 ? 'item' : 'items'}` : [day ? formatDateKey(day, 'medium') : null, formatBytes(file!.size)].filter(Boolean).join(' · ')
   const picture = isFolder ? (
     <FolderGlyph student={!!it.folder.studentId} locked={adminsOnly(it)} className="size-14" />
   ) : score && score.source === 'sius' ? (
