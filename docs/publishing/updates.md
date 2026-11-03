@@ -47,29 +47,31 @@ The keys live in `mobile/.publish/` (never in git), and each store needs its own
 
 ## The next update: 1.1.0 (both stores)
 
-Waiting on `main` until each store has answered on 1.0.0 (no second submission during a review: the owner,
-2026-10-26). Release 1.0.0 first when it's approved, then send this one straight away.
+**For trying now:** 1.1.0 (build 9) went to **TestFlight** and to Google Play's **internal testing** from the MacBook
+Pro on 2026-11-03, so Goo tries everything on both phones (Scan, the families' part, Create an account, Sign in with
+Apple). Neither reaches anyone else: the App Store keeps 1.0.0 in review, and Google Play's store listing keeps 1.0.0.
 
-- **What it brings to the iPhone** (1.0.0 is build 2): classes taught together (#34) and the week from Monday (#33),
-  the marks' words Here and No-show (#39), and the demo academy for the demo logins and the schedule by Day or Week
-  with its events (#41).
-- **What it brings to Android** (1.0.0 is build 3, which already has classes taught together): the marks' words, the
-  demo academy, the schedule by Day or Week (#41), and three permissions it never used, gone (#37).
-- **The steps,** after `git switch main && git pull`:
-  1. The iPhone's build is up: **1.1.0 (build 5)**, uploaded to App Store Connect from the MacBook Pro on 2026-10-28
-     and on TestFlight (build 4 before it lacks Phase 3's work). If the phone app hasn't changed since, submit that one:
-     App Store Connect → Sky Arc → **+** next to **iOS App** → `1.1.0` → **What's New** from
-     [listing.md](../store/listing.md) → **Build**: 5 → **Add for Review** → **Submit for Review**. If it has, upload a new one first (`npm run publish:iphone`: the build goes up,
-     still 1.1.0) and commit the release number. When approved: **Release This Version**.
-  2. Pull the release number on the Mac that uploads next.
-  3. MacBook Pro: `npm run publish:android -- --track production` (the build goes up again, still 1.1.0). Play
-     Console → the release → notes from [listing.md](../store/listing.md) → **Send changes for review**.
-  4. Commit the release number.
-  5. When the iPhone's 1.1.0 is out, take the lead coach off the seats: `npx tsx scripts/lead-coach.ts --clear`
-     (`docs/TODO.md`).
-- **The review notes:** the reviewers keep the admin login (the academy's real data). From 1.1.0 the phone also opens
-  the demo academy for the demo logins (made-up people; their password is on the Mac mini, `docs/internal/`), so the
-  reviewers could use those instead; that's the owner's call before submitting.
+**The release waits until everything is ready** (Goo, 2026-11-03), and on the iPhone until Apple has answered on 1.0.0
+(no second submission during a review: the owner, 2026-10-26). Release 1.0.0 first when it's approved. Then:
+
+1. **The forms first:** Apple's App Privacy and Google's Data safety for 1.1.0, and the review notes
+   ([privacy-answers.md](../store/privacy-answers.md), "When the app changes"; [review-notes.md](../store/review-notes.md)).
+   Sign in with Apple's setup is done (Goo, 2026-11-03: [apple/sign-in-with-apple.md](apple/sign-in-with-apple.md)).
+2. **iPhone:** if the phone app hasn't changed since build 9, submit it: App Store Connect → Sky Arc → **+** next to
+   **iOS App** → `1.1.0` → **What's New** (Claude Code drafts it from the pull requests since 1.0.0, with
+   [listing.md](../store/listing.md)) → **Build**: 9 → **Add for Review** → **Submit for Review**. If it has, upload a
+   new one first (`npm run publish:iphone`: the build goes up, still 1.1.0) and commit the release number. When
+   approved: **Release This Version**.
+3. **Android:** Play Console → **Test and release** → **Testing** → **Internal testing** → the 1.1.0 (9) release →
+   **Promote release** → **Production** → notes from [listing.md](../store/listing.md) → **Send changes for review**. Or,
+   if the app has changed since, `npm run publish:android -- --track production` on the MacBook Pro.
+4. **Commit the release number** after any new upload.
+5. When the iPhone's 1.1.0 is out, take the lead coach off the seats: `npx tsx scripts/lead-coach.ts --clear`
+   (`docs/TODO.md`).
+
+**The review notes:** the reviewers keep the admin login (the academy's real data). From 1.1.0 the phone also opens
+the demo academy for the demo logins (made-up people; their password is on the Mac mini, `docs/internal/`), so the
+reviewers could use those instead; that's the owner's call before submitting.
 
 ## Keep in mind
 
