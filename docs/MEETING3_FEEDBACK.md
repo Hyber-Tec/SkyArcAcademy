@@ -173,6 +173,9 @@ started: *already works*, *small change* or *new work*.
     position, shots and total (and its shots). The Drive leaves a repeat out and names it (two copies in one drop got
     through before); Add scores leaves it out with Save it anyway; Add a competition, Add paper scores and the phone's
     scans ask "Already saved?" first.
+  - *Then (Goo, 2026-11-03):* the Drive says it in its drop dialog, beside the student and position, the moment the
+    PDFs are dropped ("… is already in Arin’s scores, so it won’t be added again"), with **Add it anyway**, instead of
+    a note after adding.
 - ✅ **CP3. Show the position on each series** of a competition (kneeling, prone, standing). Goo found it confusing
   without them.
   - *Plan:* **Small change:** a competition's card names the position beside each series on the phone and in small

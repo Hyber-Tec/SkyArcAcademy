@@ -1,3 +1,4 @@
+import type { ResultPrint } from '@shared/scores/duplicates'
 import type { ArrowPixels } from '@shared/sius/arrow'
 import { extractSiusPage } from '@shared/sius/extract'
 import { type SiusReading, type SiusResult, parseSiusPage, readSiusResult } from '@shared/sius/parse'
@@ -56,4 +57,17 @@ export async function readSiusFiles(files: File[], timezone: string, onEach?: (d
   }
   await Promise.all(Array.from({ length: Math.min(3, files.length) }, worker))
   return out
+}
+
+/** A dropped result as the duplicate check knows it (shared/src/scores/duplicates.ts): its printed time, total and shots. */
+export function siusPrint(studentId: string, position: string | null, reading: SiusReading): ResultPrint {
+  return {
+    studentId,
+    dateKey: reading.dateKey,
+    position: position ?? '',
+    shots: reading.shots,
+    total: reading.total,
+    printed: reading.printed,
+    values: reading.series.flatMap((x) => x.shots.map((t) => t.v)),
+  }
 }
