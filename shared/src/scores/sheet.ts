@@ -27,6 +27,11 @@ export interface SheetPosition {
 export interface SheetReading {
   /** "Mina Park", from "Park, Mina". */
   name: string
+  /**
+   * The sheet's first lines, above its shots (the shooter, the match, the club): whose it is is looked for here too when
+   * no name was found the usual way (sheetStudent.ts). Missing from a server older than it.
+   */
+  header?: string
   match: string
   course: string
   dateKey: DateKey | null
@@ -91,6 +96,22 @@ export function printedCentres(text: string, words?: readonly SheetWord[]): Shee
   return out
 }
 
+/**
+ * The positions a course of fire shoots, each with its shots, to fill a match typed by hand (the third meeting, CP5):
+ * "3x20" is kneeling, prone and standing, 20 each (the sheet's six series, two of each in that order); "60 Shots" is
+ * standing (a 60-shot match is all standing), unless the course names its position ("Prone 40"). Null when it doesn't
+ * say how many shots.
+ */
+export function courseRows(course: string): { position: Position; shots: number }[] | null {
+  const each = /(\d+)\s*[x×]\s*(\d+)/i.exec(course)
+  if (each && Number(each[1]) === 3) return (['kneeling', 'prone', 'standing'] as const).map((position) => ({ position, shots: Number(each[2]) }))
+  const all = /(\d+)\s*(?:shots?\b|$)/i.exec(course.trim())
+  if (!all || each) return null
+  const named = /kneel/i.test(course) ? 'kneeling' : /prone/i.test(course) ? 'prone' : 'standing'
+  const shots = Number(all[1])
+  return shots >= 1 && shots <= 200 ? [{ position: named, shots }] : null
+}
+
 /** Shots a position has in a course of fire: "3x20 Air Rifle" → 20, "60 Shots Air Rifle" → 60. */
 export function shotsPerPosition(course: string): number | null {
   const each = /(\d+)\s*[x×]\s*(\d+)/i.exec(course)
@@ -136,9 +157,18 @@ export function readSheetText(text: string, words?: readonly SheetWord[]): Sheet
   const innerTens = qual?.[2] ? Number(qual[2]) : null
   const decimal = !!qual && /[.,]\d/.test(qual[1])
 
-  // "Park, Mina": the first line that is a surname, a comma and a first name.
-  const nameLine = lines.find((l) => /^[A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?,\s*[A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?$/.test(l))
-  const name = nameLine ? nameLine.split(',').map((p) => p.trim()).reverse().join(' ') : ''
+  // "Park, Mina": the first line that is a surname, a comma and a first name (a middle initial after it is left out), or
+  // a line saying whose it is ("Athlete: Mina Park").
+  const commaName = /^([A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?),\s*([A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?)(?: [A-Z]\.?)?$/
+  const labelled = /^(?:athlete|shooter|competitor|name)\s*:\s*([A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+){1,3})$/i
+  const nameFound = lines.map((l) => commaName.exec(l) ?? labelled.exec(l)).find(Boolean)
+  const name = !nameFound ? '' : nameFound.length > 2 && nameFound[2] ? `${nameFound[2]} ${nameFound[1]}` : nameFound[1]
+  // The heading: the lines before the first shot's label.
+  const firstShot = lines.findIndex((l) => /^[KPS]\d{1,2}\b/.test(l))
+  const header = lines
+    .slice(0, firstShot >= 0 ? Math.min(firstShot, 15) : 15)
+    .join('\n')
+    .slice(0, 600)
 
   // "Lakeside Fall 3P | Sat, 12 Sep 2026": the match, then its date.
   const matchLine = lines.find((l) => /\|/.test(l) && sheetDate(l))
@@ -187,5 +217,5 @@ export function readSheetText(text: string, words?: readonly SheetWord[]): Sheet
   const sum = decimal ? round1(positions.reduce((n, p) => n + p.decimalTotal, 0)) : positions.reduce((n, p) => n + p.wholeTotal, 0)
   const tens = positions.reduce((n, p) => n + p.innerTens, 0)
   const consistent = positions.length > 0 && total !== null && Math.abs(sum - total) < 0.05 && (decimal || innerTens === null || tens === innerTens)
-  return { name, match, course, dateKey, total, innerTens, decimal, positions, consistent, perPosition: shotsPerPosition(course), centres: printedCentres(text, words) }
+  return { name, header, match, course, dateKey, total, innerTens, decimal, positions, consistent, perPosition: shotsPerPosition(course), centres: printedCentres(text, words) }
 }

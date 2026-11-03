@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useId, useState } from 'react'
 import { LuChevronDown, LuMessageSquareQuote, LuPencilLine, LuTrophy } from 'react-icons/lu'
-import { type MatchResult, type ResultRow as Row, matchTotal, rowPer10 } from '@shared/scores/match'
+import { type MatchResult, POSITION_LETTER, type ResultRow as Row, matchTotal, rowPer10 } from '@shared/scores/match'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, evaluationPoints, per10, totalWithTens } from '@shared/shooting/evaluation'
 import { formatDateKey, formatMinutes } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -191,7 +191,7 @@ export function ResultRow({
     const what = match ? e.match?.name?.trim() || 'Competition' : POSITION_LABELS[e.position]
     const from = match ? SOURCE_LABELS.sheet : e.match?.name?.trim() || SOURCE_LABELS[e.source]
     const dots = (
-      <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+      <span className="flex shrink-0 items-center gap-0.5" title={(match ? row.results : [e]).map((r) => POSITION_LABELS[r.position]).join(', ')} aria-hidden>
         {(match ? row.results : [e]).map((r) => (
           <span key={r.id} className="size-2 rounded-full" style={{ background: POSITION_COLORS[r.position] }} />
         ))}
@@ -270,13 +270,15 @@ export function ResultRow({
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             {match ? null : <span className="size-2 shrink-0 rounded-full" style={{ background: POSITION_COLORS[e.position] }} />}
-            <span className="max-w-[7.5rem] min-w-0 truncate @xl:max-w-none">{where}</span>
+            <span className="max-w-[7.5rem] min-w-16 truncate @xl:max-w-none">{where}</span>
             <ResultKindChip e={e} />
+            {/* Each position by name (the third meeting, CP3: a match's positions weren't clear as dots alone). */}
             {match && row.results.length > 1
               ? row.results.map((r) => (
-                  <span key={r.id} className="hidden shrink-0 items-center gap-1 tabular-nums @2xl:inline-flex" title={`${POSITION_LABELS[r.position]}: ${one(per10(r.wholeTotal, r.shots) ?? 0)} per 10`}>
+                  <span key={r.id} className="hidden shrink-0 items-center gap-1 tabular-nums @xl:inline-flex" title={`${POSITION_LABELS[r.position]}: ${one(per10(r.wholeTotal, r.shots) ?? 0)} per 10`} data-testid="match-position">
                     <span className="size-2 rounded-full" style={{ background: POSITION_COLORS[r.position] }} />
-                    {one(per10(r.wholeTotal, r.shots) ?? 0)}
+                    <span className="@5xl:hidden">{POSITION_LETTER[r.position]}</span>
+                    <span className="hidden @5xl:inline">{POSITION_LABELS[r.position]}</span> {one(per10(r.wholeTotal, r.shots) ?? 0)}
                   </span>
                 ))
               : null}

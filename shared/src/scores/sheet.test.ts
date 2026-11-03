@@ -73,3 +73,62 @@ describe('reading a results sheet', () => {
     expect(sheetDate('10/18/2026 4:02:27 PM')).toBe('2026-10-18')
   })
 })
+
+describe('a 3×20 and a 60-shot sheet (the third meeting, CP4)', () => {
+  const tens = (from: number) => Array.from({ length: 10 }, (_, i) => `${(from + i) % 3 === 0 ? '10.1*' : `${8 + ((from + i) % 2)}.${(from + i) % 10}`}`)
+  const column = (letter: string, first: number) => tens(first).map((v, i) => `${letter}${first + i} ${v}`)
+  const sheet3x20 = [
+    'Rowan, Avery',
+    'Lakeside Junior 3P | Sat, 10 Oct 2026',
+    'Course of Fire: 3x20 Air Rifle',
+    ...['K', 'P', 'S'].flatMap((l) => [...column(l, 1), ...column(l, 11)]),
+  ].join('\n')
+
+  it('reads 3×20 as six series of ten: kneeling, kneeling, prone, prone, standing, standing', async () => {
+    const { sheetSeries } = await import('./sheetRead')
+    const r = readSheetText(sheet3x20)
+    expect(r.perPosition).toBe(20)
+    expect(r.positions.map((p) => [p.position, p.shots.length])).toEqual([
+      ['kneeling', 20],
+      ['prone', 20],
+      ['standing', 20],
+    ])
+    expect(sheetSeries(r).map((s) => s.label)).toEqual(['K1–K10', 'K11–K20', 'P1–P10', 'P11–P20', 'S1–S10', 'S11–S20'])
+  })
+
+  it('keeps the order when the sheet’s two columns come out side by side', async () => {
+    const { sheetSeries } = await import('./sheetRead')
+    const side = ['K', 'P', 'S'].flatMap((l) => column(l, 1).flatMap((left, i) => [left.split(' ')[0], `${l}${11 + i}`, left.split(' ')[1], tens(11)[i]]))
+    const r = readSheetText(['Course of Fire: 3x20 Air Rifle', ...side].join('\n'))
+    expect(sheetSeries(r).map((s) => `${s.position} ${s.n}`)).toEqual(['kneeling 1', 'kneeling 2', 'prone 1', 'prone 2', 'standing 1', 'standing 2'])
+  })
+
+  it('reads a 60-shot match as standing, six series', async () => {
+    const { sheetSeries } = await import('./sheetRead')
+    const shots = Array.from({ length: 60 }, (_, i) => `S${i + 1} ${9 + (i % 2)}.${i % 10}`)
+    const r = readSheetText(['Quill, Sam', 'Course of Fire: 60 Shots Air Rifle', ...shots].join('\n'))
+    expect(r.perPosition).toBe(60)
+    expect(r.positions.map((p) => [p.position, p.shots.length])).toEqual([['standing', 60]])
+    expect(sheetSeries(r).map((s) => s.label)).toEqual(['S1–S10', 'S11–S20', 'S21–S30', 'S31–S40', 'S41–S50', 'S51–S60'])
+  })
+
+  it('fills a typed match from its course of fire', async () => {
+    const { courseRows } = await import('./sheet')
+    expect(courseRows('3x20 Air Rifle')).toEqual([
+      { position: 'kneeling', shots: 20 },
+      { position: 'prone', shots: 20 },
+      { position: 'standing', shots: 20 },
+    ])
+    expect(courseRows('60 Shots Air Rifle')).toEqual([{ position: 'standing', shots: 60 }])
+    expect(courseRows('Prone 40 shots')).toEqual([{ position: 'prone', shots: 40 }])
+    expect(courseRows('Air Rifle')).toBeNull()
+  })
+})
+
+describe('the shooter’s name and the heading', () => {
+  it('reads the name with a middle initial, or after a label, and keeps the heading', () => {
+    expect(readSheetText(['Rowan, Avery J.', 'Lakeside Fall 3P | Sat, 12 Sep 2026', 'K1 9.5'].join('\n'))).toMatchObject({ name: 'Avery Rowan', header: 'Rowan, Avery J.\nLakeside Fall 3P | Sat, 12 Sep 2026' })
+    expect(readSheetText('Athlete: Avery Rowan\nK1 9.5').name).toBe('Avery Rowan')
+    expect(readSheetText('AVERY ROWAN\nHarbor Club\nK1 9.5')).toMatchObject({ name: '', header: 'AVERY ROWAN\nHarbor Club' })
+  })
+})

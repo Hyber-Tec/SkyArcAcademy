@@ -74,9 +74,10 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
                   <LuPencilLine className="size-3.5" />
                 </span>
               )}
+              {/* The position first, in words (the third meeting, CP3), then the shots as the sheet numbers them. */}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs text-muted-foreground">{POSITION_LABELS[r.position]}</span>
-                <span className="block truncate text-sm font-medium">{seriesLabel(r.position, s)}</span>
+                <span className="block truncate text-sm font-medium">{POSITION_LABELS[r.position]}</span>
+                <span className="block truncate text-xs text-muted-foreground tabular-nums">{seriesLabel(r.position, s)}</span>
               </span>
               <span className="text-sm font-semibold tabular-nums">
                 {seriesTotalText(s, whole)}
