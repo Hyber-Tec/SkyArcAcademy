@@ -53,6 +53,8 @@ export const ADMIN_NAV: PortalNav = {
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'schedule', label: 'Schedule', to: 'schedule', icon: LuCalendarDays },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    // Every student's latest results, and where to add them (docs/DECISIONS.md §29).
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'drive', label: 'Drive', to: 'drive', icon: DriveIcon },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     {
@@ -77,7 +79,7 @@ export const ADMIN_NAV: PortalNav = {
 
 /**
  * The coach portal: the same five places as the phone app (Home, Schedule, Availability, News, Profile), plus
- * students and pay. Profile holds the person's own pages (account, notifications, sign-in, appearance).
+ * students, their scores and pay. Profile holds the person's own pages (account, notifications, sign-in, appearance).
  */
 export const COACH_NAV: PortalNav = {
   main: [
@@ -86,6 +88,7 @@ export const COACH_NAV: PortalNav = {
     { key: 'availability', label: 'Availability', to: 'availability', icon: LuCalendarClock },
     { key: 'announcements', label: 'Announcements', to: 'announcements', icon: LuMegaphone },
     { key: 'students', label: 'Students', to: 'students', icon: LuGraduationCap },
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
     { key: 'drive', label: 'Drive', to: 'drive', icon: DriveIcon },
     { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
     { key: 'payroll', label: 'Payroll', to: 'payroll', icon: LuWallet },

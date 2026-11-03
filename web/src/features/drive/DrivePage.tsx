@@ -30,7 +30,7 @@ import { scoreTotal, scoresByFile } from '@shared/drive/scores'
 import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
-import { type Evaluation, POSITION_LABELS, type Position, type ResultKind } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_LABELS, type ResultKind } from '@shared/shooting/evaluation'
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -57,7 +57,7 @@ import { FilePreview, downloadFile } from './FilePreview'
 import { MoveDialog } from './MoveDialog'
 import { AccessBadge, FolderGlyph } from './parts'
 import { readSiusFiles } from './sius'
-import { type ResultUpload, plannedFile, saveResults, sendAll, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
+import { type ResultUpload, plannedFile, saveResults, sendAll, siusFileName, uploadsInFlight, useUploadProgress, writeRecords } from './upload'
 import { useDriveIndex } from './useDriveIndex'
 
 const SEARCH_LIMIT = 200
@@ -71,11 +71,6 @@ type Dialog =
   | { kind: 'access'; id: string }
   | { kind: 'paper'; studentId: string | null; photo: WithId<DriveFile> | null }
   | { kind: 'refused'; refused: { name: string; reason: string }[]; added: number }
-
-/** "2026-10-07 Prone 186.8.pdf": a SIUS result is filed under its date, so a student's folder sorts by date. */
-function resultName(dateKey: string, position: Position | null, total: number | null): string {
-  return [dateKey, position ? POSITION_LABELS[position] : null, total === null ? 'Sighters' : total.toFixed(1)].filter(Boolean).join(' ') + '.pdf'
-}
 
 /**
  * The Drive (docs/DECISIONS.md §7): every student's folder at the top, and whatever folders the academy makes. Files
@@ -325,7 +320,7 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
       const reading = r.sius.reading
       const studentId = r.studentId as string
       const folderId = resultFolder(results.baseId, studentId)
-      const up = plannedFile(branchId, r.file, { ...r.plan, name: resultName(reading.dateKey, r.position, reading.noShots ? null : reading.total) }, folderId, studentId, { originalName: r.file.name })
+      const up = plannedFile(branchId, r.file, { ...r.plan, name: siusFileName(reading.dateKey, r.position, reading.noShots ? null : reading.total) }, folderId, studentId, { originalName: r.file.name })
       const evaluation =
         reading.noShots || !r.position
           ? null

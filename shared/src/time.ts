@@ -310,6 +310,8 @@ export type DateKeyStyle =
   | 'weekdayLong' // Wednesday, September 30, 2026
   | 'monthYear' // September 2026
   | 'monthDay' // Sep 30
+  | 'monthDayLong' // September 30
+  | 'weekday' // Wednesday
 
 const dateKeyFormats: Record<DateKeyStyle, Intl.DateTimeFormatOptions> = {
   short: { month: 'numeric', day: 'numeric', year: 'numeric' },
@@ -320,6 +322,8 @@ const dateKeyFormats: Record<DateKeyStyle, Intl.DateTimeFormatOptions> = {
   weekdayLong: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' },
   monthYear: { month: 'long', year: 'numeric' },
   monthDay: { month: 'short', day: 'numeric' },
+  monthDayLong: { month: 'long', day: 'numeric' },
+  weekday: { weekday: 'long' },
 }
 
 export function formatDateKey(key: DateKey, style: DateKeyStyle = 'medium', locale = 'en-US'): string {

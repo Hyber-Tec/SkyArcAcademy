@@ -22,7 +22,7 @@ const newestFirst = (a: Evaluation, b: Evaluation) =>
 /**
  * Home's latest scores, for admins and coaches: the newest results across the academy (each SIUS result and paper card
  * of the last two weeks), each with its target in small, whose it is, the position and the score per 10 shots. A
- * result opens the student's Scores with it open in its row.
+ * result opens the student's Scores with it open in its row; every student's are on the Scores page.
  */
 export function LatestScoresCard({ portal }: { portal: 'admin' | 'coach' }) {
   const { branchId, timezone } = useBranch()
@@ -62,8 +62,8 @@ export function LatestScoresCard({ portal }: { portal: 'admin' | 'coach' }) {
       ) : (
         <p className="px-4 py-8 text-center text-sm text-muted-foreground">No scores in the last {DAYS} days. SIUS results dropped in the Drive and paper cards show here.</p>
       )}
-      {portal === 'admin' && rows.length ? (
-        <Link to="/admin/students" className="flex items-center justify-center gap-1 border-t px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+      {rows.length ? (
+        <Link to={`/${portal}/scores`} className="flex items-center justify-center gap-1 border-t px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground">
           Every student’s scores <LuArrowRight className="size-3" />
         </Link>
       ) : null}

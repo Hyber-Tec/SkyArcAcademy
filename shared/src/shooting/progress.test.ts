@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { personalBestIds, positionProgress } from './progress'
+import { personalBestIds, personalBestIdsByStudent, positionProgress } from './progress'
 
 // Made-up results: whole totals over their shots (per 10 shots in brackets).
 const r = (id: string, position: 'standing' | 'kneeling' | 'prone', dateKey: string, wholeTotal: number, shots = 10, timeMin: number | null = null) => ({ id, position, dateKey, wholeTotal, shots, timeMin })
@@ -50,5 +50,19 @@ describe('a student’s progress by position', () => {
   it('has nothing to say without results', () => {
     expect(positionProgress([])).toEqual([])
     expect(personalBestIds([]).size).toBe(0)
+  })
+})
+
+describe('personal bests in several students’ results', () => {
+  it('sets each student’s results against their own earlier ones only', () => {
+    const of = (studentId: string, x: ReturnType<typeof r>) => ({ ...x, studentId })
+    const list = [
+      of('ana', r('a1', 'prone', '2026-09-01', 95)),
+      of('ana', r('a2', 'prone', '2026-09-08', 97)), // beats Ana's 95
+      of('ben', r('b1', 'prone', '2026-09-02', 80)),
+      of('ben', r('b2', 'prone', '2026-09-09', 85)), // beats Ben's 80, though not Ana's 97
+      of('ben', r('b3', 'standing', '2026-09-10', 90)), // Ben's first standing: sets the mark
+    ]
+    expect([...personalBestIdsByStudent(list)].sort()).toEqual(['a2', 'b2'])
   })
 })

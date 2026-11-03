@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { ResultRow } from '@shared/scores/match'
-import type { Evaluation } from '@shared/shooting/evaluation'
+import { type Evaluation, evaluationPoints } from '@shared/shooting/evaluation'
 import type { ShotPoint } from '@shared/shooting/target'
 import { type DateKey, formatDateKey } from '@shared/time'
 import { one } from '@/features/reports/model'
@@ -13,9 +13,17 @@ import { one } from '@/features/reports/model'
  */
 export const RESULT_COLUMNS = 'grid grid-cols-[2.5rem_minmax(0,1fr)_4.25rem_1rem] items-center gap-x-3 @xl:grid-cols-[2.75rem_minmax(0,1fr)_6rem_7.5rem_1.25rem] @xl:gap-x-3.5'
 
-/** Which rows are open: any number at once, each opened and closed by its own row. */
-export function useOpenRows() {
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set())
+/**
+ * Every student's results (the Scores page), by the list's own width: on a phone the small target, whose (with the
+ * position, where from and when under the name, the marks under that) and the score; from a tablet's width whose, the
+ * position and where from, the marks, the score and the chevron each in a column; and the total too where there's room.
+ */
+export const FEED_COLUMNS =
+  'grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 @2xl:grid-cols-[2.75rem_minmax(8rem,1.25fr)_minmax(8.5rem,1fr)_minmax(0,10.5rem)_6rem_1.25rem] @2xl:gap-x-3.5 @4xl:grid-cols-[2.75rem_minmax(9rem,1.25fr)_minmax(10rem,1fr)_minmax(0,11rem)_6rem_7.25rem_1.25rem]'
+
+/** Which rows are open: any number at once, each opened and closed by its own row. `initial`: open from the start. */
+export function useOpenRows(initial?: Iterable<string>) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(initial))
   const toggle = useCallback(
     (key: string) =>
       setOpen((cur) => {
@@ -28,7 +36,7 @@ export function useOpenRows() {
   )
   /** Opens a row (a link to one result, a result just added); it stays open until closed. */
   const show = useCallback((key: string) => setOpen((cur) => (cur.has(key) ? cur : new Set([...cur, key]))), [])
-  return { isOpen: (key: string) => open.has(key), toggle, show }
+  return { isOpen: (key: string) => open.has(key), toggle, show, open }
 }
 
 /** The row of a result's ID: its own, or its match's when it came from a results sheet. */
@@ -46,6 +54,12 @@ export function averagePointWords(p: ShotPoint): string {
 export function unplacedText(e: Pick<Evaluation, 'source' | 'series'>): string {
   if (e.source === 'sheet') return e.series.length ? 'From the results sheet: every shot’s score, but not where it landed.' : 'From the results sheet: its total only.'
   return e.series.length ? 'Typed in from the paper card, so where the shots landed isn’t recorded.' : 'Only the card’s total was typed in.'
+}
+
+/** Under a student's name on the Scores page, where there's no time to give: how the result came. */
+export function noTimeWords(e: Pick<Evaluation, 'source' | 'series'>): string {
+  if (e.source === 'sheet') return 'From the sheet'
+  return evaluationPoints(e).length ? 'Scanned card' : 'Typed in'
 }
 
 /** "Sep 8", with the year when it isn't this one. */
