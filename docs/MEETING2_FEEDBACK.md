@@ -485,7 +485,8 @@ from the app, without calling or texting the academy.
     italic, underline, strike, inline code, a link, nested and numbered lists, a quote, a code block, a rule and a
     picture); a post's headings now take the website's sizes (a small heading was the size of its text).
 - [ ] **M9. A new build and release** following the release process, after the current review. (2026-11-03: Google Play
-  published 1.0.0; the App Store is still reviewing it; the next update goes out once everything is ready, Goo)
+  published 1.0.0; the App Store is still reviewing it; the next update goes out once everything is ready, Goo. For
+  trying it: 1.1.0, build 9, on TestFlight and Google Play's internal testing, 2026-11-03)
 
 ---
 

@@ -103,4 +103,18 @@ emails, account ids and what they opened; the camera and the photos are the staf
   (Identifiers → **Device ID**) when submitting the first build that has them; Google's **Device or other IDs** already
   covers the token. The privacy policy already says it ("If you allow notifications on a device, we keep a
   notification token for it").
+- **1.1.0: accounts made in the app, Sign in with Apple, and the enrollment contract** (2026-11-03,
+  [`DECISIONS.md`](../DECISIONS.md) §31; the privacy policy says so since that day). Update both stores' forms when
+  submitting 1.1.0 (not before: 1.0.0 has none of it):
+  - **New data:** a parent's signature on the enrollment contract (the name they type, parent or guardian, the signature
+    drawn with a finger, the date and time, the network address, the phone's model and the app's version), kept in the
+    signed contract that only the academy's owners and admins see, and downloaded by the family; and a request to join
+    from someone the academy can't find by their email (their name, an optional phone number, their children's names and
+    an optional message). Sign in with Apple adds nothing new: the name and the email address Apple shares (which can be
+    an address Apple makes to hide the real one).
+  - **Apple's App Privacy:** Contact Info → **Phone Number** (also a parent's, when they ask to join); User Content →
+    **Other User Content** (also a contract's signature and a request to join). Nothing else changes.
+  - **Google's Data safety:** **account creation methods**: username and password, and OAuth (Google), now in the app;
+    Personal info → **Phone number** (also a parent's, when they ask to join); App activity → **Other user-generated
+    content** (also a contract's signature and a request to join). Account deletion stays as it is.
 - **A new permission or form:** a new line here, in the privacy policy, and in both stores' forms.
