@@ -19,8 +19,10 @@ import {
   Megaphone,
   Signature,
   Target,
+  UserCheck,
   UserMinus,
   UserPlus,
+  UserRoundPlus,
   UserX,
 } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
@@ -54,6 +56,8 @@ const ICONS: Record<string, LucideIcon> = {
   request_asked_again: CalendarSearch,
   score_added: Target,
   contract_signed: Signature,
+  family_linked: UserCheck,
+  signup_request: UserRoundPlus,
 };
 
 const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? null;

@@ -24,16 +24,17 @@ From the repository root: `npm run iphone:sim` (the iPhone Simulator on the prac
 iPhone plugged into the Mac), and the rest in `../docs/running-the-apps.md`.
 
 A package with native code needs a new build (`npm run iphone:sim -- --rebuild`): don't add one without asking.
-Pure JavaScript packages are fine.
+Pure JavaScript packages are fine. (expo-apple-authentication and expo-crypto came with Sign in with Apple, which the
+owner asked for: docs/DECISIONS.md §31.)
 
 ## How it is put together
 
 ```
 app.config.ts          native configuration: ids, Firebase files, permissions, plugins (iOS 27 scene life cycle, signing)
-src/app/               screens (Expo Router). Root gates: signed out → sign-in screens; a password account with an
-                       unconfirmed email → verify-email; otherwise (app)/, which reads the person's member doc for their
-                       email (BranchProvider: the academy's, or the demo academy's for a member of it alone) and opens
-                       the part of their one role.
+src/app/               screens (Expo Router). Root gates: signed out → sign-in screens (sign-in, create-account,
+                       forgot-password); a password account with an unconfirmed email → verify-email; otherwise (app)/,
+                       which reads the person's member doc for their email (BranchProvider: the academy's, or the demo
+                       academy's for a member of it alone) and opens the part of their one role.
   (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Home · Schedule ·
                        Scan · Students · More for the office, Home · Schedule · Availability · Scan · More for coaches
                        (their Students is More's first row); More's pages (more/: students, coaches, payroll, account,
@@ -56,12 +57,18 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        months), score/[id] a score to look at,
                        file/[id] its original, report/[id] a progress report, news/ the academy's news: the list,
                        news/[id] a post, news/attachment a post's file, inbox their notifications (Home's bell));
-                       FamilyProvider holds whose they are and the child a parent chose
-  (app)/no-access      an email the academy hasn't added (opens the app by itself once it does)
+                       FamilyProvider holds whose they are and the child a parent chose; ContractGate (src/features/
+                       contracts) stands in for all of it until the academy's enrollment contract is signed for each
+                       of their students: a parent signs it there, a student waits for their parent
+  (app)/no-access      an email the academy hasn't added: the server first links it by the email on file
+                       (`linkMyAccount`, docs/DECISIONS.md §31: a parent's or a student's own email on a student's
+                       record), then it waits for the academy (a request sent) or offers ask-access ("Ask the academy",
+                       the website's /join) and another email; the app opens by itself once the member doc is there
   (app)/view-as        a super admin's "View the app as" (an admin, a coach, a parent or a student, or the demo
                        academy): a modal over either part, declared after them so the app still opens on its tabs;
                        BranchProvider applies the choice (src/state/viewAs.ts) and only the view changes
-src/state/             AuthProvider (Google, email + password, verification), BranchProvider (the academy, or the demo
+src/state/             AuthProvider (Google, Apple on iPhones, email + password, making an account, verification),
+                       BranchProvider (the academy, or the demo
                        one (`isDemo`): settings, rules, time zone, member, staff record, the actor for the audit log),
                        PushProvider (push notifications: this phone's token, taps, the toast while open, the badge, the
                        one question after sign-in), AppearanceProvider
@@ -86,7 +93,8 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
-                       target), access, account (deleting an account), family (what a family reads: their students,
+                       target), access, account (deleting an account), contracts (signing the enrollment contract before
+                       using the app: ContractGate, the signature pad), family (what a family reads: their students,
                        classes, scores and shared reports, and the academy's news (news.ts); the child switcher; their
                        classes (classes.ts: brothers and sisters in the same class together) and the class cards; the
                        Classes tab (the owner's remake, 2026-10-29: clear at a glance, for every age): its top
@@ -121,7 +129,7 @@ src/components/        the shared building blocks (Text `T`, Button, Card, ListS
                        official logos)
 src/lib/               firebase, firestore hooks (useDoc, useQuery), callables (api.ts), audit, links (the website,
                        call/text/email, a link the website saved as the practice copy's phones reach it), toast, Google
-                       sign-in, env, push (the token and this install's device record), notify (the phone's permission,
+                       and Apple sign-in, env, push (the token and this install's device record), notify (the phone's permission,
                        Android's channels, the badge), device (the install's id and label), pushBackground
 src/theme/             the website's neutral palette in light and dark with Sky Arc's red, status colors, spacing, type
 ../shared/src          the business logic the website and the Cloud Functions use, imported as @shared/...
@@ -185,8 +193,18 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **Never name the AI model or provider** (permanent rule): it is always "AI".
 - Every route loads its record by ID (links and the back gesture always work). Every interactive element gets an
   `accessibilityLabel` when it has no text, and screens and key controls a `testID` (the Maestro flows use them).
-- **No new accounts in the app:** the academy invites people on the website. Signing in is Google or an email and
-  password, with Forgot password.
+- **Accounts in the app** (docs/DECISIONS.md §31): anyone makes one (Create an account: Google, Apple on an iPhone, or
+  an email and a password that confirms its email first), and access still follows the email: the server links an
+  email on a student's record (`linkMyAccount`), and anyone else asks the academy, which approves on the website. Sign
+  in with Apple (`src/lib/appleSignIn.ts`, expo-apple-authentication with a nonce from expo-crypto) is Apple's rule
+  (guideline 4.8) beside Google; deleting an Apple account confirms with Apple and revokes the app's Apple tokens
+  (Apple's rule too). Android has no Apple button.
+- **The enrollment contract comes first** (docs/DECISIONS.md §31): once the academy has one, the family's part shows
+  ContractGate (src/features/contracts/SignContract.tsx) until each of their students at the academy has a signed one
+  (`contractGate`, `@shared/contracts/gate`): the contract's pages as the website saved them (the PDF itself when there
+  are none), the children a parent signs for (one signature, a copy each), their name, parent or guardian, a finger
+  signature (SignaturePad, drawn with Skia) and the agreement; `signContractSignedIn` signs it on the server. A student
+  waits for their parent. Anything that can't be read opens the app rather than locking anyone out.
 - **Zoomable pictures** use `ZoomCanvas` (in a page: `ZoomScrollView`, or `Screen zoomable`): it follows each finger,
   so a hand's late second finger or first-lifted one never makes the picture jump, and the page waits for it natively.
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.

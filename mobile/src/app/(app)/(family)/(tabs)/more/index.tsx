@@ -1,6 +1,6 @@
-import type { SignInMethods } from "@shared/auth";
+import { type SignInMethods, signInWays } from "@shared/auth";
 import { ROLE_LABELS } from "@shared/roles";
-import { formatDateKey } from "@shared/time";
+import { formatDateKey, formatInstant } from "@shared/time";
 import * as Application from "expo-application";
 import { router } from "expo-router";
 import { Bell, Eye, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
@@ -11,6 +11,7 @@ import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
+import { useSignedContracts } from "@/features/family/data";
 import { AcademyContact } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { studentLine } from "@/features/students/format";
@@ -29,21 +30,21 @@ function builtWhen(iso: string): string {
 
 /** "You sign in with Google", as the website's Account says how. */
 function signInLine(methods: SignInMethods): string {
-  if (methods.google && methods.password) return "You sign in with Google, or your email and password";
-  if (methods.google) return "You sign in with Google";
-  return "You sign in with your email and password";
+  return `You sign in with ${signInWays(methods).replace(/email and password$/i, "your email and password")}`;
 }
 
 /**
  * Everything else, kept short: the account signed in and how it signs in (Sign-in & security), the children (or the
- * student's own record) as the academy has them, the appearance, how to reach the academy, help, the privacy policy,
+ * student's own record) as the academy has them, with who signed their enrollment contract, the appearance, how to reach the academy, help, the privacy policy,
  * the website, which version this is, signing out, and deleting the account: the website's Profile, for families.
  */
 export default function FamilyMoreScreen() {
-  const { actor, member, name, portal, canViewAs, viewAs } = useBranch();
+  const { actor, member, name, portal, canViewAs, viewAs, timezone } = useBranch();
   const { email, methods, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const family = useFamily();
+  const signed = useSignedContracts(family.ids);
+  const signedById = new Map(signed.data.map((d) => [d.id, d]));
   const colors = useColors();
   const version = `${Application.nativeApplicationVersion ?? "1.0.0"} (${Application.nativeBuildVersion ?? "1"})`;
   const built = [env.buildCommit, env.builtAt ? builtWhen(env.builtAt) : ""].filter(Boolean).join(", ");
@@ -94,6 +95,7 @@ export default function FamilyMoreScreen() {
             const line = s ? studentLine(s) : "";
             // The rest of what the website's Account shows: the school, and since when the classes go.
             const more = s ? [s.school?.trim(), s.firstSessionDate ? `Classes since ${formatDateKey(s.firstSessionDate, "monthYear")}` : null].filter(Boolean).join(" · ") : "";
+            const contract = signedById.get(id);
             return (
               <ListRow
                 key={id}
@@ -108,6 +110,11 @@ export default function FamilyMoreScreen() {
                       {more ? (
                         <T variant="small" tone="muted">
                           {more}
+                        </T>
+                      ) : null}
+                      {contract ? (
+                        <T variant="small" tone="muted" testID={`family-more-contract-${id}`}>
+                          {contract.via === "paper" ? "Enrollment contract signed on paper" : `Enrollment contract signed by ${contract.signerName || "a parent"}${contract.signedAt?.toMillis ? ` on ${formatInstant(contract.signedAt.toMillis(), timezone, { month: "short", day: "numeric", year: "numeric" })}` : ""}`}
                         </T>
                       ) : null}
                     </View>

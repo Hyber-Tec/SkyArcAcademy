@@ -4,6 +4,7 @@ import { KeyRound } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View, type TextInput } from "react-native";
 import { ErrorBox, StrengthMeter } from "@/components/AuthParts";
+import { AppleMark } from "@/components/AppleMark";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { PasswordField } from "@/components/Field";
@@ -26,8 +27,8 @@ const currentMethods = (): SignInMethods | null => (auth.currentUser ? signInMet
 /**
  * More → Sign-in & security, for every role (the staff's More and the family's), as the website's Profile has it
  * (web/src/features/profile/SecuritySection.tsx, web/src/components/app/SignInSecurity.tsx): how the account signs in
- * (Google, a password), and its password, changed after the current one is confirmed, or added to an account that signs
- * in with Google only, with the website's checks and words (@shared/auth). Access never depends on how someone signs
+ * (Google, Apple on an iPhone, a password), and its password, changed after the current one is confirmed, or added to
+ * an account that signs in with Google or Apple only, with the website's checks and words (@shared/auth). Access never depends on how someone signs
  * in: it follows the email.
  */
 export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: string }) {
@@ -69,6 +70,19 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
           right={methods.google ? <Badge style={styles.center}>Connected</Badge> : undefined}
           testID="security-google"
         />
+        {methods.apple ? (
+          <ListRow
+            icon={
+              <RowIcon>
+                <AppleMark size={17} color={colors.foreground} />
+              </RowIcon>
+            }
+            title="Apple"
+            subtitle={email ?? ""}
+            right={<Badge style={styles.center}>Connected</Badge>}
+            testID="security-apple"
+          />
+        ) : null}
         <ListRow
           icon={
             <RowIcon>
@@ -76,7 +90,7 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
             </RowIcon>
           }
           title="Password"
-          subtitle={methods.password ? "You can sign in with your email and password." : "Add one to sign in without Google."}
+          subtitle={methods.password ? "You can sign in with your email and password." : `Add one to sign in without ${methods.apple ? "Apple" : "Google"}.`}
           right={
             open ? undefined : (
               <Button size="sm" variant="outline" onPress={() => setOpen(true)} testID="security-password-open">
@@ -90,6 +104,7 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
       {open && email ? (
         <PasswordForm
           adding={!methods.password}
+          confirmWith={methods.apple && !methods.google ? "apple" : "google"}
           email={email}
           onClose={(changed) => {
             setOpen(false);
@@ -102,7 +117,7 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
 }
 
 /** Change the password (the current one first), or add one to a Google account: the website's PasswordDialog. */
-function PasswordForm({ adding, email, onClose }: { adding: boolean; email: string; onClose: (changed: boolean) => void }) {
+function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean; confirmWith: "google" | "apple"; email: string; onClose: (changed: boolean) => void }) {
   const { changePassword, sendPasswordReset } = useAuth();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -127,9 +142,9 @@ function PasswordForm({ adding, email, onClose }: { adding: boolean; email: stri
         await attempt();
       } catch (e) {
         if (!adding || !/requires-recent-login/.test(codeOf(e))) throw e;
-        // Firebase asks an account that signed in with Google a while ago to confirm it's them before a password is
-        // added: Google's own window (as when deleting the account), then once more.
-        if (!(await confirmIdentity("google"))) {
+        // Firebase asks an account that signed in with Google (or Apple) a while ago to confirm it's them before a
+        // password is added: Google's own window or Apple's sheet (as when deleting the account), then once more.
+        if (!(await confirmIdentity(confirmWith))) {
           setBusy(false);
           return;
         }
