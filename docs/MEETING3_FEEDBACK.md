@@ -160,7 +160,7 @@ started: *already works*, *small change* or *new work*.
     (3×20, 60 shots) in one tap, and an easier button to find (`SC1`).
 
 ### AT: Attendance
-- [ ] **AT1. Check that past attendance is easy to change.** The manager is marking the past weeks himself (Here,
+- ✅ **AT1. Check that past attendance is easy to change.** The manager is marking the past weeks himself (Here,
   No-show, Canceled, moved). Past classes must be easy to mark and change on the website, and the attendance figures
   must follow. *(He starts right away, so this comes first.)*
   - *Plan:* **Already works:** on the website's schedule a past day's student cards have Here and No-show, and their
@@ -168,6 +168,9 @@ started: *already works*, *small change* or *new work*.
     weeks to October 25 are all Here and the ones since are unmarked (production, counted on 2026-11-03), so most of
     the work is marking the exceptions, then Here for the recent weeks. **Small change:** mark the rest of a class
     Here in one click, and past classes still unmarked easy to see.
+  - *Done (#105):* a day that has started says how many students aren't marked yet (the Day view's title, the week's
+    strip, each day's header); **Mark the rest here** for a class (its sheet and menu) and for a day (after a
+    confirmation), each seat audited as by hand.
 
 ### SC: The Scores tab
 - [ ] **SC1. Finding where to add scores.** On the website the manager couldn't find how to add a score from a student's

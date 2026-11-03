@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LuMinus, LuPlus, LuTrash2, LuUsers } from 'react-icons/lu'
+import { LuCheckCheck, LuMinus, LuPlus, LuTrash2, LuUsers } from 'react-icons/lu'
 import { MAX_SEATS_PER_CLASS } from '@shared/settings/businessRules'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import type { SessionStatus } from '@shared/settings/defaults'
@@ -45,6 +45,7 @@ function ClassBody({ v, onClose }: { v: ClassView; onClose: () => void }) {
   const { c } = v
   const editable = b.mode === 'admin' && b.canEdit(c.dateKey)
   const statuses = c.dateKey <= b.today ? ALL : COMING_OR_OFF
+  const toMark = editable ? b.toMark([v]).length : 0
   const [note, setNote] = useState(c.note ?? '')
   const seats = [...v.seats].sort((a, b2) => Number(a.status === 'canceled') - Number(b2.status === 'canceled'))
   const levels = levelsOf(v, b.student)
@@ -95,7 +96,14 @@ function ClassBody({ v, onClose }: { v: ClassView; onClose: () => void }) {
       </section>
 
       <section className="p-5">
-        <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Students</h3>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Students</h3>
+          {toMark ? (
+            <Button variant="outline" size="xs" onClick={() => b.markHere([v], 'class')} data-testid="mark-rest-here">
+              <LuCheckCheck /> Mark the rest here ({toMark})
+            </Button>
+          ) : null}
+        </div>
         <ul className="space-y-1.5" data-testid="class-students">
           {seats.map((s) => {
             const st = b.student(s.studentId)

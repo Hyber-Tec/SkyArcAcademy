@@ -1,4 +1,4 @@
-import { LuArrowRight, LuArrowRightLeft, LuBan, LuCheck, LuInbox, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTrash2, LuUserPlus, LuUserX, LuUsers } from 'react-icons/lu'
+import { LuArrowRight, LuArrowRightLeft, LuBan, LuCheck, LuCheckCheck, LuInbox, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTrash2, LuUserPlus, LuUserX, LuUsers } from 'react-icons/lu'
 import { type DateKey, addDays, formatDateKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { type MenuEntry, menu } from '@/components/app/ItemMenu'
@@ -72,13 +72,18 @@ export function seatContextActions(b: Board, seat: WithId<Session>, v: ClassView
   )
 }
 
-/** A class's actions, as its sheet has them: open it, add a student, who's in that day, remove it. */
+/**
+ * A class's actions, as its sheet has them: open it, mark the students not marked yet here (once it has started), add
+ * a student, who's in that day, remove it.
+ */
 export function classActions(b: Board, v: ClassView): MenuEntry[] {
   const { c } = v
   const free = freeSeats(v)
+  const toMark = b.toMark([v]).length
   return menu(
     { kind: 'label', label: `${classRange(c.startMin, c.endMin)} class` },
     { label: 'Open the class', icon: LuSquareArrowOutUpRight, onSelect: () => b.openClass(c.id) },
+    toMark > 0 && { label: 'Mark the rest here', icon: LuCheckCheck, hint: String(toMark), onSelect: () => b.markHere([v], 'class') },
     { label: 'Add a student', icon: LuUserPlus, hint: free > 0 ? `${free} open` : 'Full', disabled: free <= 0, onSelect: () => b.addSeat(c.id) },
     { label: "Who's in this day", icon: LuUsers, onSelect: () => b.editWhosIn(c.dateKey) },
     { label: 'Remove this class', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => b.removeClass(v) },
@@ -101,10 +106,16 @@ export function requestActions(b: Board, requestId: string, v: ClassView): MenuE
   )
 }
 
-/** A day's empty space on the timeline, right-clicked: add a class, who's in, and in the week, open the day. */
+/**
+ * A day's empty space on the timeline, right-clicked: add a class, who's in, mark the students not marked yet here (a
+ * day that has started), and in the week, open the day.
+ */
 export function dayActions(b: Board, d: DateKey, week = false): MenuEntry[] {
+  const classes = b.byDate.get(d) ?? []
+  const toMark = b.toMark(classes).length
   return menu(
     { kind: 'label', label: dayName(d) },
+    toMark > 0 && { label: 'Mark the rest of the day here', icon: LuCheckCheck, hint: String(toMark), onSelect: () => b.markHere(classes, 'day') },
     { label: 'Add a class', icon: LuPlus, onSelect: () => b.addClass(d) },
     { label: "Who's in", icon: LuUsers, onSelect: () => b.editWhosIn(d) },
     week && { label: 'Open the day', icon: LuArrowRight, separatorBefore: true, onSelect: () => b.openDay(d) },

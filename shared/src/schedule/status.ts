@@ -34,3 +34,15 @@ export const SESSION_STATUS_DOT: Record<SessionStatus, string> = {
 
 /** Calendar events in lists. */
 export const EVENT_DOT = '#009EEB'
+
+/** A seat nobody has marked yet: still coming (pending or confirmed), not here, a no-show or canceled. */
+export const isUnmarked = (status: SessionStatus) => status === 'pending' || status === 'confirmed'
+
+/**
+ * Seats whose attendance can be taken but hasn't been: unmarked, in a class that has started (a day before today, or
+ * today once its time has come). The office marks the rest of a class or a day here in one go (the third meeting,
+ * `AT1`: the manager marks the past weeks himself).
+ */
+export function seatsToMark<S extends { dateKey: string; startMin: number; status: SessionStatus; isDeleted?: boolean }>(seats: readonly S[], today: string, nowMin: number): S[] {
+  return seats.filter((s) => !s.isDeleted && isUnmarked(s.status) && (s.dateKey < today || (s.dateKey === today && s.startMin <= nowMin)))
+}
