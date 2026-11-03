@@ -30,6 +30,7 @@ import { scoreTotal, scoresByFile } from '@shared/drive/scores'
 import { type DriveFile, accessOf, isFixedFolder, studentFolderId } from '@shared/drive/types'
 import { COL } from '@shared/paths'
 import { isStaffRole } from '@shared/roles'
+import { type ResultPrint, printOf, repeatOf } from '@shared/scores/duplicates'
 import { type Evaluation, POSITION_LABELS, type ResultKind } from '@shared/shooting/evaluation'
 import { positionFromName } from '@shared/sius/parse'
 import type { WithId } from '@shared/types'
@@ -308,14 +309,32 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
   async function confirmResults(list: ResultRow[], kind: ResultKind) {
     if (!results) return
     const studentName = new Map(index.students.map((s) => [s.id, s.name]))
-    // A result already in the Drive (the same printed time and total) isn't added twice.
-    const known = new Map<string, Set<string>>()
+    // A result already in the student's scores, or the same report twice in this drop (the same printed time and total,
+    // shared/src/scores/duplicates.ts), isn't added again (the third meeting, CP2).
+    const known = new Map<string, ResultPrint[]>()
     for (const id of new Set(list.map((r) => r.studentId as string))) {
       const snap = await getDocs(query(branchCol(branchId, COL.evaluations), where('studentId', '==', id)))
-      known.set(id, new Set(snap.docs.map((d) => d.data() as Evaluation).filter((e) => e.sius).map((e) => `${e.sius!.printed}|${e.total}`)))
+      known.set(id, snap.docs.map((d) => printOf(d.data() as Evaluation)))
     }
-    const fresh = list.filter((r) => r.sius.reading.noShots || !known.get(r.studentId!)?.has(`${r.sius.reading.printed}|${r.sius.reading.total}`))
-    const skipped = list.length - fresh.length
+    const fresh: ResultRow[] = []
+    const repeated: string[] = []
+    for (const r of list) {
+      const reading = r.sius.reading
+      if (reading.noShots) {
+        fresh.push(r)
+        continue
+      }
+      const print: ResultPrint = { studentId: r.studentId as string, dateKey: reading.dateKey, position: r.position ?? '', shots: reading.shots, total: reading.total, printed: reading.printed, values: reading.series.flatMap((x) => x.shots.map((t) => t.v)) }
+      const theirs = known.get(print.studentId) ?? []
+      if (repeatOf(print, theirs)) {
+        repeated.push(r.file.name)
+        continue
+      }
+      theirs.push(print)
+      known.set(print.studentId, theirs)
+      fresh.push(r)
+    }
+    const skipped = repeated.length
     const uploads: ResultUpload[] = fresh.map((r) => {
       const reading = r.sius.reading
       const studentId = r.studentId as string
@@ -349,7 +368,11 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
     })
     const baseId = results.baseId
     setResults(null)
-    if (skipped) toast.info(skipped === 1 ? 'One result was already in the Drive, so it wasn’t added again.' : `${skipped} results were already in the Drive, so they weren’t added again.`)
+    if (skipped)
+      toast.info(skipped === 1 ? `“${repeated[0]}” is already in the student’s scores, so it wasn’t added again.` : `${skipped} results were already in the students’ scores (or twice in what you dropped), so they weren’t added again.`, {
+        description: skipped > 1 ? repeated.slice(0, 4).join(', ') + (skipped > 4 ? '…' : '') : undefined,
+        duration: 10_000,
+      })
     if (!uploads.length) return
     try {
       const failures = await saveResults(branchId, actor, index, uploads)

@@ -1,6 +1,7 @@
 import { dateInName } from '@shared/drive/exif'
 import type { DriveStudent } from '@shared/drive/model'
 import { studentsNamedIn } from '@shared/drive/suggest'
+import { sheetStudent } from '@shared/scores/sheetStudent'
 import { positionFromName } from '@shared/sius/parse'
 import { typedReview } from '@shared/targets/review'
 import { type DateKey, dateKeyOf } from '@shared/time'
@@ -76,7 +77,7 @@ export async function readFile(
       // A name printed on the report (set on the SIUS lane) comes first, then the file's name.
       const printed = sius.result.pageText.join(' ')
       const position = positionFromName(printed) ?? positionFromName(bareName(file))
-      const found: Found = { kind: 'sius', sius, position, positionFrom: positionFromName(printed) ? 'report' : position ? 'file' : null, resultKind: 'practice', duplicateOf: null }
+      const found: Found = { kind: 'sius', sius, position, positionFrom: positionFromName(printed) ? 'report' : position ? 'file' : null, resultKind: 'practice' }
       const unknown = printed.trim() ? { ...nobody, said: printed.trim(), saidIn: 'report' as const } : nobody
       return { found, ...(whose(printed, 'report', students) ?? whose(bareName(file), 'file', students) ?? unknown) }
     }
@@ -101,9 +102,16 @@ export async function readFile(
     const { reading: r, found } = (await readSheet({ branchId, ...content })).data
     if (!found || (!r.positions.length && r.total === null)) return { found: none(`${what}, and it doesn’t read as a results sheet.`), ...nobody }
     let key = 1
-    const read = draftFromReading(r, pixels, { base: newSheetDraft(today, key++), today, nextKey: () => key++, studentName: null })
+    const read = draftFromReading(r, pixels, { base: newSheetDraft(today, key++), today, nextKey: () => key++ })
     const sheet: Found = { kind: 'sheet', draft: read.draft, readNote: read.readNote, placedNote: read.placedNote, partly: !r.consistent, checked: false }
-    return { found: sheet, ...((r.name ? whose(r.name, 'sheet', students) : null) ?? whose(bareName(file), 'file', students) ?? (r.name ? { ...nobody, said: r.name, saidIn: 'sheet' as const } : nobody)) }
+    // The shooter as printed, a full name of theirs (other names too), or in the sheet's heading (the third meeting, CP1).
+    const named = sheetStudent(r, students)
+    const fromSheet: Whose | null = named.id
+      ? { studentId: named.id, studentFrom: 'sheet', said: null, saidIn: null, candidates: [] }
+      : named.candidates.length
+        ? { studentId: null, studentFrom: null, said: r.name || null, saidIn: 'sheet', candidates: named.candidates }
+        : null
+    return { found: sheet, ...(fromSheet ?? whose(bareName(file), 'file', students) ?? (r.name ? { ...nobody, said: r.name, saidIn: 'sheet' as const } : nobody)) }
   } catch {
     return { found: none(`${what}, and it couldn’t be read as a results sheet just now.`), ...nobody }
   }

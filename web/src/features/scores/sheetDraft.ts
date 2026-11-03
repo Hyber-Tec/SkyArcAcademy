@@ -1,5 +1,5 @@
 import { httpsCallable } from 'firebase/functions'
-import type { SheetReading } from '@shared/scores/sheet'
+import { type SheetReading, courseRows } from '@shared/scores/sheet'
 import { readSheetShots } from '@shared/scores/sheetRead'
 import { type SheetPlaces, placedSeries, placesByPosition, sheetSeriesOf } from '@shared/scores/sheetSave'
 import type { Evaluation, Position, ResultKind } from '@shared/shooting/evaluation'
@@ -76,13 +76,13 @@ export const newSheetDraft = (today: DateKey, key: number): SheetDraft => ({ mat
 
 /**
  * What a sheet's reading fills in (the match, the date, each position's shots, total and inner tens, and each shot's
- * place on the sheet's targets when its photo shows them), with what to say about it. `studentName`: the student it's
- * being added for, when known, to check the sheet names them.
+ * place on the sheet's targets when its photo shows them), with what to say about it. Whose it is comes from the name
+ * printed on it (`sheetStudent`), said by each place that reads one.
  */
 export function draftFromReading(
   r: SheetReading,
   pixels: RgbaImage | undefined,
-  { base, today, nextKey, studentName }: { base: SheetDraft; today: DateKey; nextKey: () => number; studentName: string | null },
+  { base, today, nextKey }: { base: SheetDraft; today: DateKey; nextKey: () => number },
 ): { draft: SheetDraft; readNote: string; placedNote: string | null } {
   const draft: SheetDraft = { ...base }
   if (r.match) draft.match = r.match
@@ -106,10 +106,9 @@ export function draftFromReading(
   } else if (r.total !== null) {
     draft.rows = [{ ...emptySheetRow(nextKey(), base.rows[0]?.position ?? 'standing'), total: String(r.total), innerTens: r.innerTens === null ? '' : String(r.innerTens) }]
   }
-  const who = studentName && r.name && !r.name.toLowerCase().includes(studentName.split(' ')[0].toLowerCase()) ? ` The sheet names ${r.name}: check it’s ${studentName}’s.` : ''
   const readNote = r.consistent
-    ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? 'position' : 'positions'}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ''}.${who}`
-    : `Partly read: check every number against the sheet.${who}`
+    ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? 'position' : 'positions'}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ''}.`
+    : 'Partly read: check every number against the sheet.'
   // Then each shot's place on the sheet's target pictures, for the replay: the rows keep it with their values.
   let placedNote: string | null = null
   if (pixels && r.consistent && r.positions.length) {
@@ -120,6 +119,25 @@ export function draftFromReading(
     if (of) placedNote = placed === of ? `Every shot's place found on the sheet's targets (${of} series): they play back on the score.` : placed ? `Shots placed on ${placed} of ${of} series' targets; the others keep their scores only.` : "The sheet's targets couldn't be read, so the shots keep their scores only."
   }
   return { draft, readNote, placedNote }
+}
+
+/** Courses of fire filled in one tap when a match is typed by hand (the third meeting, CP5). */
+export const QUICK_COURSES = [
+  { label: '3×20', course: '3x20 Air Rifle' },
+  { label: '3×10', course: '3x10 Air Rifle' },
+  { label: '60 shots', course: '60 Shots Air Rifle' },
+  { label: '40 shots', course: '40 Shots Air Rifle' },
+] as const
+
+/** A course of fire's positions and shots in the form, keeping any total already typed for a position it has. */
+export function withCourse(d: SheetDraft, course: string, nextKey: () => number): SheetDraft {
+  const list = courseRows(course)
+  if (!list) return d
+  const rows = list.map(({ position, shots }) => {
+    const had = d.rows.find((r) => r.position === position)
+    return { ...emptySheetRow(nextKey(), position), shots: String(shots), total: had?.total ?? '', innerTens: had?.innerTens ?? '' }
+  })
+  return { ...d, course, rows }
 }
 
 /** Each line's numbers, and whether every one is a result that can be saved (each position once, a date). */
