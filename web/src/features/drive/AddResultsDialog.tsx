@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LuArrowRight, LuCircleAlert, LuCopy, LuFileSearch, LuInfo } from 'react-icons/lu'
+import { LuArrowRight, LuCircleAlert, LuCopy, LuFileSearch, LuInfo, LuX } from 'react-icons/lu'
 import type { DriveStudent } from '@shared/drive/model'
 import { type ResultPrint, repeatOf, sameResult } from '@shared/scores/duplicates'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition, type ResultKind } from '@shared/shooting/evaluation'
@@ -38,8 +38,8 @@ type Repeat = { kind: 'saved' } | { kind: 'twin'; of: string }
 /** A choice read from the report's words or from the file name. */
 export type ReadFrom = 'report' | 'file'
 
-/** Rows and "Set all" share the columns: the target, the result, the student, the position. */
-const COLUMNS = 'sm:grid-cols-[56px_minmax(0,1fr)_14rem_10rem]'
+/** Rows and "Set all" share the columns: the target, the result, the student, the position, and Remove. */
+const COLUMNS = 'sm:grid-cols-[56px_minmax(0,1fr)_14rem_10rem_2rem]'
 /** Under the result on a phone: the student and the position side by side. */
 const PICKERS = 'grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2 sm:contents'
 
@@ -139,6 +139,11 @@ export function AddResultsDialog({
   const leftOut = rows.length - adding.length
   const firstName = (studentId: string) => (options.find((o) => o.value === studentId)?.label ?? 'the student').split(' ')[0]
   const set = (key: string, patch: Partial<ResultRow>) => setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+  // A file taken off the list (a duplicate, or one dropped by mistake) isn't added; the last one closes the dialog.
+  const remove = (key: string) => {
+    if (rows.length === 1) return onClose()
+    setRows((all) => all.filter((r) => r.key !== key))
+  }
   const setAll = (patch: Partial<ResultRow>) => setRows((all) => all.map((r) => ({ ...r, ...patch })))
   // "Set all" shows the student or the position when every row has the same one.
   const allStudent = rows.every((r) => r.studentId === rows[0]?.studentId) ? (rows[0]?.studentId ?? null) : null
@@ -194,6 +199,7 @@ export function AddResultsDialog({
                   />
                   <PositionSelect value={allPosition} onChange={(p) => setAll({ position: p, positionFrom: null })} placeholder={fits('Position…', 'Position for all')} label="Position for all" />
                 </div>
+                <span className="hidden sm:block" />
               </div>
             ) : null}
             <div className="divide-y">
@@ -204,11 +210,12 @@ export function AddResultsDialog({
                 const studentFrom = r.studentId && !fixedStudentId ? (r.studentFrom ?? null) : null
                 const repeat = repeats.get(r.key) ?? null
                 return (
-                  <div key={r.key} className={cn('grid gap-x-3 gap-y-2 p-3 sm:items-start', COLUMNS, repeat && !r.keepRepeat && 'bg-amber-50/40 dark:bg-amber-950/10')} data-testid="result-row">
+                  <div key={r.key} className={cn('relative grid gap-x-3 gap-y-2 p-3 sm:items-start', COLUMNS, repeat && !r.keepRepeat && 'bg-amber-50/40 dark:bg-amber-950/10')} data-testid="result-row">
                     <div className="hidden sm:block">
                       <TargetPlot shots={shots} size={56} color={color} showMpi={false} />
                     </div>
-                    <div className="min-w-0 space-y-1">
+                    {/* On a phone the Remove button sits in the row's corner: the text keeps clear of it. */}
+                    <div className="min-w-0 space-y-1 pr-8 sm:pr-0">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-medium tabular-nums">{formatDateKey(reading.dateKey, 'weekdayMedium')} · {formatMinutes(reading.timeMin)}</span>
                         {reading.noShots ? (
@@ -280,10 +287,23 @@ export function AddResultsDialog({
                         {r.positionFrom && r.position ? <ReadFromNote what="position" from={r.positionFrom} /> : null}
                       </div>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 size-8 text-muted-foreground hover:text-foreground sm:static sm:mt-0.5"
+                      onClick={() => remove(r.key)}
+                      disabled={busy}
+                      aria-label={`Remove “${r.file.name}”: it won’t be added`}
+                      title="Remove: it won’t be added"
+                      data-testid="result-remove"
+                    >
+                      <LuX />
+                    </Button>
                     {repeat && r.studentId ? (
                       <div
                         className={cn(
-                          'flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border px-3 py-2 text-sm sm:col-span-4',
+                          'flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border px-3 py-2 text-sm sm:col-span-5',
                           r.keepRepeat ? 'text-muted-foreground' : 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200',
                         )}
                         data-testid="drive-repeat"
