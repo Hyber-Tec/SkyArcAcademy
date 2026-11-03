@@ -11,10 +11,10 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    means (release it, or the reply to a rejection). If Apple asks for the academy's permission (guideline 5.2.1),
    attach the academy's email. Since 2026-10-26 the reviewers' login is an admin with the academy's real data: paste
    the new notes (`docs/store/review-notes.md`) into App Review Information if App Store Connect lets you while it
-   waits. No second submission while it's in review (Goo, 2026-10-26).
-2. **Google Play:** Sky Arc 1.0.0 (build 3, with classes taught together) has been in Google's review since 2026-10-26.
-   When Google answers, tell Claude Code (`docs/publishing.md`, "When a store answers"): an approved first release
-   goes live by itself.
+   waits. No second submission while it's in review (Goo, 2026-10-26). Still waiting on 2026-11-03; Goo has written
+   to Apple's support.
+2. **Google Play:** Sky Arc 1.0.0 (build 3, with classes taught together) is **published and live** (by 2026-11-03).
+   Nothing to do until the next update.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
 4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
@@ -22,15 +22,16 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    below), sign in with one of the demo's own logins to show it ("Demo" shows at the top), and with your own account
    for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
    moves its classes around the day).
-5. **The next update, 1.1.0, for both stores**, once each has answered on 1.0.0: the iPhone gets classes taught
+5. **The next update, 1.1.0, for both stores**, once everything is ready (Goo, 2026-11-03: no update before then;
+   Google Play has answered, the App Store hasn't yet): the iPhone gets classes taught
    together; both get the demo academy for the demo logins, the schedule by Day or Week (#41), and the marks' words. The iPhone's build is on TestFlight already (1.1.0, build 4, 2026-10-27). The steps, and which Mac
    uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
    - **The schedule (`V2`) and the hole sizes (`P1`)** are merged (#67, #68, and the phone's part in #71). The manager
      isn't asked about the scoring rule.
-   - **The manager's files**, when he sends them (Section 7): the SIUS folder, past schedules, the latest sheet, the
-     blank contract, nicknames, the academy owner's email. No rush.
+   - **The manager's files:** the past results are all in (the third meeting); only the blank contract is still to
+     come (`CT2`).
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
 8. **AI for report text** (`docs/DECISIONS.md` §26): you're a super admin (HyberTec's other developer too, §29). On
@@ -42,6 +43,10 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 9. **Your round of 2026-11-02** (`docs/DECISIONS.md` §29): your three picks are built. The Students list (#100) and
    the Scores tab (#101) are merged; **review the Scores page (#102)**. What they left for you to decide is the first
    three questions below.
+10. **The third meeting's tasks** (2026-11-02): [`docs/MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md), ticked as each is
+    merged, all on the MacBook Pro this round (Goo, 2026-11-03). Yours: decide the parents' sign-up flow (`CT1`, a
+    proposal from Claude Code), the blank contract when the manager sends it (`CT2`), and the domain once he invites you
+    to Squarespace (`DM1`–`DM3`).
 
 ## Product questions waiting for the owner
 
@@ -98,8 +103,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   and Sunday is open 1–7:30 PM; the import brought in the staff, the students and their parents' contacts, and the
   classes from August 31 to November 30 with who's in each day (from the sheets and the spreadsheet of 2026-10-25).
   Nobody got access or email. Still to do:
-  1. **The manager's later changes:** the sheets and the spreadsheet as they're edited; the import runs again and
-     updates the same records (`docs/internal/schedule-import/`), or the office changes them on the website.
+  1. **The manager's later changes:** none by import: since the third meeting (2026-11-02) the academy uses the app,
+     and the manager marks the past weeks' attendance himself on the website.
   2. **Who's in on Sundays:** the coach in turn isn't on the sheets, so Sundays show the every-Sunday coach and the
      manager only; the office adds that week's coach in "Who's in". The make-up Friday of October 23 has nobody in,
      and one student was in two classes at once that day.

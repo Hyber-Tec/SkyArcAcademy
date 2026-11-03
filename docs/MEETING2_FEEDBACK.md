@@ -287,7 +287,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Done (#68):* on the manager's 36 hand-scored cards (local only), the app's totals went from 2.6 points per 10
     shots over his coaches' to 1.7, and the shots scored as the coach wrote from 68% to 76% (cards within 3 points: 26
     to 28 of 36; within 5: 32 to 33). The manager isn't asked; "most of the hole" is dropped.
-- ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule: `P1`)
+- ✅ **P2. Test and tune the scoring with the real paper targets, locally only.** (reported 2026-10-28: 36 cards; the rule: `P1`; all entered in the app by the third meeting)
   - *Plan:* **New work:** a local test on the manager's cards (38 paper cards, 8 competition sheets), never imported or
     committed; the results go to Goo.
   - Goo has photos of the real paper cards and competition sheets the manager gave us (on the Mac mini). Use them **on
@@ -326,6 +326,8 @@ To start a phase, paste this into Claude Code on the right computer:
     Google's text reader (Goo's pick, 2026-10-28), and the admin checks them before saving.
   - *Since (Goo, 2026-10-29):* a competition shows as its match, series by series, each shot placed from the sheet's
     target pictures and played back, and reports compare each match with the one before (#89, #93; DECISIONS §27).
+  - *Third meeting (2026-11-02):* it works; the follow-ups are [`CP1`–`CP5`](MEETING3_FEEDBACK.md), and competition
+    PDFs come later (`L-CP`).
 - ✅ **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
   (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history. (#48)
   - *Plan:* **New work**, with `P9`: the Evaluation label.
@@ -344,6 +346,8 @@ To start a phase, paste this into Claude Code on the right computer:
 - ✅ **P12. Nicknames and aliases.** Some students go by another name than their legal one. A preferred name plus
   aliases, so name matching (PDFs, scans) and display both work. (#48)
   - *Plan:* **New work:** a preferred name and other names, used by the PDF matching and in searches.
+  - *Third meeting (2026-11-02):* the manager filled in every student's other names; a results sheet's name finds the
+    student by them ([`CP1`](MEETING3_FEEDBACK.md)).
 - ✅ **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
   been a new file." Build the event here; push comes in Phase 3. (#46)
   - *Plan:* **Already done** for reports (a shared report notifies the family). **New work** for scores.
@@ -379,6 +383,8 @@ To start a phase, paste this into Claude Code on the right computer:
   - *Plan:* **New work:** a link the office sends (Goo's pick, 2026-10-28). The family reads the contract on any phone,
     types their name and signs with a finger; no app or account needed. The signed PDF goes to the Contracts folder
     (`F5`). The text waits for the blank contract.
+  - *Third meeting (2026-11-02):* parents will sign in the app right after signing up: the sign-up flow first
+    ([`CT1`](MEETING3_FEEDBACK.md)), then the signing in the app (`CT2`), with `F1`'s two parents and `F5`'s access.
 - ✅ **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
   **visible only to the manager and owners, not coaches.** (#53)
   - *Plan:* **New work**, with `F6`: a Contracts folder only owners and admins see.
@@ -397,11 +403,11 @@ To start a phase, paste this into Claude Code on the right computer:
 - ✅ **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
   or reject family requests. (#46)
   - *Plan:* **New work.**
-- [ ] **S9. Verify the imported schedule.** Some entries looked wrong in the demo (for example, a student marked
+- ✅ **S9. Verify the imported schedule.** (not needed, the third meeting, 2026-11-02: the manager fixes the past weeks himself by marking attendance, [`AT1`](MEETING3_FEEDBACK.md)) Some entries looked wrong in the demo (for example, a student marked
   canceled who actually came). Compare against the **latest schedule sheet** from the manager and fix the differences.
   *(Needs the latest sheet.)*
   - *Plan:* Waits for the latest sheet.
-- [ ] **D1. Past data, September 2026 on**, so parents see history and can use compare and graphs from day one.
+- ✅ **D1. Past data, September 2026 on** (done at the third meeting, 2026-11-02: every SIUS PDF, paper target and competition sheet went in through the Drive and the phone; past schedules aren't needed, `AT1`), so parents see history and can use compare and graphs from day one.
   **Blocked until the manager sends the data** (Section 7). Sources:
   - *Plan:* Waits for the manager's data.
   - **All SIUS PDFs** (one complete folder, replacing the old one). They're electronic and go through the Drive's PDF
@@ -409,10 +415,10 @@ To start a phase, paste this into Claude Code on the right computer:
   - **Past schedules** (the manager's Google Sheets).
   - **Paper targets, evaluations and competition sheets:** **Goo enters these by hand** through the app (`P2`). No bulk
     import.
-- [ ] **D2. Imported data can have mistakes.** Mark imported items so they're easy to review and fix, and give Goo a
+- ✅ **D2. Imported data can have mistakes.** (not needed: the results went in by hand through the app, not by an import, third meeting) Mark imported items so they're easy to review and fix, and give Goo a
   summary (counts per student, anything unmatched or flagged).
   - *Plan:* **New work**, with `D1`.
-- [ ] **D3. Real student data never goes into the repository.** Import straight into the app's database and storage.
+- ✅ **D3. Real student data never goes into the repository.** (kept: the results are in the app only) Import straight into the app's database and storage.
   - *Plan:* The rule for `D1`.
 - ✅ **X1. The academy owner's account**, with payroll access: the owner runs payroll but isn't in the app yet.
   *(Needs their email from the manager.)* (not needed, Goo 2026-10-28: the manager's account is the owner)
@@ -478,7 +484,8 @@ from the app, without calling or texting the academy.
   - *Done (#75):* checked on both phones with a post of every format the website's editor makes (headings, bold,
     italic, underline, strike, inline code, a link, nested and numbered lists, a quote, a code block, a rule and a
     picture); a post's headings now take the website's sizes (a small heading was the size of its text).
-- [ ] **M9. A new build and release** following the release process, after the current review.
+- [ ] **M9. A new build and release** following the release process, after the current review. (2026-11-03: Google Play
+  published 1.0.0; the App Store is still reviewing it; the next update goes out once everything is ready, Goo)
 
 ---
 
@@ -486,9 +493,9 @@ from the app, without calling or texting the academy.
 
 These wait until everything else is ready, some even after launch.
 
-- [ ] **L1. Korean + English** across the parent portal, the phone app and the website. Many parents don't speak
+- [ ] **L1. Korean + English** (still later: the third meeting's [`L-LG`](MEETING3_FEEDBACK.md)) across the parent portal, the phone app and the website. Many parents don't speak
   English, so it matters, but it's done in one go later. **Don't work on languages now.**
-- [ ] **E1. Emails going to spam.** Move to the academy's .com domain and send from its `info@` address. Goo does this
+- [ ] **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](MEETING3_FEEDBACK.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
   **in person with the manager** (domain and email access). Until then, invitation emails may land in spam.
 - [ ] **W1. A parent how-to video** on the website and app, recorded once both are final.
 - [ ] **W2. Tuition** on the website, if the manager asks.
@@ -550,19 +557,19 @@ These are **real data**. Goo enters them by hand through the app; Claude Code ma
 imports them automatically, and they're **never committed**.
 
 ### Still needed
-- [ ] **The complete SIUS PDF folder** (everything since reopening) → `D1` (asked 2026-10-28: a shared Drive folder)
-- [ ] **Past schedules** (Google Sheets, September on) → `D1` (asked 2026-10-28)
-- [ ] **The latest weekly schedule sheet** (this week) → `S9` (asked 2026-10-28: the sheet shared view-only, this week on)
+- ✅ **The complete SIUS PDF folder** (everything since reopening) → `D1` (loaded at the third meeting, 2026-11-02)
+- ✅ **Past schedules** (Google Sheets, September on) → `D1` (not needed: the manager marks attendance himself, third meeting)
+- ✅ **The latest weekly schedule sheet** (this week) → `S9` (not needed: the academy uses the app from now on, third meeting)
 - ✅ **A short rules summary** (scoring, practice vs. competition) the manager offered to write, plus the rules email
   mentioned → `P9` (not needed, Goo 2026-10-28: the scoring rule is decided, `P1`)
-- [ ] **The blank enrollment contract (PDF)** → `F4` (asked 2026-10-28)
-- [ ] **The signed contracts** (the academy's Google Drive folder) → `F5` (asked 2026-10-28)
+- [ ] **The blank enrollment contract (PDF)** → `F4` (asked 2026-10-28; asked again at the third meeting, for `CT2`)
+- ✅ **The signed contracts** (the academy's Google Drive folder) → `F5` (not needed: the manager uploads them himself, third meeting)
 - ✅ **Parents' names and second parents' emails** (optional) → `F1`, `F3` (not asked, Goo 2026-10-28)
 - ✅ **Students' nicknames and preferred names** → `P12` (not asked now, Goo 2026-10-28)
 - ✅ **The academy owner's email**, for their owner account → `X1` (not needed: the manager's account is the owner)
 - ✅ **Payroll decisions with the academy's owner:** the clock-out rule, arrival minutes, the pay period → Section 6 (not asked: set in Settings)
 - ✅ **Honest feedback** after using the portal (three design options for anything, on request) (not asked, Goo 2026-10-28)
-- [ ] *Later, in person:* domain access and the `info@` email account → `E1`
+- [ ] *Later, in person:* domain access and the `info@` email account → `E1` (third meeting: an invitation to Squarespace, `DM1`)
 
 ---
 
