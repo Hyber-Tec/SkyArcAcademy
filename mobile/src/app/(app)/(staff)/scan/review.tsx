@@ -1,3 +1,4 @@
+import { printOf } from "@shared/scores/duplicates";
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, RESULT_KINDS, RESULT_KIND_LABELS, type ResultKind, paperEvaluation } from "@shared/shooting/evaluation";
 import { canReplay } from "@shared/shooting/replay";
 import { type CardReview, changeShotsPerBull, reviewShots, reviewTotals, startReview, typedReview } from "@shared/targets/review";
@@ -24,7 +25,8 @@ import { BullTiles } from "@/features/scan/BullTiles";
 import { CardView } from "@/features/scan/CardView";
 import { lastChoices } from "@/features/scan/choices";
 import { type CardFile, type FlatCard, type ReadPhoto, cardFile, flattenCard, readPhoto } from "@/features/scan/photo";
-import { knowFolder, saveCard } from "@/features/scan/save";
+import { clearToSave } from "@/features/scan/repeats";
+import { cardData, knowFolder, saveCard } from "@/features/scan/save";
 import { type PickedStudent, StudentPicker } from "@/features/scan/StudentPicker";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { toast } from "@/lib/toast";
@@ -188,6 +190,8 @@ export default function ScanReviewScreen() {
   /** Only the total typed: saved over the shots said. */
   const saveTotal = async () => {
     if (!student || !position || !read || !totalOk) return;
+    const card = { actor, student, position, dateKey, note, review: null, total: totalNumber, shotCount: shotsNumber, kind };
+    if (!(await clearToSave(branchId, student.name, [printOf(cardData(card, ""))]))) return;
     setPhase({ kind: "saving" });
     try {
       const file = fileRef.current?.read === read ? fileRef.current.file : cardFile(read, flat);
@@ -214,10 +218,11 @@ export default function ScanReviewScreen() {
       });
       if (!ok) return;
     }
+    const official = !typed && written.trim() !== "" ? writtenNumber : null;
+    if (!(await clearToSave(branchId, student.name, [printOf(cardData({ actor, student, position, dateKey, note, review, total: null, kind, written: official }, ""))]))) return;
     setPhase({ kind: "saving" });
     try {
       const file = fileRef.current?.read === read ? fileRef.current.file : cardFile(read, flat);
-      const official = !typed && written.trim() !== "" ? writtenNumber : null;
       await saveCard({ branchId, actor, student, position, dateKey, note, review, total: null, kind, written: official, file });
       remember(student, position);
       lastChoices.shotsPerBull = review.shotsPerBull;

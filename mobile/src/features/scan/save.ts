@@ -84,6 +84,23 @@ export function folderUnknown(branchId: string, studentId: string): void {
 const describe = (e: Pick<Evaluation, "position" | "dateKey" | "total" | "shots">) =>
   `${SOURCE_LABELS.paper} ${POSITION_LABELS[e.position].toLowerCase()} result of ${formatDateKey(e.dateKey, "medium")} (${e.total} over ${e.shots} shots, ${per10(e.total, e.shots) ?? 0} per 10)`;
 
+/** The card's result as it's saved: its scores, the written (official) score when there is one, and what it was. */
+export function cardData(c: Omit<SaveCard, "file" | "branchId">, fileId: string): Omit<Evaluation, keyof AuditStamp> {
+  // A total typed without bulls is over the shots said (any number: 20, 30, 60), as on the website.
+  const data: Omit<Evaluation, keyof AuditStamp> = c.review
+    ? cardEvaluation(c, fileId)
+    : paperEvaluation({ studentId: c.student.id, studentName: c.student.name, position: c.position, dateKey: c.dateKey, shots: null, total: c.total, shotCount: c.shotCount ?? 10, fileId, note: c.note.trim() });
+  data.kind = c.kind;
+  // The written score, when it differs from the app's reading, is what everyone sees (totals, charts, reports).
+  const official = c.review && c.written !== null && c.written !== undefined && c.written !== data.total ? c.written : null;
+  data.official = official === null ? null : { appTotal: data.total, by: c.actor.email, at: serverTimestamp() as unknown as NonNullable<Evaluation["official"]>["at"] };
+  if (official !== null) {
+    data.total = official;
+    data.wholeTotal = official;
+  }
+  return data;
+}
+
 /**
  * Writes the card and returns as soon as the phone has it; the server's confirmation and the upload follow by
  * themselves, with a message if either fails.
@@ -96,18 +113,7 @@ export async function saveCard(c: SaveCard): Promise<{ evaluationId: string; fil
   const folderRef = doc(db, ROOT.branches, c.branchId, COL.driveFolders, folderId);
   const by = driveActor(c.actor);
   const name = cardFileName(c.dateKey, c.position);
-  // A total typed without bulls is over the shots said (any number: 20, 30, 60), as on the website.
-  const data: Omit<Evaluation, keyof AuditStamp> = c.review
-    ? cardEvaluation(c, fileRef.id)
-    : paperEvaluation({ studentId: c.student.id, studentName: c.student.name, position: c.position, dateKey: c.dateKey, shots: null, total: c.total, shotCount: c.shotCount ?? 10, fileId: fileRef.id, note: c.note.trim() });
-  data.kind = c.kind;
-  // The written score, when it differs from the app's reading, is what everyone sees (totals, charts, reports).
-  const official = c.review && c.written !== null && c.written !== undefined && c.written !== data.total ? c.written : null;
-  data.official = official === null ? null : { appTotal: data.total, by: c.actor.email, at: serverTimestamp() as unknown as NonNullable<Evaluation["official"]>["at"] };
-  if (official !== null) {
-    data.total = official;
-    data.wholeTotal = official;
-  }
+  const data = cardData(c, fileRef.id);
 
   const batch = writeBatch(db);
   // The student's folder exists as a stand-in until its first file: made now if it isn't there yet. A student's folder,

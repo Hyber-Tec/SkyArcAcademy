@@ -80,7 +80,9 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        and the family's), scan
                        (reading a card, the card and bull views with each hole at its measured size, saving: what it
                        was, the score written on it, a total over any number of shots; sheet.ts, a results sheet read
-                       on the server and its results saved),
+                       on the server and its results saved, its student picked from the name printed on it
+                       (`@shared/scores/sheetStudent`); repeats.ts, a result already in the student's scores asked
+                       about before it's saved again, `@shared/scores/duplicates`),
                        scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
