@@ -30,7 +30,10 @@ const ROLE_CHOICES: { role: Role; title: string; text: string; icon: typeof LuUs
   { role: 'student', title: 'Student', text: 'I take classes here.', icon: LuGraduationCap },
 ]
 
-/** `/join`: a signed-in coach or parent asks the academy for access; an admin approves it on the Account page. */
+/**
+ * `/join`: a signed-in coach, parent or student the app couldn't find by their email asks the academy for access
+ * (docs/DECISIONS.md §31); the office is told, and an admin approves it on the Account page.
+ */
 export function BranchSignupPage() {
   const branchId = ACADEMY_ID
   const { status, user, email, membership, needsVerification } = useAuth()
@@ -64,7 +67,7 @@ export function BranchSignupPage() {
             <div>
               <h1 className="text-xl font-semibold tracking-tight">Join {profile.name}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {profile.signupMessage || 'Sign in or create an account to request access. The academy will review your request.'}
+                {profile.signupMessage || 'Sign in or create an account with the email you gave the academy: a parent or student whose email is on file gets in right away. Anyone else asks here, and the academy reviews it.'}
               </p>
               <GoogleSignInButton className="mt-6 w-full" label="Continue with Google" />
               <OrDivider label="or use your email" />
@@ -242,7 +245,7 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
               <Field>
                 <FieldLabel htmlFor="su-students">Child’s name</FieldLabel>
                 <Input id="su-students" value={studentNames} onChange={(e) => setStudentNames(e.target.value)} placeholder="e.g. Ava Patel" />
-                <FieldDescription>If you have several children at the academy, list them all.</FieldDescription>
+                <FieldDescription>If you have several children at the academy, list them all. New to the academy? Say so in the message.</FieldDescription>
               </Field>
             ) : null}
             <Field>

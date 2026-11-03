@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { type DocumentData, type Query, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "@react-native-firebase/firestore";
+import { type DocumentData, type Query, collection, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "@react-native-firebase/firestore";
+import type { ContractTemplate, SignedContract } from "@shared/contracts/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { ProgressReportDoc } from "@shared/reports/types";
 import type { ClassRequest } from "@shared/schedule/requests";
@@ -112,6 +113,22 @@ export function useLinkedStudents(ids: readonly string[]) {
   const list = stable(ids);
   return useMerged<Student>(list.length ? `family-students-${branchId}-${list.join(",")}` : null, () =>
     list.map((id) => ({ kind: "doc", path: `${ROOT.branches}/${branchId}/${COL.students}/${id}` })),
+  );
+}
+
+/** The academy's current enrollment contract (members read it: docs/DECISIONS.md §31), or null when there's none. */
+export function useCurrentContract() {
+  const { branchId } = useBranch();
+  const state = useMerged<ContractTemplate>(`contract-template-${branchId}`, () => [{ kind: "query", ref: query(col(branchId, COL.contractTemplates), where("current", "==", true), limit(1)) }]);
+  return { template: state.data[0] ?? null, loading: state.loading };
+}
+
+/** The students' signed enrollment contracts (`SignedContract`), one document each, as the rules allow. */
+export function useSignedContracts(ids: readonly string[]) {
+  const { branchId } = useBranch();
+  const list = stable(ids);
+  return useMerged<SignedContract>(list.length ? `signed-contracts-${branchId}-${list.join(",")}` : null, () =>
+    list.map((id) => ({ kind: "doc", path: `${ROOT.branches}/${branchId}/${COL.signedContracts}/${id}` })),
   );
 }
 

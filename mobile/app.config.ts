@@ -207,18 +207,20 @@ const withEmulatorCleartext: ConfigPlugin = (config) =>
 /** All of the above, wrapped around the whole config so they run after every other plugin. */
 /**
  * A build for someone's own iPhone, signed by a free Apple team (Xcode's "Personal Team", APPLE_PERSONAL_TEAM=1): such
- * a team can't sign push notifications, so that capability is left out. That build gets no pushes; everything else
- * works (as HyberCRM's phone app does it).
+ * a team can't sign push notifications or Sign in with Apple, so those capabilities are left out. That build gets no
+ * pushes and no Apple button (`appleSignIn` finds it unavailable); everything else works (as HyberCRM's phone app does
+ * it).
  */
-const withoutPushOnPersonalTeam: ConfigPlugin = (config) =>
+const withoutPaidCapabilitiesOnPersonalTeam: ConfigPlugin = (config) =>
   process.env.APPLE_PERSONAL_TEAM === "1"
     ? withEntitlementsPlist(config, (c) => {
         delete c.modResults["aps-environment"];
+        delete c.modResults["com.apple.developer.applesignin"];
         return c;
       })
     : config;
 
-const withFinalTouches: ConfigPlugin = (config) => withoutPushOnPersonalTeam(withEmulatorCleartext(withUploadKey(withoutDevMenuIntro(withSceneLifecycle(config)))));
+const withFinalTouches: ConfigPlugin = (config) => withoutPaidCapabilitiesOnPersonalTeam(withEmulatorCleartext(withUploadKey(withoutDevMenuIntro(withSceneLifecycle(config)))));
 
 export default ({ config }: ConfigContext): ExpoConfig =>
   withFinalTouches({
@@ -242,6 +244,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       // The app uses only the standard HTTPS kind of encryption (exempt), so App Store Connect never asks the
       // export-compliance question for a build.
       infoPlist: { ITSAppUsesNonExemptEncryption: false },
+      // Sign in with Apple, beside Google (Apple's guideline 4.8, as people make their accounts in the app:
+      // docs/DECISIONS.md §31): the capability is on the app's identifier in Apple's developer account.
+      usesAppleSignIn: true,
     },
     android: {
       package: APP_ID,
@@ -283,6 +288,7 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       ["expo-build-properties", { ios: { useFrameworks: "dynamic", usePrecompiledModules: false } }],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
+      "expo-apple-authentication",
       ...(iosUrlScheme ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as [string, unknown]] : []),
       // Push notifications from the server, through Firebase Cloud Messaging on both phones (src/lib/push.ts): the
       // iPhone's push entitlement, Android's notification icon (the logo's one-colour layer, which Android shows in the

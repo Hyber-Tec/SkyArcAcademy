@@ -13,9 +13,9 @@ import { AuthShell, OrDivider, PasswordInput, StrengthMeter, useAuthBranch, useN
 import { GoogleSignInButton } from './GoogleButton'
 
 /**
- * A new account with an email and a password (or Google, the quicker way). Creating an account doesn't give access
- * by itself: the academy gives access to an email (an invitation, or an approved sign-up request), and the account is
- * matched to it once the email is confirmed.
+ * A new account with an email and a password (or Google, the quicker way). Once the email is confirmed, an email the
+ * academy has on a student's record (a parent's, or the student's own) opens their part of the app by itself
+ * (docs/DECISIONS.md §31); anyone else asks the academy, or was invited by it (the account is matched to the email).
  */
 export function SignUp() {
   const { status, needsVerification, signUp } = useAuth()
@@ -60,7 +60,7 @@ export function SignUp() {
   return (
     <AuthShell
       title="Create your account"
-      description={`Use the email ${academy} has for you.`}
+      description={`Use the email you gave ${academy}: that’s how it finds your child’s record.`}
       footer={
         <p>
           Already have an account?{' '}

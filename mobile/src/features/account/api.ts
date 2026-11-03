@@ -1,16 +1,19 @@
 import { EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential } from "@react-native-firebase/auth";
 import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from "@react-native-google-signin/google-signin";
 import { callable } from "@/lib/api";
+import { confirmWithApple } from "@/lib/appleSignIn";
 import { env } from "@/lib/env";
 import { auth } from "@/lib/firebase";
 
 /**
- * Proves again who is signed in (their password, or Google), as Firebase asks before deleting an account. False when
- * the person closed Google's picker.
+ * Proves again who is signed in (their password, Google or Apple), as Firebase asks before deleting an account or
+ * adding a password. `apple` with `revoke` also revokes the app's Apple tokens, as Apple asks before deleting an account
+ * (src/lib/appleSignIn.ts). False when the person closed Google's picker or Apple's sheet.
  */
-export async function confirmIdentity(how: { password: string } | "google"): Promise<boolean> {
+export async function confirmIdentity(how: { password: string } | "google" | "apple", opts: { revoke?: boolean } = {}): Promise<boolean> {
   const user = auth.currentUser;
   if (!user?.email) throw Object.assign(new Error("Sign in first."), { code: "auth/no-current-user" });
+  if (how === "apple") return confirmWithApple({ revoke: opts.revoke });
   if (how !== "google") {
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, how.password));
     return true;

@@ -11,20 +11,24 @@ import { GoogleMark } from "@/components/GoogleMark";
 import { T } from "@/components/Text";
 import { confirmIdentity, deleteMyAccount } from "./api";
 import { errorMessage } from "@/lib/api";
+import { appleProblem } from "@/lib/appleSignIn";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/state/AuthProvider";
 import { radius, space, useColors } from "@/theme";
 
 /**
  * Delete my account (the stores' rule: an app people can sign in to lets them delete the account): what goes and what
- * the academy keeps, then the person confirms who they are (their password, or Google) and the server's
+ * the academy keeps, then the person confirms who they are (their password, Google, or Apple, whose tokens for the app
+ * are revoked then, as Apple asks) and the server's
  * `deleteMyAccount` removes the sign-in and the personal profile; the app then signs out. In More, and on every screen
  * an account can be stuck on (no access, email not confirmed, a part not in the app yet, paused access).
  */
 export function DeleteAccountForm({ academyName, onDone }: { academyName?: string | null; onDone?: () => void }) {
   const colors = useColors();
   const { methods, email, signOut } = useAuth();
-  const withPassword = methods.password;
+  // An account made with Apple confirms with Apple, which also revokes the app's Apple tokens (Apple's rule).
+  const withApple = methods.apple;
+  const withPassword = methods.password && !withApple;
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +45,7 @@ export function DeleteAccountForm({ academyName, onDone }: { academyName?: strin
     if (!sure) return;
     setBusy(true);
     try {
-      if (!(await confirmIdentity(withPassword ? { password } : "google"))) return;
+      if (!(await confirmIdentity(withApple ? "apple" : withPassword ? { password } : "google", { revoke: true }))) return;
       await deleteMyAccount({});
       onDone?.();
       await signOut().catch(() => undefined);
@@ -49,6 +53,7 @@ export function DeleteAccountForm({ academyName, onDone }: { academyName?: strin
     } catch (e) {
       const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
       if (/wrong-password|invalid-credential|invalid-login-credentials/.test(code)) setError("That password isn’t right.");
+      else if (appleProblem(e)) setError(appleProblem(e));
       else if (code.startsWith("auth/")) setError(authErrorMessage(code, "sign-in"));
       else setError(errorMessage(e, "Couldn’t delete your account. Try again."));
     } finally {
@@ -76,11 +81,11 @@ export function DeleteAccountForm({ academyName, onDone }: { academyName?: strin
       {withPassword ? (
         <PasswordField label="Your password" value={password} onChangeText={setPassword} autoComplete="current-password" textContentType="password" returnKeyType="done" testID="delete-password" />
       ) : (
-        <T tone="muted">You’ll confirm with Google that it’s you.</T>
+        <T tone="muted">You’ll confirm with {withApple ? "Apple" : "Google"} that it’s you.</T>
       )}
       {error ? <ErrorBox>{error}</ErrorBox> : null}
-      <Button size="lg" variant="destructive" busy={busy} icon={withPassword ? undefined : <GoogleMark size={18} />} onPress={() => void remove()} testID="delete-account-confirm">
-        {withPassword ? "Delete my account" : "Confirm with Google and delete"}
+      <Button size="lg" variant="destructive" busy={busy} icon={withPassword || withApple ? undefined : <GoogleMark size={18} />} onPress={() => void remove()} testID="delete-account-confirm">
+        {withPassword ? "Delete my account" : withApple ? "Confirm with Apple and delete" : "Confirm with Google and delete"}
       </Button>
     </View>
   );

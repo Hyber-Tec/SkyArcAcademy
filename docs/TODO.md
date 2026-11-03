@@ -44,9 +44,17 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    the Scores tab (#101) are merged; **review the Scores page (#102)**. What they left for you to decide is the first
    three questions below.
 10. **The third meeting's tasks** (2026-11-02): [`docs/MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md), ticked as each is
-    merged, all on the MacBook Pro this round (Goo, 2026-11-03). Yours: decide the parents' sign-up flow (`CT1`, a
-    proposal from Claude Code), the blank contract when the manager sends it (`CT2`), and the domain once he invites you
-    to Squarespace (`DM1`–`DM3`).
+    merged, all on the MacBook Pro this round (Goo, 2026-11-03). The sign-up and the contract in the app are built
+    (`CT1`, `CT2`; `docs/DECISIONS.md` §31). Yours:
+    - **Sign in with Apple, once, before the next store update:** the steps in
+      [`docs/publishing/apple/sign-in-with-apple.md`](publishing/apple/sign-in-with-apple.md) (Apple's developer site and
+      the Firebase console).
+    - **Ask the manager** one contract per child or per family (`docs/QUESTIONS.md`, A19), when he sends the blank
+      contract.
+    - **The blank contract:** the office uploads it in Settings → Enrollment contract. From then on parents sign it before
+      using the app, so first file the contracts families already signed in each student's Contracts folder in the Drive
+      (they count as signed), or mark them signed on the student's page.
+    - **The domain** once he invites you to Squarespace (`DM1`–`DM3`).
 
 ## Product questions waiting for the owner
 

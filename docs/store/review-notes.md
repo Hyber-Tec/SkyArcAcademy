@@ -6,6 +6,12 @@ steps 15–17), the replies to send if Apple answers with guideline 4.8 (sign-in
 the notes say. Checked on 2026-10-20 against Apple's list of what a complete review needs (who the app is for, the
 devices tested, the outside services, a login for each kind of account, regional differences).
 
+> **For 1.1.0 (not 1.0.0, which Apple is reviewing now):** the sign-in paragraph and the reply to 4.8 below describe
+> 1.0.0, which has no sign-up. 1.1.0 makes accounts in the app and has Sign in with Apple beside Google
+> ([`DECISIONS.md`](../DECISIONS.md) §31): before submitting it, the notes say that instead (Create an account; an email
+> on a student's record opens the family's part, anyone else asks the academy; a parent signs the enrollment contract
+> first) and drop the exception. The review login itself doesn't change.
+
 ## The review login
 
 Since 2026-10-26 production holds the academy's real data, and the reviewers sign in as an admin that sees it (Goo's

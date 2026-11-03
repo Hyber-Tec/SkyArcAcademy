@@ -86,17 +86,21 @@ service firebase.storage {
         || (isStaff(b) && record().status == 'error' && (isAdmin(b) || staffSees(record())));
     }
 
-    // The academy's blank enrollment contract (docs/DECISIONS.md §23, F4): a PDF each time owners or admins upload it
-    // (Settings → Enrollment contract), kept for the signed copies' history: never replaced or deleted. Only they read
-    // it; a family reads it through the signing link (functions/src/contracts.ts), and the signed copies are Drive files
-    // in the Contracts folder, which only owners and admins see.
+    // The academy's blank enrollment contract (docs/DECISIONS.md §23, F4, and §31): a PDF each time owners or admins
+    // upload it (Settings → Enrollment contract), with its pages as pictures for the phone app (`{id}-p{n}.jpg`), kept
+    // for the signed copies' history: never replaced or deleted. Members read it (a parent signs it in the app or on the
+    // website before using it; a blank contract holds nobody's details); a link's signer reads it through the server
+    // (functions/src/contracts.ts). The signed copies are Drive files in the Contracts folder, owners' and admins' only.
     match /branches/{b}/contracts/templates/{fileName} {
-      allow read: if isAdmin(b);
+      allow read: if isMember(b);
       allow create: if isAdmin(b)
         && resource == null
-        && request.resource.size <= 10 * 1024 * 1024
-        && request.resource.contentType == 'application/pdf'
-        && fileName.matches('[A-Za-z0-9]{20}[.]pdf');
+        && ((request.resource.size <= 10 * 1024 * 1024
+             && request.resource.contentType == 'application/pdf'
+             && fileName.matches('[A-Za-z0-9]{20}[.]pdf'))
+          || (request.resource.size <= 4 * 1024 * 1024
+             && request.resource.contentType == 'image/jpeg'
+             && fileName.matches('[A-Za-z0-9]{20}-p[0-9]{1,2}[.]jpg')));
       allow update, delete: if false;
     }
   }

@@ -11,9 +11,13 @@ again.
 ## Ready in the app
 
 - **Signing in** (4.0, 4.8): Google's own sheet, or an email and a password; no sign-up in the app; only an email the
-  academy added opens it ([Sign in with Apple](#sign-in-with-apple-48)).
+  academy added opens it ([Sign in with Apple](#sign-in-with-apple-48)). *From 1.1.0:* anyone makes an account in the
+  app, with Sign in with Apple beside Google, and an email on a student's record opens it ([`DECISIONS.md`](../../DECISIONS.md)
+  §31).
 - **Delete my account** (5.1.1(v)): More → Delete my account for every role, and on every screen an account can be stuck
-  on ("No access yet", paused access, Confirm your email). It says what the academy keeps, as Apple's help now asks.
+  on ("No access yet", paused access, Confirm your email, and from 1.1.0 the contract to sign). It says what the academy
+  keeps, as Apple's help now asks. From 1.1.0, an account made with Apple confirms with Apple and its Apple tokens are
+  revoked before it's deleted, as Apple asks of apps with Sign in with Apple.
 - **The privacy policy** (5.1.1(i)): in effect since 2026-10-20 at https://skyarcacademy.web.app/privacy, linked in More
   and under the sign-in form. It says what the app collects and how (signing in; the camera and the photo picker in
   Scan), that the companies running it protect the data as the policy does, how long things are kept, and how to delete
@@ -102,6 +106,12 @@ exceptions, unchanged on 2026-10-20, and one fits Sky Arc: *"Your app is an educ
 requires the user to sign in with an existing education or enterprise account."* Nobody gets anything from the app
 without an account the academy made: the academy adds a person's email address, only that address opens it, there is
 no sign-up, and Google or a password are two ways of proving it's that address.
+
+**Changed for 1.1.0 (Goo, 2026-11-03):** the app makes accounts from then on (Create an account; an email on a student's
+record opens it, anyone else asks the academy: [`DECISIONS.md`](../../DECISIONS.md) §31), so the exception no longer
+fits, and **1.1.0 has Sign in with Apple** beside Google, on iPhones (the setup:
+[sign-in-with-apple.md](sign-in-with-apple.md)). Its review notes say so, in place of the exception. What follows is the
+reasoning for 1.0.0, which Apple is reviewing.
 
 **Decided by this check: no Sign in with Apple for now.** With "Hide My Email", Apple would give the app a private
 address the academy doesn't know, so it would open nothing. The review notes claim the exception, and a reply is ready

@@ -56,6 +56,7 @@ part and says what's left. What each answer means:
 | [apple/app-store.md](publishing/apple/app-store.md) | The App Store, from Apple's account to the release | Done up to the review; steps 24–27 when Apple answers |
 | [apple/testflight.md](publishing/apple/testflight.md) | Trying the store build on phones first | Optional |
 | [apple/rules.md](publishing/apple/rules.md) | Apple's rules and how Sky Arc meets them; the decisions behind the answers | When Apple asks something |
+| [apple/sign-in-with-apple.md](publishing/apple/sign-in-with-apple.md) | Sign in with Apple's settings at Apple and in Firebase | Once, before 1.1.0 |
 | [google-play/testing.md](publishing/google-play/testing.md) | The developer account, creating the app, the first upload, testers, uploads by command | Done; Part 4 sets up uploads by command on a Mac |
 | [google-play/production.md](publishing/google-play/production.md) | Google's forms, the store page, the release | Done up to the review; step 13 when Google answers |
 | [updates.md](publishing/updates.md) | Every update after the first release, both stores; the next one is 1.1.0 | When the stores have answered |
@@ -78,7 +79,10 @@ Nothing costs money per release.
 
 - **A public listing, published by HyberTec LLC** from its own Apple account (the owner, 2026-10-16;
   [rules.md](publishing/apple/rules.md#public-or-unlisted)).
-- **No Sign in with Apple** for now ([rules.md](publishing/apple/rules.md#sign-in-with-apple-48)).
+- **Sign in with Apple from 1.1.0** (Goo, 2026-11-03): people make their accounts in the app from then on
+  ([`DECISIONS.md`](DECISIONS.md) §31), so 4.8's exception no longer fits; 1.0.0 has none
+  ([rules.md](publishing/apple/rules.md#sign-in-with-apple-48)). Goo's setup, once:
+  [apple/sign-in-with-apple.md](publishing/apple/sign-in-with-apple.md).
 - **iPhone first, then Android** once tried; **TestFlight optional** (the owner, 2026-10-20).
 - **Free, in the United States only, iPhone only** (no iPad layout; iPads run the iPhone app).
 

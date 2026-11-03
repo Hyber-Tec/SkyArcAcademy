@@ -5,7 +5,7 @@ import type { WithId } from '../types'
 import { type ContractLink, SIGNER_RELATIONS, type SignerRelation } from './types'
 
 /**
- * The signing link and what the signer sends, checked the same way in the browser and on the server
+ * The signing link and what the signer sends, checked the same way in the browser, the phone app and on the server
  * (functions/src/contracts.ts), and the words of the signature page the server adds to the contract.
  */
 
@@ -110,7 +110,8 @@ export interface SignatureFactsInput {
   timezone: string
   ip: string
   userAgent: string
-  token: string
+  /** How it was signed: with a signing link (its token), or by a parent signed in to the app or the website. */
+  how: { link: string } | { account: string; where: 'app' | 'website' }
   templateName: string
   templateSha256: string
 }
@@ -134,8 +135,8 @@ export function signatureFacts(i: SignatureFactsInput): { label: string; value: 
     { label: 'Signed by', value: `${i.signerName} (${SIGNER_RELATIONS[i.relation].toLowerCase()})` },
     { label: 'Signed on', value: signedOnText(i.signedAtMs, i.timezone) },
     { label: 'IP address', value: i.ip || 'Unknown' },
-    { label: 'Browser', value: i.userAgent || 'Unknown' },
-    { label: 'Signing link', value: i.token },
+    { label: 'link' in i.how || i.how.where === 'website' ? 'Browser' : 'Device', value: i.userAgent || 'Unknown' },
+    'link' in i.how ? { label: 'Signing link', value: i.how.link } : { label: 'Account', value: `${i.how.account} (signed in ${i.how.where === 'app' ? 'to the app' : 'on the website'})` },
     { label: 'Contract signed', value: i.templateName },
     { label: 'Its SHA-256', value: i.templateSha256 },
   ]

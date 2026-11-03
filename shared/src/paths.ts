@@ -41,9 +41,18 @@ export const COL = {
   websiteMessages: 'websiteMessages',
   /** Server only: how many messages a sender sent lately (and how often a signing link was asked for). */
   websiteLimits: 'websiteLimits',
-  /** The enrollment contract (shared/src/contracts): each upload of the blank one, and the signing links sent. */
+  /**
+   * The enrollment contract (shared/src/contracts): each upload of the blank one, the signing links sent, and each
+   * student's signed one (`SignedContract`, by student ID).
+   */
   contractTemplates: 'contractTemplates',
   contractLinks: 'contractLinks',
+  signedContracts: 'signedContracts',
+  /**
+   * Server only: each email the server linked by the records (shared/src/access/onFile.ts), by email. One the office
+   * then removed isn't linked again by itself (it asks the academy instead).
+   */
+  accessLinks: 'accessLinks',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]

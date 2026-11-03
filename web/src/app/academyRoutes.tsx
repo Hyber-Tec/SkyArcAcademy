@@ -1,5 +1,6 @@
 import { Navigate, Outlet, type RouteObject, redirect } from 'react-router'
 import { BranchProvider } from '@/branch/BranchProvider'
+import { RequireContract } from '@/features/contracts/ContractGate'
 import { PortalLayout } from '@/portals/PortalLayout'
 import { PortalHomeRedirect, RequireAuth, RequirePage, RequirePortal } from './guards'
 
@@ -114,7 +115,7 @@ const coachRoutes: RouteObject[] = [
 
 /**
  * Parents and students share one portal design: Home, Classes, Scores, Reports, News and Profile (a parent sees their
- * children).
+ * children). Once the academy has an enrollment contract, it's signed before the portal opens (RequireContract).
  */
 function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
   return [
@@ -158,8 +159,17 @@ export const academyRoute: RouteObject = {
   ),
   children: [
     { path: '/app', element: <PortalHomeRedirect /> },
-    // A progress report as families see it, printable (staff open it too); the rules decide who may read it.
-    { path: '/report/:reportId', lazy: page(() => import('@/features/reports/ReportPage'), 'ReportPage') },
+    // A progress report as families see it, printable (staff open it too); the rules decide who may read it. A family
+    // signs the enrollment contract first here too.
+    {
+      path: '/report/:reportId',
+      element: (
+        <RequireContract>
+          <Outlet />
+        </RequireContract>
+      ),
+      children: [{ index: true, lazy: page(() => import('@/features/reports/ReportPage'), 'ReportPage') }],
+    },
     {
       path: '/admin',
       element: (
@@ -182,7 +192,9 @@ export const academyRoute: RouteObject = {
       path: '/parent',
       element: (
         <RequirePortal role="parent">
-          <PortalLayout portal="parent" />
+          <RequireContract>
+            <PortalLayout portal="parent" />
+          </RequireContract>
         </RequirePortal>
       ),
       children: familyRoutes('parent'),
@@ -191,7 +203,9 @@ export const academyRoute: RouteObject = {
       path: '/student',
       element: (
         <RequirePortal role="student">
-          <PortalLayout portal="student" />
+          <RequireContract>
+            <PortalLayout portal="student" />
+          </RequireContract>
         </RequirePortal>
       ),
       children: familyRoutes('student'),

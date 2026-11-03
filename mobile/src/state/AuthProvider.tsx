@@ -1,5 +1,6 @@
 import {
   EmailAuthProvider,
+  createUserWithEmailAndPassword,
   getIdToken,
   linkWithCredential,
   onAuthStateChanged,
@@ -10,11 +11,13 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   updatePassword,
+  updateProfile,
   type User,
 } from "@react-native-firebase/auth";
 import { type SignInMethods, signInMethods } from "@shared/auth";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { callable } from "@/lib/api";
+import { appleSignInAvailable, signInWithApple } from "@/lib/appleSignIn";
 import { env } from "@/lib/env";
 import { auth } from "@/lib/firebase";
 import { signInWithGoogle, signOutOfGoogle } from "@/lib/googleSignIn";
@@ -35,8 +38,13 @@ export interface AuthState {
    */
   needsVerification: boolean;
   methods: SignInMethods;
+  /** Whether this phone offers Sign in with Apple (iPhones). */
+  appleAvailable: boolean;
   signInWithGoogle: () => Promise<boolean>;
+  signInWithApple: () => Promise<boolean>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  /** A new account with an email and a password; it confirms its email next (the "Confirm your email" screen). */
+  createAccount: (name: string, email: string, password: string) => Promise<void>;
   sendVerification: () => Promise<VerificationResult>;
   /** Asks Firebase whether the email was confirmed (on the website, in the mail app's browser); true once it is. */
   checkVerified: () => Promise<boolean>;
@@ -54,8 +62,9 @@ const sendAccountEmail = callable<{ kind: "verify" | "reset"; email?: string; ne
 const actionSettings = (path: string) => ({ url: `${env.webUrl}${path}`, handleCodeInApp: false });
 
 /**
- * Who is signed in on this phone, and every way to sign in, out and recover (the website's web/src/auth/AuthProvider.tsx).
- * There is no "create an account" in the app: the academy invites people on the website.
+ * Who is signed in on this phone, and every way to sign in, make an account, sign out and recover (the website's
+ * web/src/auth/AuthProvider.tsx). Anyone may make an account (docs/DECISIONS.md §31): access still follows the email,
+ * linked by the email on file or given by the academy.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -63,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Mirrors user.emailVerified, which changes in place when the account is reloaded (no auth event fires).
   const [verified, setVerified] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    void appleSignInAvailable().then(setAppleAvailable);
+  }, []);
 
   useEffect(
     () =>
@@ -77,6 +90,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email.trim(), password);
+  }, []);
+
+  const createAccount = useCallback(async (name: string, email: string, password: string) => {
+    const { user: made } = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    if (name.trim()) await updateProfile(made, { displayName: name.trim() }).catch(() => undefined);
+    // Our own "Confirm your email", or Firebase's when ours can't go out; the next screen offers it again.
+    try {
+      const r = await sendAccountEmail({ kind: "verify", next: null });
+      if (r.sent || r.alreadyVerified || r.throttled) return;
+    } catch {
+      // Firebase's own, below.
+    }
+    await sendEmailVerification(made, actionSettings("/login")).catch(() => undefined);
   }, []);
 
   const sendVerification = useCallback(async (): Promise<VerificationResult> => {
@@ -147,15 +173,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: user?.email ? user.email.trim().toLowerCase() : null,
       needsVerification: !!user && !verified,
       methods: signInMethods(providers),
+      appleAvailable,
       signInWithGoogle: () => signInWithGoogle(),
+      signInWithApple: () => signInWithApple(),
       signInWithPassword,
+      createAccount,
       sendVerification,
       checkVerified,
       sendPasswordReset,
       changePassword,
       signOut,
     }),
-    [loading, user, verified, providers, signInWithPassword, sendVerification, checkVerified, sendPasswordReset, changePassword, signOut],
+    [loading, user, verified, providers, appleAvailable, signInWithPassword, createAccount, sendVerification, checkVerified, sendPasswordReset, changePassword, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

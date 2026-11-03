@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountActionUrl, authErrorMessage, isGoogleMailbox, looksLikeEmail, passwordProblem, passwordStrength, queryParams, signInMethods } from './auth'
+import { accountActionUrl, authErrorMessage, isGoogleMailbox, looksLikeEmail, passwordProblem, passwordStrength, queryParams, signInMethods, signInWays } from './auth'
 import { accountEmail } from './email/account'
 
 describe('passwords', () => {
@@ -29,8 +29,13 @@ describe('emails and methods', () => {
   })
 
   it('reads how an account signs in', () => {
-    expect(signInMethods(['google.com'])).toEqual({ google: true, password: false })
-    expect(signInMethods(['password', 'google.com'])).toEqual({ google: true, password: true })
+    expect(signInMethods(['google.com'])).toEqual({ google: true, password: false, apple: false })
+    expect(signInMethods(['password', 'google.com'])).toEqual({ google: true, password: true, apple: false })
+    expect(signInMethods(['apple.com'])).toEqual({ google: false, password: false, apple: true })
+    expect(signInWays(signInMethods(['google.com', 'password']))).toBe('Google, or email and password')
+    expect(signInWays(signInMethods(['apple.com']))).toBe('Apple')
+    expect(signInWays(signInMethods(['google.com', 'apple.com']))).toBe('Google or Apple')
+    expect(signInWays(signInMethods(['password']))).toBe('Email and password')
   })
 
   it('puts Firebase errors in plain words without saying whether an account exists', () => {

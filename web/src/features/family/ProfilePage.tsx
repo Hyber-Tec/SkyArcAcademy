@@ -1,5 +1,6 @@
 import { LuBell, LuBookOpen, LuChevronRight, LuExternalLink, LuKeyRound, LuLifeBuoy, LuShieldCheck, LuSunMoon, LuUserRound } from 'react-icons/lu'
 import { Link } from 'react-router'
+import { signInWays } from '@shared/auth'
 import { gradeLabel, initials } from '@shared/people'
 import { ROLE_LABELS } from '@shared/roles'
 import { formatDateKey } from '@shared/time'
@@ -9,6 +10,8 @@ import { useBranch } from '@/branch/BranchProvider'
 import { useTheme } from '@/components/app/theme'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FamilyContractFact } from '@/features/contracts/FamilyContractFact'
+import { useCurrentContract, useSignedFor } from '@/features/contracts/family'
 import { NoticeSwitches } from '@/features/notifications/NoticeSwitches'
 import { ProfileLayout, SectionTitle } from '@/features/profile/ProfileLayout'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -83,14 +86,6 @@ function FamilyHeader({ family }: { family: Family }) {
   )
 }
 
-/** "Google", "Email and password", or both. */
-function signInText(methods: { google: boolean; password: boolean }): string {
-  if (methods.google && methods.password) return 'Google, or email and password'
-  if (methods.google) return 'Google'
-  if (methods.password) return 'Email and password'
-  return '—'
-}
-
 function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="divide-y">
@@ -109,12 +104,14 @@ export function FamilyAccountSection() {
   const { branch, viewAs } = useBranch()
   const { email, methods } = useAuth()
   const family = useFamily()
+  const { map: signed } = useSignedFor(family.ids)
+  const { template } = useCurrentContract()
   const base = `/${family.who}/profile`
   const you: [string, React.ReactNode][] = [
     ['Name', family.personName || '—'],
     ...(!viewAs ? ([['Email', email ?? '—']] as [string, React.ReactNode][]) : []),
     ['Role', ROLE_LABELS[family.who]],
-    ...(!viewAs ? ([['Signs in with', signInText(methods)]] as [string, React.ReactNode][]) : []),
+    ...(!viewAs ? ([['Signs in with', signInWays(methods)]] as [string, React.ReactNode][]) : []),
   ]
   return (
     <div>
@@ -157,7 +154,7 @@ export function FamilyAccountSection() {
             </p>
           </section>
         ) : (
-          family.kids.map((k) => <KidCard key={k.id} kid={k} family={family} />)
+          family.kids.map((k) => <KidCard key={k.id} kid={k} family={family} contract={template || signed.has(k.id) ? <FamilyContractFact studentId={k.id} signed={signed.get(k.id)} /> : null} />)
         )}
 
         <p className="px-1 text-sm text-muted-foreground">
@@ -171,7 +168,7 @@ export function FamilyAccountSection() {
   )
 }
 
-function KidCard({ kid, family }: { kid: WithId<Student>; family: Family }) {
+function KidCard({ kid, family, contract }: { kid: WithId<Student>; family: Family; contract: React.ReactNode }) {
   const { branch } = useBranch()
   const rows: [string, React.ReactNode][] = [
     ['Grade', kid.grade ? gradeLabel(kid.grade) : '—'],
@@ -179,6 +176,7 @@ function KidCard({ kid, family }: { kid: WithId<Student>; family: Family }) {
     ['Program', kid.program || '—'],
     ['School', kid.school || '—'],
     ['Classes since', kid.firstSessionDate ? formatDateKey(kid.firstSessionDate, 'monthYear') : '—'],
+    ...(contract ? ([['Enrollment contract', contract]] as [string, React.ReactNode][]) : []),
   ]
   return (
     <section className="overflow-hidden rounded-xl border bg-card" aria-label={kid.name} data-testid="profile-kid">
