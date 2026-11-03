@@ -1,11 +1,12 @@
 import { query, where } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuCalendarCog, LuCalendarDays, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { LuCalendarCog, LuCalendarDays, LuCheckCheck, LuChevronLeft, LuChevronRight, LuClock, LuCopyPlus, LuEllipsisVertical, LuPanelRightOpen, LuPlus, LuTrash2 } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
 import { MAKEUP_LOOKBACK_DAYS, makeupsOwed } from '@shared/schedule/classes'
 import type { ClassRequest } from '@shared/schedule/requests'
+import { seatsToMark } from '@shared/schedule/status'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, addDays, formatDateKey, formatMinutesShort, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
 import type { Availability, ClockShift, Session, Student, WithId } from '@shared/types'
@@ -26,7 +27,7 @@ import { AddClassDialog } from './AddClassDialog'
 import { AddSeatDialog } from './AddSeatDialog'
 import type { ScheduleCtx } from './api'
 import { type Board, BoardContext } from './board'
-import { addSeat, createClass, moveSeat, removeClass, removeSeat, saveWhosIn, setSeatLabel, setSeatStatus, updateClass } from './classApi'
+import { addSeat, createClass, markSeatsHere, moveSeat, removeClass, removeSeat, saveWhosIn, setSeatLabel, setSeatStatus, updateClass } from './classApi'
 import { ClassSheet } from './ClassSheet'
 import { DayList } from './DayList'
 import { DayHoursDialog } from './dialogs/DayHoursDialog'
@@ -195,6 +196,22 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     addClass: (d) => setNewClass({ dateKey: d, key: Date.now() }),
     editWhosIn: setWhosIn,
     setStatus: (s, status: SessionStatus) => void run(() => setSeatStatus(ctx, s, status)),
+    toMark: (classes) => seatsToMark(classes.flatMap((v) => v.seats), today, nowMin),
+    markHere: async (classes, scope) => {
+      const seats = seatsToMark(classes.flatMap((v) => v.seats), today, nowMin)
+      const n = seats.length
+      if (!n) return
+      if (scope === 'day') {
+        const day = formatDateKey(classes[0].c.dateKey, 'weekdayMedium')
+        const ok = await confirm({
+          title: `Mark the rest of ${day} here?`,
+          description: `${n} ${n === 1 ? 'student' : 'students'} not marked yet in ${classes.length} ${classes.length === 1 ? 'class' : 'classes'} will be marked Here. No-shows and cancellations stay as they are, and each one can still be changed.`,
+          confirmLabel: `Mark ${n} here`,
+        })
+        if (!ok) return
+      }
+      void run(() => markSeatsHere(ctx, seats), `${n} marked here`)
+    },
     setLabel: (s, l) => void run(() => setSeatLabel(ctx, s, l)),
     move: (s, to) => void run(() => moveSeat(ctx, s, to, nextOrder(classById(to.id))), `${s.studentName} moved to ${formatDateKey(to.dateKey, 'weekdayMedium')}, ${formatMinutesShort(to.startMin)}`),
     removeSeat: async (s) => {
@@ -226,6 +243,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
     over,
     setOver,
   }
+  // The open day's students nobody has marked yet (the office's Day view says how many, and marks the rest here).
+  const dayToMark = admin && view === 'day' ? board.toMark(data.byDate.get(date) ?? []) : []
 
   // --------------------------------------------------------------- nav
   const step = useCallback(
@@ -361,6 +380,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             {view === 'day' && !data.hoursOf(date).isOpen ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">CLOSED</span> : null}
             {/* Owners and admins change any day (docs/DECISIONS.md §24); coaches only look. */}
             {view === 'day' && date < today ? <span className="hidden text-xs text-muted-foreground sm:inline">{admin ? 'Past' : 'Past · view only'}</span> : null}
+            {dayToMark.length ? <span className="text-xs font-medium whitespace-nowrap text-amber-700 dark:text-amber-400">{dayToMark.length} not marked</span> : null}
           </div>
           {/* They stay whether the panel is open or not (it has its own), so the header never changes with it. */}
           <div className="hidden items-center gap-1 sm:flex">
@@ -384,6 +404,14 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {dayToMark.length ? (
+                  <>
+                    <DropdownMenuItem onSelect={() => board.markHere(data.byDate.get(date) ?? [], 'day')}>
+                      <LuCheckCheck /> Mark the rest of the day here
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
                 {view === 'day' && date >= today ? (
                   <>
                     <DropdownMenuItem onSelect={() => setNewClass({ dateKey: date, key: Date.now() })}>

@@ -240,6 +240,26 @@ export async function setSeatStatus(ctx: ScheduleCtx, s: WithId<Session>, status
   await batch.commit()
 }
 
+/**
+ * Marks the seats here at once (the rest of a class or a day, `seatsToMark`), each with its audit entry, as marking
+ * them one by one would. Batches of 200 seats (a batch holds 500 writes), so a long day still saves.
+ */
+export async function markSeatsHere(ctx: ScheduleCtx, seats: readonly WithId<Session>[]) {
+  for (let i = 0; i < seats.length; i += 200) {
+    const batch = writeBatch(db)
+    for (const s of seats.slice(i, i + 200)) {
+      batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { status: 'present', ...stamps(ctx) })
+      auditSeat(batch, ctx, s, {
+        action: 'session.status',
+        entityId: s.id,
+        summary: `Marked ${s.studentName} here`,
+        changes: [{ field: 'status', label: 'Status', from: SESSION_STATUS_LABELS[s.status], to: SESSION_STATUS_LABELS.present }],
+      })
+    }
+    await batch.commit()
+  }
+}
+
 /** Changes a seat's label ("MU for 11/2", "Practice", …). */
 export async function setSeatLabel(ctx: ScheduleCtx, s: WithId<Session>, label: string) {
   const next = label.trim()

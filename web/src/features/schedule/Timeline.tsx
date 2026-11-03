@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { LuArrowRight, LuCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSend, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
+import { LuArrowRight, LuCheck, LuCheckCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSend, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { peopleIn, seatKind } from '@shared/schedule/classes'
 import { type ClassRequest, REQUEST_KIND_LABELS } from '@shared/schedule/requests'
@@ -253,6 +253,7 @@ function WeekStrip({ days, width }: { days: DateKey[]; width: number }) {
         const seats = classes.reduce((n, v) => n + Math.max(0, v.c.seats - v.taken), 0)
         const requests = classes.reduce((n, v) => n + b.requestsFor(v.c.id).filter((r) => r.status === 'pending').length, 0)
         const noCoach = classes.some((v) => !v.coaches.length)
+        const toMark = b.mode === 'admin' ? b.toMark(classes).length : 0
         const today = d === b.today
         return (
           <button
@@ -268,6 +269,7 @@ function WeekStrip({ days, width }: { days: DateKey[]; width: number }) {
               {!open ? 'Closed' : classes.length ? `${classes.length} classes · ${seats ? `${seats} open` : 'full'}` : 'No classes'}
               {requests ? <span className="font-semibold text-amber-700 dark:text-amber-400"> · {requests} request{requests > 1 ? 's' : ''}</span> : null}
               {noCoach ? <span className="font-semibold text-amber-700 dark:text-amber-400"> · no coach</span> : null}
+              {toMark ? <span className="font-semibold text-amber-700 dark:text-amber-400"> · {toMark} not marked</span> : null}
             </div>
           </button>
         )
@@ -282,6 +284,7 @@ function WeekDay({ m, width }: { m: DayModel; width: number }) {
   const filled = m.classes.reduce((n, v) => n + v.taken, 0)
   const seats = m.classes.reduce((n, v) => n + v.c.seats, 0)
   const editable = b.mode === 'admin' && b.canEdit(d)
+  const toMark = editable ? b.toMark(m.classes).length : 0
   const today = d === b.today
   return (
     <section id={`timeline-${d}`} aria-label={formatDateKey(d, 'weekdayLong')} className="scroll-mt-20 pt-5" data-testid={`timeline-${d}`}>
@@ -291,7 +294,13 @@ function WeekDay({ m, width }: { m: DayModel; width: number }) {
         <span className="text-sm text-muted-foreground">
           {m.classes.length ? `${m.classes.length} classes · ${filled} of ${seats} seats` : 'No classes yet'}
         </span>
+        {toMark ? <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{toMark} not marked</span> : null}
         <span className="ml-auto flex items-center gap-1">
+          {toMark ? (
+            <Button variant="ghost" size="xs" onClick={() => b.markHere(m.classes, 'day')} data-testid={`mark-day-here-${d}`}>
+              <LuCheckCheck /> Mark the rest here
+            </Button>
+          ) : null}
           {editable ? (
             <>
               <Button variant="ghost" size="xs" onClick={() => b.editWhosIn(d)}>

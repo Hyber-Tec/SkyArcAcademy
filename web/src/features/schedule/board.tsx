@@ -53,6 +53,10 @@ export interface Board {
   addClass: (d: DateKey) => void
   editWhosIn: (d: DateKey) => void
   setStatus: (s: WithId<Session>, status: SessionStatus) => void
+  /** The seats of these classes nobody has marked yet, once their class has started (`seatsToMark`). */
+  toMark: (classes: readonly ClassView[]) => WithId<Session>[]
+  /** Marks them here: a class's at once, a whole day's after asking (the third meeting, `AT1`). */
+  markHere: (classes: readonly ClassView[], scope: 'class' | 'day') => void
   setLabel: (s: WithId<Session>, label: string) => void
   move: (s: WithId<Session>, to: WithId<AcademyClass>) => void
   removeSeat: (s: WithId<Session>) => void
