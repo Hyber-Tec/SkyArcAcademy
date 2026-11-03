@@ -111,7 +111,8 @@ started: *already works*, *small change* or *new work*.
 ## 4. Tasks
 
 ### CT: The contract and parents' sign-up (design first, build later)
-- ✅ **CT1. Design the parents' sign-up flow, and propose it to Goo. Don't build it yet.** (proposed 2026-11-03; Goo decides)
+- ✅ **CT1. Design the parents' sign-up flow, and propose it to Goo. Don't build it yet.** (proposed 2026-11-03; Goo
+  decided the same day: `docs/DECISIONS.md` §31)
   - *Plan:* **New work: a proposal**, built on how accounts work today (the office adds a person's email; a parent's
     access follows their verified email; the contract link of the second meeting, `F4`).
   - **The goal:** when the academy moves to the app, the manager tells parents "download the app and sign up". Right
@@ -132,12 +133,23 @@ started: *already works*, *small change* or *new work*.
     waiting, and who has no parent in the app yet. The alternatives weighed: a family code, an invite per family,
     approval for everyone. Goo's questions: the way; accounts made in the app (and Sign in with Apple at review); one
     contract per child or per family; Later or must sign first; one parent's signature enough; students' own logins.
-- [ ] **CT2. The contract signed in the app**, once `CT1` is decided **and** the academy's blank contract arrives. Turn it
+  - *Goo's answers (2026-11-03):* the email on file, with "Ask the academy" behind it; accounts made in the app, with
+    Sign in with Apple as Apple asks; one contract per child or per family, the manager decides (Goo asks him with the
+    contract); they sign before using the app; one parent's signature is enough; students' own logins the same way.
+- ✅ **CT2. The contract signed in the app**, once `CT1` is decided **and** the academy's blank contract arrives. Turn it
   into a document parents read and sign easily, in the app and on the website. **Don't change its wording.** The signed
   copy goes to the student's folder by itself and is **for owners and admins only**. Contracts parents already signed
   stay as they are; the manager uploads those himself. *(Website and phone)*
   - *Plan:* **New work**, waiting for `CT1` and the contract. The signing link (`F4`, #53) already reads a contract,
     takes a typed name and a finger's signature, and files the signed PDF in the student's Contracts folder.
+  - *Built (2026-11-03), with the sign-up of `CT1`:* anyone makes an account in the app (Google, Apple on iPhones, or a
+    password) or on the website; a confirmed email on a student's record links them (siblings at once), anyone else
+    asks the academy and the office approves on the Account page with suggested students. Once the academy has a
+    contract, a parent's app and website open only after they read it (its pages, as uploaded: not a word changed) and
+    sign it for each child, once for several (a copy each, in each child's Contracts folder, owners and admins only); a
+    student waits for their parent. Contracts signed before count once the manager files them in the student's
+    Contracts folder (or marks them signed on paper), and Settings → Enrollment contract lists who has signed. **What's
+    left is the manager's:** the blank contract, uploaded in Settings → Enrollment contract when it comes.
 
 ### CP: Competitions
 - ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**
@@ -240,7 +252,7 @@ started: *already works*, *small change* or *new work*.
 | `P2` Real paper targets | **Entered** in the app. |
 | `P7` Competitions from a photo | **Works.** Follow-ups `CP1`–`CP5`; PDFs later (`L-CP`). |
 | `P12` Other names | **Filled in** by the manager; used to find the student on a sheet (`CP1`). |
-| `F1`, `F4`, `F5` Parents and contracts | The sign-up flow first (`CT1`), then the build (`CT2`). |
+| `F1`, `F4`, `F5` Parents and contracts | The sign-up flow (`CT1`) and the contract in the app (`CT2`): built, `docs/DECISIONS.md` §31. |
 | `E1` Email and the domain | The domain is on Squarespace: `DM1`–`DM3`. |
 | `L1` Korean | Still later: `L-LG`. |
 
@@ -248,7 +260,8 @@ started: *already works*, *small change* or *new work*.
 
 ## 7. What we need from the manager
 
-- [ ] **The blank contract** (digital), to build the signing in the app → `CT2`
+- [ ] **The blank contract** (digital): the signing in the app is built (`CT2`); it starts once the office uploads the
+  contract in Settings → Enrollment contract. With it, Goo asks him: one contract per child, or one per family?
 - [ ] **An invitation to the domain's Squarespace account**, to connect the .com → `DM1`
 
 Everything else is in hand, or the manager's own work in the app.
@@ -260,7 +273,8 @@ Everything else is in hand, or the manager's own work in the app.
 | When | What |
 |---|---|
 | Now | The academy uses the app from now on, and the manager marks attendance every day, the past weeks included. |
-| Now | Claude Code designs the parents' sign-up and contract (`CT1`) for Goo to decide. |
+| Now | The sign-up and the contract in the app are built (`CT1`, `CT2`); Goo sets up Sign in with Apple once (`docs/publishing/apple/sign-in-with-apple.md`). |
+| When the contract arrives | The office files the contracts signed before in each student's Contracts folder, then uploads the blank one: parents sign it before using the app. |
 | This week | The manager invites Goo to Squarespace → the domain connected → the coaches invited. |
 | When the App Store approves | Parents are told to download the app and sign up; the kiosk tablet is set up. |
 | Later | Competition PDFs, the kiosk's install file, Korean. |

@@ -29,6 +29,7 @@ asked: the office fills them in from the website ([`DECISIONS.md`](DECISIONS.md)
 | **A12** | **The kiosk:** a tablet or computer at the front desk where coaches clock in? Any device with a web browser works. | The kiosk | The kiosk page, opened by an admin on any computer |
 | **A13** | **Website content:** coach portraits, real families' quotes (with their permission), trial length and price, the youngest starting age, the range's safety rules, whether coaching happens in Korean, tuition rates or a guide, more photos and a larger match-day photo (`docs/TODO.md`). The phone number is set (2026-10-20). | The public website | Left out until confirmed (photos marked); sample quotes marked "Sample" |
 | **A14** | **The domain:** access to skyarcacademy.com, and an email address on it for the app to send from (the academy already uses an address on it, 2026-10-24). | Launch ([`DEPLOY.md`](DEPLOY.md)) | HyberTec's Gmail sends |
+| **A19** | **One enrollment contract per child, or one per family?** Two brothers: two signed contracts, or one for both? Goo asks the manager with the blank contract (2026-11-03, [`DECISIONS.md`](DECISIONS.md) §31). | Signing in the app (`CT2`) | One signed copy per child; a parent signs once for several children |
 
 A15 (how coaches score a hole on a line) was answered at the second meeting: by where most of the hole sits
 ([`DECISIONS.md`](DECISIONS.md) §23). What the academy still has to send is listed in

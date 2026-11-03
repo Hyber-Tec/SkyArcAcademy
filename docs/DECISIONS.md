@@ -1001,3 +1001,39 @@ they loaded the academy's past results. The tasks and their ticks: [`MEETING3_FE
 - **This round runs on the MacBook Pro alone** (Goo, 2026-11-03), the website's and the server's tasks included.
 - **The stores** (Goo, 2026-11-03): Google Play has published 1.0.0; the App Store is still reviewing it. The next
   update goes to both once everything is ready, not before.
+
+## 31. Signing up in the app, and the contract before using it (Goo, 2026-11-03)
+
+Goo's answers to the sign-up proposal (`CT1`, [`MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md)), and what was built from
+them (`CT2`).
+
+- **The email on file links a new account**, with "Ask the academy" behind it (Goo's pick of the proposal's
+  recommendation). Anyone makes an account, on the phone or the website; once its email is confirmed, the server
+  (`linkMyAccount`, `functions/src/signup.ts`) links it to every student whose record lists it as a parent's, or makes
+  it the student's own login when it's the student's own email (`shared/src/access/onFile.ts`). Only students at the
+  academy count (starting, enrolled or paused). It's written in the audit log, the office is told, and the access is
+  removed on the Account page as any other; one removed that way isn't linked by itself again (it asks the academy).
+  An email no record has asks the academy, which is told and approves on the Account page with the students the typed
+  names could mean, other names included (`shared/src/access/requests.ts`). The office's "Give access" stays.
+- **Accounts are made in the app** (question 2): "Create an account" with Google, an email and a password, and **Sign
+  in with Apple on iPhones**, which Apple asks of an app that offers Google for the account people make in it
+  (guideline 4.8). Deleting an Apple account in the app revokes the app's Apple tokens, as Apple also asks. An Apple
+  account that hides its email can't be found by it: it asks the academy. What Goo sets up once in Apple's and
+  Firebase's consoles: [`publishing/apple/sign-in-with-apple.md`](publishing/apple/sign-in-with-apple.md).
+- **One contract per child, or one per family?** Goo asks the manager with the blank contract (`docs/QUESTIONS.md`).
+  Meanwhile, as today, each child has their own signed copy, and a parent signs once for several children: one
+  signature, a copy each.
+- **They sign before using the app** (question 4): once the academy has a contract (Settings → Enrollment contract), a
+  parent's portal, on the phone and the website, opens only when each of their children at the academy has a signed
+  one. No "Later".
+- **One parent's signature is enough** for a child (question 5): the other parent goes straight in, and sees who signed
+  and when.
+- **Students' own logins follow the same way** (question 6): a student's own email on their record links them, or they
+  ask the academy. A student's login waits for a parent's signature too.
+- **What counts as signed:** a signature in the app or on the website (signed in), a signing link (as before), a file
+  the office puts in the student's Contracts folder (the contracts signed before the app: "the manager uploads those
+  himself"), or the office marking it signed on paper on the student's page. The office can ask a family to sign again.
+  Each student's state is a `signedContracts` record the family reads; Settings → Enrollment contract lists who has
+  signed, who hasn't though a parent has the app, and who has no parent in the app yet.
+- **The privacy policy** says so (accounts made in the app, Sign in with Apple, what signing records), dated
+  2026-11-03, for the owner to review.
