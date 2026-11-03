@@ -111,7 +111,7 @@ started: *already works*, *small change* or *new work*.
 ## 4. Tasks
 
 ### CT: The contract and parents' sign-up (design first, build later)
-- [ ] **CT1. Design the parents' sign-up flow, and propose it to Goo. Don't build it yet.**
+- ✅ **CT1. Design the parents' sign-up flow, and propose it to Goo. Don't build it yet.** (proposed 2026-11-03; Goo decides)
   - *Plan:* **New work: a proposal**, built on how accounts work today (the office adds a person's email; a parent's
     access follows their verified email; the contract link of the second meeting, `F4`).
   - **The goal:** when the academy moves to the app, the manager tells parents "download the app and sign up". Right
@@ -124,6 +124,14 @@ started: *already works*, *small change* or *new work*.
     next. Include what the office sees and does (checking or approving a link, who has or hasn't signed) and what
     happens when a parent stops halfway.
   - A recommendation and its trade-offs. **Build only once Goo has decided.**
+  - *Proposed (2026-11-03, a page sent to Goo):* **link by the email the academy already has.** A parent signs up in the
+    app (Google, or an email and password, confirmed); the server links a confirmed email to every student whose
+    record lists it as a parent's (siblings at once, each parent by their own email), tells the office (with Undo),
+    and the contract step opens. An email not on file asks the academy in the app (the child's name, or "we're new"),
+    and the office approves in one tap with the students it could mean. A Contracts list shows who has signed, who's
+    waiting, and who has no parent in the app yet. The alternatives weighed: a family code, an invite per family,
+    approval for everyone. Goo's questions: the way; accounts made in the app (and Sign in with Apple at review); one
+    contract per child or per family; Later or must sign first; one parent's signature enough; students' own logins.
 - [ ] **CT2. The contract signed in the app**, once `CT1` is decided **and** the academy's blank contract arrives. Turn it
   into a document parents read and sign easily, in the app and on the website. **Don't change its wording.** The signed
   copy goes to the student's folder by itself and is **for owners and admins only**. Contracts parents already signed
@@ -132,32 +140,47 @@ started: *already works*, *small change* or *new work*.
     takes a typed name and a finger's signature, and files the signed PDF in the student's Contracts folder.
 
 ### CP: Competitions
-- [ ] **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**
+- ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**
   (legal, Korean, English). Today whoever scans has to choose the student. *(Phone scanner and the server)*
   - *Plan:* **Small change:** the reader already finds the shooter's name ("Park, Mina") and the phone only says "The
     sheet names …". New: the name matched to a student (their name and other names) and picked, read from more of the
     ways a sheet prints it; a warning when the student already chosen isn't the one the sheet names; the website's Add
     a competition does the same.
-- [ ] **CP2. Catch duplicates.** Whenever a result is added (the competition scan, the paper scan, a SIUS PDF in the
+  - *Done (#106):* the shooter's name is matched to a student by their name or another name, whole, in any order
+    ("Seo-yeon" is "Seoyeon"), or found in the sheet's heading; the phone picks them ("From the name on the sheet"),
+    says when the sheet names someone else, and offers the students it could be; the website's Add a competition says
+    so with "It's X's", and Add scores picks by the same rule.
+- ✅ **CP2. Catch duplicates.** Whenever a result is added (the competition scan, the paper scan, a SIUS PDF in the
   Drive, an upload on a student's Scores), check whether it's already there (the same student, date and scores) and
   warn instead of saving it twice. The manager uploaded the same PDF twice during the meeting.
   - *Plan:* **New work:** only the Drive's SIUS upload skips a result already saved (the same printed time and total).
     A shared check (the same student, day, position and scores) for every way a result is added, on the website and
     the phone, that says which result it repeats.
-- [ ] **CP3. Show the position on each series** of a competition (kneeling, prone, standing). Goo found it confusing
+  - *Done (#106):* every way of adding a result compares it with the student's saved results and the others added with
+    it (`shared/src/scores/duplicates.ts`): a SIUS report by its printed time and total, anything else by its day,
+    position, shots and total (and its shots). The Drive leaves a repeat out and names it (two copies in one drop got
+    through before); Add scores leaves it out with Save it anyway; Add a competition, Add paper scores and the phone's
+    scans ask "Already saved?" first.
+- ✅ **CP3. Show the position on each series** of a competition (kneeling, prone, standing). Goo found it confusing
   without them.
   - *Plan:* **Small change:** a competition's card names the position beside each series on the phone and in small
     print above it on the website; the results list shows a match's positions as coloured dots only. The position in
     words wherever a competition's series or positions show.
-- [ ] **CP4. Check the reader follows 3.1:** 3×20 = 6 series in the order kneeling, kneeling, prone, prone, standing,
+  - *Done (#106):* each series of a match's card leads with its position ("Kneeling", then K1–K10), and a match's row
+    names its positions (K, P, S, the words on wide screens).
+- ✅ **CP4. Check the reader follows 3.1:** 3×20 = 6 series in the order kneeling, kneeling, prone, prone, standing,
   standing; 60 shots = all standing.
   - *Plan:* **Already works**, to check with tests: the reader takes each shot's position from its letter on the sheet
     (K, P, S), keeps the order kneeling, prone, standing, and splits each position into series of ten.
-- [ ] **CP5. Typing a competition by hand**, for results that are only online: the match, the date, the scores per
+  - *Done (#106):* tests read a 3×20 sheet as six series in that order (its two columns interleaved too) and a 60-shot
+    match as standing, six series.
+- ✅ **CP5. Typing a competition by hand**, for results that are only online: the match, the date, the scores per
   position or series, and the inner tens. Check it works and is easy to find.
   - *Plan:* **Already works:** Add a competition (a student's Scores on the website, the Scan tab on the phone) takes
     each position's total and inner tens with no photo. **Small change:** fill the positions from the course of fire
     (3×20, 60 shots) in one tap, and an easier button to find (`SC1`).
+  - *Done (#106):* "No sheet? Fill in: 3×20 · 3×10 · 60 shots · 40 shots" fills the positions and their shots in one
+    tap, on the website and the phone.
 
 ### AT: Attendance
 - [ ] **AT1. Check that past attendance is easy to change.** The manager is marking the past weeks himself (Here,
@@ -170,12 +193,14 @@ started: *already works*, *small change* or *new work*.
     Here in one click, and past classes still unmarked easy to see.
 
 ### SC: The Scores tab
-- [ ] **SC1. Finding where to add scores.** On the website the manager couldn't find how to add a score from a student's
+- ✅ **SC1. Finding where to add scores.** On the website the manager couldn't find how to add a score from a student's
   Scores tab ("This is what I missed. I don't know why I didn't see that part"), so he used the Drive. Keep it in mind
   for that screen.
   - *Plan:* **Small change:** the tab's add buttons are outlined, beside a filled New report (the tab was remade the
     same day, #101). Adding scores becomes the tab's main action, and files dropped on the tab are read as the Drive
     reads them.
+  - *Done (#106):* the tab's add buttons are its main (filled) buttons, New report outlined, and files dropped anywhere
+    on the tab (SIUS PDFs, card photos, results sheets) are read there, all the student's.
 
 ### DM: The domain and access
 - [ ] **DM1. Connect the .com** (on Squarespace) once the manager invites Goo to the account. *(Goo)*
