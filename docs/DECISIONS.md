@@ -1037,3 +1037,15 @@ them (`CT2`).
   signed, who hasn't though a parent has the app, and who has no parent in the app yet.
 - **The privacy policy** says so (accounts made in the app, Sign in with Apple, what signing records), dated
   2026-11-03, for the owner to review.
+
+## 32. Goo's round of 2026-11-03, after the sign-up
+
+- **The Drive's drop dialog warns about repeats at once:** a dropped SIUS result already in the student's scores, or
+  the same one twice in the drop, says so in its row, beside the student and the position ("… is already in Arin’s
+  scores, so it won’t be added again"), and is left out unless someone chooses **Add it anyway** (`CP2`).
+- **A Date column in each student's Drive:** the day of what a file holds (its score's day, or a date in its name),
+  which matters more than when it was uploaded or changed. A student's folder opens with the newest day first; the
+  column sorts like the others (`itemDate`, `shared/src/drive/model.ts`).
+- **The sidebar:** Drive, then Scores, then Reports.
+- **1.1.0 to try on both phones** (build 9: TestFlight, Google Play's internal testing), with Sign in with Apple's
+  setup done; the stores' release still waits until everything is ready (`docs/publishing/updates.md`).
