@@ -954,14 +954,50 @@ Goo's asks after using the website. All of it is the website's: the phone app do
   which the academy sees on the Account page, §3) without an employee record, so he isn't on Employees, the schedule or
   payroll; in the demo academy too. Done on production on 2026-11-02 (the employee record he'd been given had nothing
   attached to it).
-- **Three designs each, for Goo to pick** (demo pages with made-up data, kept on the Mac mini, not committed): a
-  student's **Scores tab**, a **Scores page** in the menu, and the **Students list** (`docs/TODO.md`). Whatever he picks:
-  - **The Scores tab** starts with a summary (each position's average per 10, best and trend), then every result in a
-    list. A result opens and closes under its own row, several at once, its target played back, and nothing scrolls;
-    the latest result is no longer shown large on top. Add paper scores, Add a competition and New report stay, and
-    **Add paper scores takes photos** of the cards, from the computer or the student's Drive folder: the website reads
-    them as the phone's scanner does, for the coach to check and save. Typing the scores stays.
-  - **The Scores page** (staff only) shows every student's latest results, found by student, position, kind and date,
-    opened in place, and added from there (SIUS PDFs, card photos, results sheets).
-  - **The Students list** shows each student's status as a dot by the name (green: enrolled) instead of a Status
-    column, with fewer columns.
+- **Goo's picks of three designs each** (demo pages with made-up data, kept on the Mac mini, not committed):
+  - **The Students list: options 1 and 2 together** (#100), "list vs grid", switched with a button the website
+    remembers. The list is the quiet one, easy to read (each student's status as a dot by the name, green for enrolled,
+    and fewer columns); the grid shows the students as cards. Group by level works in both and is remembered for each
+    (off in the list, on in the grid).
+  - **A student's Scores tab: option 1** (#101). A summary on top (each position's average per 10, its best, and its
+    trend by the progress reports' rule, so the two never disagree), then every result in a list. A result opens and
+    closes under its own row, several at once, its target played back, and nothing scrolls; the latest result is no
+    longer shown large on top. Scores over time, Compare and Progress reports fold under the list (remembered). Add
+    paper scores, Add a competition and New report stay, and **Add paper scores takes photos** of the cards, from the
+    computer or the student's Drive folder: the website reads them with the phone's reader, for the coach to check card
+    by card and save. Typing the scores stays. Families' Scores page is unchanged.
+  - **The Scores page: option 1, "Feed"** (#102), for admins and coaches, in the menu after Students: every student's
+    results, newest first, by day and then by week, found by student, position, kind, level and dates (the last 30
+    days to start), and opened in place as on the Scores tab. Beside them: the last 7 days against the week before, the
+    week's new bests, and what needs a look (results marked Check, enrolled students without a score for 30 days).
+    **Add scores** takes SIUS PDFs, card photos and results sheets together, dropped anywhere on the page, and asks
+    only what the files don't say. A card's student and position come from the photo's file name when it says them
+    (the reader doesn't read handwriting), else they're asked.
+
+## 30. The third meeting with the manager (2026-11-02)
+
+Goo showed the manager the competition scan, comparisons, the parent view, Settings and progress reports, and together
+they loaded the academy's past results. The tasks and their ticks: [`MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md).
+
+- **The academy uses the app from now on.** Every past result is in (SIUS PDFs through the Drive, paper targets and
+  competition sheets through the phone), so nothing more is imported. The manager marks the past weeks' attendance
+  himself on the website, and every day from now on: the imported weeks to October 25 came in all Here, the ones since
+  unmarked.
+- **Competition sheets:** a 3×20 prints six series of ten, kneeling, kneeling, prone, prone, standing, standing (the
+  sheet doesn't name them; the order does, as the app assumed); a 60-shot match is all standing; "PR" is a personal
+  record. Results that exist only online are typed by hand. Match directors may give PDFs later, laid out like the
+  paper sheet (`L-CP`). A paper card's **bench** isn't a position (as §23).
+- **The scan picks the student from the sheet's name**, other names included, and **every way of adding a result
+  warns about one already saved** (`CP1`, `CP2`).
+- **Contracts are signed in the app**, right after a parent signs up: first a proposal of the whole sign-up flow,
+  above all how a new parent's account reaches the right child safely (`CT1`, Goo decides), then the build once the
+  academy's blank contract arrives (`CT2`). The contract's wording is the academy's and isn't changed; contracts
+  already signed stay as they are, uploaded by the manager.
+- **The domain** is on Squarespace: Goo connects the .com when the manager invites him, then the coaches are invited
+  and email goes out from the academy's domain (`DM1`–`DM3`, `docs/DEPLOY.md`).
+- **The kiosk** will run on an Android tablet on a wall mount at the front desk, installed from a file when Goo asks
+  (`L-KI`). Clocking in from a phone or by location was turned down: the kiosk only.
+- **Korean** stays for later, when Goo decides (`L-LG`).
+- **This round runs on the MacBook Pro alone** (Goo, 2026-11-03), the website's and the server's tasks included.
+- **The stores** (Goo, 2026-11-03): Google Play has published 1.0.0; the App Store is still reviewing it. The next
+  update goes to both once everything is ready, not before.
