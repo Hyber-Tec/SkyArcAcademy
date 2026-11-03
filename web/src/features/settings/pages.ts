@@ -124,7 +124,7 @@ export const PAGES: SettingsPageDef[] = [
     more: [],
   },
   { key: 'website', title: 'Website', description: 'The public website: its pages, photos, coaches and reviews, and the trial requests and questions it sends.', home: 'academy', groups: [{ items: [b('website')] }], more: [], wide: true, selfTitled: true },
-  { key: 'contract', title: 'Enrollment contract', description: 'The blank contract families sign from a link the office sends.', home: 'academy', groups: [{ items: [b('contract')] }], more: [], selfTitled: true },
+  { key: 'contract', title: 'Enrollment contract', description: 'The blank contract each family signs in the app before using it, and who has signed.', home: 'academy', groups: [{ items: [b('contract')] }], more: [], selfTitled: true },
   { key: 'activity', title: 'Activity log', description: 'Every change to the settings, the schedule, people and pay: who made it and when.', home: 'academy', groups: [{ items: [b('activity')] }], more: [], wide: true, selfTitled: true, keywords: 'audit history' },
   {
     key: 'ai',

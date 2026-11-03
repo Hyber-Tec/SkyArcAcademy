@@ -8,7 +8,7 @@ import type { TimestampLike } from './types'
  * four switches on their staff record (`NotificationPrefs`, More → Notifications on the phone, Profile on the website).
  * A switch that was never set is on. The inbox, the website's bell and the phone's push all follow the same switch.
  */
-export type NoticeKey = 'classChanges' | 'requests' | 'scores' | 'reports' | 'announcements' | 'websiteMessages'
+export type NoticeKey = 'classChanges' | 'requests' | 'scores' | 'reports' | 'announcements' | 'websiteMessages' | 'signups'
 
 /** `branches/{b}/notificationPrefs/{email}`: a parent's, student's, owner's or admin's switches. */
 export type NoticePrefs = Partial<Record<NoticeKey, boolean>> & { updatedAt?: TimestampLike | null }
@@ -31,6 +31,7 @@ export const OFFICE_SWITCHES: readonly NoticeSwitch[] = [
   { key: 'classChanges', label: 'Cancellations from families', help: 'When a parent or student cancels a class' },
   { key: 'requests', label: 'Requests from families', help: 'A makeup, a moved class or an extra class to answer, and families’ answers to the times you suggest' },
   { key: 'websiteMessages', label: 'Messages from the website', help: 'Trial requests and questions sent from the public website' },
+  { key: 'signups', label: 'Families signing up', help: 'A parent or student who signed up with the email on file, and anyone asking to join' },
 ]
 
 /** The switches a role sees (coaches have their own, on their staff record). */
@@ -48,6 +49,7 @@ export function noticeKeyOf(type: NotificationType): NoticeKey | null {
   if (type === 'report_shared') return 'reports'
   if (type.startsWith('announcement')) return 'announcements'
   if (type === 'website_message') return 'websiteMessages'
+  if (type === 'family_linked' || type === 'signup_request') return 'signups'
   return null
 }
 

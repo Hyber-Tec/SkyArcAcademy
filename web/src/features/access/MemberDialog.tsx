@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LuPlus } from 'react-icons/lu'
 import { toast } from 'sonner'
+import { requestedStudents } from '@shared/access/requests'
 import { isReservedEmail } from '@shared/brand'
 import { emailKey } from '@shared/paths'
 import { ROLES, ROLE_LABELS, type Role, isAdminRole, isStaffRole } from '@shared/roles'
@@ -117,14 +118,13 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
     })),
   ]
   const studentOptions = students.map((s) => ({ value: s.id, label: s.name, hint: s.grade ? gradeLabel(s.grade) : undefined }))
-  // The children a parent's request names ("Ava Patel, Ben Patel") that match a student's full name, offered to add with
-  // one click: the admin still chooses, as a parent's access to a child's records is theirs to grant.
+  // The children a parent's request names ("Ava Patel, Ben Patel", "Ava and Ben Patel", a nickname), matched to the
+  // students they could be and offered to add with one click: the admin still chooses, as a parent's access to a child's
+  // records is theirs to grant.
   const requested = useMemo(() => {
-    const names = (request?.studentNames ?? '')
-      .split(/,|;|\n|&|\band\b/i)
-      .map((n) => n.trim().toLowerCase().replace(/\s+/g, ' '))
-      .filter(Boolean)
-    return students.filter((st) => names.includes(st.nameLower))
+    const byId = new Map(students.map((st) => [st.id, st]))
+    const pool = students.map((st) => ({ id: st.id, name: st.name, otherNames: st.otherNames, finished: st.status === 'finished' }))
+    return requestedStudents(request?.studentNames ?? '', pool).flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []))
   }, [request?.studentNames, students])
   const staffRole = isStaffRole(role)
   // A new employee record is asked for its hourly rate, so payroll never prices their time at $0.

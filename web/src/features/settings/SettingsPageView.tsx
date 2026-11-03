@@ -31,6 +31,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { SignupShareCard } from '@/features/access/SignupShare'
 import { AuditLogSection } from '@/features/audit/AuditLogSection'
 import { ContractSettings } from '@/features/contracts/ContractSettings'
+import { ContractsList } from '@/features/contracts/ContractsList'
 import { WebsiteSettings } from '@/features/website/WebsiteSettings'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
@@ -226,7 +227,13 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
       case 'website':
         return wrap(<WebsiteSettings />, true)
       case 'contract':
-        return wrap(<ContractSettings />, true)
+        return wrap(
+          <div className="space-y-4">
+            <ContractSettings />
+            <ContractsList />
+          </div>,
+          true,
+        )
       case 'activity':
         return wrap(<AuditLogSection />, true)
       case 'ai':

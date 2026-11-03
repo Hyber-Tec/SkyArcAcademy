@@ -17,9 +17,11 @@ import { storage } from '@/lib/firebase'
 import { readContractPdf, uploadTemplate, useContractTemplates } from './api'
 
 /**
- * Settings → Enrollment contract (owners and admins): the academy's blank contract, as a PDF. A new upload replaces it
- * for the links sent from then on; the earlier ones stay listed, as contracts already signed (and links already sent)
- * keep theirs. The signed copies go in each student's Contracts folder in the Drive (shared/src/contracts/filing.ts).
+ * Settings → Enrollment contract (owners and admins): the academy's blank contract, as a PDF, and who has signed it
+ * (ContractsList). Once it's here, each family signs it in the app before using it (docs/DECISIONS.md §31). A new upload
+ * replaces it for the signatures from then on; the earlier ones stay listed, as contracts already signed (and links
+ * already sent) keep theirs. The signed copies go in each student's Contracts folder in the Drive
+ * (shared/src/contracts/filing.ts).
  */
 export function ContractSettings() {
   const { branchId, actor, timezone } = useBranch()
@@ -41,13 +43,20 @@ export function ContractSettings() {
       if (current) {
         const ok = await confirm({
           title: 'Replace the enrollment contract?',
-          description: `Links you send from now on will have “${file.name}”. Contracts already signed, and links already sent, keep the one they have.`,
+          description: `Families who haven’t signed yet, and links you send from now on, will have “${file.name}”. Contracts already signed, and links already sent, keep the one they have.`,
           confirmLabel: 'Replace',
+        })
+        if (!ok) return
+      } else {
+        const ok = await confirm({
+          title: 'Ask families to sign this contract?',
+          description: `From now on, each parent signs “${file.name}” in the app (or on the website) before using it, for each child without a signed contract. A contract signed before the app counts once it’s filed in the student’s Contracts folder in the Drive (or marked signed on their page): file those first, so those families aren’t asked again.`,
+          confirmLabel: 'Upload',
         })
         if (!ok) return
       }
       await uploadTemplate(branchId, actor, file, read, current)
-      toast.success(current ? 'The contract is replaced' : 'The contract is uploaded', { description: 'Send it from a student’s page.' })
+      toast.success(current ? 'The contract is replaced' : 'The contract is uploaded', { description: 'Families sign it in the app before using it.' })
     } catch (e) {
       toast.error('Couldn’t upload the contract', { description: (e as Error).message })
     } finally {
@@ -69,7 +78,7 @@ export function ContractSettings() {
       <CardHeader>
         <CardTitle>Enrollment contract</CardTitle>
         <CardDescription>
-          The academy’s blank contract, as a PDF. From a student’s page you send the family a link: they read the contract on their phone, type their name and sign with a finger, with no account or app. The signed copy goes in the student’s Contracts folder, inside their folder in the Drive, which only owners and admins see.
+          The academy’s blank contract, as a PDF. Each parent reads it and signs it in the app (or on the website) before using it, with a finger. For a family without the app, send a link from the student’s page: it works on any phone, with no account. The signed copy goes in the student’s Contracts folder, inside their folder in the Drive, which only owners and admins see.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -91,7 +100,7 @@ export function ContractSettings() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No contract yet. Upload the academy’s blank contract to send it to families.</div>
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No contract yet. Upload the academy’s blank contract for families to sign.</div>
         )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Button onClick={() => input.current?.click()} disabled={busy || loading}>

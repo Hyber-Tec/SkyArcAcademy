@@ -12,10 +12,12 @@ import { FinalCta, PageHero } from '../components/blocks'
 /**
  * The privacy policy and Help, as pages of the website (the App Store and Google Play link both: the policy's address
  * and the Support URL; the phone app opens them too). The policy is the academy's, approved by it on 2026-10-20 (the
- * owner); its English is the text in force, so the Korean page shows it in English under a note. Help is translated
- * like the rest of the site (a draft the owner reviews). The academy's email and phone come from Settings → Academy.
+ * owner), and updated on 2026-11-03 for accounts made in the app, Sign in with Apple and the enrollment contract
+ * (docs/DECISIONS.md §31); its English is the text in force, so the Korean page shows it in English under a note. Help
+ * is translated like the rest of the site (a draft the owner reviews). The academy's email and phone come from
+ * Settings → Academy.
  */
-const UPDATED: DateKey = '2026-10-20'
+const UPDATED: DateKey = '2026-11-03'
 const EFFECTIVE: DateKey = '2026-10-20'
 
 const TEXT = {
@@ -147,11 +149,18 @@ export function Privacy() {
         <List
           items={[
             <>
-              <strong>Your account.</strong> Your name and email address. If you sign in with Google, the name and picture on that Google account. If you sign in with a
-              password, it’s stored only in scrambled form by our sign-in service; no one at the academy can see it.
+              <strong>Your account.</strong> Your name and email address. If you sign in with Google, the name and picture on that Google account. If you sign in with
+              Apple, the name and email address Apple shares (which can be an address Apple makes to hide yours). If you sign in with a password, it’s stored only in
+              scrambled form by our sign-in service; no one at the academy can see it.
             </>,
             <>
               <strong>Parents and guardians.</strong> Your name, email address, phone number and relationship to the student.
+            </>,
+            <>
+              <strong>The enrollment contract.</strong> When a parent or guardian signs the academy’s contract, in the app, on this website or from a link the academy
+              sends: the name they type, their relationship to the student, the signature they draw, the date and time, their network address, their browser or phone,
+              and the email they’re signed in with, if they are. These go on a page added to the signed contract, which is kept with the student’s records, where only
+              the academy’s owners and admins see it; the family can download their own copy.
             </>,
             <>
               <strong>Students.</strong> Name, grade, school, date of birth, level and program, contact details we’re given, class schedule, attendance, and notes from
@@ -185,7 +194,7 @@ export function Privacy() {
       body: (
         <List
           items={[
-            'You sign in with Google or with an email and a password; the app opens only for an email the academy has added.',
+            'You make your account, or sign in, with Google, with Apple (on an iPhone) or with an email and a password. A parent or student whose email is on the academy’s records gets in by it; anyone else asks the academy, which decides. Parents sign the academy’s enrollment contract in the app before using it.',
             'Staff can photograph a student’s paper target, or choose a photo of one, to score it. The app asks for the camera or your photos only then, reads the target on the phone, and files a copy of the target and its scores in that student’s records. It doesn’t save anything to your photos and doesn’t look at your other photos.',
             'The app doesn’t collect your location, contacts or microphone, and has no advertising, analytics or tracking.',
           ]}
@@ -330,17 +339,21 @@ const HELP = {
     title: l('Signing in', '로그인'),
     items: [
       l(
-        'The academy gives each person access by their email address: sign in with the email it has for you, with Google or with a password.',
-        '아카데미는 이메일 주소로 접근 권한을 드립니다. 아카데미에 등록된 이메일로, Google 또는 비밀번호를 사용해 로그인하세요.',
+        'Make your account, or sign in, with the email you gave the academy, with Google, Apple (on an iPhone) or a password: a parent or student whose email is on the academy’s records gets in right away.',
+        '아카데미에 알려 주신 이메일로 Google, Apple(iPhone) 또는 비밀번호를 사용해 계정을 만들거나 로그인하세요. 아카데미 기록에 이메일이 있는 학부모와 학생은 바로 이용할 수 있습니다.',
       ),
       l('Forgot your password?', '비밀번호를 잊으셨나요?'),
       l(
-        '“No access yet” means the academy hasn’t added the email you signed in with: ask it to, or sign in with the email its invitation went to.',
-        '“아직 접근 권한이 없습니다”는 로그인한 이메일을 아카데미가 아직 등록하지 않았다는 뜻입니다. 등록을 요청하시거나, 초대 메일을 받은 이메일로 로그인하세요.',
+        '“This email isn’t on the academy’s records” means no student’s record has the email you signed in with: tap “Ask the academy”, or sign in with the email you gave it.',
+        '“이 이메일은 아카데미 기록에 없습니다”는 로그인한 이메일이 어느 학생 기록에도 없다는 뜻입니다. “아카데미에 요청”을 누르시거나, 아카데미에 알려 주신 이메일로 로그인하세요.',
       ),
       l(
         'A password account opens once its email is confirmed: look for the email from the academy, or ask for a new one from the sign-in page.',
         '비밀번호 계정은 이메일 확인 후에 열립니다. 아카데미에서 보낸 메일을 확인하시거나, 로그인 화면에서 새 확인 메일을 요청하세요.',
+      ),
+      l(
+        'Before using the app, a parent signs the academy’s enrollment contract for each child, in the app or on this website. One parent’s signature is enough.',
+        '앱을 사용하기 전에 학부모가 앱이나 이 웹사이트에서 자녀마다 아카데미 등록 계약서에 서명합니다. 부모 중 한 분의 서명이면 됩니다.',
       ),
     ],
     reset: l('Choose a new one', '새 비밀번호 만들기'),
@@ -393,6 +406,7 @@ export function Help() {
             </>,
             tr(HELP.signIn.items[2]),
             tr(HELP.signIn.items[3]),
+            tr(HELP.signIn.items[4]),
           ]}
         />
       ),

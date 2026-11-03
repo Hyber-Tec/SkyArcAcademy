@@ -60,6 +60,24 @@ describe('email and password accounts', () => {
   })
 })
 
+describe('signing up by the email on file (docs/DECISIONS.md §31)', () => {
+  it('nobody gives themselves access to a child: only the server links', async () => {
+    const db = user('u-new', 'new@a.test')
+    await assertFails(setDoc(doc(db, `branches/${B}/members/new@a.test`), { email: 'new@a.test', role: 'parent', status: 'active', studentIds: ['s1'], restrictions: [] }))
+    await assertFails(setDoc(doc(db, `branches/${B}/accessLinks/new@a.test`), { email: 'new@a.test', studentIds: ['s1'] }))
+    await assertFails(getDoc(doc(db, `branches/${B}/accessLinks/new@a.test`)))
+  })
+
+  it('the server’s record of who it linked is closed, even to the office', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `branches/${B}/members/admin@a.test`), { email: 'admin@a.test', role: 'admin', status: 'active', restrictions: [] })
+      await setDoc(doc(ctx.firestore(), `branches/${B}/accessLinks/new@a.test`), { email: 'new@a.test', studentIds: ['s1'] })
+    })
+    await assertFails(getDoc(doc(user('u-admin', 'admin@a.test'), `branches/${B}/accessLinks/new@a.test`)))
+    await assertFails(deleteDoc(doc(user('u-admin', 'admin@a.test'), `branches/${B}/accessLinks/new@a.test`)))
+  })
+})
+
 describe('phone devices', () => {
   it('people register, read and remove their own phone', async () => {
     const db = user('u-coach', 'coach@a.test')

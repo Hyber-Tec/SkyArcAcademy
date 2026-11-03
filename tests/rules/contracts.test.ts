@@ -5,8 +5,10 @@ import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, query, serverTi
 import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
-// The enrollment contract (docs/DECISIONS.md §23, F4): the blank contract's uploads and the signing links are owners'
-// and admins' only; links are made and signed on the server, and admins cancel one still waiting.
+// The enrollment contract (docs/DECISIONS.md §23, F4, and §31): the blank contract's uploads are owners' and admins',
+// and members read the current one (a parent signs it before using the app); the signing links are owners' and admins'
+// only, made and signed on the server, and admins cancel one still waiting. Each student's signed contract is the
+// family's to read; the server writes it, and owners and admins mark one signed on paper or remove it.
 
 let env: RulesTestEnvironment
 const A = 'alpha-academy'
@@ -65,6 +67,41 @@ const link = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 })
 
+const signedByServer = (studentId: string) => ({
+  studentId,
+  studentName: 'Student',
+  via: 'app',
+  signedAt: Timestamp.now(),
+  signerName: 'Pat Parent',
+  relation: 'parent',
+  signerEmail: 'other@a.test',
+  templateId: TEMPLATE_ID,
+  templateName: 'Enrollment contract.pdf',
+  fileId: 'f1',
+  fileName: 'Student enrollment contract.pdf',
+  linkId: null,
+  markedBy: null,
+  note: '',
+})
+
+const onPaper = (email: string, studentId: string, extra: Record<string, unknown> = {}) => ({
+  studentId,
+  studentName: 'Student One',
+  via: 'paper',
+  signedAt: serverTimestamp(),
+  signerName: '',
+  relation: null,
+  signerEmail: null,
+  templateId: null,
+  templateName: null,
+  fileId: null,
+  fileName: null,
+  linkId: null,
+  markedBy: actor(email),
+  note: 'Signed in September',
+  ...extra,
+})
+
 const cancel = (email: string) => ({ status: 'canceled', canceledAt: serverTimestamp(), canceledBy: actor(email) })
 
 beforeAll(async () => {
@@ -89,7 +126,13 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/owner@a.test`), member('owner@a.test', 'owner'))
     await setDoc(doc(d, `branches/${A}/members/coach@a.test`), member('coach@a.test', 'coach', { staffId: 'c1' }))
     await setDoc(doc(d, `branches/${A}/members/parent@a.test`), member('parent@a.test', 'parent', { studentIds: ['s1'] }))
+    await setDoc(doc(d, `branches/${A}/members/other@a.test`), member('other@a.test', 'parent', { studentIds: ['s2'] }))
+    await setDoc(doc(d, `branches/${A}/members/kid@a.test`), member('kid@a.test', 'student', { studentId: 's1' }))
+    await setDoc(doc(d, `branches/${A}/students/s1`), { name: 'Student One', status: 'enrolled' })
+    await setDoc(doc(d, `branches/${A}/students/s2`), { name: 'Student Two', status: 'enrolled' })
     await setDoc(doc(d, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { ...template(ADMIN, TEMPLATE_ID), uploadedAt: Timestamp.now() })
+    await setDoc(doc(d, `branches/${A}/contractTemplates/OLD4567890abcdefghij`), { ...template(ADMIN, 'OLD4567890abcdefghij'), current: false, uploadedAt: Timestamp.now() })
+    await setDoc(doc(d, `branches/${A}/signedContracts/s2`), signedByServer('s2'))
     await setDoc(doc(d, `branches/${A}/contractLinks/waiting`), link())
     await setDoc(doc(d, `branches/${A}/contractLinks/done`), link({ status: 'signed', signedAt: Timestamp.now() }))
     await uploadBytes(ref(c.storage(), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`), PDF, { contentType: 'application/pdf' })
@@ -97,14 +140,31 @@ beforeEach(async () => {
 })
 
 describe('the blank contract', () => {
-  it('only owners and admins read its uploads, and the PDFs', async () => {
+  it('owners and admins read every upload; members read the current one and its files, nobody else', async () => {
     await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
+    await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
     await assertSucceeds(getDocs(query(collection(db('owner@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
-    await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
+    await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
+    await assertSucceeds(getDoc(doc(db('kid@a.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
     await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/contractTemplates`)))
+    await assertFails(getDoc(doc(db('stranger@b.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
     await assertSucceeds(getBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
-    await assertFails(getBytes(ref(storage('coach@a.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
-    await assertFails(getBytes(ref(storage('parent@a.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
+    await assertSucceeds(getBytes(ref(storage('parent@a.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
+    await assertFails(getBytes(ref(storage('stranger@b.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
+  })
+
+  it('takes its pages as pictures from owners and admins only, once', async () => {
+    const page = `branches/${A}/contracts/templates/${TEMPLATE_ID}-p1.jpg`
+    const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0])
+    await assertFails(uploadBytes(ref(storage('coach@a.test'), page), JPEG, { contentType: 'image/jpeg' }))
+    await assertFails(uploadBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${TEMPLATE_ID}-p1.png`), JPEG, { contentType: 'image/png' }))
+    await assertFails(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'text/html' }))
+    await assertSucceeds(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'image/jpeg' }))
+    await assertFails(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'image/jpeg' }))
+    await assertSucceeds(getBytes(ref(storage('kid@a.test'), page)))
+    await assertSucceeds(setDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/P1234567890abcdefghi`), template(ADMIN, 'P1234567890abcdefghi', { pageImages: 3 })))
+    await assertFails(setDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/Q1234567890abcdefghi`), template(ADMIN, 'Q1234567890abcdefghi', { pageImages: 99 })))
   })
 
   it('takes a new upload from owners and admins, as themselves, and retires the one before, for good', async () => {
@@ -144,5 +204,36 @@ describe('signing links', () => {
     await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/done`), cancel(ADMIN)))
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), cancel(ADMIN)))
     await assertFails(deleteDoc(doc(a, `branches/${A}/contractLinks/done`)))
+  })
+})
+
+describe('signed contracts', () => {
+  it('the family reads their own; owners and admins read all; coaches none', async () => {
+    await assertSucceeds(getDoc(doc(db('other@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertSucceeds(getDoc(doc(db('parent@a.test'), `branches/${A}/signedContracts/s1`)))
+    await assertSucceeds(getDoc(doc(db('kid@a.test'), `branches/${A}/signedContracts/s1`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertFails(getDoc(doc(db('kid@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertSucceeds(getDocs(collection(db(ADMIN), `branches/${A}/signedContracts`)))
+  })
+
+  it('owners and admins mark one signed on paper, as themselves; the rest is the server’s', async () => {
+    const a = db(ADMIN)
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/signedContracts/s1`), onPaper('parent@a.test', 's1')))
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/signedContracts/s1`), { ...signedByServer('s1'), signerEmail: 'parent@a.test' }))
+    await assertFails(setDoc(doc(a, `branches/${A}/signedContracts/s1`), onPaper('someone@a.test', 's1')))
+    await assertFails(setDoc(doc(a, `branches/${A}/signedContracts/s1`), onPaper(ADMIN, 's1', { via: 'app' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/signedContracts/s1`), onPaper(ADMIN, 's2')))
+    await assertFails(setDoc(doc(a, `branches/${A}/signedContracts/s1`), onPaper(ADMIN, 's1', { signerEmail: 'x@a.test' })))
+    await assertFails(setDoc(doc(a, `branches/${A}/signedContracts/nobody`), onPaper(ADMIN, 'nobody')))
+    await assertSucceeds(setDoc(doc(a, `branches/${A}/signedContracts/s1`), onPaper(ADMIN, 's1')))
+    await assertFails(updateDoc(doc(a, `branches/${A}/signedContracts/s1`), { note: 'changed' }))
+  })
+
+  it('owners and admins remove one to ask again; nobody else', async () => {
+    await assertFails(deleteDoc(doc(db('other@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertFails(deleteDoc(doc(db('coach@a.test'), `branches/${A}/signedContracts/s2`)))
+    await assertSucceeds(deleteDoc(doc(db(ADMIN), `branches/${A}/signedContracts/s2`)))
   })
 })

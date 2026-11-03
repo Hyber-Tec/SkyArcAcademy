@@ -142,6 +142,9 @@ export type NotificationType =
   // A new score for a student, to their family.
   | 'score_added'
   | 'contract_signed'
+  // Sign-ups (docs/DECISIONS.md §31), to the office: someone linked by the email on file, or asking to join.
+  | 'family_linked'
+  | 'signup_request'
 
 /** `branches/{b}/notifications/{id}`: the in-app inbox (written by Cloud Functions). */
 export interface AppNotification {
@@ -187,6 +190,8 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   request_asked_again: { label: 'Asked Again', color: '#D97706' },
   score_added: { label: 'New Score', color: '#2563EB' },
   contract_signed: { label: 'Contract Signed', color: '#16A34A' },
+  family_linked: { label: 'Signed Up', color: '#16A34A' },
+  signup_request: { label: 'Asks to Join', color: '#D97706' },
 }
 
 export function notificationMeta(type: string): { label: string; color: string } {

@@ -1,21 +1,16 @@
 import { httpsCallable } from 'firebase/functions'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuCircleCheck, LuDownload, LuEraser, LuFileText, LuMail, LuPhone, LuRotateCw } from 'react-icons/lu'
+import { useEffect, useMemo, useState } from 'react'
+import { LuCircleCheck, LuDownload, LuFileText, LuMail, LuPhone, LuRotateCw } from 'react-icons/lu'
 import { useParams } from 'react-router'
-import { type SigningField, checkSigning } from '@shared/contracts/signing'
-import { SIGNER_RELATIONS, type SignerRelation } from '@shared/contracts/types'
+import type { Signing, SigningField } from '@shared/contracts/signing'
 import { formatPhone } from '@shared/people'
 import { formatInstant } from '@shared/time'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Field, FieldError, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
 import { ContractPages } from '@/features/contracts/ContractPages'
-import { SignaturePad, type SignaturePadHandle } from '@/features/contracts/SignaturePad'
+import { type SignOutcome, SigningForm } from '@/features/contracts/SigningForm'
 import { functions } from '@/lib/firebase'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
@@ -254,39 +249,18 @@ export function SignContractPage() {
 function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: { name: string; copyUntil: number }) => void }) {
   const pdf = useMemo(() => bytesOf(loaded.contract.data), [loaded.contract.data])
   const [showPages, setShowPages] = useState(true)
-  const [name, setName] = useState('')
-  const [relation, setRelation] = useState<SignerRelation | ''>('')
-  const [agree, setAgree] = useState(false)
-  const [errors, setErrors] = useState<Partial<Record<SigningField, string>>>({})
-  const [problem, setProblem] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const pad = useRef<SignaturePadHandle>(null)
-  const clearError = useCallback((field: SigningField) => setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e)), [])
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setProblem(null)
-    const signature = pad.current?.toPng() ?? ''
-    const checked = checkSigning({ name, relation, signature, agree })
-    if (!checked.ok) {
-      setErrors(checked.errors)
-      document.querySelector('[data-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
-    }
-    setErrors({})
-    setBusy(true)
+  async function onSign(signing: Signing): Promise<SignOutcome> {
     try {
-      const r = (await sign({ token, ...checked.value, agree: true })).data
-      onSigned({ name: checked.value.name, copyUntil: r.copyUntil })
+      const r = (await sign({ token, ...signing, agree: true })).data
+      onSigned({ name: signing.name, copyUntil: r.copyUntil })
       window.scrollTo({ top: 0 })
     } catch (err) {
       const f = err as { code?: string; details?: { errors?: Partial<Record<SigningField, string>>; state?: string } }
-      if (f.details?.errors) setErrors(f.details.errors)
-      else if (f.code === 'functions/failed-precondition') setProblem('This link can’t be signed any more. Reload the page to see why.')
-      else if (f.code === 'functions/resource-exhausted') setProblem('Too many tries just now. Please wait a few minutes, then sign again.')
-      else setProblem('The contract couldn’t be signed just now. Check your connection and try again.')
-    } finally {
-      setBusy(false)
+      if (f.details?.errors) return { errors: f.details.errors }
+      if (f.code === 'functions/failed-precondition') return { problem: 'This link can’t be signed any more. Reload the page to see why.' }
+      if (f.code === 'functions/resource-exhausted') return { problem: 'Too many tries just now. Please wait a few minutes, then sign again.' }
+      return { problem: 'The contract couldn’t be signed just now. Check your connection and try again.' }
     }
   }
 
@@ -304,89 +278,11 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
         </Button>
       </section>
 
-      <form onSubmit={(e) => void submit(e)} className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm sm:p-8" noValidate>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Sign the contract</h2>
-          <p className="mt-1 text-sm text-muted-foreground">As {loaded.firstName}’s parent or guardian.</p>
-        </div>
-
-        <Field data-invalid={!!errors.name}>
-          <FieldLabel htmlFor="signer-name">Your full name</FieldLabel>
-          <Input
-            id="signer-name"
-            value={name}
-            autoComplete="name"
-            autoCapitalize="words"
-            maxLength={100}
-            aria-invalid={!!errors.name || undefined}
-            onChange={(e) => {
-              setName(e.target.value)
-              clearError('name')
-            }}
-          />
-          {errors.name ? <FieldError>{errors.name}</FieldError> : null}
-        </Field>
-
-        <Field data-invalid={!!errors.relation}>
-          <FieldLabel id="signer-relation-label">You are {loaded.firstName}’s</FieldLabel>
-          <RadioGroup
-            value={relation}
-            onValueChange={(v) => {
-              setRelation(v as SignerRelation)
-              clearError('relation')
-            }}
-            className="grid grid-cols-2 gap-2"
-            aria-labelledby="signer-relation-label"
-          >
-            {(Object.keys(SIGNER_RELATIONS) as SignerRelation[]).map((r) => (
-              <label key={r} htmlFor={`relation-${r}`} className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-3 text-sm font-medium has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted/40">
-                <RadioGroupItem value={r} id={`relation-${r}`} />
-                {SIGNER_RELATIONS[r]}
-              </label>
-            ))}
-          </RadioGroup>
-          {errors.relation ? <FieldError>{errors.relation}</FieldError> : null}
-        </Field>
-
-        <Field data-invalid={!!errors.signature}>
-          <div className="flex items-center justify-between gap-2">
-            <FieldLabel>Your signature</FieldLabel>
-            <Button type="button" variant="ghost" size="sm" onClick={() => pad.current?.clear()}>
-              <LuEraser /> Clear
-            </Button>
-          </div>
-          <SignaturePad ref={pad} invalid={!!errors.signature} onChange={(ink) => ink && clearError('signature')} label="Your signature: draw it with your finger or mouse" />
-          {errors.signature ? <FieldError>{errors.signature}</FieldError> : null}
-        </Field>
-
-        <Field data-invalid={!!errors.agree} orientation="horizontal" className="items-start">
-          <Checkbox
-            id="signer-agree"
-            checked={agree}
-            className="mt-0.5"
-            onCheckedChange={(v) => {
-              setAgree(v === true)
-              clearError('agree')
-            }}
-          />
-          <div className="space-y-1">
-            <FieldLabel htmlFor="signer-agree" className="leading-snug font-medium">
-              I agree to sign this contract electronically
-            </FieldLabel>
-            <p className="text-xs text-muted-foreground">My typed name and the signature I drew are my signature on it.</p>
-            {errors.agree ? <FieldError>{errors.agree}</FieldError> : null}
-          </div>
-        </Field>
-
-        {problem ? <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{problem}</p> : null}
-
-        <Button type="submit" size="lg" className="w-full" disabled={busy}>
-          {busy ? <Spinner /> : null} Sign the contract
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Signing adds a page to the contract with your name, the date and time, your internet address and your browser. The link works until {longDate(loaded.expiresAt, loaded.academy)}, for one signature.
-        </p>
-      </form>
+      <SigningForm
+        who={loaded.firstName}
+        onSign={onSign}
+        note={<>Signing adds a page to the contract with your name, the date and time, your internet address and your browser. The link works until {longDate(loaded.expiresAt, loaded.academy)}, for one signature.</>}
+      />
 
       <Contact academy={loaded.academy} lead="Questions about the contract? Contact the academy:" />
     </Shell>

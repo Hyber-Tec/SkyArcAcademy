@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { isDemoAcademy } from '@shared/academy'
+import { LINKED_BY_RECORDS } from '@shared/access/onFile'
 import { isReservedEmail, signInUrl } from '@shared/brand'
 import { type InviteKind, inviteEmail } from '@shared/email/invite'
 import { COL, DOC, ROOT } from '@shared/paths'
@@ -70,6 +71,8 @@ export const onMemberWritten = onDocumentWritten(
     const promoted = !!before && before.role !== 'owner' && after.role === 'owner'
     if (before && !promoted) return
     if (isReservedEmail(email) || isDemoAcademy(branchId)) return
+    // Signed up and linked by the email on file (signup.ts): they're signed in already.
+    if (!before && after.createdBy === LINKED_BY_RECORDS) return
 
     let kind: InviteKind = promoted ? 'promoted_owner' : after.role === 'owner' ? 'owner' : 'added'
     let by = (promoted ? after.updatedBy : after.createdBy) ?? null

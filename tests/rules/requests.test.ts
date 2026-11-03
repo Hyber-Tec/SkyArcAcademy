@@ -117,5 +117,7 @@ describe('notification switches', () => {
     await assertFails(setDoc(doc(db('other@a.test'), `branches/${A}/notificationPrefs/parent@a.test`), { scores: true, updatedAt: serverTimestamp() }))
     await assertFails(setDoc(doc(db('paused@a.test'), `branches/${A}/notificationPrefs/paused@a.test`), { scores: true, updatedAt: serverTimestamp() }))
     await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/notificationPrefs/admin@a.test`), { websiteMessages: false, updatedAt: serverTimestamp() }))
+    await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/notificationPrefs/admin@a.test`), { signups: false, updatedAt: serverTimestamp() }))
+    await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/notificationPrefs/admin@a.test`), { signups: 'off', updatedAt: serverTimestamp() }))
   })
 })

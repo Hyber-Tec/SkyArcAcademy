@@ -102,7 +102,7 @@ describe('the signature page', () => {
       timezone: 'America/New_York',
       ip: '203.0.113.7',
       userAgent: 'Mozilla/5.0 (iPhone)',
-      token: 'tok',
+      how: { link: 'tok' },
       templateName: 'Enrollment contract.pdf',
       templateSha256: 'ab'.repeat(32),
     })
@@ -117,6 +117,15 @@ describe('the signature page', () => {
       'Contract signed': 'Enrollment contract.pdf',
       'Its SHA-256': 'ab'.repeat(32),
     })
+  })
+
+  it('records the account that signed in the app or on the website', () => {
+    const base = { academyName: 'Sky Arc', studentName: 'Mia Larkin', signerName: 'Jane Larkin', relation: 'parent' as const, signedAtMs: NOW, timezone: 'America/New_York', ip: '', userAgent: 'SkyArc/1.2 iOS', templateName: 'c.pdf', templateSha256: 'cd'.repeat(32) }
+    const app = Object.fromEntries(signatureFacts({ ...base, how: { account: 'jane@example.test', where: 'app' } }).map((f) => [f.label, f.value]))
+    expect(app).toMatchObject({ 'IP address': 'Unknown', Device: 'SkyArc/1.2 iOS', Account: 'jane@example.test (signed in to the app)' })
+    expect(app['Signing link']).toBeUndefined()
+    const web = Object.fromEntries(signatureFacts({ ...base, how: { account: 'jane@example.test', where: 'website' } }).map((f) => [f.label, f.value]))
+    expect(web).toMatchObject({ Browser: 'SkyArc/1.2 iOS', Account: 'jane@example.test (signed in on the website)' })
   })
 })
 

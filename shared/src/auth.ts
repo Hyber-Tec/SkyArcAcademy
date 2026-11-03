@@ -106,14 +106,22 @@ export function authErrorMessage(code: string | undefined | null, action: AuthAc
   }
 }
 
-/** How an account signs in, from Firebase's provider ids. */
+/** How an account signs in, from Firebase's provider ids (Apple: the iPhone app's Sign in with Apple). */
 export interface SignInMethods {
   google: boolean
   password: boolean
+  apple: boolean
 }
 
 export function signInMethods(providerIds: readonly string[]): SignInMethods {
-  return { google: providerIds.includes('google.com'), password: providerIds.includes('password') }
+  return { google: providerIds.includes('google.com'), password: providerIds.includes('password'), apple: providerIds.includes('apple.com') }
+}
+
+/** "Google", "Google or Apple, or email and password", "Email and password": how an account signs in, in words. */
+export function signInWays(m: SignInMethods): string {
+  const providers = [m.google ? 'Google' : null, m.apple ? 'Apple' : null].filter(Boolean).join(' or ')
+  if (providers && m.password) return `${providers}, or email and password`
+  return providers || 'Email and password'
 }
 
 /** The page that handles links in account emails (verify the email, reset the password): `{APP_URL}/auth/action`. */
