@@ -2,12 +2,14 @@ import { type Timestamp, serverTimestamp } from 'firebase/firestore'
 import { type ReactNode, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { studentLabel } from '@shared/people'
+import { printOf } from '@shared/scores/duplicates'
 import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition, kindOf, paperEvaluation } from '@shared/shooting/evaluation'
 import { type DateKey, todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { DatePicker } from '@/components/app/DatePicker'
 import { OptionPicker } from '@/components/app/OptionPicker'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -19,6 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useStudentList } from '@/features/data/hooks'
 import { createEvaluation, updateEvaluation } from './api'
 import { ResultKindPicker } from './kinds'
+import { repeatQuestion, repeatsOf } from './repeats'
 
 const BULLS = 10
 
@@ -86,6 +89,7 @@ export function PaperScoreForm({
   // A card the coach scored by hand: the written score is the official one (the app's reading is kept for reference).
   const [written, setWritten] = useState(existing?.official ? String(existing.total) : '')
   const [busy, setBusy] = useState(false)
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   const student = students.find((s) => s.id === studentId)
   const values = bulls.map((b) => (b.trim() === '' ? null : Number(b)))
@@ -131,6 +135,9 @@ export function PaperScoreForm({
         data.total = official
         data.wholeTotal = official
       }
+      // A new card already in their scores (the same day, position and scores): asked first (the third meeting, CP2).
+      const repeats = existing ? [] : await repeatsOf(branchId, [printOf(data)])
+      if (repeats.length && !(await confirm(repeatQuestion(student.name, repeats)))) return setBusy(false)
       let id = existing?.id ?? ''
       if (existing) await updateEvaluation(branchId, actor, existing.id, existing, data)
       else id = await createEvaluation(branchId, actor, data)
@@ -241,6 +248,7 @@ export function PaperScoreForm({
           </Field>
         </FieldGroup>
       </Body>
+      {confirmDialog}
       <DialogFooter>
         <Button variant="outline" onClick={onDone}>
           Cancel

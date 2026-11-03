@@ -25,7 +25,7 @@ import { TargetPlot } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
 import type { EarlierScore } from '../data'
 import { ACCEPTED_FILES } from '../files'
-import { type AddItem, fileTypeOf, itemNeeds, kindOfItem, resultsOf, saves, status, withKind } from './items'
+import { type AddItem, fileTypeOf, itemNeeds, kindOfItem, leftOut, markRepeats, resultsOf, saves, status, withKind } from './items'
 import { cardDraft, readFile } from './read'
 import { saveItems } from './save'
 
@@ -54,6 +54,7 @@ export function AddScoresDialog({
   onSaved,
   students,
   known,
+  student = null,
 }: {
   request: AddRequest | null
   onClose: () => void
@@ -62,13 +63,15 @@ export function AddScoresDialog({
   students: readonly WithId<Student>[]
   /** Every result already known: the same SIUS result isn't added twice, and a card shows a new best. */
   known: readonly EarlierScore[]
+  /** A student's own Scores tab: everything dropped there is theirs (a file naming another student says so). */
+  student?: string | null
 }) {
   // A card is checked as on the Scores tab, in the room its picture and boxes need.
   const [wide, setWide] = useState(false)
   return (
     <Dialog open={!!request} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={cn('flex max-h-[92svh] flex-col gap-0', wide ? 'sm:max-w-5xl' : 'sm:max-w-3xl')} data-testid="add-scores-dialog">
-        {request ? <AddFlow key={request.id} files={request.files} onClose={onClose} onSaved={onSaved} students={students} known={known} onWide={setWide} /> : null}
+        {request ? <AddFlow key={request.id} files={request.files} onClose={onClose} onSaved={onSaved} students={students} known={known} onWide={setWide} fixed={student} /> : null}
       </DialogContent>
     </Dialog>
   )
@@ -83,6 +86,7 @@ function AddFlow({
   students,
   known,
   onWide,
+  fixed,
 }: {
   files: File[] | null
   onClose: () => void
@@ -90,13 +94,16 @@ function AddFlow({
   students: readonly WithId<Student>[]
   known: readonly EarlierScore[]
   onWide: (wide: boolean) => void
+  fixed: string | null
 }) {
   const { branchId, actor, timezone, settings } = useBranch()
   const today = todayKey(timezone)
   const index = useDriveIndex()
   const byId = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
   const driveStudents = useMemo<DriveStudent[]>(() => students.map((s) => ({ id: s.id, name: s.name, otherNames: s.otherNames ?? [], finished: s.status === 'finished' })), [students])
-  const [items, setItems] = useState<AddItem[]>([])
+  const [read_, setItems] = useState<AddItem[]>([])
+  // Each file with what it repeats, if anything (a saved result, or a file above it), worked out as it changes.
+  const items = useMemo(() => markRepeats(read_, known, (k) => `${POSITION_LABELS[k.position].toLowerCase()} ${Number.isInteger(k.total) ? k.total : k.total.toFixed(1)}`), [read_, known])
   const [step, setStep] = useState<'pick' | 'reading' | 'check'>(files ? 'reading' : 'pick')
   const [view, setView] = useState<View>({ kind: 'list' })
   useEffect(() => {
@@ -114,19 +121,8 @@ function AddFlow({
   const nameOf = (id: string) => byId.get(id)?.name ?? ''
   const patch = (key: number, p: Partial<AddItem> | ((i: AddItem) => AddItem)) => setItems((all) => all.map((i) => (i.key === key ? (typeof p === 'function' ? p(i) : { ...i, ...p }) : i)))
 
-  /** The same SIUS result (its printed time and total) already in the student's scores: the day it was shot. */
-  const duplicateOf = (item: Pick<AddItem, 'found' | 'studentId'>): DateKey | null => {
-    const f = item.found
-    if (f?.kind !== 'sius' || !item.studentId || f.sius.reading.noShots) return null
-    const r = f.sius.reading
-    return known.find((k) => k.studentId === item.studentId && k.printed === r.printed && Math.abs(k.total - r.total) < 0.05)?.dateKey ?? null
-  }
-  /** Whose an item is, picked here: a SIUS result already in their scores is left out. */
-  const pickStudent = (key: number, studentId: string) =>
-    patch(key, (i) => {
-      const next = { ...i, studentId, studentFrom: 'picked' as const, said: i.said, candidates: i.candidates }
-      return i.found?.kind === 'sius' ? { ...next, found: { ...i.found, duplicateOf: duplicateOf(next) } } : next
-    })
+  /** Whose an item is, picked here (a result already in their scores is then left out, `markRepeats`). */
+  const pickStudent = (key: number, studentId: string) => patch(key, (i) => ({ ...i, studentId, studentFrom: 'picked' as const, namesOther: null, keepRepeat: false }))
 
   /** Reads the files, three at a time, then shows what was read. */
   async function read(list: File[]) {
@@ -142,10 +138,9 @@ function AddFlow({
         try {
           const got = await readFile(item, { branchId, timezone, today, students: driveStudents, onStep: (s) => alive.current && patch(item.key, { step: s }) })
           if (!alive.current) return
-          patch(item.key, (i) => {
-            const done = { ...i, ...got, status: 'done' as const, step: null }
-            return done.found?.kind === 'sius' ? { ...done, found: { ...done.found, duplicateOf: duplicateOf(done) } } : done
-          })
+          // On a student's own tab, it's theirs; a file naming someone else says so, to change it with a click.
+          const theirs = fixed ? { studentId: fixed, studentFrom: got.studentId === fixed ? got.studentFrom : ('page' as const), namesOther: got.studentId && got.studentId !== fixed ? got.studentId : null, candidates: [] } : {}
+          patch(item.key, (i) => ({ ...i, ...got, ...theirs, status: 'done' as const, step: null }))
         } catch (e) {
           patch(item.key, { status: 'done', step: null, found: { kind: 'none', reason: e instanceof Error ? e.message : 'It couldn’t be read.', photo: null, tip: null } })
         }
@@ -360,6 +355,7 @@ function AddFlow({
               onStudent={(id) => pickStudent(i.key, id)}
               onPosition={(p) => patch(i.key, (x) => (x.found?.kind === 'sius' ? { ...x, found: { ...x.found, position: p, positionFrom: null } } : x))}
               onKind={(k) => patch(i.key, (x) => withKind(x, k))}
+              onKeep={(keep) => patch(i.key, { keepRepeat: keep })}
               onCheck={() => setView({ kind: i.found?.kind === 'sheet' ? 'sheet' : 'card', key: i.key })}
               onType={() =>
                 patch(i.key, (x) => (x.found?.kind === 'none' && x.found.photo ? { ...x, found: { kind: 'card', card: cardDraft(x.key, x.file, x.found.photo, today, timezone), checked: false } } : x))
@@ -505,6 +501,7 @@ function ItemRow({
   onStudent,
   onPosition,
   onKind,
+  onKeep,
   onCheck,
   onType,
 }: {
@@ -515,6 +512,8 @@ function ItemRow({
   onStudent: (id: string) => void
   onPosition: (p: Position) => void
   onKind: (k: ResultKind) => void
+  /** Saves a repeated result anyway, or leaves it out again. */
+  onKeep: (keep: boolean) => void
   onCheck: () => void
   onType: () => void
 }) {
@@ -605,7 +604,8 @@ function ItemRow({
     ) : null
   }
 
-  const duplicate = f.kind === 'sius' ? f.duplicateOf : null
+  const repeat = item.repeat ?? null
+  const duplicate = leftOut(item)
   return (
     <li
       className={cn(
@@ -637,7 +637,27 @@ function ItemRow({
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-muted-foreground">{what}</div>
         {figures ? <div>{figures}</div> : null}
-        {duplicate ? <p className="text-muted-foreground">Already in {first}’s scores ({dayWords(duplicate, today)}): left out.</p> : null}
+        {item.namesOther && name(item.namesOther) ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-amber-800 dark:text-amber-300" data-testid="add-names-other">
+            <span>
+              The {f.kind === 'sius' ? 'report' : f.kind === 'sheet' ? 'sheet' : 'file'} names {name(item.namesOther)?.name}, another student.
+            </span>
+            <button type="button" onClick={() => onStudent(item.namesOther as string)} className="text-xs font-medium text-foreground underline underline-offset-4">
+              It’s {name(item.namesOther)?.name}’s
+            </button>
+          </p>
+        ) : null}
+        {repeat ? (
+          <p className={cn('flex flex-wrap items-center gap-x-2 gap-y-1', duplicate ? 'text-muted-foreground' : 'text-amber-800 dark:text-amber-300')} data-testid="add-repeat">
+            <span>
+              {'saved' in repeat ? `Already in ${first}’s scores (${repeat.saved}, ${dayWords(repeat.dateKey, today)})` : `The same as ${repeat.file} above`}
+              {duplicate ? ': left out.' : ', saved again anyway.'}
+            </span>
+            <button type="button" onClick={() => onKeep(duplicate)} className="text-xs font-medium text-foreground underline underline-offset-4" data-testid="add-repeat-keep">
+              {duplicate ? 'Save it anyway' : 'Leave it out'}
+            </button>
+          </p>
+        ) : null}
         {f.kind === 'sius' && f.sius.reading.problems.length && !duplicate ? (
           <p className="flex items-start gap-1.5 text-amber-800 dark:text-amber-300">
             <LuCircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Check: {f.sius.reading.problems[0]} It’s saved marked Check.

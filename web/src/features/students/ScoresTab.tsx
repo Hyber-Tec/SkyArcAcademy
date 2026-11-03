@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LuChartLine, LuFilePlus, LuFileText, LuGitCompareArrows, LuPlus, LuTrophy } from 'react-icons/lu'
+import { LuChartLine, LuFilePlus, LuFileText, LuGitCompareArrows, LuPlus, LuTrophy, LuUpload } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { toPoint } from '@shared/reports/facts'
@@ -13,6 +13,8 @@ import { useBranch } from '@/branch/BranchProvider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useStudentList } from '@/features/data/hooks'
+import { useFileDropZone } from '@/features/drive/dropzone'
 import { NewReportDialog } from '@/features/reports/NewReportDialog'
 import { TrendChip } from '@/features/reports/ReportParts'
 import { TrendChart } from '@/features/reports/charts'
@@ -22,6 +24,8 @@ import { CompetitionDialog } from '@/features/scores/CompetitionDialog'
 import { useStudentEvaluations } from '@/features/scores/hooks'
 import { ResultKindFilter } from '@/features/scores/kinds'
 import { prefersReducedMotion } from '@/features/scores/playback'
+import { scoreOf } from '@/features/scores/page/data'
+import { type AddRequest, AddScoresDialog } from '@/features/scores/page/add/AddScores'
 import { AddPaperScoresDialog } from '@/features/scores/photos/AddPaperScores'
 import { ResultListHead, ResultRow } from '@/features/scores/ResultRow'
 import { rowOf, shortDate, useOpenRows } from '@/features/scores/results'
@@ -75,6 +79,12 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const [adding, setAdding] = useState(false)
   const [competing, setCompeting] = useState(false)
   const [creating, setCreating] = useState(false)
+  // Files dropped anywhere on the tab (SIUS PDFs, card photos, results sheets) are read as the Scores page reads them,
+  // all of them this student's (the third meeting, SC1: the manager looked for this here, and used the Drive).
+  const { data: students } = useStudentList()
+  const known = useMemo(() => all.map((e) => scoreOf(e.id, e)), [all])
+  const [dropped, setDropped] = useState<AddRequest | null>(null)
+  const drop = useFileDropZone({ canWrite: true, onFiles: (entries) => setDropped({ id: Date.now(), files: entries.map((e) => e.file) }), disabled: !!dropped || adding || competing })
   const name = student.firstName || student.name
   // Results just added: marked "Just added" for a little while, and the first of them in the list (the newest) opens
   // as soon as the list has it.
@@ -126,7 +136,16 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const reportsSub = reports.length ? [drafts ? `${drafts} ${drafts === 1 ? 'draft' : 'drafts'}` : '', reports.length - drafts ? `${reports.length - drafts} shared` : ''].filter(Boolean).join(' · ') : 'None yet'
 
   return (
-    <div className="space-y-5" data-testid="scores-tab">
+    <div className="relative space-y-5" data-testid="scores-tab" {...drop.handlers}>
+      {drop.dragOver ? (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center rounded-xl border-2 border-dashed border-foreground/50 bg-background/85 pt-24 backdrop-blur-[1px]" data-testid="scores-drop-overlay">
+          <div className="max-w-sm rounded-xl border bg-card px-5 py-4 text-center shadow-lg">
+            <LuUpload className="mx-auto size-6 text-muted-foreground" aria-hidden />
+            <p className="mt-2 text-sm font-semibold">Drop to add {name}’s scores</p>
+            <p className="mt-1 text-xs text-muted-foreground">SIUS PDFs, photos of paper cards and results sheets are read, then checked before they’re saved.</p>
+          </div>
+        </div>
+      ) : null}
       <section className="@container overflow-hidden rounded-xl border bg-card">
         <div className="space-y-4 p-4 @xl:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -137,14 +156,15 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setAdding(true)} data-testid="add-paper-scores">
+              {/* Adding scores is the tab's main action (the third meeting, SC1); files can be dropped on the tab too. */}
+              <Button size="sm" onClick={() => setAdding(true)} data-testid="add-paper-scores">
                 <LuPlus /> Add paper scores
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setCompeting(true)} data-testid="add-competition">
+              <Button size="sm" onClick={() => setCompeting(true)} data-testid="add-competition">
                 <LuTrophy /> Add a competition
               </Button>
               {admin ? (
-                <Button size="sm" onClick={() => setCreating(true)} disabled={!all.some((e) => e.shots > 0)}>
+                <Button variant="outline" size="sm" onClick={() => setCreating(true)} disabled={!all.some((e) => e.shots > 0)}>
                   <LuFilePlus /> New report
                 </Button>
               ) : null}
@@ -168,7 +188,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             </ul>
           </>
         ) : (
-          <p className="border-t px-5 py-10 text-center text-sm text-muted-foreground">No scores yet. Add paper scores or a competition above; SIUS results dropped in the Drive show here too.</p>
+          <p className="border-t px-5 py-10 text-center text-sm text-muted-foreground">No scores yet. Add paper scores or a competition above, or drop SIUS PDFs, card photos or results sheets on this page.</p>
         )}
       </section>
 
@@ -224,6 +244,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
 
       <AddPaperScoresDialog open={adding} onOpenChange={setAdding} studentId={student.id} onSaved={added} savedAction={(ids) => ({ label: 'Show', onClick: () => showRow(ids, true) })} />
       <CompetitionDialog open={competing} onOpenChange={setCompeting} studentId={student.id} studentName={student.name} />
+      <AddScoresDialog request={dropped} onClose={() => setDropped(null)} onSaved={(list) => added(list.filter((e) => e.studentId === student.id).map((e) => e.id))} students={students} known={known} student={student.id} />
       {creating ? <NewReportDialog open onOpenChange={setCreating} studentId={student.id} reports={reports} /> : null}
       {actions.element}
     </div>

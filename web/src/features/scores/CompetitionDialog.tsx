@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react'
-import { LuFileImage, LuPlus, LuScanText, LuTrash2 } from 'react-icons/lu'
+import { LuFileImage, LuPlus, LuScanText, LuTrash2, LuTriangleAlert } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { classifyFile, cleanFileName } from '@shared/drive/files'
 import { studentFolderId } from '@shared/drive/types'
+import { type SheetStudent, sheetStudent } from '@shared/scores/sheetStudent'
 import { POSITIONS, POSITION_LABELS, isPosition } from '@shared/shooting/evaluation'
 import { type DateKey, todayKey } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { DatePicker } from '@/components/app/DatePicker'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -18,7 +20,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { plannedFile, saveSheetResults } from '@/features/drive/upload'
 import { useDriveIndex } from '@/features/drive/useDriveIndex'
 import { ResultKindPicker } from './kinds'
-import { type SheetDraft, type SheetRow, checkSheet, draftFromReading, emptySheetRow, newSheetDraft, readSheet, sheetContent, sheetEvaluations } from './sheetDraft'
+import { repeatQuestion, repeatsOf } from './repeats'
+import { QUICK_COURSES, type SheetDraft, type SheetRow, checkSheet, draftFromReading, emptySheetRow, newSheetDraft, readSheet, sheetContent, sheetEvaluations, withCourse } from './sheetDraft'
 
 /**
  * Student page → Scores → Add a competition (the manager's second meeting, P7): a match's results from its sheet. A
@@ -71,6 +74,12 @@ export function CompetitionForm({
   const [placedNote, setPlacedNote] = useState<string | null>(checking?.placedNote ?? null)
   const [draft, setDraft] = useState<SheetDraft>(() => checking?.draft ?? newSheetDraft(today, 1))
   const [busy, setBusy] = useState(false)
+  const { confirm, dialog: confirmDialog } = useConfirm()
+  // Whose the sheet says it is (the third meeting, CP1): when it names another student, the result can go to them.
+  const [named, setNamed] = useState<(SheetStudent & { name: string }) | null>(null)
+  const [instead, setInstead] = useState<{ id: string; name: string } | null>(null)
+  const who = instead ?? student
+  const studentName = (id: string) => index.students.find((s) => s.id === id)?.name ?? ''
   const { match, course, dateKey, decimal, kind, note, rows } = draft
   const set = (patch: Partial<SheetDraft>) => setDraft((d) => ({ ...d, ...patch }))
   const setRows = (next: (all: SheetRow[]) => SheetRow[]) => setDraft((d) => ({ ...d, rows: next(d.rows) }))
@@ -91,7 +100,8 @@ export function CompetitionForm({
         setReadNote('No text found on it. Type the numbers below.')
         return
       }
-      const read = draftFromReading(r, pixels, { base: draft, today, nextKey: () => nextKey.current++, studentName: student?.name ?? null })
+      const read = draftFromReading(r, pixels, { base: draft, today, nextKey: () => nextKey.current++ })
+      setNamed({ ...sheetStudent(r, index.students), name: r.name })
       setDraft(read.draft)
       setReadNote(read.readNote)
       setPlacedNote(read.placedNote)
@@ -105,20 +115,23 @@ export function CompetitionForm({
   const { ready } = checkSheet(draft)
 
   async function save() {
-    if (!ready || !student) return
+    if (!ready || !who) return
     setBusy(true)
+    // Already in their scores (the same day, position and scores)? Asked first (the third meeting, CP2).
+    const evaluations = sheetEvaluations(draft, who)
+    const repeats = await repeatsOf(branchId, evaluations.map((e) => ({ ...e, values: e.series.flatMap((x) => x.shots.map((t) => t.v)) })))
+    if (repeats.length && !(await confirm(repeatQuestion(who.name, repeats)))) return setBusy(false)
     try {
-      const evaluations = sheetEvaluations(draft, student)
       const label = match.trim()
       const plan = file ? classifyFile(file) : null
       if (plan && !plan.ok) throw new Error(plan.reason)
       const up =
         file && plan && plan.ok
-          ? plannedFile(branchId, file, { ...plan, name: `${cleanFileName(`${dateKey} ${label || 'Competition'} results`)}.${plan.kind}` }, studentFolderId(student.id), student.id)
+          ? plannedFile(branchId, file, { ...plan, name: `${cleanFileName(`${dateKey} ${label || 'Competition'} results`)}.${plan.kind}` }, studentFolderId(who.id), who.id)
           : null
       const failures = await saveSheetResults(branchId, actor, index, up, evaluations)
       toast.success(evaluations.length === 1 ? 'Competition result added' : `${evaluations.length} competition results added`, {
-        description: failures.length ? `The sheet’s file didn’t upload: ${failures[0]}` : up ? 'The sheet is in the student’s Drive folder.' : undefined,
+        description: [instead ? `For ${instead.name}.` : '', failures.length ? `The sheet’s file didn’t upload: ${failures[0]}` : up ? 'The sheet is in the student’s Drive folder.' : ''].filter(Boolean).join(' ') || undefined,
       })
       onDone()
     } catch (e) {
@@ -134,7 +147,7 @@ export function CompetitionForm({
         <DialogDescription>
           {checking
             ? `${student ? `For ${student.name}. ` : ''}Filled in from the sheet; check every number against it.`
-            : `For ${student?.name ?? ''}. A photo or PDF of the results sheet fills the form; check every number before saving.`}
+            : `For ${who?.name ?? ''}. A photo or PDF of the results sheet fills the form, or type it; check every number before saving.`}
         </DialogDescription>
       </DialogHeader>
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
@@ -158,6 +171,7 @@ export function CompetitionForm({
               </>
             )}
             {readNote ? <FieldDescription>{readNote}</FieldDescription> : <FieldDescription>Optional. It’s filed in the student’s Drive folder with the result.</FieldDescription>}
+            {!checking && named && who ? <SheetNames named={named} who={who} nameOf={studentName} onUse={(id) => setInstead(id === student?.id ? null : { id, name: studentName(id) })} /> : null}
             {placedNote ? <FieldDescription data-testid="sheet-placed-note">{placedNote}</FieldDescription> : null}
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -174,6 +188,16 @@ export function CompetitionForm({
             <Field>
               <FieldLabel htmlFor="comp-course">Course of fire</FieldLabel>
               <Input id="comp-course" value={course} onChange={(e) => set({ course: e.target.value })} placeholder="e.g. 3x20 Air Rifle" maxLength={80} />
+              {!rows.some((r) => r.values) ? (
+                <div className="flex flex-wrap items-center gap-1.5" data-testid="quick-courses">
+                  <span className="text-xs text-muted-foreground">No sheet? Fill in:</span>
+                  {QUICK_COURSES.map((c) => (
+                    <Button key={c.label} type="button" variant="outline" size="xs" onClick={() => setDraft((d) => withCourse(d, c.course, () => nextKey.current++))}>
+                      {c.label}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
             </Field>
             <Field>
               <FieldLabel>Totals</FieldLabel>
@@ -239,6 +263,7 @@ export function CompetitionForm({
           </Field>
         </FieldGroup>
       </div>
+      {confirmDialog}
       <DialogFooter>
         {checking ? (
           <>
@@ -261,5 +286,31 @@ export function CompetitionForm({
         )}
       </DialogFooter>
     </>
+  )
+}
+
+/**
+ * What the sheet's printed name says about whose it is: another student's (with a button to save it as theirs), the
+ * student's own, or nobody's.
+ */
+function SheetNames({ named, who, nameOf, onUse }: { named: SheetStudent & { name: string }; who: { id: string; name: string }; nameOf: (id: string) => string; onUse: (id: string) => void }) {
+  if (named.id && named.id !== who.id)
+    return (
+      <div className="mt-1 flex flex-wrap items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-testid="sheet-other-student">
+        <LuTriangleAlert className="size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">
+          The sheet names {named.name || nameOf(named.id)}, not {who.name}.
+        </span>
+        <Button type="button" size="xs" variant="outline" className="bg-background" onClick={() => onUse(named.id as string)} data-testid="sheet-use-named">
+          It’s {nameOf(named.id)}’s
+        </Button>
+      </div>
+    )
+  if (named.id) return <FieldDescription data-testid="sheet-names-student">The sheet names {named.name || who.name}: {who.name}.</FieldDescription>
+  if (!named.name) return null
+  return (
+    <FieldDescription data-testid="sheet-unknown-student">
+      The sheet names {named.name}{named.candidates.length ? `, which could be ${named.candidates.map(nameOf).join(' or ')}` : ', and no student has that name'}. Check it’s {who.name}’s.
+    </FieldDescription>
   )
 }

@@ -1,9 +1,11 @@
+import { courseRows } from "@shared/scores/sheet";
+import { type SheetStudent, sheetStudent } from "@shared/scores/sheetStudent";
 import { POSITIONS, POSITION_LABELS, type Position, RESULT_KINDS, RESULT_KIND_LABELS, type ResultKind } from "@shared/shooting/evaluation";
 import { type DateKey } from "@shared/time";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { Camera, Images, Plus, Trash2, UserRound } from "lucide-react-native";
+import { Camera, Images, Plus, Trash2, TriangleAlert, UserRound } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button } from "@/components/Button";
@@ -17,7 +19,8 @@ import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { SwitchRow } from "@/components/SwitchRow";
 import { T } from "@/components/Text";
-import { useAcademyNow, useStudent } from "@/features/data/hooks";
+import { useAcademyNow, useStudent, useStudentList } from "@/features/data/hooks";
+import { clearToSave } from "@/features/scan/repeats";
 import { type SheetPhoto, type SheetRow, findSheetPlaces, readSheet, saveSheetResults, sheetPhoto } from "@/features/scan/sheet";
 import type { SheetPlaces } from "@shared/scores/sheetSave";
 import { type PickedStudent, StudentPicker } from "@/features/scan/StudentPicker";
@@ -41,6 +44,14 @@ interface Row {
 }
 
 const emptyRow = (key: number, position: Position | null = null): Row => ({ key, position, shots: "", total: "", innerTens: "", values: null });
+
+/** Courses of fire filled in one tap when a match is typed by hand (the third meeting, CP5): their positions and shots. */
+const COURSES = [
+  { label: "3×20", course: "3x20 Air Rifle" },
+  { label: "3×10", course: "3x10 Air Rifle" },
+  { label: "60 shots", course: "60 Shots Air Rifle" },
+  { label: "40 shots", course: "40 Shots Air Rifle" },
+];
 
 /**
  * Why the sheet wasn't read, in the reader's own words when it says ("Reading sheets isn't switched on yet. Type the
@@ -68,9 +79,15 @@ export default function CompetitionSheetScreen() {
   const colors = useColors();
   const { today } = useAcademyNow();
   const preset = useStudent(params.studentId ?? null);
+  const { data: students } = useStudentList();
   const [picked, setPicked] = useState<PickedStudent | null>(null);
   const student: PickedStudent | null = picked ?? (preset.data ? { id: preset.data.id, name: preset.data.name } : null);
   const [picking, setPicking] = useState(false);
+  // Whose the sheet says it is (the third meeting, CP1): the name printed on it, the student with that name, and
+  // whether the student shown was picked from it.
+  const [named, setNamed] = useState<(SheetStudent & { name: string }) | null>(null);
+  const [fromSheet, setFromSheet] = useState(false);
+  const nameOf = (id: string) => students.find((s) => s.id === id)?.name ?? "";
   const [photo, setPhoto] = useState<SheetPhoto | null>(null);
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState<string | null>(null);
@@ -107,11 +124,19 @@ export default function CompetitionSheetScreen() {
     if (picked.canceled || !picked.assets[0]) return;
     setReading(true);
     setReadNote(null);
+    setNamed(null);
     try {
       const p = await sheetPhoto(picked.assets[0].uri);
       setPhoto(p);
       const { reading: r, found } = await readSheet(branchId, p);
       if (!found) return setReadNote("No text found on it. Type the numbers below.");
+      // Whose it is, by the name printed on it (their other names too): picked when no student is chosen yet.
+      const whose = sheetStudent(r, students.map((s) => ({ id: s.id, name: s.name, otherNames: s.otherNames ?? [], finished: s.status === "finished" })));
+      setNamed({ ...whose, name: r.name });
+      if (!student && whose.id) {
+        setPicked({ id: whose.id, name: nameOf(whose.id) });
+        setFromSheet(true);
+      }
       if (r.match) setMatch(r.match);
       if (r.course) setCourse(r.course);
       if (r.dateKey && r.dateKey <= today) setDateKey(r.dateKey);
@@ -135,12 +160,10 @@ export default function CompetitionSheetScreen() {
       } else if (r.total !== null) {
         setRows([{ ...emptyRow(nextKey.current++, rows[0]?.position ?? "standing"), total: String(r.total), innerTens: r.innerTens === null ? "" : String(r.innerTens) }]);
       }
-      const first = student?.name.split(" ")[0]?.toLowerCase();
-      const who = r.name && first && !r.name.toLowerCase().includes(first) ? ` The sheet names ${r.name}: check it’s ${student?.name}’s.` : r.name && !student ? ` The sheet names ${r.name}.` : "";
       setReadNote(
         r.consistent
-          ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? "position" : "positions"}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ""}.${who}`
-          : `Partly read: check every number against the sheet.${who}`,
+          ? `Read from the sheet: ${r.positions.length} ${r.positions.length === 1 ? "position" : "positions"}, adding up to the printed ${r.total}${r.innerTens !== null ? `-${r.innerTens}` : ""}.`
+          : "Partly read: check every number against the sheet.",
       );
       // Then each shot's place on the sheet's target pictures, for the replay: the rows keep it with their values.
       if (r.consistent && r.positions.length) {
@@ -190,11 +213,27 @@ export default function CompetitionSheetScreen() {
   const positionsDistinct = new Set(rows.map((r) => r.position)).size === rows.length;
   const ready = !!student && parsed.length > 0 && parsed.every((p) => p.ok) && positionsDistinct && !reading;
 
+  /** A course of fire's positions and shots, keeping any total already typed for a position it has. */
+  const fillCourse = (c: (typeof COURSES)[number]) => {
+    const list = courseRows(c.course);
+    if (!list) return;
+    setCourse(c.course);
+    setRows((all) =>
+      list.map(({ position, shots }) => {
+        const had = all.find((r) => r.position === position);
+        return { ...emptyRow(nextKey.current++, position), shots: String(shots), total: had?.total ?? "", innerTens: had?.innerTens ?? "" };
+      }),
+    );
+  };
+
   const save = async () => {
     if (!ready || !student || busy) return;
+    const results: SheetRow[] = parsed.map(({ r, shots, total, tens }) => ({ position: r.position as Position, shots, total, innerTens: tens, values: r.values, places: r.places ?? null }));
+    // Already in their scores (the same day, position and scores)? Asked first, never saved twice without a word.
+    const prints = results.map((x) => ({ studentId: student.id, dateKey, position: x.position, shots: x.shots, total: x.total, values: x.values && x.values.length === x.shots ? x.values : null }));
     setBusy(true);
+    if (!(await clearToSave(branchId, student.name, prints))) return setBusy(false);
     try {
-      const results: SheetRow[] = parsed.map(({ r, shots, total, tens }) => ({ position: r.position as Position, shots, total, innerTens: tens, values: r.values, places: r.places ?? null }));
       await saveSheetResults({ branchId, actor, student, dateKey, kind, match, course, note, rows: results, photo });
       toast.success(results.length === 1 ? "Competition result added" : `${results.length} competition results added`, {
         description: photo ? `For ${student.name}. The sheet goes to their Drive folder in the background.` : `For ${student.name}.`,
@@ -224,10 +263,51 @@ export default function CompetitionSheetScreen() {
         <ListRow
           icon={<UserRound size={20} color={colors.mutedForeground} />}
           title={student ? student.name : preset.loading ? "…" : "Who shot it?"}
-          subtitle={student ? "Tap to change" : "Choose the student"}
+          subtitle={student ? (fromSheet ? "From the name on the sheet · tap to change" : "Tap to change") : "Choose the student"}
           onPress={() => setPicking(true)}
           testID="sheet-student"
         />
+        {named && student && named.id && named.id !== student.id ? (
+          <View style={styles.inset} testID="sheet-other-student">
+            <View style={styles.warn}>
+              <TriangleAlert size={16} color={colors.warning} />
+              <T variant="small" style={styles.grow}>
+                {`The sheet names ${named.name || nameOf(named.id)}, not ${student.name}. Check whose it is.`}
+              </T>
+            </View>
+            <Button
+              variant="outline"
+              wrap
+              onPress={() => {
+                setPicked({ id: named.id as string, name: nameOf(named.id as string) });
+                setFromSheet(true);
+              }}
+              testID="sheet-use-named"
+            >
+              {`It’s ${nameOf(named.id)}’s`}
+            </Button>
+          </View>
+        ) : named && !named.id && named.name && !student ? (
+          <View style={styles.inset} testID="sheet-unknown-student">
+            <T variant="small" tone="muted">
+              {named.candidates.length ? `The sheet names ${named.name}. Is it one of these?` : `The sheet names ${named.name}, and no student has that name. Choose the student, or add the name to theirs (Other names).`}
+            </T>
+            {named.candidates.map((id) => (
+              <Button
+                key={id}
+                variant="outline"
+                wrap
+                onPress={() => {
+                  setPicked({ id, name: nameOf(id) });
+                  setFromSheet(false);
+                }}
+                testID={`sheet-candidate-${id}`}
+              >
+                {nameOf(id)}
+              </Button>
+            ))}
+          </View>
+        ) : null}
       </ListSection>
 
       <ListSection title="The results sheet">
@@ -271,6 +351,20 @@ export default function CompetitionSheetScreen() {
         <View style={styles.insetGap}>
           <Field label="Match" value={match} onChangeText={setMatch} maxLength={120} placeholder="Lakeside Fall 3P" testID="sheet-match" />
           <Field label="Course of fire" value={course} onChangeText={setCourse} maxLength={80} placeholder="3x20 Air Rifle" testID="sheet-course" />
+          {!rows.some((r) => r.values) ? (
+            <View style={styles.courses}>
+              <T variant="small" tone="muted">
+                No sheet? Fill the positions for:
+              </T>
+              <View style={styles.courseButtons}>
+                {COURSES.map((c) => (
+                  <Button key={c.label} size="sm" variant="outline" onPress={() => fillCourse(c)} testID={`sheet-course-${c.label}`}>
+                    {c.label}
+                  </Button>
+                ))}
+              </View>
+            </View>
+          ) : null}
           <DateField label="Date" value={dateKey} onChange={setDateKey} today={today} max={today} pickerTitle="The day of the match" testID="sheet-date" />
         </View>
       </ListSection>
@@ -360,6 +454,7 @@ export default function CompetitionSheetScreen() {
         onClose={() => setPicking(false)}
         onPick={(s) => {
           setPicked(s);
+          setFromSheet(false);
           setPicking(false);
         }}
       />
@@ -378,4 +473,7 @@ const styles = StyleSheet.create({
   rowHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   numbers: { flexDirection: "row", gap: space.sm },
   number: { flex: 1 },
+  warn: { flexDirection: "row", alignItems: "flex-start", gap: space.sm },
+  courses: { gap: space.sm },
+  courseButtons: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });

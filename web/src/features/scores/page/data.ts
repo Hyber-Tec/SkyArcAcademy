@@ -1,6 +1,7 @@
 import { getDocs, query, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { COL } from '@shared/paths'
+import { printOf } from '@shared/scores/duplicates'
 import type { Evaluation } from '@shared/shooting/evaluation'
 import { type DateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
@@ -25,9 +26,11 @@ export interface EarlierScore {
   total: number
   /** A SIUS result's printed time: the same result added again is known by it. */
   printed: string | null
+  /** Each shot's value, when it has its shots: a card added again is known by them (shared/src/scores/duplicates.ts). */
+  values: number[] | null
 }
 
-/** A result kept small: its scores, without its shots. */
+/** A result kept small: its scores, and its shots' values only. */
 export const scoreOf = (id: string, e: Evaluation): EarlierScore => ({
   id,
   studentId: e.studentId,
@@ -38,6 +41,7 @@ export const scoreOf = (id: string, e: Evaluation): EarlierScore => ({
   shots: e.shots,
   total: e.total,
   printed: e.sius?.printed ?? null,
+  values: printOf(e).values?.slice() ?? null,
 })
 
 /** Older scores already read during this visit: coming back from a student's page doesn't read them again. */

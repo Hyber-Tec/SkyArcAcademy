@@ -5,6 +5,7 @@ import { dateInName } from '@shared/drive/exif'
 import { tsMs } from '@shared/drive/model'
 import { type DriveFile, studentFolderId } from '@shared/drive/types'
 import { studentLabel } from '@shared/people'
+import { printOf, repeatOf, resultWords, sameResult } from '@shared/scores/duplicates'
 import { type Position, wholePer10 } from '@shared/shooting/evaluation'
 import { positionFromName } from '@shared/sius/parse'
 import { cardEvaluation, cardFileName } from '@shared/targets/flat'
@@ -14,6 +15,7 @@ import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { DriveIcon } from '@/components/app/DriveIcon'
 import { OptionPicker } from '@/components/app/OptionPicker'
+import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useStudentList } from '@/features/data/hooks'
@@ -80,6 +82,7 @@ function AddFlow({ fixedStudent, drivePhotos, onSaved, savedAction, onDone }: { 
   const student = students.find((s) => s.id === chosen) ?? null
   const first = student ? student.firstName || student.name.split(' ')[0] : ''
   const { data: evaluations } = useStudentEvaluations(chosen)
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const [tab, setTab] = useState<Tab>('computer')
   const [step, setStep] = useState<'choose' | 'reading' | 'check'>('choose')
   const [cards, setCards] = useState<CardDraft[]>([])
@@ -161,12 +164,39 @@ function AddFlow({ fixedStudent, drivePhotos, onSaved, savedAction, onDone }: { 
     if (!rest.length) setStep('choose')
   }
 
-  function save() {
+  async function save() {
     if (!ready || !student) return
     const who = { id: student.id, name: student.name }
-    const toSave: CardSave[] = cards.map((c) => {
+    const made = cards.map((c) => {
       const evaluation = cardEvaluation({ student: who, position: c.position as Position, dateKey: c.dateKey, note: c.note, review: c.review, total: null }, null)
       evaluation.kind = c.kind
+      return evaluation
+    })
+    // A card already in their scores, or the same card twice here: asked first (the third meeting, CP2).
+    const known = evaluations.map((e) => ({ ...printOf(e), e }))
+    const prints = made.map((e) => printOf(e))
+    const already = prints.flatMap((p) => {
+      const e = repeatOf(p, known)?.e
+      return e ? [resultWords(e)] : []
+    })
+    const twins = prints.flatMap((p, i) => (prints.slice(0, i).some((q) => sameResult(p, q)) ? [i + 1] : []))
+    if (
+      (already.length || twins.length) &&
+      !(await confirm({
+        title: 'Already saved?',
+        description: [
+          already.length ? `${student.name}’s scores already have ${already.join('; ')}, with the same scores.` : '',
+          twins.length ? `${twins.map((n) => `Card ${n}`).join(' and ')} ${twins.length === 1 ? 'has' : 'have'} the same scores as another card here.` : '',
+          `Save ${cards.length === 1 ? 'it' : 'them all'} anyway?`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+        confirmLabel: 'Save anyway',
+      }))
+    )
+      return
+    const toSave: CardSave[] = cards.map((c, i) => {
+      const evaluation = made[i]
       // A photo in the Drive keeps its file: it becomes the score's. One from the computer is filed as the card itself.
       if (c.source.kind === 'drive') return { evaluation, up: null, driveFileId: c.source.file.id }
       const name = cardFileName(c.dateKey, c.position as Position)
@@ -274,7 +304,8 @@ function AddFlow({ fixedStudent, drivePhotos, onSaved, savedAction, onDone }: { 
             <Button variant="outline" onClick={() => setStep('choose')}>
               Back
             </Button>
-            <Button onClick={save} disabled={!ready} data-testid="save-cards">
+            {confirmDialog}
+            <Button onClick={() => void save()} disabled={!ready} data-testid="save-cards">
               <LuCheck /> {cards.length > 1 ? `Save ${cards.length} cards` : 'Save scores'}
             </Button>
           </>,
