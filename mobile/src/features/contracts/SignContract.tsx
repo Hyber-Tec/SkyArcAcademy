@@ -34,6 +34,9 @@ const firstNameOf = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 type Waiting = ContractLink & { id: string };
 
+/** A child whose contract was just signed here, and where the signer's copy was emailed. */
+type SignedKid = { id: string; name: string; emailedTo: string[] };
+
 /**
  * Signing before using the app (docs/DECISIONS.md §31: "they have to sign first", and §34): once the office has sent a
  * student's enrollment contract, the family's part of the app opens only when it's signed (shared/src/contracts/
@@ -47,7 +50,7 @@ export function ContractGate({ children }: { children: ReactNode }) {
   const { ids, students, loading } = useFamily();
   const waiting = useWaitingContracts(ids);
   // The children signed for here, for the copy to save (asked over the next contract, or the app).
-  const [justSigned, setJustSigned] = useState<{ id: string; name: string }[]>([]);
+  const [justSigned, setJustSigned] = useState<SignedKid[]>([]);
   const byStudent = useMemo(() => {
     const map = new Map<string, Waiting>();
     for (const l of [...waiting.data].sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))) if (!map.has(l.studentId)) map.set(l.studentId, l);
@@ -109,7 +112,7 @@ function WaitForParent() {
  * phone and email), and what the parent typed about themselves carries to the next child's; the program, the child's
  * details and the signature never do.
  */
-function SignBeforeUsing({ toSign, waiting, onSigned }: { toSign: GateStudent[]; waiting: Map<string, Waiting>; onSigned: (kid: { id: string; name: string }) => void }) {
+function SignBeforeUsing({ toSign, waiting, onSigned }: { toSign: GateStudent[]; waiting: Map<string, Waiting>; onSigned: (kid: SignedKid) => void }) {
   const { branchId } = useBranch();
   const { email } = useAuth();
   const [prefill, setPrefill] = useState<ContractPrefillResult | null>(null);
@@ -143,10 +146,10 @@ function SignBeforeUsing({ toSign, waiting, onSigned }: { toSign: GateStudent[];
       total={Math.max(total, signedHere.length + left.length)}
       prefill={prefill}
       carry={carry}
-      onSigned={(values) => {
+      onSigned={(values, emailedTo) => {
         setCarry(values);
         setSignedHere((d) => [...d, child.id]);
-        onSigned({ id: child.id, name: child.name });
+        onSigned({ id: child.id, name: child.name, emailedTo });
       }}
     />
   );
@@ -168,9 +171,9 @@ function OneContract({
   total: number;
   prefill: ContractPrefillResult | null;
   carry: ContractValues;
-  onSigned: (carried: ContractValues) => void;
+  onSigned: (carried: ContractValues, emailedTo: string[]) => void;
 }) {
-  const { branchId, name: academy, timezone } = useBranch();
+  const { branchId, name: academy, timezone, isDemo } = useBranch();
   const { email, signOut } = useAuth();
   const template = useContractTemplate(link.templateId);
   const signer = useAcademySigner();
@@ -204,7 +207,7 @@ function OneContract({
       testID="contract-sign"
       submitLabel={`Sign ${first}’s contract`}
       submitTestID="sign-contract"
-      offer={{ suggested, academySigner: signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image } : null }}
+      offer={{ suggested, academySigner: signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image ?? null } : null }}
       header={
         <View style={styles.head}>
           <SkyArcLogo height={56} />
@@ -237,7 +240,7 @@ function OneContract({
             agree: true,
           });
           if (!r.signed) toast.success(`${first}’s contract was signed already`);
-          onSigned(carriedValues(doc, s.values));
+          onSigned(carriedValues(doc, s.values), r.emailedTo ?? []);
         } catch (e) {
           const details = (e as { details?: { errors?: Record<string, string> } }).details;
           if (details?.errors) return { errors: details.errors };
@@ -247,7 +250,8 @@ function OneContract({
       footer={
         <View style={styles.footer}>
           <T variant="small" tone="muted">
-            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address, this phone and the email you’re signed in with. The academy keeps it, and you can save your copy.
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address, this phone and the email you’re signed in with. The academy keeps it,{" "}
+            {isDemo ? "and you can save your copy." : "and you get your copy by email and can save it."}
           </T>
           <Button variant="outline" onPress={() => void signOut()} testID="contract-sign-out">
             Sign out
@@ -263,7 +267,7 @@ function OneContract({
  * Once signed: their copy to save now (the share sheet: Save to Files, Mail…), or later from More, by the child (the
  * owner, 2026-11-05: "ask, hey, you want to download the contract or not").
  */
-function SaveCopies({ kids, onDone }: { kids: { id: string; name: string }[]; onDone: () => void }) {
+function SaveCopies({ kids, onDone }: { kids: SignedKid[]; onDone: () => void }) {
   const { branchId } = useBranch();
   const colors = useColors();
   const [busy, setBusy] = useState<string | null>(null);
@@ -271,7 +275,8 @@ function SaveCopies({ kids, onDone }: { kids: { id: string; name: string }[]; on
   // On an iPhone the PDF opens in the same sheet (one sheet at a time); on Android, the share sheet.
   const [pdf, setPdf] = useState<{ uri: string; name: string } | null>(null);
   const one = kids.length === 1;
-  async function save(kid: { id: string; name: string }) {
+  const emailed = [...new Set(kids.flatMap((k) => k.emailedTo))];
+  async function save(kid: SignedKid) {
     setBusy(kid.id);
     try {
       await openPdf(await copyCall({ branchId, studentId: kid.id }), setPdf);
@@ -295,8 +300,10 @@ function SaveCopies({ kids, onDone }: { kids: { id: string; name: string }[]; on
             <T variant="title" style={styles.center}>
               {one ? `${firstNameOf(kids[0]?.name ?? "")}’s contract is signed` : "Your contracts are signed"}
             </T>
-            <T tone="muted" style={styles.center}>
-              Thank you. The academy has its copy. Would you like to save yours?
+            <T tone="muted" style={styles.center} testID="contract-signed-note">
+              {emailed.length
+                ? `Thank you. The academy has its copy, and yours is on its way to ${emailed.join(", ")}. Would you like to save it too?`
+                : "Thank you. The academy has its copy. Would you like to save yours?"}
             </T>
             {kids.map((k) => (
               <Button key={k.id} size="lg" wrap variant={one ? "default" : "outline"} icon={<Download size={18} color={one ? colors.primaryForeground : colors.foreground} />} busy={busy === k.id} onPress={() => void save(k)} testID={`save-copy-${k.id}`}>

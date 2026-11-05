@@ -62,6 +62,16 @@ export function prefillValues(doc: ContractDocument, p: Prefill): ContractValues
   return out
 }
 
+/** The addresses the family typed in the contract's email fields, as signed: where the signer's copy goes (§35). */
+export function emailsIn(doc: ContractDocument, values: ContractValues): string[] {
+  const out = new Set<string>()
+  for (const f of familyFields(doc)) {
+    const v = values[f.id]
+    if (f.kind === 'field' && f.fill === 'email' && typeof v === 'string' && v.includes('@')) out.add(v.trim().toLowerCase())
+  }
+  return [...out]
+}
+
 /**
  * What carries over to the next child's contract: what the signer typed about themselves (their name, phone, email,
  * initials), never the child's details or the options chosen for them.

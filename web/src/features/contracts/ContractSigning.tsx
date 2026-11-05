@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { LuCircleAlert } from 'react-icons/lu'
 import type { ContractDocument } from '@shared/contracts/document'
 import { type ContractValues, SIGN_KEYS, checkContractSigning, missingParts } from '@shared/contracts/fill'
-import type { ContractSignRequest } from '@shared/contracts/types'
+import type { ContractSignRequest, ShownSigner } from '@shared/contracts/types'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { ContractView, type SignState } from './ContractView'
@@ -41,7 +41,7 @@ export function ContractSigning({
   /** The program the office suggested (the family may choose another). */
   suggested?: string | null
   /** The academy's signature on file, shown on its line. */
-  academySigner?: { name: string; title: string; image: string } | null
+  academySigner?: ShownSigner | null
 }) {
   const [values, setValues] = useState<ContractValues>(initial)
   const [sign, setSign] = useState<SignState>({ name: '', relation: '', agree: false })

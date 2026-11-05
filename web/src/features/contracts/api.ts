@@ -130,8 +130,8 @@ export function useAcademySigner() {
   return useDoc<AcademySigner>(branchDocRef(branchId, COL.contractSigner, ACADEMY_SIGNER_ID))
 }
 
-/** Sets the academy's signature (who signs for it, and the signature, a PNG), with its audit entry. */
-export async function saveAcademySigner(branchId: string, actor: Actor, input: { name: string; title: string; image: string }) {
+/** Sets the academy's signature (who signs for it, and the signature, a PNG, or none for their name typed), with its audit entry. */
+export async function saveAcademySigner(branchId: string, actor: Actor, input: { name: string; title: string; image: string | null }) {
   const batch = writeBatch(db)
   batch.set(branchDocRef(branchId, COL.contractSigner, ACADEMY_SIGNER_ID), { name: input.name.trim(), title: input.title.trim(), image: input.image, updatedAt: serverTimestamp(), updatedBy: actorOf(actor) })
   addAudit(batch, branchId, actor, {
@@ -139,7 +139,7 @@ export async function saveAcademySigner(branchId: string, actor: Actor, input: {
     category: 'contracts',
     entityType: 'contractSigner',
     entityId: ACADEMY_SIGNER_ID,
-    summary: `Set the academy’s signature on the enrollment contract: ${[input.name.trim(), input.title.trim()].filter(Boolean).join(', ')}`,
+    summary: `Set the academy’s signature on the enrollment contract: ${[input.name.trim(), input.title.trim()].filter(Boolean).join(', ')}${input.image ? '' : ' (the name typed)'}`,
   })
   await batch.commit()
 }

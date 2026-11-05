@@ -771,14 +771,15 @@ service cloud.firestore {
         }
       }
 
-      // The academy's signature (`AcademySigner`, docs/DECISIONS.md §34): the server puts it on every contract signed.
-      // Owners and admins set it in Settings; every member reads it (the family sees it on the contract).
+      // The academy's signature (`AcademySigner`, docs/DECISIONS.md §34): the server puts it on every contract signed, or
+      // the signer's name typed until there's an image (§35). Owners and admins set it in Settings; every member reads it
+      // (the family sees it on the contract).
       match /contractSigner/{docId} {
         function validSigner(d) {
           return d.keys().hasOnly(['name', 'title', 'image', 'updatedAt', 'updatedBy'])
             && d.name is string && d.name.size() > 0 && d.name.size() <= 100
             && d.title is string && d.title.size() <= 100
-            && d.image is string && d.image.size() <= 400000 && d.image.matches('^data:image/png;base64,[A-Za-z0-9+/]+=*$')
+            && (d.image == null || (d.image is string && d.image.size() <= 400000 && d.image.matches('^data:image/png;base64,[A-Za-z0-9+/]+=*$')))
             && d.updatedAt == request.time
             && byMe(d.updatedBy);
         }

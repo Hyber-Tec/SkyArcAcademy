@@ -6,8 +6,11 @@
  * students' Drive folders, a few paper cards (the recent ones mostly scanned, with a made-up picture of the card in the
  * Drive, as the phone app saves it), and progress reports (shared with the families that can sign in, one draft).
  * It also has a few trial requests and questions sent from the website, and families' requests for classes (waiting for
- * the office, waiting for a family's answer to a time suggested, approved and declined). Running it again rewrites the
- * same documents, and the sample's schedule (classes, seats, who's in, time entries, families' requests) becomes the ten
+ * the office, waiting for a family's answer to a time suggested, approved and declined), and, once the academy has its
+ * enrollment contract (scripts/contract.ts), the contracts the office sent the families (shared/src/sample/contracts.ts):
+ * some waiting (the Hwang family's two, for the demo's parent login), most signed with their PDFs in the students'
+ * Contracts folders, one withdrawn, one on paper. Running it again rewrites the same documents (a student with a
+ * contract keeps it), and the sample's schedule (classes, seats, who's in, time entries, families' requests) becomes the ten
  * weeks around the new today: the sample's earlier ones are replaced, those from before classes were taught together too.
  *
  * Where it goes: production holds the academy's real people (docs/DECISIONS.md §21), so there the sample goes only into
@@ -27,14 +30,23 @@
  * Real people and their data are never touched. Uses the developer's gcloud login (scripts/lib/firestore-rest.ts), or
  * the emulators when FIRESTORE_EMULATOR_HOST is set. The academy must exist first (npm run seed).
  */
+import { createHash, randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
+import { buildContractPdf } from '../functions/src/contractPdf'
 import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
-import { contractsFolderStudent, driveObjectPath, studentFolderId } from '../shared/src/drive/types'
+import { parseContract } from '../shared/src/contracts/document'
+import { RELATION_LABELS, checkContractSigning, usDate, withPreset } from '../shared/src/contracts/fill'
+import { contractFilePlace, contractFoldersToMake } from '../shared/src/contracts/filing'
+import { contractFileName, signatureFacts, signatureStatement } from '../shared/src/contracts/signing'
+import { ACADEMY_SIGNER_ID, type AcademySigner, CONTRACT_TOKEN_DOC, type ContractTemplate, templateLabel } from '../shared/src/contracts/types'
+import { type DriveActor, contractsFolderStudent, driveObjectPath, studentFolderId } from '../shared/src/drive/types'
 import { COL, DOC } from '../shared/src/paths'
 import { composeReport } from '../shared/src/reports/compose'
 import { presetPeriod } from '../shared/src/reports/period'
 import { newMemberData, publicProfileFor } from '../shared/src/branchFactory'
 import { SAMPLE_AUTHOR, SAMPLE_EMAIL_DOMAIN, SAMPLE_MANAGER, SAMPLE_PREFIX, type SampleDoc, buildSampleData, sampleStaffId, sampleStudentId } from '../shared/src/sample/data'
+import { buildSampleContracts, drawSampleSignature } from '../shared/src/sample/contracts'
 import { buildSampleMessages } from '../shared/src/sample/messages'
 import { buildSampleScores, sampleCardPicture } from '../shared/src/sample/scores'
 import { POSITION_LABELS } from '../shared/src/shooting/evaluation'
@@ -44,7 +56,7 @@ import { resolveSettings } from '../shared/src/settings/resolve'
 import type { SettingsOverrides } from '../shared/src/settings/resolve'
 import type { Branch } from '../shared/src/types'
 import { drawSyntheticCard } from '../shared/src/targets/synthetic'
-import { todayKey } from '../shared/src/time'
+import { dateKeyOf, todayKey } from '../shared/src/time'
 import { PROJECT_ID, type Write, commit, deleteDocuments, getDocument, listDocuments } from './lib/firestore-rest'
 import { isReviewAdmin } from './lib/review-admin'
 import { encodePng } from './lib/png'
@@ -95,6 +107,11 @@ const SAMPLE_RULES: Record<string, (id: string, data: Record<string, unknown>) =
   [COL.evaluations]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.progressReports]: (id, d) => isSample(id) || isSample(d.studentId),
   [COL.websiteMessages]: (id) => isSample(id),
+  // The contracts sent to sample families (with their links' tokens), their signed contracts, and who signs for the
+  // academy when the sample set it.
+  [COL.contractLinks]: (_, d) => isSample(d.studentId),
+  [COL.signedContracts]: (id) => isSample(id),
+  [COL.contractSigner]: (_, d) => (d.updatedBy as { uid?: unknown } | undefined)?.uid === SAMPLE_AUTHOR,
 }
 
 /** The sample's schedule, which each run replaces with the weeks around its today (the families' requests are for its classes). */
@@ -103,7 +120,7 @@ const SCHEDULE = [COL.classes, COL.classSeats, COL.sessions, COL.availability, C
 const RETIRED = [COL.events] as const
 
 /** Sub-collections that go with a removed document. */
-const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'] }
+const CHILDREN: Record<string, string[]> = { [COL.staff]: ['private'], [COL.students]: ['private'], [COL.announcements]: ['comments', 'reads'], [COL.progressReports]: ['views'], [COL.contractLinks]: ['private'] }
 
 async function add() {
   if (academyId === DEMO_ACADEMY_ID && !(await getDocument(base))) await createDemoAcademy()
@@ -125,6 +142,7 @@ async function add() {
   })
   const shooting = await sampleShooting(docs, academy, timezone, settings.students.levels, now)
   const messages = buildSampleMessages({ academyId, now, manager: SAMPLE_MANAGER.email })
+  const contracts = await sampleContracts(docs, shooting.docs, academy, timezone, now)
   // The sample's schedule from an earlier run that this one doesn't rewrite (other weeks, or from before classes were
   // taught together): this run's weeks replace it. Its events from earlier runs go too.
   const keep = new Set(docs.map((d) => d.path))
@@ -136,14 +154,201 @@ async function add() {
     await deleteDocuments(stale)
     console.log(`- ${stale.length} documents of the sample's earlier schedule, replaced`)
   }
-  await commit([...docs, ...shooting.docs, ...messages], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
+  await commit([...docs, ...shooting.docs, ...messages, ...contracts.docs], (done, total) => process.stdout.write(`\r  writing ${done}/${total}`))
   console.log(`\n+ Sample data in ${PROJECT_ID} (${base}): ${summary.staff} staff (a manager and ${summary.staff - 1} coaches), ${summary.students} students, ${summary.parents} parents`)
   console.log(`  ${summary.classes} classes with ${summary.seats} seats (${summary.makeups} make-ups, ${summary.practice} practice, ${summary.trials} trial visits)`)
   console.log(`  Who's in: ${summary.whosIn} days of the staff's hours; ${summary.shifts} time entries`)
   console.log(`  ${summary.requests} requests from families: waiting for the office, for a family's answer to a time suggested, approved and declined`)
   console.log(`  ${messages.length} messages from the website (${messages.filter((m) => m.data.status === 'new').length} new)`)
   console.log(`  ${shooting.evaluations} evaluations (${shooting.pdfs} SIUS PDFs and ${shooting.cards} scanned cards in the students' Drive folders), ${shooting.reports} progress reports`)
+  if (contracts.families) console.log(`  Enrollment contracts for ${contracts.families} students: ${contracts.waiting} waiting, ${contracts.signed} signed (their PDFs in the Contracts folders), the rest withdrawn or on paper`)
   console.log('  Remove it all with: npm run seed:sample -- --remove')
+}
+
+/** Who files the signed copies, as the server does (functions/src/contracts.ts). */
+const SIGNING: DriveActor = { uid: 'contract-signing', email: '', name: 'Contract signing' }
+const LOGO = readFileSync(new URL('../web/public/brand/skyarc-logo-email.png', import.meta.url))
+const pngBytes = (dataUrl: string) => Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64')
+
+/** An audit entry of the sample's contracts: the office's (sending, withdrawing, on paper) or the signing's. */
+function contractAudit(id: string, at: Date, actor: { uid: string; email: string; name: string; role: string }, e: { action: string; entityType: string; entityId: string; studentId: string; studentName: string; summary: string }): SampleDoc {
+  return {
+    path: `${base}/${COL.auditLog}/${id}`,
+    data: {
+      at,
+      actorUid: actor.uid,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      actorRole: actor.role,
+      category: 'contracts',
+      context: '',
+      dateKey: null,
+      coachId: null,
+      coachName: null,
+      changes: [],
+      via: actor.role === 'system' ? 'function' : 'web',
+      ...e,
+    },
+  }
+}
+
+/**
+ * The sample's enrollment contracts (shared/src/sample/contracts.ts), on the academy's own contract once it has one:
+ * each contract the office sent, with its link's token; for each one signed, its PDF as the server makes it
+ * (functions/src/contractPdf.ts), filed in the student's Contracts folder, and the student's signed contract; one
+ * marked signed on paper; the parents who sign in told of the ones waiting; and who signs for the academy (the sample
+ * manager, their name typed) unless someone does already. A student with a contract already keeps it.
+ */
+async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy: Record<string, unknown>, timezone: string, now: Date) {
+  const result = { docs: [] as SampleDoc[], families: 0, waiting: 0, signed: 0 }
+  const current = (await listDocuments(`${base}/${COL.contractTemplates}`)).find((t) => t.data.current === true)
+  if (!current) {
+    console.log('  No enrollment contract in the academy yet: set it up with scripts/contract.ts, then run this again for the sample contracts.')
+    return result
+  }
+  const template = current.data as unknown as ContractTemplate
+  const { doc } = parseContract(template.text)
+  const taken = new Set([
+    ...(await listDocuments(`${base}/${COL.contractLinks}`)).map((l) => String(l.data.studentId)),
+    ...(await listDocuments(`${base}/${COL.signedContracts}`)).map((d) => d.id),
+  ])
+  const plan = buildSampleContracts({ doc, docs, academyId, timezone, today: todayKey(timezone, now), skip: taken })
+  const out = result.docs
+  const academyName = String(academy.name ?? 'Sky Arc Sports Academy')
+  const manager: DriveActor = { uid: SAMPLE_AUTHOR, email: SAMPLE_MANAGER.email, name: SAMPLE_MANAGER.name }
+  const office = { ...manager, role: 'admin' }
+  const label = templateLabel(template)
+
+  // Who signs for the academy: the sample manager, their name typed, unless the academy has someone.
+  const signerPath = `${base}/${COL.contractSigner}/${ACADEMY_SIGNER_ID}`
+  const onFile = (await getDocument(signerPath)) as Partial<AcademySigner> | null
+  const signer = onFile?.name ? { name: onFile.name, title: onFile.title ?? '', image: typeof onFile.image === 'string' ? onFile.image : null } : { name: SAMPLE_MANAGER.name, title: 'Office manager', image: null }
+  if (!onFile?.name) out.push({ path: signerPath, data: { ...signer, updatedAt: now, updatedBy: manager } })
+  const academySigner = { name: signer.name, title: signer.title, image: signer.image ? pngBytes(signer.image) : null }
+
+  const folders = new Set(shooting.filter((d) => d.path.startsWith(`${base}/${COL.driveFolders}/`)).map((d) => String(d.data.studentId)))
+  const parentLogins = (studentId: string) =>
+    docs.filter((d) => d.path.startsWith(`${base}/${COL.members}/`) && d.data.role === 'parent' && Array.isArray(d.data.studentIds) && (d.data.studentIds as string[]).includes(studentId)).map((d) => d.path.slice(d.path.lastIndexOf('/') + 1))
+  let files = 0
+  for (const c of plan) {
+    const key = c.studentId.slice(SAMPLE_PREFIX.length)
+    const first = c.studentName.split(' ')[0]
+    const who = { studentId: c.studentId, studentName: c.studentName }
+    result.families++
+    if (c.paper) {
+      out.push({
+        path: `${base}/${COL.signedContracts}/${c.studentId}`,
+        data: { ...who, via: 'paper', signedAt: c.paper.at, signerName: '', relation: null, signerEmail: null, templateId: null, templateName: null, fileId: null, fileName: null, linkId: null, markedBy: manager, note: c.paper.note },
+      })
+      out.push(contractAudit(`${SAMPLE_PREFIX}contract-paper-${key}`, c.paper.at, office, { action: 'contract.paper', entityType: 'signedContract', entityId: c.studentId, ...who, summary: `Marked ${c.studentName}’s enrollment contract signed on paper` }))
+    }
+    for (const [i, s] of c.sent.entries()) {
+      const token = randomBytes(32).toString('base64url')
+      const id = createHash('sha256').update(token).digest('hex')
+      const link: Record<string, unknown> = {
+        ...who,
+        templateId: current.id,
+        templateName: label,
+        preset: s.preset,
+        status: s.status,
+        createdAt: s.at,
+        createdBy: manager,
+        emailedTo: [],
+        emailedAt: null,
+        signedAt: null,
+        signer: null,
+        fileId: null,
+        fileName: null,
+        canceledAt: s.canceledAt,
+        canceledBy: s.canceledAt ? manager : null,
+      }
+      out.push({ path: `${base}/${COL.contractLinks}/${id}/private/${CONTRACT_TOKEN_DOC}`, data: { token } })
+      out.push(contractAudit(`${SAMPLE_PREFIX}contract-send-${key}-${i}`, s.at, office, { action: 'contract.send', entityType: 'contractLink', entityId: id, ...who, summary: `Sent ${c.studentName}’s enrollment contract` }))
+      if (s.canceledAt) {
+        out.push(contractAudit(`${SAMPLE_PREFIX}contract-cancel-${key}-${i}`, s.canceledAt, office, { action: 'contract.cancel', entityType: 'contractLink', entityId: id, ...who, summary: `Withdrew ${c.studentName}’s enrollment contract, sent but not signed` }))
+      }
+      const sig = s.signed
+      const png = sig ? encodePng(drawSampleSignature(sig.name)) : null
+      const checked = sig && png ? checkContractSigning(doc, { values: sig.values, relation: sig.relation, signature: `data:image/png;base64,${Buffer.from(png).toString('base64')}`, agree: true }) : null
+      if (sig && png && checked && !checked.ok) console.warn(`  ${c.studentName}: the sample couldn't fill the contract in (${Object.keys(checked.errors).join(', ')}); it's left waiting`)
+      if (sig && png && checked?.ok) {
+        // Signed as the server signs: the PDF, filed in the student's Contracts folder, and the student's signed contract.
+        const values = withPreset(doc, checked.value.values, s.preset)
+        const signedOn = dateKeyOf(sig.at, timezone)
+        const how = sig.via === 'link' ? { link: token } : { account: sig.signerEmail ?? '', where: sig.via === 'app' ? ('app' as const) : ('website' as const) }
+        const pdf = await buildContractPdf({
+          doc,
+          values,
+          signature: png,
+          signerName: sig.name,
+          relation: RELATION_LABELS[sig.relation].toLowerCase(),
+          signedOn: usDate(signedOn),
+          academySigner,
+          record: {
+            statement: signatureStatement({ signerName: sig.name, studentName: c.studentName, academyName }),
+            facts: signatureFacts({
+              academyName,
+              studentName: c.studentName,
+              signerName: sig.name,
+              relation: sig.relation,
+              signedAtMs: sig.at.getTime(),
+              timezone,
+              ip: sig.ip,
+              userAgent: sig.userAgent,
+              how,
+              templateName: label,
+              templateSha256: template.sha256,
+              sentBy: { name: manager.name, atMs: s.at.getTime() },
+              academySigner: { name: signer.name, title: signer.title, typed: !signer.image },
+            }),
+            footnote: `Signed electronically ${sig.via === 'app' ? `in ${academyName}’s app` : `through ${academyName}’s website`}. The SHA-256 identifies the exact text of the contract that was signed: the same text always gives the same value.`,
+          },
+          sample: false,
+          createdAt: sig.at,
+          logo: LOGO,
+        })
+        const fileId = `${SAMPLE_PREFIX}contract-${key}`
+        const fileName = contractFileName(c.studentName, signedOn)
+        await uploadObject(driveObjectPath(academyId, fileId), pdf, 'application/pdf')
+        process.stdout.write(`\r  filing sample contracts ${++files}`)
+        for (const f of contractFoldersToMake({ studentId: c.studentId, studentName: c.studentName, has: { studentFolder: folders.has(c.studentId), contractsFolder: false }, by: SIGNING, at: sig.at })) {
+          out.push({ path: `${base}/${COL.driveFolders}/${f.id}`, data: f.data })
+        }
+        out.push({
+          path: `${base}/${COL.driveFiles}/${fileId}`,
+          data: { name: fileName, size: pdf.length, kind: 'pdf', mime: 'application/pdf', status: 'ready', ...contractFilePlace(c.studentId), evaluationId: null, originalName: null, uploadedAt: sig.at, uploadedBy: { uid: SIGNING.uid, email: '', name: sig.name } },
+        })
+        out.push({
+          path: `${base}/${COL.signedContracts}/${c.studentId}`,
+          data: { ...who, via: sig.via, signedAt: sig.at, signerName: sig.name, relation: sig.relation, signerEmail: sig.signerEmail, templateId: current.id, templateName: label, values, fileId, fileName, linkId: id, markedBy: null, note: '' },
+        })
+        Object.assign(link, { status: 'signed', signedAt: sig.at, signer: { name: sig.name, relation: sig.relation, ip: sig.ip, userAgent: sig.userAgent, templateSha256: template.sha256 }, fileId, fileName })
+        out.push(
+          contractAudit(`${SAMPLE_PREFIX}contract-signed-${key}-${i}`, sig.at, { uid: SIGNING.uid, email: 'system', name: sig.name, role: 'system' }, {
+            action: 'contract.signed',
+            entityType: 'contractLink',
+            entityId: id,
+            ...who,
+            summary: `${sig.name} (${RELATION_LABELS[sig.relation].toLowerCase()}) signed ${c.studentName}’s enrollment contract ${sig.via === 'link' ? 'with the link' : sig.via === 'app' ? 'in the app' : 'on the website'}; it’s in ${c.studentName}’s Contracts folder in the Drive`,
+          }),
+        )
+        result.signed++
+      } else if (link.status === 'signed') link.status = 'sent'
+      if (link.status === 'sent') {
+        result.waiting++
+        // The parents who sign in hear of it, as the server tells them.
+        for (const email of parentLogins(c.studentId)) {
+          out.push({
+            path: `${base}/${COL.notifications}/${SAMPLE_PREFIX}contract-sent-${key}-${email}`,
+            data: { recipientKey: email, type: 'contract_sent', title: `Please sign ${first}’s enrollment contract`, body: `${academyName} sent ${first}’s contract. Open the app to read it and sign it.`, link: 'parent', refs: {}, createdAt: s.at, readAt: null },
+          })
+        }
+      }
+      out.push({ path: `${base}/${COL.contractLinks}/${id}`, data: link })
+    }
+  }
+  if (files) process.stdout.write('\n')
+  return result
 }
 
 /**

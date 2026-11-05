@@ -123,6 +123,9 @@ export function StudentContractCard({ student }: { student: WithId<Student> }) {
     body = (
       <>
         <p className="text-sm">{signedText(signed, timezone)}</p>
+        {c.lastSigned?.id === signed.linkId && c.lastSigned?.copyEmailedTo?.length ? (
+          <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">Their copy was emailed to {c.lastSigned.copyEmailedTo.join(', ')}</p>
+        ) : null}
         {signed.note ? <p className="text-xs text-muted-foreground">“{signed.note}”</p> : null}
         {signed.values && signed.templateId ? <ChosenInContract templateId={signed.templateId} values={signed.values} /> : null}
         <div className="flex flex-wrap gap-2">

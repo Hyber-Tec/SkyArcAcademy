@@ -93,6 +93,13 @@ describe('the signature page', () => {
     })
   })
 
+  it('says when the academy’s signature is its signer’s name typed', () => {
+    const base = { academyName: 'Sky Arc', studentName: 'Mia Larkin', signerName: 'Jane Larkin', relation: 'parent' as const, signedAtMs: NOW, timezone: 'America/New_York', ip: '', userAgent: '', how: { link: 'tok' }, templateName: 'c', templateSha256: 'cd'.repeat(32) }
+    const typed = signatureFacts({ ...base, academySigner: { name: 'Sam Director', title: '', typed: true } }).at(-1)
+    expect(typed).toEqual({ label: 'The academy’s signature', value: 'Sam Director: their name typed as the academy’s signature, as on file with the academy, on every contract it sends' })
+    expect(signatureFacts(base).some((f) => f.label === 'The academy’s signature')).toBe(false)
+  })
+
   it('records the account that signed in the app or on the website', () => {
     const base = { academyName: 'Sky Arc', studentName: 'Mia Larkin', signerName: 'Jane Larkin', relation: 'parent' as const, signedAtMs: NOW, timezone: 'America/New_York', ip: '', userAgent: 'SkyArc/1.2 iOS', templateName: 'c.pdf', templateSha256: 'cd'.repeat(32) }
     const app = Object.fromEntries(signatureFacts({ ...base, how: { account: 'jane@example.test', where: 'app' } }).map((f) => [f.label, f.value]))

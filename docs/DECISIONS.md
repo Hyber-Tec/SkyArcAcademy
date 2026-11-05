@@ -1139,7 +1139,43 @@ and answered the questions sent with it.
   signature ... autofill"). Settings → Enrollment contract takes the signature, uploaded (an SVG or PNG from the
   manager) or drawn there, with who signs and their title. It goes on the academy's line of every contract signed from
   then on, with the same date. The record page says it was put on from the one on file, and who sent the contract.
-  Until there is one, the academy's line stays blank. Signing each contract by hand in the app can come later.
+  Until there is one, the academy's line has the signer's name typed (§35). Signing each contract by hand in the app
+  can come later.
 - **The program cards are short** (Goo: "make each card better ... straightforward"). Each shows its name over the
   rest of it ("BEGINNER" over "FOUNDATION · 1 HR") and the price after the discounts, with the office's suggestion
   marked; the one chosen opens to its details.
+
+## 35. The signer's copy by email, the manager's name typed, and the contract live (Goo, 2026-11-05)
+
+Goo read the review page of §34 and answered its questions, then asked for everything at once: "do everything now.
+even the testflight too", with something made up in the demo to try it.
+
+- **Every signer gets their signed copy by email** (Goo: "Yes, let's follow the law"). As a contract is signed, the
+  server emails its PDF to the signer: to the address they typed in the contract, and to the account they signed in
+  with, when they did. The E-SIGN Act (15 U.S.C. §7001(e)) and Georgia's Uniform Electronic Transactions Act
+  (O.C.G.A. §10-12-8) let a contract be electronic when each party can keep it and print it; the emailed PDF is that
+  copy, beside the download, and the email says how to get one on paper. The contract's own section 15 has both sides
+  agree to sign electronically.
+  - The demo academy never emails (§22), and test addresses get nothing.
+  - The office sees where the copy went: on the student's contract card (website and phone) and in the notice of the
+    signature.
+  - The signing pages say so before signing, and the "signed" screens name the address.
+- **The academy's signature is the manager's name, typed, until his SVG comes** (Goo: "use the digital printed name as
+  it is. but once we have its svg, use them"). Settings → Enrollment contract saves who signs without an image: their
+  name is then typed on the academy's line, in the contract the family reads and in the PDF, and the record page says
+  it's their name typed. An uploaded or drawn signature replaces it ("Type the name instead" goes back). The live
+  academy's is the manager's name (`scripts/contract.ts --signer`); the demo's is the sample manager's.
+- **The demo shows the contract as the academy will use it** (Goo: "make up and put something for demo version too so
+  that i can switch demo and see how it looks and works"). Once the academy has its contract, the sample data
+  (`shared/src/sample/contracts.ts`) adds what the office sent over the last weeks:
+  - the Hwang family's two children (the demo's parent login) and a few new students waiting;
+  - one withdrawn and sent again with its discount fixed, and one withdrawn for a student who paused;
+  - most signed, in the app, on the website or with the link, each with its PDF built as the server builds it and
+    filed in the student's Contracts folder;
+  - an adult's signed on paper.
+
+  The signatures are drawn from the names and the network addresses are documentation ones: nothing real. On the
+  website, Demo data shows it all to the office; on a phone, the demo's parent login is asked to sign both children's
+  contracts and gets the copies to save.
+- **Live now:** the contract is set up in the live academy and the demo one (`scripts/contract.ts`), the demo is
+  refreshed, and 1.1.0 goes to TestFlight and Google Play's internal testing for Goo to try on both phones.

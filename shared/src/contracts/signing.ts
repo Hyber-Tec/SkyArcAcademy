@@ -66,8 +66,8 @@ export interface SignatureFactsInput {
   templateSha256: string
   /** Who in the office sent it (setting the program suggested and the discounts), and when. */
   sentBy?: { name: string; atMs: number } | null
-  /** The academy's signature put on it, as on file in Settings: who signs for the academy. */
-  academySigner?: { name: string; title: string } | null
+  /** The academy's signature put on it, as on file in Settings: who signs for the academy, and whether it's their name typed. */
+  academySigner?: { name: string; title: string; typed?: boolean } | null
 }
 
 /** The zone's short name at that moment ("EDT"). */
@@ -95,7 +95,12 @@ export function signatureFacts(i: SignatureFactsInput): { label: string; value: 
     { label: 'Contract signed', value: i.templateName },
     { label: 'Its text’s SHA-256', value: i.templateSha256 },
     ...(i.academySigner
-      ? [{ label: 'The academy’s signature', value: `${[i.academySigner.name, i.academySigner.title].filter(Boolean).join(', ')}: the signature on file with the academy, put on every contract it sends` }]
+      ? [
+          {
+            label: 'The academy’s signature',
+            value: `${[i.academySigner.name, i.academySigner.title].filter(Boolean).join(', ')}: ${i.academySigner.typed ? 'their name typed as the academy’s signature, as on file with the academy, on every contract it sends' : 'the signature on file with the academy, put on every contract it sends'}`,
+          },
+        ]
       : []),
   ]
 }

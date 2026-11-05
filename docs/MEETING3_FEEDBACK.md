@@ -162,6 +162,8 @@ started: *already works*, *small change* or *new work*.
     the discounts only it can check. The family sees the price after them, signs in the app, on the website or with the
     QR code at the front desk, and is asked whether to download their copy. The academy's signature fills itself in
     from the one on file ([`DECISIONS.md`](DECISIONS.md) §34).
+  - *Live (2026-11-05):* each signer gets their copy by email, the manager's name is typed as the academy's signature
+    until his SVG comes, and the demo has families' contracts in every state to try ([`DECISIONS.md`](DECISIONS.md) §35).
 
 ### CP: Competitions
 - ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**

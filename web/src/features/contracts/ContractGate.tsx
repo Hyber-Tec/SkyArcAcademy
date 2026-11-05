@@ -30,11 +30,14 @@ import { savePdf } from './pdf'
  * before the office sends it. Once signed, the parent is asked whether to download their copy (it stays under Profile →
  * Account). An admin looking at a family's portal isn't asked.
  */
+/** A child whose contract was just signed here, and where the signer's copy was emailed. */
+type SignedKid = { id: string; name: string; emailedTo: string[] }
+
 export function RequireContract({ children }: { children: React.ReactNode }) {
   const { viewAs } = useBranch()
   const state = useFamilyContract()
   // The children signed for here, for the copy to download (shown over the portal once the last is signed).
-  const [justSigned, setJustSigned] = useState<{ id: string; name: string }[]>([])
+  const [justSigned, setJustSigned] = useState<SignedKid[]>([])
   if (viewAs) return children
   if (state.loading && !justSigned.length) return <FullPageSpinner />
   const copies = justSigned.length ? <DownloadCopies kids={justSigned} onDone={() => setJustSigned([])} /> : null
@@ -69,7 +72,7 @@ function Page({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SignBeforeUsing({ state, onSigned }: { state: FamilyContract; onSigned: (kid: { id: string; name: string }) => void }) {
+function SignBeforeUsing({ state, onSigned }: { state: FamilyContract; onSigned: (kid: SignedKid) => void }) {
   const { role, branchId, branch } = useBranch()
   const contact = useAcademyContactDetails()
   // The children signed for here, before the records say so (the next one shows at once).
@@ -129,10 +132,10 @@ function SignBeforeUsing({ state, onSigned }: { state: FamilyContract; onSigned:
         total={total}
         prefill={prefill === 'none' ? null : prefill}
         carry={carry}
-        onSigned={(values) => {
+        onSigned={(values, emailedTo) => {
           setCarry(values)
           setDone((d) => [...d, kid.id])
-          onSigned({ id: kid.id, name: kid.name })
+          onSigned({ id: kid.id, name: kid.name, emailedTo })
         }}
       />
     </Page>
@@ -155,9 +158,9 @@ function OneContract({
   total: number
   prefill: ContractPrefillResult | null
   carry: ContractValues
-  onSigned: (carried: ContractValues) => void
+  onSigned: (carried: ContractValues, emailedTo: string[]) => void
 }) {
-  const { branchId, branch, timezone } = useBranch()
+  const { branchId, branch, timezone, isDemo } = useBranch()
   const now = useNow()
   const template = useContractTemplate(link.templateId)
   const signer = useAcademySigner()
@@ -191,7 +194,7 @@ function OneContract({
     try {
       const r = await signSignedIn(branchId, kid.id, link.id, request)
       if (!r.signed) toast.message(`${first}’s contract was signed already`, { description: 'Another parent signed it a moment ago.' })
-      onSigned(carriedValues(doc, request.values))
+      onSigned(carriedValues(doc, request.values), r.emailedTo ?? [])
       window.scrollTo({ top: 0 })
     } catch (err) {
       const f = err as { code?: string; message?: string; details?: { errors?: Record<string, string> } }
@@ -227,10 +230,11 @@ function OneContract({
         onSign={onSign}
         signLabel={`Sign ${first}’s contract`}
         suggested={suggested}
-        academySigner={signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image } : null}
+        academySigner={signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image ?? null } : null}
         note={
           <>
-            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address, your browser and the email you’re signed in with. The academy keeps it, and you can download your copy.
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address, your browser and the email you’re signed in with. The academy keeps it,{' '}
+            {isDemo ? 'and you can download your copy.' : 'and you get your copy by email and can download it.'}
           </>
         }
       />
@@ -242,7 +246,7 @@ function OneContract({
  * Once signed: their copy to download now, or later from Profile → Account, where each child's signed contract is
  * (the owner, 2026-11-05: "ask, hey, you want to download the contract or not").
  */
-function DownloadCopies({ kids, onDone }: { kids: { id: string; name: string }[]; onDone: () => void }) {
+function DownloadCopies({ kids, onDone }: { kids: SignedKid[]; onDone: () => void }) {
   const { branchId, role } = useBranch()
   const [busy, setBusy] = useState<string | null>(null)
   async function download(kid: { id: string; name: string }) {
@@ -257,13 +261,22 @@ function DownloadCopies({ kids, onDone }: { kids: { id: string; name: string }[]
     }
   }
   const one = kids.length === 1
+  const emailed = [...new Set(kids.flatMap((k) => k.emailedTo))]
   return (
     <Dialog open onOpenChange={(o) => !o && onDone()}>
       <DialogContent className="sm:max-w-md" data-testid="contract-signed-dialog">
         <DialogHeader className="items-center text-center sm:text-center">
           <LuCircleCheck className="size-10 text-emerald-600" aria-hidden />
           <DialogTitle>{one ? `${firstNames([kids[0].name])}’s contract is signed` : 'Your contracts are signed'}</DialogTitle>
-          <DialogDescription>Thank you. The academy has its copy. Would you like to download yours?</DialogDescription>
+          <DialogDescription>
+            {emailed.length ? (
+              <>
+                Thank you. The academy has its copy, and yours is on its way to <span className="font-medium [overflow-wrap:anywhere] text-foreground">{emailed.join(', ')}</span>. Would you like to download it too?
+              </>
+            ) : (
+              'Thank you. The academy has its copy. Would you like to download yours?'
+            )}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
           {kids.map((k) => (

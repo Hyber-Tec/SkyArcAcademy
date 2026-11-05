@@ -46,17 +46,21 @@ export const CONTRACT_PRICE_MAX = 100_000
 /**
  * `branches/{b}/contractSigner/academy`: the academy's signature, which the server puts on every contract a family signs
  * from then on (the owner, 2026-11-05: "autofill"): who signs for the academy and the signature, a PNG (an SVG the
- * office uploads is drawn as one first). Owners and admins set it in Settings; the family sees it on the contract.
+ * office uploads is drawn as one first), or, until there's one, their name typed (§35). Owners and admins set it in
+ * Settings; the family sees it on the contract.
  */
 export interface AcademySigner {
   name: string
   /** Their title ("Director"), or ''. */
   title: string
-  /** A PNG data URL, dark ink on transparent. */
-  image: string
+  /** A PNG data URL, dark ink on transparent; none: the name is typed on the academy's line instead. */
+  image: string | null
   updatedAt: TimestampLike | null
   updatedBy: DriveActor
 }
+
+/** The academy's signature as a contract shows it: who signs, and the image, or none for the name typed. */
+export type ShownSigner = Pick<AcademySigner, 'name' | 'title' | 'image'>
 
 export const ACADEMY_SIGNER_ID = 'academy'
 
@@ -111,6 +115,9 @@ export interface ContractLink {
   /** The signed PDF in the Drive (the Contracts folder). */
   fileId: string | null
   fileName: string | null
+  /** Where the signer's copy was emailed as it was signed (§35), and when: none from the demo academy or for test addresses. */
+  copyEmailedTo?: string[]
+  copyEmailedAt?: TimestampLike | null
   canceledAt: TimestampLike | null
   canceledBy: DriveActor | null
 }
@@ -187,7 +194,7 @@ export interface ContractPrefillResult {
  * - `contractPrefill` (a parent signed in): `{ branchId }` → `ContractPrefillResult`.
  * - `getContractForSigning` (anyone with a link): `{ token, copy? }` → its state; when it's ready to sign, the contract
  *   (`{ title, text, version }`), what the office set, the academy's signature and the student's name.
- * - `signContract` (anyone with a link): `{ token }` and a `ContractSignRequest` → `{ ok, fileName, copyUntil }`.
+ * - `signContract` (anyone with a link): `{ token }` and a `ContractSignRequest` → `ContractLinkSignedResult`.
  * - `previewContract` (owners and admins): `{ branchId, studentName?, preset? }` and any of a `ContractSignRequest` →
  *   `ContractPdf`, a sample of the current contract marked so (nothing is filed).
  */
@@ -215,6 +222,16 @@ export interface ContractSignedResult {
   /** False when the other parent signed it meanwhile: nothing more was filed. */
   signed: boolean
   fileName: string | null
+  /** Where the signer's copy was emailed (§35): the address they typed and the account's; none from the demo academy. */
+  emailedTo: string[]
+}
+
+/** Signed with the link: the copy's name, until when the link downloads it, and where it was emailed. */
+export interface ContractLinkSignedResult {
+  ok: true
+  fileName: string | null
+  copyUntil: number
+  emailedTo: string[]
 }
 
 /** A PDF sent back by a function: its name and bytes (base64). */

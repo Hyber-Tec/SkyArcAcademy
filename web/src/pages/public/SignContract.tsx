@@ -5,7 +5,7 @@ import { useParams } from 'react-router'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@shared/brand'
 import { parseContract, pricedChoice } from '@shared/contracts/document'
 import { type ContractValues, prefillValues, presetValues } from '@shared/contracts/fill'
-import type { ContractSignRequest } from '@shared/contracts/types'
+import type { ContractLinkSignedResult, ContractSignRequest, ShownSigner } from '@shared/contracts/types'
 import { formatPhone } from '@shared/people'
 import { dateKeyOf, formatInstant } from '@shared/time'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
@@ -44,14 +44,16 @@ type Loaded =
       studentName: string
       contract: { title: string; text: string; version: number }
       preset: ContractValues
-      academySigner: { name: string; title: string; image: string } | null
+      academySigner: ShownSigner | null
+      /** Whether signing emails the signer their copy (every academy but the demo one). */
+      emailsCopy?: boolean
     }
   | { state: 'signed'; academy: Academy; firstName: string; signedAt: number; signerName: string; copyUntil: number; copy?: { name: string; data: string } }
   | { state: 'canceled'; academy: Academy; firstName: string }
   | { state: 'invalid'; academy: Academy }
 
 const getContract = httpsCallable<{ token: string; copy?: boolean }, Loaded>(functions, 'getContractForSigning')
-const sign = httpsCallable<{ token: string } & ContractSignRequest, { ok: true; fileName: string; copyUntil: number }>(functions, 'signContract')
+const sign = httpsCallable<{ token: string } & ContractSignRequest, ContractLinkSignedResult>(functions, 'signContract')
 
 /** "November 27, 2026", in the academy's time zone. */
 const longDate = (ms: number, academy: Academy) => formatInstant(ms, academy.timezone || 'America/New_York', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -168,7 +170,7 @@ export function SignContractPage() {
   const { token = '' } = useParams()
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [failure, setFailure] = useState<'busy' | 'network' | null>(null)
-  const [signed, setSigned] = useState<{ name: string; copyUntil: number } | null>(null)
+  const [signed, setSigned] = useState<Signed | null>(null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -189,7 +191,16 @@ export function SignContractPage() {
           <div className="flex flex-col items-center text-center">
             <LuCircleCheck className="size-10 text-emerald-600" aria-hidden />
             <h1 className="mt-3 text-xl font-semibold tracking-tight">Thank you, {signed.name.split(' ')[0]}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{loaded.firstName}’s enrollment contract is signed, and the academy has its copy. Would you like to download yours?</p>
+            <p className="mt-2 text-sm text-muted-foreground" data-testid="signed-copy-note">
+              {loaded.firstName}’s enrollment contract is signed, and the academy has its copy.{' '}
+              {signed.emailedTo.length ? (
+                <>
+                  We’ve emailed yours to <span className="font-medium [overflow-wrap:anywhere] text-foreground">{signed.emailedTo.join(', ')}</span>. Would you like to download it too?
+                </>
+              ) : (
+                'Would you like to download yours?'
+              )}
+            </p>
           </div>
           <div className="mt-6">
             <CopyButton token={token} until={signed.copyUntil} academy={loaded.academy} />
@@ -255,7 +266,10 @@ export function SignContractPage() {
   }
 }
 
-function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: { name: string; copyUntil: number }) => void }) {
+/** Signed here: the signer's name, until when the link downloads the copy, and where it was emailed. */
+type Signed = { name: string; copyUntil: number; emailedTo: string[] }
+
+function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: Signed) => void }) {
   const now = useNow()
   const doc = useMemo(() => parseContract(loaded.contract.text).doc, [loaded.contract.text])
   const initial = useMemo(() => ({ ...prefillValues(doc, { studentName: loaded.studentName }), ...presetValues(doc, loaded.preset ?? {}) }), [doc, loaded.studentName, loaded.preset])
@@ -265,7 +279,7 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
   async function onSign(request: ContractSignRequest): Promise<SignOutcome> {
     try {
       const r = (await sign({ token, ...request })).data
-      onSigned({ name: request.name ?? '', copyUntil: r.copyUntil })
+      onSigned({ name: request.name ?? '', copyUntil: r.copyUntil, emailedTo: r.emailedTo ?? [] })
       window.scrollTo({ top: 0 })
     } catch (err) {
       const f = err as { code?: string; details?: { errors?: Record<string, string>; state?: string } }
@@ -293,7 +307,8 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
         academySigner={loaded.academySigner}
         note={
           <>
-            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The academy keeps it, and you can download your copy.
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The academy keeps it,{' '}
+            {loaded.emailsCopy ? 'and you get your copy by email, at the address you give above, and can download it.' : 'and you can download your copy.'}
           </>
         }
       />
