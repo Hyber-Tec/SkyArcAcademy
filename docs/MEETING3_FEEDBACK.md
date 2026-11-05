@@ -156,6 +156,12 @@ started: *already works*, *small change* or *new work*.
     the student's and the parent's details filled in where the paper has them, then the signature; the signed copy is a
     PDF of it as filled in. The office writes it in Settings → Enrollment contract and publishes it once the manager
     approves the e-version ([`DECISIONS.md`](DECISIONS.md) §33).
+  - *Approved (2026-11-05), and sent by the office:* the manager and Goo approved the e-version. Its words are set up
+    once and never edited in the app; the office changes only the prices. The office sends each family's contract from
+    the student's page (the website or the phone) or the families' list in Settings, with the program it suggests and
+    the discounts only it can check. The family sees the price after them, signs in the app, on the website or with the
+    QR code at the front desk, and is asked whether to download their copy. The academy's signature fills itself in
+    from the one on file ([`DECISIONS.md`](DECISIONS.md) §34).
 
 ### CP: Competitions
 - ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**
