@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { deleteDoc, doc, serverTimestamp, setDoc } from "@react-native-firebase/firestore";
 import { deleteToken, getMessaging, getToken, isDeviceRegisteredForRemoteMessages, onTokenRefresh, registerDeviceForRemoteMessages } from "@react-native-firebase/messaging";
+import type { Lang } from "@shared/i18n";
 import { ROOT, USER_COL } from "@shared/paths";
 import { Platform } from "react-native";
 import { appVersion, deviceLabel, getDeviceId } from "./device";
@@ -23,6 +24,8 @@ interface Stored {
   uid: string;
   token: string;
   version: string;
+  /** The language of its notifications (docs/DECISIONS.md §36). */
+  lang?: Lang;
   savedAt: number;
 }
 
@@ -66,22 +69,23 @@ export function currentPushToken(): Promise<string | null> {
   return asking;
 }
 
-async function save(uid: string, email: string, token: string, first: boolean): Promise<void> {
+async function save(uid: string, email: string, token: string, first: boolean, lang: Lang): Promise<void> {
   const id = await getDeviceId();
   const version = appVersion();
   await setDoc(
     doc(db, ROOT.users, uid, USER_COL.devices, id),
-    { token, email, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: version, label: deviceLabel(), ...(first ? { createdAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() },
+    { token, email, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: version, label: deviceLabel(), lang, ...(first ? { createdAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() },
     { merge: true },
   );
-  await AsyncStorage.setItem(STORED_KEY, JSON.stringify({ uid, token, version, savedAt: Date.now() } satisfies Stored)).catch(() => undefined);
+  await AsyncStorage.setItem(STORED_KEY, JSON.stringify({ uid, token, version, lang, savedAt: Date.now() } satisfies Stored)).catch(() => undefined);
 }
 
 /**
- * Puts this phone's token on the signed-in person's record, when notifications are allowed and this build can get them:
- * again when the token or the app's version changed, or a week went by (`force`: whatever was saved).
+ * Puts this phone's token on the signed-in person's record, with the language its notifications come in, when
+ * notifications are allowed and this build can get them: again when the token, the app's version or the language
+ * changed, or a week went by (`force`: whatever was saved).
  */
-export async function registerThisDevice(force = false): Promise<void> {
+export async function registerThisDevice(force = false, lang: Lang = "en"): Promise<void> {
   const user = auth.currentUser;
   if (!user?.email || !user.emailVerified || !pushPossible()) return;
   if ((await notificationPermission()) !== "granted") return;
@@ -90,9 +94,9 @@ export async function registerThisDevice(force = false): Promise<void> {
   if (stored && stored.uid !== user.uid) await forget(stored);
   const token = await currentPushToken();
   if (!token) return;
-  const same = stored?.uid === user.uid && stored.token === token && stored.version === appVersion();
+  const same = stored?.uid === user.uid && stored.token === token && stored.version === appVersion() && (stored.lang ?? "en") === lang;
   if (!force && same && Date.now() - (stored?.savedAt ?? 0) < REWRITE_AFTER_MS) return;
-  await save(user.uid, user.email.trim().toLowerCase(), token, stored?.uid !== user.uid).catch(() => undefined);
+  await save(user.uid, user.email.trim().toLowerCase(), token, stored?.uid !== user.uid, lang).catch(() => undefined);
 }
 
 /** Calls `listener` with this phone's new token when Firebase replaces it. */

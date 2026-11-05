@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { Loading } from "@/components/Loading";
 import { PausedAccess } from "@/features/access/PausedAccess";
 import { BranchProvider, useBranch } from "@/state/BranchProvider";
+import { EnglishOnly } from "@/state/LangProvider";
 import { PushProvider } from "@/state/PushProvider";
 import { useColors } from "@/theme";
 
@@ -41,11 +42,19 @@ export default function AppLayout() {
       }
       paused={(why) => <PausedAccess why={why} />}
     >
-      <PushProvider>
-        <PortalStack />
-      </PushProvider>
+      <RoleLang>
+        <PushProvider>
+          <PortalStack />
+        </PushProvider>
+      </RoleLang>
     </BranchProvider>
   );
+}
+
+/** A parent reads the app in their language; students and staff in English (docs/DECISIONS.md §36). */
+function RoleLang({ children }: { children: React.ReactNode }) {
+  const { role } = useBranch();
+  return role === "parent" ? children : <EnglishOnly>{children}</EnglishOnly>;
 }
 
 function PortalStack() {

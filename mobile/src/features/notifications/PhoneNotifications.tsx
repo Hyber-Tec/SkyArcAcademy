@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { ListRow, ListSection } from "@/components/List";
 import { T } from "@/components/Text";
 import { type PermissionState, notificationPermission, requestNotificationPermission } from "@/lib/notify";
+import { useLang } from "@/lib/lang";
 import { currentPushToken, onPushTokenChange, pushPossible, registerThisDevice } from "@/lib/push";
 import { toast } from "@/lib/toast";
 import { type BranchState, useBranch } from "@/state/BranchProvider";
@@ -38,6 +39,7 @@ const PRACTICE = { badge: "Practice", tone: "secondary" as const, text: "The pra
  */
 export function PhoneNotifications() {
   const branch = useBranch();
+  const lang = useLang();
   const [permission, setPermission] = useState<PermissionState | null>(null);
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,7 @@ export function PhoneNotifications() {
       const p = await requestNotificationPermission();
       setPermission(p);
       if (p === "granted") {
-        await registerThisDevice(true);
+        await registerThisDevice(true, lang);
         toast.success("Notifications are on");
       }
     } finally {

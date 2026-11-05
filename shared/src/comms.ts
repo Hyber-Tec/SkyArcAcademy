@@ -154,6 +154,11 @@ export interface AppNotification {
   type: NotificationType
   title: string
   body: string
+  /**
+   * The same in Korean, on what goes to a family (docs/DECISIONS.md §36): a parent reading Korean sees it in the app,
+   * and a phone set to Korean gets it as its push.
+   */
+  ko?: { title: string; body: string }
   /** In-app path below the branch, e.g. "coach/announcements/abc". */
   link: string
   refs: {

@@ -14,6 +14,7 @@ import { setupProblem } from "@/lib/env";
 import "@/lib/notify";
 import { AppearanceProvider } from "@/state/AppearanceProvider";
 import { AuthProvider, useAuth } from "@/state/AuthProvider";
+import { LangProvider } from "@/state/LangProvider";
 import { useColors, useIsDark } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -21,7 +22,9 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 export default function RootLayout() {
   return (
     <AppearanceProvider>
-      <Themed />
+      <LangProvider>
+        <Themed />
+      </LangProvider>
     </AppearanceProvider>
   );
 }

@@ -1,4 +1,5 @@
 import type { DriveActor } from '../drive/types'
+import type { Lang } from '../i18n'
 import type { TimestampLike } from '../types'
 import type { ContractValues } from './fill'
 
@@ -32,6 +33,20 @@ export interface ContractTemplate {
   publishedBy: DriveActor
   replacedAt?: TimestampLike | null
   replacedBy?: DriveActor | null
+  /**
+   * Its Korean translation, once the academy approved it (docs/DECISIONS.md §36: parents read it, the English counts):
+   * the same markers in the same order (shared/src/contracts/translation.ts), put in by scripts/contract.ts. A new
+   * version of prices keeps it.
+   */
+  ko?: ContractTranslation | null
+}
+
+export interface ContractTranslation {
+  text: string
+  /** The SHA-256 of `text`: the signed PDF records it beside the English's. */
+  sha256: string
+  updatedAt: TimestampLike | null
+  updatedBy: DriveActor
 }
 
 /** "Enrollment Agreement (version 2)": a published contract, as links and signatures name it. */
@@ -173,6 +188,8 @@ export interface ContractSignRequest {
   /** The drawn signature, a PNG data URL. */
   signature: string
   agree: boolean
+  /** The language the signer read it in: Korean adds the translation they read to the PDF (docs/DECISIONS.md §36). */
+  lang?: Lang
 }
 
 /** What the family's form starts with (`contractPrefill`): their students, and the signer's details on the records. */

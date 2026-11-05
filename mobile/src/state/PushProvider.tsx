@@ -11,6 +11,7 @@ import { useInbox } from "@/features/notifications/inbox";
 import { pushReason } from "@/features/notifications/PhoneNotifications";
 import { type PushOpen, dataOfNotification, firstTime, openFamilyNotice, openStaffNotice, pushOpenOf } from "@/features/notifications/pushOpen";
 import { isPush, notificationPermission, requestNotificationPermission, setAppBadge } from "@/lib/notify";
+import { useLang } from "@/lib/lang";
 import { onPushTokenChange, registerThisDevice } from "@/lib/push";
 import { toast } from "@/lib/toast";
 import { space } from "@/theme";
@@ -36,19 +37,21 @@ const ASKED_KEY = "skyarc.push-asked";
  */
 export function PushProvider({ children }: { children: ReactNode }) {
   const { branchId, isDemo, isStaff } = useBranch();
+  const lang = useLang();
   const inbox = useInbox(!isDemo);
   const [asking, setAsking] = useState(false);
 
+  // The phone's notifications come in the language its screens show (a parent's choice of Korean too).
   useEffect(() => {
     if (isDemo) return;
-    void registerThisDevice();
-    const sub = AppState.addEventListener("change", (s) => s === "active" && void registerThisDevice());
-    const off = onPushTokenChange(() => void registerThisDevice(true));
+    void registerThisDevice(false, lang);
+    const sub = AppState.addEventListener("change", (s) => s === "active" && void registerThisDevice(false, lang));
+    const off = onPushTokenChange(() => void registerThisDevice(true, lang));
     return () => {
       sub.remove();
       off();
     };
-  }, [isDemo]);
+  }, [isDemo, lang]);
 
   // The badge follows the inbox once it's known (not 0 while it loads), and goes when the person signs out.
   const unread = inbox.data.filter((n) => !n.readAt).length;

@@ -46,9 +46,11 @@ export async function pushItems(branchId: string, items: { id: string; n: Outgoi
             announcementId: n.refs.announcementId ?? '',
             dateKey: n.refs.dateKey ?? '',
           }
+          // A phone set to Korean gets the family's notice in Korean, when it has one (docs/DECISIONS.md §36).
+          const words = device.get('lang') === 'ko' && n.ko ? n.ko : n
           messages.push({
             token,
-            notification: { title: n.title, body: n.body },
+            notification: { title: words.title, body: words.body },
             data,
             apns: { payload: { aps: { badge: unread, sound: 'default', threadId: channel.id } } },
             android: { priority: 'high', notification: { channelId: channel.id, sound: 'default', tag: id.slice(0, 64) } },

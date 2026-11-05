@@ -155,8 +155,11 @@ export const replaceDollars = (text: string, amount: number): string => text.rep
 
 const sameTitle = (a: string, b: string) => a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase()
 
-/** The contract's words and fields, and what to fix (`problems`), from its text. */
-export function parseContract(source: string): { doc: ContractDocument; problems: ContractProblem[] } {
+/**
+ * The contract's words and fields, and what to fix (`problems`), from its text. `anyText` lets in what the PDF's standard
+ * fonts can't print: a translation's Korean (shared/src/contracts/translation.ts), which the PDF draws with its own font.
+ */
+export function parseContract(source: string, opts: { anyText?: boolean } = {}): { doc: ContractDocument; problems: ContractProblem[] } {
   const doc: ContractDocument = { title: '', footer: [], blocks: [] }
   const problems: ContractProblem[] = []
   const ids = new Set<string>()
@@ -191,7 +194,7 @@ export function parseContract(source: string): { doc: ContractDocument; problems
     const n = i + 1
     const line = raw.replace(/\s+$/, '').replace(/^\s+/, '')
     if (!line) return close()
-    const bad = line.match(NOT_PRINTABLE)
+    const bad = opts.anyText ? null : line.match(NOT_PRINTABLE)
     if (bad) problems.push({ line: n, message: `“${bad[0]}” can’t be printed in the PDF. Use English letters and common signs.` })
 
     const directive = line.match(DIRECTIVE)

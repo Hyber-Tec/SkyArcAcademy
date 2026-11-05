@@ -108,8 +108,10 @@ service cloud.firestore {
       match /devices/{deviceId} {
         allow read, delete: if signedIn() && uid == request.auth.uid;
         allow create, update: if signedIn() && uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['token', 'email', 'platform', 'appVersion', 'label', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['token', 'email', 'platform', 'appVersion', 'label', 'lang', 'createdAt', 'updatedAt'])
           && request.resource.data.email == emailKey()
+          // The language of its notifications (docs/DECISIONS.md §36).
+          && (!('lang' in request.resource.data) || request.resource.data.lang in ['en', 'ko'])
           && request.resource.data.token is string
           && request.resource.data.token.size() > 0
           && request.resource.data.token.size() < 4096

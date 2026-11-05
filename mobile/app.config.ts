@@ -242,8 +242,9 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       // For phones only for now: the stores then ask for no iPad screenshots and no iPad review.
       supportsTablet: false,
       // The app uses only the standard HTTPS kind of encryption (exempt), so App Store Connect never asks the
-      // export-compliance question for a build.
-      infoPlist: { ITSAppUsesNonExemptEncryption: false },
+      // export-compliance question for a build. It speaks English and Korean (parents: docs/DECISIONS.md §36), so the
+      // phone's own parts (the share sheet, the PDF viewer, date pickers) follow a Korean phone too.
+      infoPlist: { ITSAppUsesNonExemptEncryption: false, CFBundleLocalizations: ["en", "ko"], CFBundleAllowMixedLocalizations: true },
       // Sign in with Apple, beside Google (Apple's guideline 4.8, as people make their accounts in the app:
       // docs/DECISIONS.md §31): the capability is on the app's identifier in Apple's developer account.
       usesAppleSignIn: true,
@@ -295,6 +296,8 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       // status bar) in the logo's black.
       ["expo-notifications", { color: "#0A0A0A", icon: "./assets/images/android-icon-monochrome.png" }],
       "@react-native-firebase/messaging",
+      // The phone's language, for parents' Korean (src/lib/lang.ts).
+      "expo-localization",
       // The Scan tab: the camera for a new photo of a paper target, the photo library for one taken before. Photos
       // only: no microphone, no video, no barcode scanner, nothing saved to the library.
       ["expo-camera", { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: false }],
