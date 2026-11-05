@@ -23,9 +23,9 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
    moves its classes around the day).
 5. **The next update, 1.1.0, for both stores**, once everything is ready (Goo, 2026-11-03: no update before then;
-   Google Play has answered, the App Store hasn't yet). **To try it now:** 1.1.0 (build 10, 2026-11-05) is on TestFlight
+   Google Play has answered, the App Store hasn't yet). **To try it now:** 1.1.0 (build 11, 2026-11-05) is on TestFlight
    and on Google Play's internal testing, with everything built so far (Scan, the families' part, Create an account,
-   Sign in with Apple, and the contract the office sends). The steps of the release, the forms to update first and
+   Sign in with Apple, the contract the office sends, opened on the website, and Korean for parents). The steps of the release, the forms to update first and
    which Mac uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach
    (below).
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
