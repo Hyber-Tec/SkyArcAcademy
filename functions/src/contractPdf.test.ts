@@ -99,7 +99,7 @@ describe('the signed contract', () => {
 
   it('marks a sample on every page, with no record page', async () => {
     const pages = await pagesText(await buildContractPdf({ ...signed, values: {}, signature: null, signerName: '', record: null, sample: true }))
-    pages.forEach((p) => expect(p).toContain('Sample from Settings: not signed, and not filed.'))
+    pages.forEach((p) => expect(p).toContain('Sample: not signed, and not filed.'))
     expect(pages.join(' ')).not.toContain('Signature record')
   })
 

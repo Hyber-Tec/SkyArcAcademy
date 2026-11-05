@@ -23,7 +23,7 @@ export interface ContractPdfInput {
   signedOn: string
   /** The page recording the signing; none on a sample. */
   record: { statement: string; facts: { label: string; value: string }[]; footnote: string } | null
-  /** Settings' preview: every page says it's a sample. */
+  /** A preview (Settings, or More → Enrollment contract on the phone): every page says it's a sample. */
   sample: boolean
   createdAt: Date
 }
@@ -434,7 +434,7 @@ export async function buildContractPdf(input: ContractPdfInput): Promise<Uint8Ar
     })
     if (input.sample) {
       page.drawText('SAMPLE', { x: 150, y: 250, size: 110, font: f.bold, color: RED, opacity: 0.08, rotate: degrees(40) })
-      const note = 'Sample from Settings: not signed, and not filed.'
+      const note = 'Sample: not signed, and not filed.'
       page.drawText(note, { x: W - M - f.bold.widthOfTextAtSize(note, 7.5), y: H - 26, size: 7.5, font: f.bold, color: RED })
     }
   })
