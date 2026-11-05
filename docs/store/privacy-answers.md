@@ -107,14 +107,19 @@ emails, account ids and what they opened; the camera and the photos are the staf
   [`DECISIONS.md`](../DECISIONS.md) §31; the privacy policy says so since that day). Update both stores' forms when
   submitting 1.1.0 (not before: 1.0.0 has none of it):
   - **New data:** a parent's signature on the enrollment contract (the name they type, parent or guardian, the signature
-    drawn with a finger, the date and time, the network address, the phone's model and the app's version), kept in the
-    signed contract that only the academy's owners and admins see, and downloaded by the family; and a request to join
+    drawn with a finger, the date and time, the network address, the phone's model and the app's version) and what they
+    fill in on it (the program, the discounts, their initials, the student's name and date of birth, their own name,
+    phone number and email: `DECISIONS.md` §33), kept in the signed contract that only the academy's owners and admins
+    see, and downloaded by the family; and a request to join
     from someone the academy can't find by their email (their name, an optional phone number, their children's names and
     an optional message). Sign in with Apple adds nothing new: the name and the email address Apple shares (which can be
     an address Apple makes to hide the real one).
-  - **Apple's App Privacy:** Contact Info → **Phone Number** (also a parent's, when they ask to join); User Content →
-    **Other User Content** (also a contract's signature and a request to join). Nothing else changes.
+  - **Apple's App Privacy:** Contact Info → **Phone Number** (also a parent's, when they ask to join or sign the
+    contract); User Content → **Other User Content** (also a contract's signature and what's filled in on it, and a
+    request to join); Other Data → **Other Data Types** (also a student's date of birth, on the contract). Nothing else
+    changes.
   - **Google's Data safety:** **account creation methods**: username and password, and OAuth (Google), now in the app;
-    Personal info → **Phone number** (also a parent's, when they ask to join); App activity → **Other user-generated
-    content** (also a contract's signature and a request to join). Account deletion stays as it is.
+    Personal info → **Phone number** (also a parent's, when they ask to join or sign the contract); Personal info →
+    **Other info** (also a student's date of birth, on the contract); App activity → **Other user-generated content**
+    (also a contract's signature and what's filled in on it, and a request to join). Account deletion stays as it is.
 - **A new permission or form:** a new line here, in the privacy policy, and in both stores' forms.
