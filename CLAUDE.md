@@ -108,9 +108,11 @@ If you're unsure whether something is low-risk, treat it as not low-risk and ask
   for every card, not perfect on the samples. Tests use made-up cards and results.
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
-- **Language:** English only while the features are built. Korean and other languages come in one pass once
-  everything works (`docs/DECISIONS.md` §6, Q14). The public website already has Korean pages (`/ko/…`), a draft the
-  owner reviews by hand: don't spend time polishing them (`docs/TODO.md`).
+- **Language:** parents read the portal, the phone app, the public website and the contract in Korean (their phone's or
+  browser's language, or their choice); students and staff read English (`docs/DECISIONS.md` §36). Every text a parent
+  sees is written in both, side by side in the code (`t('Home', '홈')`), the Korean written as
+  `.claude/skills/korean-ux-writing` says: use that skill before writing or reviewing any Korean. Emails stay English;
+  no other language for now.
 
 ## Owner and production
 
@@ -182,8 +184,9 @@ Carried over from HyberCRM, adapted to one academy:
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
   Their weeks start on Sunday, as calendars do (`CALENDAR_WEEK_START`); the academy's week, the schedule's, runs Monday
   to Sunday (`settings.general.weekStartsOn`; `docs/DECISIONS.md` §21).
-- **Language:** English for now. Keep text in the code, never in images, so the translation pass (several languages, not
-  only Korean) can come later.
+- **Language:** English, and Korean for parents (`docs/DECISIONS.md` §36): `useT()` (`web/src/lib/lang.ts`,
+  `mobile/src/lib/lang.ts`) on every text a parent can see, Korean beside its English; staff-only screens stay English.
+  Dates, times and particles after names go through `shared/src/i18n.ts`. Keep text in the code, never in images.
 - **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logos are fixed in the code ("Brand and logos" below); Settings can't change them.
 - **Cloud Functions** run as `functions@skyarcacademy.iam.gserviceaccount.com` with only the roles they use (`docs/DEPLOY.md`). A function that needs another Google service needs that role added there first.
 - **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy. The email app password is the Secret Manager secret `GMAIL_APP_PASSWORD`.

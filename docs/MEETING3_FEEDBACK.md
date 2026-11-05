@@ -247,7 +247,10 @@ started: *already works*, *small change* or *new work*.
 - [ ] **L-KI. The kiosk on an Android tablet.** HyberTec provides the tablet and a wall mount, at the front desk near an
   outlet. When Goo asks, make the kiosk **installable on the tablet from a file** (no store) and keep it running there.
   Clocking in from a phone or by location was turned down: the kiosk only.
-- [ ] **L-LG. Korean** for parents and the whole app (the second meeting's `L1`), when Goo decides it's time.
+- ✅ **L-LG. Korean** for parents (the second meeting's `L1`), 2026-11-05 (#115): what parents see, in Korean (the
+  parent portal, the phone app's family part, the public website, the contract and what families hear), as Goo decided
+  that day; students and staff stay English (`docs/DECISIONS.md` §36). Next: the manager reads the contract's Korean
+  before it goes to the live academy (`docs/TODO.md`).
 
 ---
 
@@ -271,7 +274,7 @@ started: *already works*, *small change* or *new work*.
 | `P12` Other names | **Filled in** by the manager; used to find the student on a sheet (`CP1`). |
 | `F1`, `F4`, `F5` Parents and contracts | The sign-up flow (`CT1`) and the contract in the app (`CT2`): built, `docs/DECISIONS.md` §31. |
 | `E1` Email and the domain | The domain is on Squarespace: `DM1`–`DM3`. |
-| `L1` Korean | Still later: `L-LG`. |
+| `L1` Korean | **Done** for parents: `L-LG`. |
 
 ---
 
@@ -294,4 +297,4 @@ Everything else is in hand, or the manager's own work in the app.
 | When the contract arrives | The office files the contracts signed before in each student's Contracts folder, then uploads the blank one: parents sign it before using the app. |
 | This week | The manager invites Goo to Squarespace → the domain connected → the coaches invited. |
 | When the App Store approves | Parents are told to download the app and sign up; the kiosk tablet is set up. |
-| Later | Competition PDFs, the kiosk's install file, Korean. |
+| Later | Competition PDFs, the kiosk's install file. |

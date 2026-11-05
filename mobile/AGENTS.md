@@ -60,7 +60,7 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        news/[id] a post, news/attachment a post's file, inbox their notifications (Home's bell));
                        FamilyProvider holds whose they are and the child a parent chose; ContractGate (src/features/
                        contracts) stands in for all of it until the academy's enrollment contract is signed for each
-                       of their students: a parent signs it there, a student waits for their parent
+                       of their students: a parent opens each on the website from there, a student waits for them
   (app)/no-access      an email the academy hasn't added: the server first links it by the email on file
                        (`linkMyAccount`, docs/DECISIONS.md §31: a parent's or a student's own email on a student's
                        record), then it waits for the academy (a request sent) or offers ask-access ("Ask the academy",
@@ -94,10 +94,11 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
-                       target), access, account (deleting an account), contracts (signing the enrollment contract the office
-                       sent before using the app: ContractGate, the contract as a page to fill in (ContractForm,
-                       ContractSheet), the signature pad, a PDF to read or save (PdfSheet); the office's part on a
-                       student's screen (StudentContract, with its QR code: ContractQr)), family (what a family reads: their students,
+                       target), access, account (deleting an account), contracts (the enrollment contract the office sent,
+                       before using the app: ContractGate, which opens each on the website; a PDF to read or save
+                       (PdfSheet); the office's part on a student's screen (StudentContract, with its QR code:
+                       ContractQr), and More's preview of the contract as a parent sees it (ContractForm,
+                       ContractSheet, the signature pad)), family (what a family reads: their students,
                        classes, scores and shared reports, and the academy's news (news.ts); the child switcher; their
                        classes (classes.ts: brothers and sisters in the same class together) and the class cards; the
                        Classes tab (the owner's remake, 2026-10-29: clear at a glance, for every age): its top
@@ -174,7 +175,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   symbols (SF Symbols on iPhone, Material on Android).
 - **Words:** Coach (not tutor), Class (not session; a class is its own record, one time on one day with its seats, and
   each student in it is a session), Academy (not branch or center), Position = Standing / Kneeling / Prone. Sentence
-  case, plain words, English only for now (Korean and other languages come in one pass later).
+  case, plain words. Parents read Korean too (`docs/DECISIONS.md` §36): every text a parent can see goes through
+  `useT()` (`src/lib/lang.ts`: `t("Home", "홈")`), written as `.claude/skills/korean-ux-writing` says; the staff's
+  tabs and a student's stay English (`EnglishOnly`).
 - **Classes are taught together** (`docs/DECISIONS.md` §21): a class is `classes/{id}`, and `/class/[id]` opens it by
   that ID; its students are the sessions with its `classId`; its coaches are everyone in at its time (who's in: each
   person's availability that day). The shared `classViews` and `coachesIn` (`@shared/schedule/classes`) put them
@@ -202,24 +205,17 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   in with Apple (`src/lib/appleSignIn.ts`, expo-apple-authentication with a nonce from expo-crypto) is Apple's rule
   (guideline 4.8) beside Google; deleting an Apple account confirms with Apple and revokes the app's Apple tokens
   (Apple's rule too). Android has no Apple button.
-- **The enrollment contract comes first, once the office sends it** (docs/DECISIONS.md §31, §33 and §34): when a
-  student's contract is sent (`contractLinks`, status `sent`), the family's part shows ContractGate
-  (src/features/contracts/SignContract.tsx) until it's signed (`contractGate`, `@shared/contracts/gate`); nothing is
-  asked before. The contract is the academy's text with its fields marked (`@shared/contracts/document`), the version
-  it was sent with, drawn by ContractForm as a page of the app with the parts to fill in where the paper has them:
-  - the program, a short card each, with the office's suggestion marked and each price after the discounts
-    (`optionPrices`);
-  - the discounts, shown as the academy's (`[[academy check: …]]`: only the office checks them, as it sends);
-  - the boxes, the initials, the student's and the signer's details;
-  - then the signing: parent or guardian, a finger signature drawn with Skia in SignaturePad, the date, the
-    agreement, checked as the server checks it (`checkContractSigning`, `@shared/contracts/fill`);
-  - the academy's signature on file, on its line.
-
-  One contract per child, each signed on its own, A to Z: `contractPrefill` fills in what the records know, and what
-  the parent typed about themselves carries to the next child's. `signContractSignedIn` (with the contract's
-  `linkId`) signs it on the server, which makes the PDF. Then the parent is asked whether to save their copy
-  (PdfSheet: the PDF in a sheet on an iPhone, the share sheet on Android); it stays under More → Enrollment contract. A
-  student waits for their parent. Anything that can't be read opens the app rather than locking anyone out.
+- **The enrollment contract comes first, once the office sends it, and it's signed on the website** (docs/DECISIONS.md
+  §31, §33, §34 and §36): when a student's contract is sent (`contractLinks`, status `sent`), the family's part shows
+  ContractGate (src/features/contracts/SignContract.tsx) until it's signed (`contractGate`, `@shared/contracts/gate`);
+  nothing is asked before. The app doesn't draw the contract for families (Goo, 2026-11-05: "writing the contract can
+  be all done by website, just like the QR code"): a parent taps each child's contract, `contractLinkForFamily` gives
+  its page (`/sign/{token}`, the QR code's), and the app opens it on the website in the in-app browser, with
+  `?lang=` (the language they read the app in) and `&from=app`. They read it, fill it in and sign it there, in Korean
+  or English; the app opens by itself once every one is signed (the contracts are watched live), with a word that it's
+  done. The copy comes by email and stays under More → Enrollment contract (PdfSheet). A change to the contract's
+  screens, or a new language, is a website change, with no new build. A student waits for their parent. Anything that
+  can't be read opens the app rather than locking anyone out.
 
   The office sends a student's contract from the student's screen (StudentContract: the program, the discounts, the
   email switch; then its QR code, drawn with `qrcode` and react-native-svg, for a parent at the front desk), withdraws
