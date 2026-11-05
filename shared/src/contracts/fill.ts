@@ -58,7 +58,7 @@ export function prefillValues(doc: ContractDocument, p: Prefill): ContractValues
     else if (f.fill === 'signer' && p.signerName) out[f.id] = p.signerName
     else if (f.fill === 'phone' && p.phone) out[f.id] = p.phone
     else if (f.fill === 'email' && p.email) out[f.id] = p.email
-    else if (f.fill === 'date' && /birth/i.test(f.label) && p.dob) out[f.id] = usDate(p.dob)
+    else if (f.fill === 'date' && /birth|생년월일|생일/i.test(f.label) && p.dob) out[f.id] = usDate(p.dob)
   }
   return out
 }

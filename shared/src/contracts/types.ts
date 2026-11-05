@@ -209,6 +209,8 @@ export interface ContractPrefillResult {
  * - `signContractSignedIn` (a parent signed in, one child at a time): `{ branchId, studentId, linkId, where, device? }`
  *   and a `ContractSignRequest` → `ContractSignedResult`.
  * - `contractPrefill` (a parent signed in): `{ branchId }` → `ContractPrefillResult`.
+ * - `contractLinkForFamily` (a parent signed in to the phone app): `{ branchId, studentId }` → `{ path, linkId }`, the
+ *   page of their child's contract still waiting (`/sign/{token}`), which the app opens on the website to sign it.
  * - `getContractForSigning` (anyone with a link): `{ token, copy? }` → its state; when it's ready to sign, the contract
  *   (`{ title, text, version }`), what the office set, the academy's signature and the student's name.
  * - `signContract` (anyone with a link): `{ token }` and a `ContractSignRequest` → `ContractLinkSignedResult`.
