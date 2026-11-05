@@ -1,8 +1,9 @@
 import { ChartLine, ChevronRight } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
-import { one, sharedOn } from "@/features/reports/format";
+import { one, periodText, sharedOn } from "@/features/reports/format";
 import { TrendChip } from "@/features/reports/TrendChip";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 import type { ReportDoc } from "./data";
@@ -10,8 +11,9 @@ import type { ReportDoc } from "./data";
 /** "NEW", on a report nobody in the family has opened yet. */
 export function NewBadge() {
   const colors = useColors();
+  const t = useT();
   return (
-    <View style={[styles.new, { backgroundColor: colors.brand }]} accessibilityLabel="New">
+    <View style={[styles.new, { backgroundColor: colors.brand }]} accessibilityLabel={t("New", "아직 안 읽음")}>
       <T variant="tiny" style={styles.newText}>
         NEW
       </T>
@@ -41,17 +43,20 @@ export function ReportRow({
   testID?: string;
 }) {
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const { timezone } = useBranch();
   const average = r.facts?.average ?? null;
   const level = r.options?.showStatus !== false ? (r.facts?.trend?.level ?? null) : null;
-  const shared = sharedOn(r, timezone);
-  const title = r.customName || "Progress report";
-  const detail = [name, shared ? `Shared ${shared}` : null].filter(Boolean).join(" · ");
+  const shared = sharedOn(r, timezone, "short", lang);
+  const title = r.customName || t("Progress report", "성장 리포트");
+  const period = periodText(r.period, lang);
+  const detail = [name, shared ? t(`Shared ${shared}`, `${shared}에 받음`) : null].filter(Boolean).join(" · ");
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={[title, r.period.label, name, isNew ? "New" : null, average !== null ? `average ${one(average)} per 10 shots` : null].filter(Boolean).join(", ")}
+      accessibilityLabel={[title, period, name, isNew ? t("New", "새 리포트") : null, average !== null ? t(`average ${one(average)} per 10 shots`, `10발 평균 ${one(average)}`) : null].filter(Boolean).join(", ")}
       onPress={onPress}
       style={({ pressed }) => [styles.row, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, pressed && { backgroundColor: colors.accent }]}
     >
@@ -66,7 +71,7 @@ export function ReportRow({
           {isNew ? <NewBadge /> : null}
         </View>
         <T variant="small" tone="muted">
-          {r.period.label}
+          {period}
         </T>
         {level || detail ? (
           <View style={[styles.line, styles.meta]}>
@@ -85,7 +90,7 @@ export function ReportRow({
             {one(average)}
           </T>
           <T variant="tiny" tone="muted">
-            per 10
+            {t("per 10", "10발 평균")}
           </T>
         </View>
       ) : null}

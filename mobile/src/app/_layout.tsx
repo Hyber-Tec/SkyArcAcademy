@@ -10,10 +10,12 @@ import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { T } from "@/components/Text";
 import { ToastHost } from "@/components/ToastHost";
 import { setupProblem } from "@/lib/env";
+import { useT } from "@/lib/lang";
 // At launch: what a push does while the app is open, and Android's channels (src/lib/notify.ts).
 import "@/lib/notify";
 import { AppearanceProvider } from "@/state/AppearanceProvider";
 import { AuthProvider, useAuth } from "@/state/AuthProvider";
+import { LangProvider } from "@/state/LangProvider";
 import { useColors, useIsDark } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -21,7 +23,9 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 export default function RootLayout() {
   return (
     <AppearanceProvider>
-      <Themed />
+      <LangProvider>
+        <Themed />
+      </LangProvider>
     </AppearanceProvider>
   );
 }
@@ -57,12 +61,13 @@ type Gate = "loading" | "signed-out" | "verify" | "app";
 /** Where the person belongs: signed out, a password account still to confirm its email, or the app. */
 function RootNavigator() {
   const auth = useAuth();
+  const t = useT();
   const gate: Gate = auth.loading ? "loading" : !auth.user ? "signed-out" : auth.needsVerification ? "verify" : "app";
   // Our own loading screen looks like the launch screen, so it can take over from it at once.
   useEffect(() => {
     void SplashScreen.hideAsync().catch(() => undefined);
   }, []);
-  if (gate === "loading") return <Loading label="Signing you in" />;
+  if (gate === "loading") return <Loading label={t("Signing you in", "로그인하는 중…")} />;
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={gate === "signed-out"}>

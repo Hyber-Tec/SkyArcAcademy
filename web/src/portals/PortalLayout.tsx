@@ -44,8 +44,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
-import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLeaves } from './nav'
+import { type NavGroup, type NavItem, type NavLeaf, PORTAL_NAV, isGroup, navLabel, navLeaves } from './nav'
 
 /**
  * Live counts shown next to nav entries, by nav key (Home: what needs attention and the messages from the website not
@@ -91,14 +92,16 @@ function visible(leaf: NavLeaf, can: (p: NonNullable<NavLeaf['restrict']>) => bo
 
 export function PortalLayout({ portal }: { portal: Portal }) {
   const branch = useBranch()
+  const lang = useLang()
   const nav = PORTAL_NAV[portal]
   const base = usePortalBase(portal)
   const { pathname } = useLocation()
 
   const current = navLeaves(nav).find((l) => isActivePath(pathname, base, l))
+  const title = current ? navLabel(current, lang) : lang === 'ko' && portal === 'parent' ? '학부모 포털' : PORTAL_LABELS[portal]
   useEffect(() => {
-    document.title = `${current?.label ?? PORTAL_LABELS[portal]} | ${branch.branch.name}`
-  }, [current?.label, portal, branch.branch.name])
+    document.title = `${title} | ${branch.branch.name}`
+  }, [title, branch.branch.name])
 
   return (
     <NavBadgesProvider portal={portal}>
@@ -171,13 +174,14 @@ const TOGGLE_KEYS = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(n
 /** The square icon and the wordmark (the academy's name), with the sidebar's own open/close button. */
 function SidebarBrand({ homeTo }: { homeTo: string }) {
   const { state, isMobile, toggleSidebar } = useSidebar()
+  const t = useT()
 
   // Collapsed to icons: the logo opens the sidebar and shows the open icon on hover.
   if (state === 'collapsed' && !isMobile) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" tooltip={`Open sidebar (${TOGGLE_KEYS})`} onClick={toggleSidebar} aria-label="Open sidebar" className="group/brand">
+          <SidebarMenuButton size="lg" tooltip={`${t('Open sidebar', '사이드바 열기')} (${TOGGLE_KEYS})`} onClick={toggleSidebar} aria-label={t('Open sidebar', '사이드바 열기')} className="group/brand">
             <span className="relative flex size-8 shrink-0 items-center justify-center">
               <span className="transition-opacity group-hover/brand:opacity-0">
                 <SkyArcMark />
@@ -197,17 +201,19 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
         <SkyArcLockup />
       </Link>
       {isMobile ? (
-        <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label="Close menu">
+        <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label={t('Close menu', '메뉴 닫기')}>
           <LuPanelLeftClose />
         </Button>
       ) : (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label="Close sidebar">
+            <Button variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" onClick={toggleSidebar} aria-label={t('Close sidebar', '사이드바 닫기')}>
               <LuPanelLeftClose />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Close sidebar ({TOGGLE_KEYS})</TooltipContent>
+          <TooltipContent side="right">
+            {t('Close sidebar', '사이드바 닫기')} ({TOGGLE_KEYS})
+          </TooltipContent>
         </Tooltip>
       )}
     </div>
@@ -219,9 +225,10 @@ function SidebarBrand({ homeTo }: { homeTo: string }) {
 /** Phones only: the sidebar is off-screen, so a slim bar opens it. */
 function MobileTopBar() {
   const { toggleSidebar } = useSidebar()
+  const t = useT()
   return (
     <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
-      <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu">
+      <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label={t('Open menu', '메뉴 열기')}>
         <LuMenu />
       </Button>
       <SkyArcLockup size="sm" />
@@ -235,6 +242,7 @@ function MobileTopBar() {
 
 function NavEntry({ item, base }: { item: NavItem; base: string }) {
   const { can } = useBranch()
+  const lang = useLang()
   const badges = useContext(NavBadges)
   const { pathname } = useLocation()
   const { setOpenMobile } = useSidebar()
@@ -243,12 +251,13 @@ function NavEntry({ item, base }: { item: NavItem; base: string }) {
     if (!visible(item, can)) return null
     const Icon = item.icon
     const badge = badges[item.key] ?? 0
+    const label = navLabel(item, lang)
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={badge ? `${item.label} (${badge})` : item.label} isActive={isActivePath(pathname, base, item)} className="h-9 gap-2.5 px-2.5 text-[15px] [&_svg]:size-[18px]">
+        <SidebarMenuButton asChild tooltip={badge ? `${label} (${badge})` : label} isActive={isActivePath(pathname, base, item)} className="h-9 gap-2.5 px-2.5 text-[15px] [&_svg]:size-[18px]">
           <NavLink to={`${base}/${item.to}`} onClick={() => setOpenMobile(false)}>
             {Icon ? <Icon /> : null}
-            <span>{item.label}</span>
+            <span>{label}</span>
           </NavLink>
         </SidebarMenuButton>
         {badge ? (
@@ -329,6 +338,7 @@ function NavGroupEntry({ group, base }: { group: NavGroup; base: string }) {
 
 function MobileTabs({ tabs, base }: { tabs: NavLeaf[]; base: string }) {
   const { pathname } = useLocation()
+  const lang = useLang()
   const badges = useContext(NavBadges)
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
@@ -355,7 +365,7 @@ function MobileTabs({ tabs, base }: { tabs: NavLeaf[]; base: string }) {
                     </span>
                   ) : null}
                 </span>
-                {t.label}
+                {navLabel(t, lang)}
               </Link>
             </li>
           )

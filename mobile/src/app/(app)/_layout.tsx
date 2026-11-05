@@ -2,6 +2,8 @@ import { Stack } from "expo-router";
 import { Loading } from "@/components/Loading";
 import { PausedAccess } from "@/features/access/PausedAccess";
 import { BranchProvider, useBranch } from "@/state/BranchProvider";
+import { EnglishOnly } from "@/state/LangProvider";
+import { useT } from "@/lib/lang";
 import { PushProvider } from "@/state/PushProvider";
 import { useColors } from "@/theme";
 
@@ -14,9 +16,10 @@ import { useColors } from "@/theme";
  */
 export default function AppLayout() {
   const colors = useColors();
+  const t = useT();
   return (
     <BranchProvider
-      fallback={<Loading label="Opening Sky Arc" />}
+      fallback={<Loading label={t("Opening Sky Arc", "Sky Arc를 여는 중…")} />}
       noAccess={
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Screen name="no-access" />
@@ -24,7 +27,7 @@ export default function AppLayout() {
             name="ask-access"
             options={{
               headerShown: true,
-              title: "Ask the academy",
+              title: t("Ask the academy", "아카데미에 문의"),
               headerShadowVisible: false,
               headerBackButtonDisplayMode: "minimal",
               headerStyle: { backgroundColor: colors.grouped },
@@ -41,11 +44,19 @@ export default function AppLayout() {
       }
       paused={(why) => <PausedAccess why={why} />}
     >
-      <PushProvider>
-        <PortalStack />
-      </PushProvider>
+      <RoleLang>
+        <PushProvider>
+          <PortalStack />
+        </PushProvider>
+      </RoleLang>
     </BranchProvider>
   );
+}
+
+/** A parent reads the app in their language; students and staff in English (docs/DECISIONS.md §36). */
+function RoleLang({ children }: { children: React.ReactNode }) {
+  const { role } = useBranch();
+  return role === "parent" ? children : <EnglishOnly>{children}</EnglishOnly>;
 }
 
 function PortalStack() {

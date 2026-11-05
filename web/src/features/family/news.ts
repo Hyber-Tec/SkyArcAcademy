@@ -2,7 +2,8 @@ import { query, where } from 'firebase/firestore'
 import { useMemo } from 'react'
 import { type Announcement, isForFamilies } from '@shared/comms'
 import { COL } from '@shared/paths'
-import { type DateKey, dateKeyOf, formatDateKey } from '@shared/time'
+import { type Lang, dateText, pick } from '@shared/i18n'
+import { type DateKey, dateKeyOf } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { useMyReadIds } from '@/features/announcements/api'
 import { branchCol, useQuery } from '@/lib/firestore'
@@ -52,11 +53,20 @@ export function useUnreadNewsCount(enabled: boolean): number {
 }
 
 /** When a post went up, in the academy's time zone: "Today", "Yesterday", "Fri, Oct 16", or "Oct 16, 2025" in another year. */
-export function postedOn(a: Pick<Announcement, 'createdAt'>, timezone: string, today: DateKey): string {
+export function postedOn(a: Pick<Announcement, 'createdAt'>, timezone: string, today: DateKey, lang: Lang = 'en'): string {
   const at = a.createdAt?.toDate?.()
-  if (!at) return 'Just now'
+  if (!at) return pick(lang, 'Just now', '방금')
   const key = dateKeyOf(at, timezone)
-  return key.slice(0, 4) === today.slice(0, 4) ? dayTitle(key, today, false) : formatDateKey(key, 'medium')
+  return key.slice(0, 4) === today.slice(0, 4) ? dayTitle(key, today, false, lang) : dateText(key, 'medium', lang)
+}
+
+/** The default categories (Settings → Announcements) in Korean; the academy's own stay as it wrote them. */
+const CATEGORIES_KO: Record<string, string> = { general: '일반', tournaments: '대회', updates: '공지' }
+
+/** A post's category, "General" when it has none. */
+export function categoryIn(category: string | null | undefined, lang: Lang): string {
+  const c = category || 'General'
+  return lang === 'ko' ? (CATEGORIES_KO[c.trim().toLowerCase()] ?? c) : c
 }
 
 /** The pictures in a post: those in its text, and attached ones. */

@@ -1,7 +1,8 @@
-import { type TrendLevel, trendLabel } from "@shared/reports/types";
+import { TREND_LABELS_KO, type TrendLevel, trendLabel } from "@shared/reports/types";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
+import { useLang } from "@/lib/lang";
 import { radius, useColors } from "@/theme";
 
 /**
@@ -11,6 +12,7 @@ import { radius, useColors } from "@/theme";
  */
 export function TrendChip({ level, size = "md", audience = "family", testID }: { level: TrendLevel; size?: "sm" | "md"; audience?: "family" | "staff"; testID?: string }) {
   const colors = useColors();
+  const lang = useLang();
   const look = {
     improving: { bg: colors.successTint, fg: colors.success, Icon: TrendingUp },
     steady: { bg: colors.infoTint, fg: colors.info, Icon: Minus },
@@ -21,7 +23,7 @@ export function TrendChip({ level, size = "md", audience = "family", testID }: {
     <View style={[styles.chip, md ? styles.md : styles.sm, { backgroundColor: look.bg }]} testID={testID}>
       <look.Icon size={md ? 16 : 12} color={look.fg} />
       <T variant={md ? "small" : "tiny"} style={[styles.text, { color: look.fg }]} numberOfLines={1}>
-        {trendLabel(level, audience)}
+        {lang === "ko" && audience === "family" ? TREND_LABELS_KO[level] : trendLabel(level, audience)}
       </T>
     </View>
   );

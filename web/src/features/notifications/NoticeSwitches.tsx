@@ -7,6 +7,8 @@ import { useBranch } from '@/branch/BranchProvider'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { branchDocRef, useDoc } from '@/lib/firestore'
+import { useLang, useT } from '@/lib/lang'
+import { FAMILY_SWITCHES_KO } from './noticeText'
 
 /**
  * A parent's, a student's or the office's notification switches (shared/src/notices.ts): each kind of notice on or off,
@@ -18,6 +20,8 @@ export function NoticeSwitches() {
   const ref = useMemo(() => branchDocRef(branchId, COL.notificationPrefs, actor.email), [branchId, actor.email])
   const prefs = useDoc<NoticePrefs>(ref)
   const [pending, setPending] = useState<Partial<Record<NoticeKey, boolean>>>({})
+  const lang = useLang()
+  const t = useT()
   const switches = noticeSwitchesFor(role)
 
   async function flip(key: NoticeKey, on: boolean) {
@@ -25,7 +29,7 @@ export function NoticeSwitches() {
     try {
       await setDoc(ref, { [key]: on, updatedAt: serverTimestamp() }, { merge: true })
     } catch {
-      toast.error('Not saved', { description: 'Please try again.' })
+      toast.error(t('Not saved', '저장하지 못했어요'), { description: t('Please try again.', '다시 시도해 주세요.') })
     } finally {
       setPending((p) => {
         const next = { ...p }
@@ -39,11 +43,12 @@ export function NoticeSwitches() {
     <ul className="divide-y rounded-xl border bg-card" data-testid="notice-switches">
       {switches.map((s) => {
         const on = pending[s.key] ?? noticeOn(prefs.data, s.key)
+        const words = (role === 'parent' && lang === 'ko' ? FAMILY_SWITCHES_KO[s.key] : null) ?? s
         return (
           <li key={s.key} className="flex items-center justify-between gap-4 px-4 py-3">
             <label htmlFor={`notice-${s.key}`} className="min-w-0 flex-1 cursor-pointer">
-              <span className="block text-sm font-medium">{s.label}</span>
-              <span className="block text-sm text-muted-foreground">{s.help}</span>
+              <span className="block text-sm font-medium">{words.label}</span>
+              <span className="block text-sm text-muted-foreground">{words.help}</span>
             </label>
             <Switch id={`notice-${s.key}`} checked={on} disabled={prefs.loading} onCheckedChange={(v) => void flip(s.key, v)} />
           </li>

@@ -1,6 +1,15 @@
 import { type DateKey, addDays, addMonths, endOfMonth, formatDateKey, parseDateKey, startOfMonth } from '../time'
 import type { ReportPreset } from './types'
 
+export const PRESET_LABELS_KO: Record<ReportPreset, string> = {
+  since_last: '지난 리포트 이후',
+  last_month: '지난달',
+  this_month: '이번 달',
+  last_30: '최근 30일',
+  last_90: '최근 90일',
+  custom: '기간 직접 선택',
+}
+
 export const PRESET_LABELS: Record<ReportPreset, string> = {
   since_last: 'Since the last report',
   last_month: 'Last month',

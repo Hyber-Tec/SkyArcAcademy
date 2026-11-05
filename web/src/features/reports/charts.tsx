@@ -1,5 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { type DateKey, diffDays, formatDateKey } from '@shared/time'
+import { dateText } from '@shared/i18n'
+import { type DateKey, diffDays } from '@shared/time'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { INK, RING_COLORS } from './paper'
 
@@ -71,6 +73,7 @@ export function TrendChart({
   className?: string
 }) {
   // Drawn at the width it's shown at, so its labels keep their size on a phone (a fixed width scaled down shrank them).
+  const lang = useLang()
   const box = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(640)
   useLayoutEffect(() => {
@@ -171,7 +174,7 @@ export function TrendChart({
         ))}
         {labels.map((d) => (
           <text key={d} x={x(d)} y={H - 8} textAnchor={d === from ? 'start' : d === to ? 'end' : 'middle'} fontSize="10" fill={INK.muted}>
-            {formatDateKey(d, 'monthDay')}
+            {dateText(d, 'monthDay', lang)}
           </text>
         ))}
         {activeDate ? <line x1={x(activeDate)} x2={x(activeDate)} y1={T - 4} y2={B} stroke={INK.secondary} strokeWidth="1" opacity=".5" /> : null}
@@ -206,7 +209,7 @@ export function TrendChart({
           style={{ left: `${Math.min(70, Math.max(2, (x(activeDate) / W) * 100 - 12))}%` }}
           role="status"
         >
-          <div className="mb-1 text-[11px] text-[#7d7a72]">{formatDateKey(activeDate, 'weekdayMedium')}</div>
+          <div className="mb-1 text-[11px] text-[#7d7a72]">{dateText(activeDate, 'weekdayMedium', lang)}</div>
           {series.map((s) => {
             const here = s.points.filter((p) => p.dateKey === activeDate)
             if (!here.length) return null
@@ -243,21 +246,27 @@ export function ChartLegend({ items, shape = 'line' }: { items: { key: string; l
 
 /** Every counted shot by whole score, as one bar (2 px gaps between parts) with a legend of counts. */
 export function DistributionBar({ tens, nines, eights, lower }: { tens: number; nines: number; eights: number; lower: number }) {
+  const t = useT()
   const total = tens + nines + eights + lower
   if (!total) return null
   const parts = [
-    { key: 'tens', label: '10', n: tens, color: RING_COLORS.tens },
-    { key: 'nines', label: '9', n: nines, color: RING_COLORS.nines },
-    { key: 'eights', label: '8', n: eights, color: RING_COLORS.eights },
-    { key: 'lower', label: '7 or less', n: lower, color: RING_COLORS.lower },
+    { key: 'tens', label: t('10', '10점'), n: tens, color: RING_COLORS.tens },
+    { key: 'nines', label: t('9', '9점'), n: nines, color: RING_COLORS.nines },
+    { key: 'eights', label: t('8', '8점'), n: eights, color: RING_COLORS.eights },
+    { key: 'lower', label: t('7 or less', '7점 이하'), n: lower, color: RING_COLORS.lower },
   ]
   const shown = parts.filter((p) => p.n > 0)
   const pct = (n: number) => `${round1((n / total) * 100)}%`
   return (
     <div>
-      <div className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full" role="img" aria-label={parts.map((p) => `${p.label}: ${p.n} shots`).join(', ')}>
+      <div className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full" role="img" aria-label={parts.map((p) => t(`${p.label}: ${p.n} shots`, `${p.label}: ${p.n}발`)).join(', ')}>
         {shown.map((p) => (
-          <span key={p.key} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(p.n / total) * 100}%`, background: p.color }} title={`${p.label}: ${p.n} shots (${pct(p.n)})`} />
+          <span
+            key={p.key}
+            className="h-full first:rounded-l-full last:rounded-r-full"
+            style={{ width: `${(p.n / total) * 100}%`, background: p.color }}
+            title={t(`${p.label}: ${p.n} shots (${pct(p.n)})`, `${p.label}: ${p.n}발 (${pct(p.n)})`)}
+          />
         ))}
       </div>
       <ChartLegend shape="square" items={parts.map((p) => ({ key: p.key, label: p.label, color: p.color, value: `${p.n} · ${pct(p.n)}` }))} />

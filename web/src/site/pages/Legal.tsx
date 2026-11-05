@@ -27,14 +27,14 @@ const TEXT = {
   privacyTitle: l('Privacy Policy', '개인정보 처리방침'),
   inEffect: l('In effect from', '시행일'),
   updated: l('Last updated', '최종 수정일'),
-  englishOnly: l('', '이 개인정보 처리방침은 영어로 제공되며, 영어 원문이 기준입니다.'),
+  englishOnly: l('', '개인정보 처리방침은 영어 원문으로 제공하며, 효력도 영어 원문을 따릅니다.'),
   contents: l('On this page', '목차'),
-  message: l('Send a message from the website', '웹사이트로 문의하기'),
+  message: l('Send a message from the website', '웹사이트에서 메시지 보내기'),
   helpKicker: l('Help', '도움말'),
   helpTitle: l('How can we help?', '무엇을 도와드릴까요?'),
   helpLead: l(
     'The website and Sky Arc, the academy’s phone app: whom to ask about what, signing in, and your account.',
-    '웹사이트와 아카데미의 휴대폰 앱 Sky Arc: 무엇을 누구에게 물어야 하는지, 로그인, 그리고 계정에 대해 안내합니다.',
+    '웹사이트와 아카데미 앱 Sky Arc 이용 안내예요. 누구에게 무엇을 물어보면 되는지, 로그인하는 법, 계정 관리까지 알려 드려요.',
   ),
 }
 
@@ -338,27 +338,27 @@ export function Privacy() {
 const HELP = {
   ask: {
     title: l('Classes, your account, a student’s records', '수업, 계정, 학생 기록'),
-    text: l('The academy runs all of it, so ask the academy:', '모두 아카데미가 관리하니, 아카데미에 문의해 주세요.'),
+    text: l('The academy runs all of it, so ask the academy:', '모두 아카데미에서 관리해요. 아카데미에 문의해 주세요:'),
   },
   signIn: {
     title: l('Signing in', '로그인'),
     items: [
       l(
         'Make your account, or sign in, with the email you gave the academy, with Google, Apple (on an iPhone) or a password: a parent or student whose email is on the academy’s records gets in right away.',
-        '아카데미에 알려 주신 이메일로 Google, Apple(iPhone) 또는 비밀번호를 사용해 계정을 만들거나 로그인하세요. 아카데미 기록에 이메일이 있는 학부모와 학생은 바로 이용할 수 있습니다.',
+        '아카데미에 알려 주신 이메일로 계정을 만들거나 로그인하세요. Google, Apple(iPhone), 비밀번호 중 편한 방법을 쓰면 돼요. 아카데미 기록에 이메일이 있는 학부모와 학생은 바로 들어갈 수 있어요.',
       ),
       l('Forgot your password?', '비밀번호를 잊으셨나요?'),
       l(
         '“This email isn’t on the academy’s records” means no student’s record has the email you signed in with: tap “Ask the academy”, or sign in with the email you gave it.',
-        '“이 이메일은 아카데미 기록에 없습니다”는 로그인한 이메일이 어느 학생 기록에도 없다는 뜻입니다. “아카데미에 요청”을 누르시거나, 아카데미에 알려 주신 이메일로 로그인하세요.',
+        '로그인했는데 아카데미 기록에 없는 이메일이라고 나오면, 그 이메일이 어느 학생 기록에도 없다는 뜻이에요. 화면에서 아카데미에 문의하거나, 아카데미에 알려 주신 이메일로 다시 로그인하세요.',
       ),
       l(
         'A password account opens once its email is confirmed: look for the email from the academy, or ask for a new one from the sign-in page.',
-        '비밀번호 계정은 이메일 확인 후에 열립니다. 아카데미에서 보낸 메일을 확인하시거나, 로그인 화면에서 새 확인 메일을 요청하세요.',
+        '비밀번호로 만든 계정은 이메일 인증을 마쳐야 열려요. 아카데미에서 보낸 메일을 확인하거나, 로그인 화면에서 인증 메일을 다시 요청하세요.',
       ),
       l(
         'Before using the app, a parent signs the academy’s enrollment contract for each child, in the app or on this website. One parent’s signature is enough.',
-        '앱을 사용하기 전에 학부모가 앱이나 이 웹사이트에서 자녀마다 아카데미 등록 계약서에 서명합니다. 부모 중 한 분의 서명이면 됩니다.',
+        '앱을 쓰기 전에 학부모가 자녀마다 아카데미 등록 계약서에 서명해요. 앱이나 이 웹사이트에서 할 수 있고, 부모님 중 한 분만 서명하면 돼요.',
       ),
     ],
     reset: l('Choose a new one', '새 비밀번호 만들기'),
@@ -367,16 +367,16 @@ const HELP = {
     title: l('Deleting your account', '계정 삭제'),
     text: l(
       'In the phone app: More → Delete my account. Or ask the academy, using the contact details above. What’s deleted and what the academy keeps is in the',
-      '휴대폰 앱에서: 더보기 → 내 계정 삭제. 또는 위 연락처로 아카데미에 요청하세요. 무엇이 삭제되고 아카데미가 무엇을 보관하는지는',
+      '앱에서는 더보기 → 계정 삭제에서 할 수 있어요. 위 연락처로 아카데미에 요청해도 돼요. 무엇이 삭제되고 아카데미가 무엇을 보관하는지는',
     ),
     policy: l('privacy policy', '개인정보 처리방침'),
-    after: l('.', '에 안내되어 있습니다.'),
+    after: l('.', '에 나와 있어요.'),
   },
   problem: {
     title: l('A problem with the website or the app', '웹사이트나 앱에 문제가 있을 때'),
     text: l(
       'Something doesn’t work, or looks wrong? Tell the academy, using the contact details above: say what you were doing, on which phone or browser, and what happened.',
-      '작동하지 않거나 이상해 보이는 부분이 있나요? 위 연락처로 아카데미에 알려 주세요. 무엇을 하던 중이었는지, 어떤 휴대폰이나 브라우저였는지, 무슨 일이 있었는지 함께 적어 주세요.',
+      '안 되는 기능이나 이상해 보이는 화면이 있나요? 위 연락처로 아카데미에 알려 주세요. 무엇을 하던 중이었는지, 어떤 휴대폰이나 브라우저였는지, 어떤 일이 있었는지 같이 적어 주시면 좋아요.',
     ),
   },
 }

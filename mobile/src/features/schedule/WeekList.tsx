@@ -176,7 +176,7 @@ function ClosedDays({ days }: { days: DateKey[] }) {
   const first = WEEKDAY_SHORT[weekdayOf(days[0])];
   const label = days.length > 1 ? `${first}–${WEEKDAY_SHORT[weekdayOf(days[days.length - 1])]}` : first;
   return (
-    <View style={[styles.closed, { borderColor: colors.border }]} accessible accessibilityLabel={`${days.map(weekdayName).join(" and ")}: closed`} testID={`schedule-week-closed-${days[0]}`}>
+    <View style={[styles.closed, { borderColor: colors.border }]} accessible accessibilityLabel={`${days.map((d) => weekdayName(d)).join(" and ")}: closed`} testID={`schedule-week-closed-${days[0]}`}>
       <Hatch />
       <T variant="small" tone="muted" style={styles.closedText}>
         {label} closed

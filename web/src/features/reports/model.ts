@@ -1,7 +1,8 @@
 import { LuMinus, LuTrendingDown, LuTrendingUp } from 'react-icons/lu'
 import type { IconType } from 'react-icons'
 import type { EvaluationPoint, ProgressReportDoc, TrendLevel } from '@shared/reports/types'
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS } from '@shared/shooting/evaluation'
+import type { Lang } from '@shared/i18n'
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, POSITION_LABELS_KO } from '@shared/shooting/evaluation'
 import { formatInstant } from '@shared/time'
 
 /** A report as stored, with its ID. */
@@ -42,14 +43,18 @@ export const TREND_STYLE: Record<TrendLevel, { icon: IconType; bg: string; fg: s
 }
 
 /** The scores-over-time lines: one per position, whole scores per 10 shots (charts.tsx `TrendChart`). */
-export function trendSeries(points: readonly EvaluationPoint[]) {
+export function trendSeries(points: readonly EvaluationPoint[], lang: Lang = 'en') {
   return POSITIONS.map((pos) => ({
     key: pos,
-    label: POSITION_LABELS[pos],
+    label: lang === 'ko' ? POSITION_LABELS_KO[pos] : POSITION_LABELS[pos],
     color: POSITION_COLORS[pos],
     points: points
       .filter((p) => p.position === pos)
-      .map((p) => ({ dateKey: p.dateKey, value: p.wholePer10, detail: p.source === 'sius' ? `${one(p.per10)} decimal` : 'paper card' })),
+      .map((p) => ({
+        dateKey: p.dateKey,
+        value: p.wholePer10,
+        detail: p.source === 'sius' ? (lang === 'ko' ? `소수점 ${one(p.per10)}` : `${one(p.per10)} decimal`) : lang === 'ko' ? '종이 표적지' : 'paper card',
+      })),
   })).filter((s) => s.points.length)
 }
 

@@ -494,8 +494,8 @@ from the app, without calling or texting the academy.
 
 These wait until everything else is ready, some even after launch.
 
-- [ ] **L1. Korean + English** (still later: the third meeting's [`L-LG`](MEETING3_FEEDBACK.md)) across the parent portal, the phone app and the website. Many parents don't speak
-  English, so it matters, but it's done in one go later. **Don't work on languages now.**
+- ✅ **L1. Korean + English** (the third meeting's [`L-LG`](MEETING3_FEEDBACK.md), #115) across the parent portal, the phone app and the website. Many parents don't speak
+  English, so it matters: done in one go on 2026-11-05, for what parents see (`docs/DECISIONS.md` §36).
 - [ ] **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](MEETING3_FEEDBACK.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
   **in person with the manager** (domain and email access). Until then, invitation emails may land in spam.
 - [ ] **W1. A parent how-to video** on the website and app, recorded once both are final.
@@ -532,7 +532,7 @@ These wait until everything else is ready, some even after launch.
 | Tiebreaker | Inner-ten count | — |
 | "Bench" | Not a position | — |
 | Contracts | Owners and admins only | — |
-| Language | English now; Korean later | — |
+| Language | English; Korean for parents since 2026-11-05 (`L1`) | — |
 
 ---
 

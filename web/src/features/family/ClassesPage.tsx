@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { LuCalendarDays, LuCalendarPlus, LuChevronDown, LuList } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
+import type { Lang } from '@shared/i18n'
 import { addDays, todayKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -10,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { type AskPreset, AskForClassDialog } from '@/features/requests/AskForClassDialog'
 import { FamilyRequestsPanel } from '@/features/requests/FamilyRequestsPanel'
+import { useLang, useT } from '@/lib/lang'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { type Family, andList, hasEnded, useFamily, useFamilySessions } from './data'
@@ -19,10 +21,12 @@ import { ClassDetails, ClassList, ContactCard, KidFilter, NotLinked } from './Fa
 /** Weeks of classes a list shows at first, and adds with "Show more". */
 const STEP_WEEKS = 4
 
-/** "Jiwoo’s and Minjun’s classes", "Jiwoo’s classes", "Your classes". */
-function whose(f: Family, kid: string): string {
+/** "Jiwoo’s and Minjun’s classes", "Jiwoo’s classes", "Your classes"; "Jiwoo, Minjun 학생의 …". */
+function whose(f: Family, kid: string, lang: Lang): string {
+  const ids = kid === 'all' ? f.kids.map((k) => k.id) : [kid]
+  if (lang === 'ko') return f.who === 'student' ? '예정된 수업과 지난 수업이에요.' : `${andList(ids.map((id) => f.firstName(id)), 'ko')} 학생의 예정된 수업과 지난 수업이에요.`
   if (f.who === 'student') return 'Your classes, upcoming and past.'
-  return `${andList((kid === 'all' ? f.kids.map((k) => k.id) : [kid]).map((id) => `${f.firstName(id)}’s`))} classes, upcoming and past.`
+  return `${andList(ids.map((id) => `${f.firstName(id)}’s`))} classes, upcoming and past.`
 }
 
 /**
@@ -32,6 +36,8 @@ function whose(f: Family, kid: string): string {
  * keep them.
  */
 export function FamilyClassesPage() {
+  const lang = useLang()
+  const t = useT()
   const family = useFamily()
   const [params, setParams] = useSearchParams()
   const view = params.get('view') === 'month' ? 'month' : 'list'
@@ -60,7 +66,7 @@ export function FamilyClassesPage() {
   if (family.notLinked) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <PageHeader title="Classes" />
+        <PageHeader title={t('Classes', '수업')} />
         <NotLinked family={family} />
       </div>
     )
@@ -69,20 +75,20 @@ export function FamilyClassesPage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <PageHeader
-        title="Classes"
-        description={family.loading ? '\u00a0' : whose(family, kid)}
+        title={t('Classes', '수업')}
+        description={family.loading ? '\u00a0' : whose(family, kid, lang)}
         className="mb-4"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={() => setAsking({ studentId: kid === 'all' ? undefined : kid })} disabled={family.loading} data-testid="ask-for-class-open">
-              <LuCalendarPlus /> Ask for a class
+              <LuCalendarPlus /> {t('Ask for a class', '수업 신청')}
             </Button>
-            <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && set({ view: v === 'month' ? 'month' : null })} aria-label="View">
-              <ToggleGroupItem value="list" aria-label="List">
-                <LuList /> List
+            <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && set({ view: v === 'month' ? 'month' : null })} aria-label={t('View', '보기')}>
+              <ToggleGroupItem value="list" aria-label={t('List', '목록')}>
+                <LuList /> {t('List', '목록')}
               </ToggleGroupItem>
-              <ToggleGroupItem value="month" aria-label="Month">
-                <LuCalendarDays /> Month
+              <ToggleGroupItem value="month" aria-label={t('Month', '달력')}>
+                <LuCalendarDays /> {t('Month', '달력')}
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
@@ -92,11 +98,11 @@ export function FamilyClassesPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <KidFilter family={family} value={kid} onChange={(id) => set({ child: id === 'all' ? null : id })} />
         {view === 'list' ? (
-          <div className="inline-flex rounded-lg bg-muted p-0.5 text-sm" role="group" aria-label="Which classes">
+          <div className="inline-flex rounded-lg bg-muted p-0.5 text-sm" role="group" aria-label={t('Which classes', '수업 구분')}>
             {(
               [
-                ['upcoming', 'Upcoming'],
-                ['past', 'Past'],
+                ['upcoming', t('Upcoming', '예정된 수업')],
+                ['past', t('Past', '지난 수업')],
               ] as const
             ).map(([v, label]) => (
               <button
@@ -130,6 +136,7 @@ export function FamilyClassesPage() {
 /** Upcoming classes from now on, or past ones latest first, a few weeks at a time. */
 function ClassesList({ family, ids, showKid, past, now, onOpen }: { family: Family; ids: string[]; showKid: boolean; past: boolean; now: number; onOpen: (s: WithId<Session>) => void }) {
   const { timezone } = useBranch()
+  const t = useT()
   const today = todayKey(timezone, now)
   const [weeks, setWeeks] = useState(STEP_WEEKS)
   const from = past ? addDays(today, -weeks * 7) : today
@@ -158,13 +165,19 @@ function ClassesList({ family, ids, showKid, past, now, onOpen }: { family: Fami
           today={today}
           past={past}
           onOpen={onOpen}
-          empty={past ? (more ? `No classes in the last ${weeks} weeks.` : 'No past classes yet.') : `No classes booked in the next ${weeks} weeks.`}
+          empty={
+            past
+              ? more
+                ? t(`No classes in the last ${weeks} weeks.`, `최근 ${weeks}주 동안 수업이 없어요.`)
+                : t('No past classes yet.', '아직 지난 수업이 없어요.')
+              : t(`No classes booked in the next ${weeks} weeks.`, `앞으로 ${weeks}주 동안 잡힌 수업이 없어요.`)
+          }
         />
       )}
       {more ? (
         <div className="flex justify-center">
           <Button variant="ghost" size="sm" onClick={() => setWeeks((w) => w + STEP_WEEKS)} disabled={loading}>
-            <LuChevronDown /> {past ? `Show ${STEP_WEEKS} earlier weeks` : `Show ${STEP_WEEKS} more weeks`}
+            <LuChevronDown /> {past ? t(`Show ${STEP_WEEKS} earlier weeks`, `이전 ${STEP_WEEKS}주 더 보기`) : t(`Show ${STEP_WEEKS} more weeks`, `${STEP_WEEKS}주 더 보기`)}
           </Button>
         </div>
       ) : null}

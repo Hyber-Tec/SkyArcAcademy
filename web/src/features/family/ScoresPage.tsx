@@ -3,6 +3,7 @@ import { LuArrowDownRight, LuArrowRight, LuArrowUpRight, LuTarget, LuTrophy } fr
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { type Evaluation, POSITION_LABELS, wholePer10, type ResultKind, kindOf } from '@shared/shooting/evaluation'
 import { personalBestIds, positionProgress } from '@shared/shooting/progress'
+import { josa } from '@shared/i18n'
 import { todayKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -15,8 +16,10 @@ import { CompareCard } from '@/features/students/scores/CompareCard'
 import { ResultKindFilter } from '@/features/scores/kinds'
 import { ResultsPanel } from '@/features/students/scores/ResultsPanel'
 import { prefersReducedMotion } from '@/features/scores/playback'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { useFamily, useFamilyEvaluations } from './data'
+import { positionIn } from './familyText'
 import { ContactCard, KidFilter, NotLinked } from './FamilyWidgets'
 import { ResultOriginal } from './ResultOriginal'
 import { PositionCards, ScoresOverTime, ShotPattern } from './ScoreWidgets'
@@ -31,6 +34,8 @@ import { PositionCards, ScoresOverTime, ShotPattern } from './ScoreWidgets'
  */
 export function FamilyScoresPage() {
   const { timezone } = useBranch()
+  const lang = useLang()
+  const t = useT()
   const family = useFamily()
   const navigate = useNavigate()
   const location = useLocation()
@@ -105,17 +110,25 @@ export function FamilyScoresPage() {
     if (!p || v === null || p.average === null || p.results < 2) return null
     const diff = Math.round((v - p.average) * 10) / 10
     const pos = POSITION_LABELS[e.position].toLowerCase()
+    const posKo = positionIn(e.position, 'ko')
     const Icon = diff > 0 ? LuArrowUpRight : diff < 0 ? LuArrowDownRight : LuArrowRight
     const bestSoFar = p.best?.id === e.id && !bests.has(e.id)
     return (
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" data-testid="result-insight">
         <span className={cn('inline-flex items-center gap-1 font-medium', diff > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground')}>
           <Icon className="size-4 shrink-0" aria-hidden />
-          {diff === 0 ? `Right at the ${pos} average of ${one(p.average)}` : `${one(Math.abs(diff))} ${diff > 0 ? 'above' : 'below'} the ${pos} average of ${one(p.average)}`}
+          {lang === 'ko'
+            ? diff === 0
+              ? `${josa(`${posKo} 평균 ${one(p.average)}`, '과/와')} 같아요`
+              : `${posKo} 평균 ${one(p.average)}보다 ${one(Math.abs(diff))} ${diff > 0 ? '높아요' : '낮아요'}`
+            : diff === 0
+              ? `Right at the ${pos} average of ${one(p.average)}`
+              : `${one(Math.abs(diff))} ${diff > 0 ? 'above' : 'below'} the ${pos} average of ${one(p.average)}`}
         </span>
         {bestSoFar ? (
           <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <LuTrophy className="size-3.5 text-amber-600 dark:text-amber-400" aria-hidden /> {student ? 'Your' : `${name}’s`} best {pos} result so far
+            <LuTrophy className="size-3.5 text-amber-600 dark:text-amber-400" aria-hidden />{' '}
+            {t(`${student ? 'Your' : `${name}’s`} best ${pos} result so far`, `지금까지 ${student ? '' : `${name}의 `}${posKo} 최고 기록이에요`)}
           </span>
         ) : null}
       </p>
@@ -125,7 +138,7 @@ export function FamilyScoresPage() {
   if (family.notLinked) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <PageHeader title="Scores" />
+        <PageHeader title={t('Scores', '점수')} />
         <NotLinked family={family} />
       </div>
     )
@@ -133,7 +146,17 @@ export function FamilyScoresPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <PageHeader title="Scores" description={ready ? (student ? 'Every result from your classes, newest first.' : `Every result from ${name}’s classes, newest first.`) : ' '} className="mb-4" />
+      <PageHeader
+        title={t('Scores', '점수')}
+        description={
+          ready
+            ? student
+              ? t('Every result from your classes, newest first.', '수업에서 쏜 기록이에요. 최근 기록부터 보여요.')
+              : t(`Every result from ${name}’s classes, newest first.`, `${name}의 수업 기록이에요. 최근 기록부터 보여요.`)
+            : '\u00a0'
+        }
+        className="mb-4"
+      />
       {several ? (
         <div className="mb-4">
           <KidFilter family={family} value={kid ?? ''} onChange={pickKid} everyone={false} />
@@ -146,7 +169,7 @@ export function FamilyScoresPage() {
       ) : null}
 
       {!ready ? (
-        <div className="space-y-5" aria-busy="true" aria-label="Loading the scores">
+        <div className="space-y-5" aria-busy="true" aria-label={t('Loading the scores', '점수를 불러오는 중')}>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Skeleton className="h-28 rounded-xl lg:h-40" />
             <Skeleton className="h-28 rounded-xl lg:h-40" />
@@ -160,11 +183,11 @@ export function FamilyScoresPage() {
             <EmptyMedia variant="icon">
               <LuTarget />
             </EmptyMedia>
-            <EmptyTitle>No scores yet</EmptyTitle>
+            <EmptyTitle>{t('No scores yet', '아직 점수가 없어요')}</EmptyTitle>
             <EmptyDescription>
               {student
-                ? 'Your results show here after your classes, once your coach adds them: SIUS results and paper cards.'
-                : `${name}’s results show here after classes, once the coach adds them: SIUS results and paper cards.`}
+                ? t('Your results show here after your classes, once your coach adds them: SIUS results and paper cards.', '수업이 끝나고 코치가 기록을 올리면 여기에 보여요. SIUS 결과와 종이 표적지 모두요.')
+                : t(`${name}’s results show here after classes, once the coach adds them: SIUS results and paper cards.`, `수업이 끝나고 코치가 기록을 올리면 ${name}의 점수가 여기에 보여요. SIUS 결과와 종이 표적지 모두요.`)}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -172,27 +195,33 @@ export function FamilyScoresPage() {
         <div className="space-y-5">
           {scoreParam && !fromScore ? (
             <p role="status" className="rounded-lg border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground" data-testid="score-not-found">
-              The result in this link isn’t available any more. Here is the latest one instead.
+              {t('The result in this link isn’t available any more. Here is the latest one instead.', '링크의 기록을 더 이상 볼 수 없어서 최근 기록을 보여 드려요.')}
             </p>
           ) : null}
           <PositionCards evaluations={mine} progress={progress} onPick={show} />
-          <section ref={results} className="@container scroll-mt-16 overflow-hidden rounded-xl border bg-card md:scroll-mt-4" aria-label="Results" data-testid="family-results">
+          <section ref={results} className="@container scroll-mt-16 overflow-hidden rounded-xl border bg-card md:scroll-mt-4" aria-label={t('Results', '기록')} data-testid="family-results">
             <div className="px-5 pt-5 pb-4">
-              <h2 className="text-base font-semibold">Results</h2>
+              <h2 className="text-base font-semibold">{t('Results', '기록')}</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                {plural(mine.length, 'result')}. Scores are per 10 shots: whole numbers out of 100, and decimals for SIUS results.
+                {lang === 'ko'
+                  ? `기록 ${mine.length}개. 점수는 10발 평균으로 100점 만점이고, SIUS 결과는 소수점 점수도 함께 보여요.`
+                  : `${plural(mine.length, 'result')}. Scores are per 10 shots: whole numbers out of 100, and decimals for SIUS results.`}
               </p>
             </div>
             <ResultsPanel key={kid} evaluations={mine} selectedId={fromScore?.id ?? null} onSelect={select} bests={bests} onOriginal={openOriginal} insight={insight} />
           </section>
-          <ScoresOverTime evaluations={mine} today={todayKey(timezone)} label={`${student ? 'Your' : `${name}’s`} scores per 10 shots over time`} />
+          <ScoresOverTime
+            evaluations={mine}
+            today={todayKey(timezone)}
+            label={t(`${student ? 'Your' : `${name}’s`} scores per 10 shots over time`, `${student ? '' : `${name}의 `}10발 평균 점수 변화`)}
+          />
           <ShotPattern key={`pattern-${kid}`} evaluations={mine} />
           <CompareCard key={`compare-${kid}`} evaluations={mine.filter((e) => e.shots > 0)} />
         </div>
       )}
 
       <div className="mt-6">
-        <ContactCard hint="Questions about a result?" />
+        <ContactCard hint={t('Questions about a result?', '기록이 궁금하면 연락해 주세요.')} />
       </div>
       {originalOpen && fromScore ? <ResultOriginal key={fromScore.id} e={fromScore} onClose={closeOriginal} /> : null}
     </div>

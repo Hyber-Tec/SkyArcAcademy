@@ -1,3 +1,4 @@
+import { type Lang, pick } from '../i18n'
 import { SIGNER_RELATIONS, type SignerRelation } from './types'
 import { type ContractDocument, type FamilyPart, PDF_PRINTABLE, academyChecks, dollarsText, familyFields, pricedChoice, replaceDollars, signerField } from './document'
 
@@ -57,7 +58,7 @@ export function prefillValues(doc: ContractDocument, p: Prefill): ContractValues
     else if (f.fill === 'signer' && p.signerName) out[f.id] = p.signerName
     else if (f.fill === 'phone' && p.phone) out[f.id] = p.phone
     else if (f.fill === 'email' && p.email) out[f.id] = p.email
-    else if (f.fill === 'date' && /birth/i.test(f.label) && p.dob) out[f.id] = usDate(p.dob)
+    else if (f.fill === 'date' && /birth|생년월일|생일/i.test(f.label) && p.dob) out[f.id] = usDate(p.dob)
   }
   return out
 }
@@ -89,12 +90,13 @@ export function carriedValues(doc: ContractDocument, values: ContractValues): Co
 const NAME = /^[A-Za-zÀ-ÖØ-öø-ÿ' .\-’]+$/
 const text = (v: unknown) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '')
 
-/** One part's value checked: the clean value, or what to fix in the family's words. */
-function checkPart(part: FamilyPart, raw: unknown): { value?: string | string[]; error?: string } {
+/** One part's value checked: the clean value, or what to fix in the family's words (Korean for a parent reading it). */
+function checkPart(part: FamilyPart, raw: unknown, lang: Lang = 'en'): { value?: string | string[]; error?: string } {
+  const say = (en: string, ko: string) => pick(lang, en, ko)
   if (part.kind === 'choose') {
     const v = text(raw)
-    if (!v) return { error: 'Choose one.' }
-    return part.block.options.some((o) => o.id === v) ? { value: v } : { error: 'Choose one of these.' }
+    if (!v) return { error: say('Choose one.', '하나를 골라 주세요.') }
+    return part.block.options.some((o) => o.id === v) ? { value: v } : { error: say('Choose one of these.', '이 중에서 골라 주세요.') }
   }
   if (part.kind === 'check') {
     const list = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
@@ -103,28 +105,30 @@ function checkPart(part: FamilyPart, raw: unknown): { value?: string | string[];
   }
   const v = text(raw)
   if (part.kind === 'initials') {
-    if (!v) return { error: 'Type your initials.' }
-    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ. ]{1,8}$/.test(v) || !/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(v)) return { error: 'Type your initials in English letters.' }
+    if (!v) return { error: say('Type your initials.', '이니셜을 입력해 주세요.') }
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ. ]{1,8}$/.test(v) || !/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(v)) return { error: say('Type your initials in English letters.', '이니셜은 영문으로 입력해 주세요.') }
     return { value: v.toUpperCase() }
   }
-  if (!v) return { error: part.fill === 'date' ? 'Type the date as MM/DD/YYYY.' : 'Fill this in.' }
-  if (v.length > 200) return { error: 'This is too long.' }
+  const dateError = say('Type the date as MM/DD/YYYY.', '날짜를 MM/DD/YYYY 형식으로 입력해 주세요.')
+  if (!v) return { error: part.fill === 'date' ? dateError : say('Fill this in.', '이 칸을 채워 주세요.') }
+  if (v.length > 200) return { error: say('This is too long.', '너무 길어요.') }
   const isName = part.fill === 'student' || part.fill === 'signer'
-  if (!PDF_PRINTABLE.test(v)) return { error: isName ? 'Type the name in English letters.' : 'Type this in English letters.' }
+  const nameError = say('Type the name in English letters.', '이름은 영문으로 입력해 주세요.')
+  if (!PDF_PRINTABLE.test(v)) return { error: isName ? nameError : say('Type this in English letters.', '영문으로 입력해 주세요.') }
   switch (part.fill) {
     case 'student':
     case 'signer':
-      if (!NAME.test(v)) return { error: 'Type the name in English letters.' }
-      if (v.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '').length < 2 || !v.includes(' ')) return { error: 'Type the first and last name.' }
+      if (!NAME.test(v)) return { error: nameError }
+      if (v.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '').length < 2 || !v.includes(' ')) return { error: say('Type the first and last name.', '이름과 성을 모두 입력해 주세요.') }
       return { value: v }
     case 'date': {
       const d = readDate(v)
-      return d ? { value: d } : { error: 'Type the date as MM/DD/YYYY.' }
+      return d ? { value: d } : { error: dateError }
     }
     case 'phone':
-      return v.replace(/\D/g, '').length >= 7 && /^[0-9+()\-. ]+$/.test(v) ? { value: v } : { error: 'Type a phone number.' }
+      return v.replace(/\D/g, '').length >= 7 && /^[0-9+()\-. ]+$/.test(v) ? { value: v } : { error: say('Type a phone number.', '전화번호를 입력해 주세요.') }
     case 'email':
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? { value: v.toLowerCase() } : { error: 'Type an email address.' }
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? { value: v.toLowerCase() } : { error: say('Type an email address.', '이메일 주소를 입력해 주세요.') }
     default:
       return { value: v }
   }
@@ -161,14 +165,15 @@ export const SIGNATURE_MAX_CHARS = 1_400_000
 
 /**
  * The whole signing checked: every field the family fills, then the signature. Errors are keyed by field ID, or by
- * `SIGN_KEYS`, each in the family's words, in the contract's order.
+ * `SIGN_KEYS`, each in the family's words (Korean for a parent reading Korean), in the contract's order.
  */
-export function checkContractSigning(doc: ContractDocument, input: ContractSignInput): { ok: true; value: ContractSigning } | { ok: false; errors: Record<string, string> } {
+export function checkContractSigning(doc: ContractDocument, input: ContractSignInput, lang: Lang = 'en'): { ok: true; value: ContractSigning } | { ok: false; errors: Record<string, string> } {
+  const say = (en: string, ko: string) => pick(lang, en, ko)
   const errors: Record<string, string> = {}
   const raw = input.values && typeof input.values === 'object' && !Array.isArray(input.values) ? (input.values as Record<string, unknown>) : {}
   const values: ContractValues = {}
   for (const part of familyFields(doc)) {
-    const r = checkPart(part, raw[part.id])
+    const r = checkPart(part, raw[part.id], lang)
     if (r.error) errors[part.id] = r.error
     else if (r.value !== undefined) values[part.id] = r.value
   }
@@ -176,24 +181,29 @@ export function checkContractSigning(doc: ContractDocument, input: ContractSignI
   let name = ''
   if (named) name = typeof values[named.id] === 'string' ? (values[named.id] as string) : ''
   else {
-    const r = checkPart({ kind: 'field', id: 'name', label: 'Your full name', fill: 'signer', section: '' }, input.name)
-    if (r.error) errors[SIGN_KEYS.name] = r.error === 'Fill this in.' ? 'Type your first and last name.' : r.error
+    const r = checkPart({ kind: 'field', id: 'name', label: 'Your full name', fill: 'signer', section: '' }, input.name, lang)
+    if (r.error) errors[SIGN_KEYS.name] = r.error === say('Fill this in.', '이 칸을 채워 주세요.') ? say('Type your first and last name.', '이름과 성을 영문으로 입력해 주세요.') : r.error
     else name = r.value as string
   }
-  if (input.relation !== 'parent' && input.relation !== 'guardian') errors[SIGN_KEYS.relation] = 'Choose parent or legal guardian.'
+  if (input.relation !== 'parent' && input.relation !== 'guardian') errors[SIGN_KEYS.relation] = say('Choose parent or legal guardian.', '부모인지 법정 보호자인지 골라 주세요.')
   const signature = input.signature
-  if (typeof signature !== 'string' || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(signature) || signature.length < 200) errors[SIGN_KEYS.signature] = 'Sign in the box with your finger or mouse.'
-  else if (signature.length > SIGNATURE_MAX_CHARS) errors[SIGN_KEYS.signature] = 'The signature is too large. Clear it and sign again.'
-  if (input.agree !== true) errors[SIGN_KEYS.agree] = 'Check the box to agree to sign electronically.'
+  if (typeof signature !== 'string' || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(signature) || signature.length < 200) errors[SIGN_KEYS.signature] = say('Sign in the box with your finger or mouse.', '칸 안에 손가락이나 마우스로 서명해 주세요.')
+  else if (signature.length > SIGNATURE_MAX_CHARS) errors[SIGN_KEYS.signature] = say('The signature is too large. Clear it and sign again.', '서명이 너무 커요. 지우고 다시 서명해 주세요.')
+  if (input.agree !== true) errors[SIGN_KEYS.agree] = say('Check the box to agree to sign electronically.', '전자 서명 동의에 체크해 주세요.')
   if (Object.keys(errors).length) return { ok: false, errors }
   return { ok: true, value: { values, name, relation: input.relation as SignerRelation, signature: signature as string } }
 }
 
 /** What's still to fill in, as the form lists it by the sign button: each part's label, in the contract's order. */
-export function missingParts(doc: ContractDocument, errors: Record<string, string>): { id: string; label: string }[] {
+export function missingParts(doc: ContractDocument, errors: Record<string, string>, lang: Lang = 'en'): { id: string; label: string }[] {
   const out: { id: string; label: string }[] = []
-  for (const part of familyFields(doc)) if (errors[part.id]) out.push({ id: part.id, label: part.kind === 'field' ? `${part.label} (${part.section.toLowerCase()})` : part.label })
-  const own: Record<SignPart, string> = { name: 'Your full name', relation: 'Parent or legal guardian', signature: 'Your signature', agree: 'Agreeing to sign electronically' }
+  for (const part of familyFields(doc)) {
+    if (errors[part.id]) out.push({ id: part.id, label: part.kind === 'field' ? `${part.label} (${lang === 'ko' ? part.section : part.section.toLowerCase()})` : part.label })
+  }
+  const own: Record<SignPart, string> =
+    lang === 'ko'
+      ? { name: '이름 (영문)', relation: '부모 또는 법정 보호자', signature: '서명', agree: '전자 서명 동의' }
+      : { name: 'Your full name', relation: 'Parent or legal guardian', signature: 'Your signature', agree: 'Agreeing to sign electronically' }
   for (const k of Object.keys(own) as SignPart[]) if (errors[SIGN_KEYS[k]]) out.push({ id: SIGN_KEYS[k], label: own[k] })
   return out
 }
@@ -321,9 +331,13 @@ export function suggestedOption(doc: ContractDocument, hints: readonly (string |
   return ''
 }
 
-/** "$475 / Month ($495, less $20 in discounts)", or the price as it is when nothing comes off. */
-export function tuitionText(t: Tuition): string {
+/**
+ * "$475 / Month ($495, less $20 in discounts)", or "월 $475 (정가 $495에서 $20 할인)" in Korean (the Korean contract's
+ * price words); the price as it is when nothing comes off.
+ */
+export function tuitionText(t: Tuition, lang: Lang = 'en'): string {
   if (!t.discounts.length) return t.shown
+  if (lang === 'ko') return `${t.shown} (정가 ${dollarsText(t.base)}에서 ${dollarsText(t.base - t.net)} 할인)`
   return `${t.shown} (${dollarsText(t.base)}, less ${dollarsText(t.base - t.net)} in discount${t.discounts.length > 1 ? 's' : ''})`
 }
 
@@ -345,18 +359,21 @@ export function shownValue(doc: ContractDocument, id: string, values: ContractVa
  * What the office reads at a glance on a student's page (the PDF holds the rest): the option chosen and its price
  * after the discounts, and what was checked (or "None").
  */
-export function contractSummary(doc: ContractDocument, values: ContractValues): { label: string; value: string }[] {
+export function contractSummary(doc: ContractDocument, values: ContractValues, lang: Lang = 'en'): { label: string; value: string }[] {
   const out: { label: string; value: string }[] = []
   const tuition = tuitionOf(doc, values)
   for (const b of doc.blocks) {
     if (b.kind === 'choose') {
       const o = b.options.find((x) => x.id === values[b.id])
       out.push({ label: b.label, value: o?.title ?? '—' })
-      if (b.priceLabel) out.push({ label: b.priceLabel, value: tuition && b === pricedChoice(doc) ? tuitionText(tuition) : (o?.price ?? '—') })
-    } else if (b.kind === 'check') out.push({ label: b.label, value: shownValue(doc, b.id, values) || 'None' })
+      if (b.priceLabel) out.push({ label: b.priceLabel, value: tuition && b === pricedChoice(doc) ? tuitionText(tuition, lang) : (o?.price ?? '—') })
+    } else if (b.kind === 'check') out.push({ label: b.label, value: shownValue(doc, b.id, values) || pick(lang, 'None', '없음') })
   }
   return out
 }
 
 /** "Parent", "Legal guardian": how the signer relates to the student, as the contract says it. */
 export const RELATION_LABELS: Record<SignerRelation, string> = { parent: SIGNER_RELATIONS.parent, guardian: 'Legal guardian' }
+
+/** The same in the family's language: 부모, 법정 보호자. */
+export const relationLabel = (relation: SignerRelation, lang: Lang = 'en'): string => (lang === 'ko' ? { parent: '부모', guardian: '법정 보호자' }[relation] : RELATION_LABELS[relation])

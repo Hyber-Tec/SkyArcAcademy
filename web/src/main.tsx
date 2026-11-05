@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router'
 import { toast } from 'sonner'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { ThemeProvider } from '@/components/app/theme'
+import { LangProvider } from '@/lib/LangProvider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { router } from './app/router'
@@ -19,12 +20,14 @@ window.addEventListener('vite:preloadError', (event) => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light">
-      <AuthProvider>
-        <TooltipProvider delayDuration={300}>
-          <RouterProvider router={router} />
-          <Toaster richColors position="top-center" />
-        </TooltipProvider>
-      </AuthProvider>
+      <LangProvider>
+        <AuthProvider>
+          <TooltipProvider delayDuration={300}>
+            <RouterProvider router={router} />
+            <Toaster richColors position="top-center" />
+          </TooltipProvider>
+        </AuthProvider>
+      </LangProvider>
     </ThemeProvider>
   </StrictMode>,
 )

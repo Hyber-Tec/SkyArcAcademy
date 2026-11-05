@@ -101,7 +101,7 @@ export function Gallery() {
             <h2 className="text-[26px] font-semibold tracking-tight text-ink sm:text-[30px]">{album === 'all' ? t(T.allPhotos) : t(albumLabel)}</h2>
             {items.length ? (
               <span className="text-[14px] text-stone">
-                {items.length} {lang === 'ko' ? t(T.photos) : items.length === 1 ? 'photo' : t(T.photos)}
+                {lang === 'ko' ? `${items.length}${t(T.photos)}` : `${items.length} ${items.length === 1 ? 'photo' : t(T.photos)}`}
               </span>
             ) : null}
           </div>

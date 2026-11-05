@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import type { IconType } from 'react-icons'
 import { LuBatteryFull, LuChartLine, LuCrosshair, LuGauge, LuMessageSquareQuote, LuWifi } from 'react-icons/lu'
 import { ReportDocument } from '@/features/reports/ReportDocument'
+import { EnglishApp } from '@/site/kit/EnglishApp'
 import { cn } from '@/lib/utils'
 import { HOME, type L } from '@/site/kit/content'
 import { useReduced } from '@/site/kit/motion'
@@ -196,7 +197,9 @@ export function ReportShowcase({ header, footer, className }: { header?: ReactNo
           <motion.div style={still ? undefined : { y }} className="will-change-transform">
             <div style={{ height: size.paperH ? size.paperH * scale : undefined }}>
               <div ref={paperRef} className="report-canvas origin-top-left px-3 pt-3 pb-10" style={{ width: size.paper, transform: `scale(${scale})` }}>
-                <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
+                <EnglishApp>
+                  <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
+                </EnglishApp>
               </div>
             </div>
           </motion.div>

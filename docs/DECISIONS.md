@@ -1179,3 +1179,42 @@ even the testflight too", with something made up in the demo to try it.
   contracts and gets the copies to save.
 - **Live now:** the contract is set up in the live academy and the demo one (`scripts/contract.ts`), the demo is
   refreshed, and 1.1.0 goes to TestFlight and Google Play's internal testing for Goo to try on both phones.
+
+## 36. Korean for parents (Goo, 2026-11-05)
+
+Goo, once the contract was live: "let's make the Korean version … only when parents see it: the parent portal, the
+parent app, the landing page … the contract too … you're always perfect in English, but your Korean feels a bit
+unnatural … research things like a Claude skill that actually help … other languages, not now … and the build too."
+
+- **Who reads Korean:** a parent whose phone or browser is set to Korean, or who chooses it: 한국어 / English in Profile
+  (website) and More (phone), and on the pages before signing in and a contract's link, remembered on that browser or
+  phone (the public website's switch carries into the portal's). Students and staff read English, whatever their phone
+  says. (Goo's pick of three; the others: every parent in Korean, or the office choosing per family.)
+- **What's in Korean:** all a parent sees: the parent portal, the family part of the phone app, the public website, the
+  contract (below), and the phone notifications families get (each phone in its own language). **Emails stay English**
+  (Goo).
+- **The contract: "Korean to read, English official"** (Goo's pick of three). The academy's English stays the contract.
+  Its Korean translation, drafted by Claude Code and kept beside the English (`docs/internal/contract/`, the same markers
+  in the same order, checked to line up part by part), is what a parent reading Korean sees, with a note that it's for
+  understanding and the English governs, and the English a tap away. The signed PDF has the English as before, then the
+  Korean they read (in a Korean font, Noto Sans KR), then the record page, which says they read the Korean and records
+  its SHA-256. **Goo and the manager check the translation before families see it:** it's in the demo academy to read;
+  the live academy gets it with `scripts/contract.ts --ko-file` once they approve. Until then a parent reading Korean
+  sees the English contract inside Korean screens.
+- **Korean that doesn't read as a translation:** `.claude/skills/korean-ux-writing`, a skill for Claude Code built from
+  research: Toss's UX writing rules (해요체 everywhere, active voice, positive framing, no stacked honorifics, 돼요),
+  the translationese patterns and their fixes (after the k-skill korean-humanizer's catalogue), particles after names,
+  Korean dates and money, and the app's glossary (입사/슬사/복사, 보강, 체험 수업, 성장 리포트…). The Korean is written
+  from what each screen means, with that skill, and the website's earlier word-for-word draft is rewritten.
+- **How it's built:** each text sits next to its English in the code (`t('Home', '홈')`), as the public website already
+  had it; `shared/src/i18n.ts` decides who reads which language and writes particles, dates and times. No translation
+  files to keep in step.
+- **The phone app opens the contract on the website** (Goo, the same day: "writing the contract from parents can be all
+  done by website, just like the QR code … web will be easier and faster even when we update something in future …
+  we can easily change language … than rebuilding mobile again"). A parent's phone app no longer draws the contract:
+  each child's contract opens from the app on its page on the website (the QR code's), in the in-app browser, in the
+  language they read the app in; the app opens once every one is signed, and says so when the parent closes the
+  page. The language can be changed right there, before the app opens (English · 한국어, as on sign-in), in the app and
+  on the website. The website's portal keeps its own signing for parents signed in there.
+- **Other languages:** not now ("maybe someday if really needed").
+

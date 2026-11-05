@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { DemoBadge } from "@/components/DemoBadge";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
+import { useT } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 import { useFamily } from "./FamilyProvider";
 
@@ -17,6 +18,7 @@ const SWITCH_WIDTH = 108;
 export function AskButton({ testID = "family-ask" }: { testID?: string }) {
   const colors = useColors();
   const family = useFamily();
+  const t = useT();
   return (
     <Button
       variant="outline"
@@ -24,10 +26,10 @@ export function AskButton({ testID = "family-ask" }: { testID?: string }) {
       wrap
       icon={<CalendarPlus size={17} color={colors.brand} />}
       onPress={() => router.push({ pathname: "/ask", params: family.child !== "all" ? { studentId: family.child } : {} })}
-      accessibilityLabel="Ask for a class"
+      accessibilityLabel={t("Ask for a class", "수업 신청")}
       testID={testID}
     >
-      Ask
+      {t("Ask", "신청")}
     </Button>
   );
 }
@@ -39,11 +41,12 @@ export function AskButton({ testID = "family-ask" }: { testID?: string }) {
  */
 export function ClassesHeader({ mode, onMode, linked }: { mode: ClassesMode; onMode: (m: ClassesMode) => void; linked: boolean }) {
   const { fontScale } = useWindowDimensions();
+  const t = useT();
   return (
     <View style={styles.row} testID="family-classes-title">
       <View style={styles.title}>
         <T variant="title" accessibilityRole="header">
-          Classes
+          {t("Classes", "수업")}
         </T>
         <DemoBadge />
       </View>
@@ -54,8 +57,8 @@ export function ClassesHeader({ mode, onMode, linked }: { mode: ClassesMode; onM
               value={mode}
               onChange={onMode}
               options={[
-                { value: "list", label: "List" },
-                { value: "month", label: "Month" },
+                { value: "list", label: t("List", "목록") },
+                { value: "month", label: t("Month", "달력") },
               ]}
               testID="family-classes-view"
             />

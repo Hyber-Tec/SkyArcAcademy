@@ -10,6 +10,7 @@ import { useAcademyNow } from "@/features/data/hooks";
 import { type NewsPost, useFamilyNews, useIsNewNews } from "@/features/family/news";
 import { NewsRow, NewsRowsLoading } from "@/features/family/NewsRow";
 import { monthYear } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { useColors } from "@/theme";
 
@@ -21,6 +22,8 @@ import { useColors } from "@/theme";
 export default function FamilyNewsScreen() {
   const { name, timezone } = useBranch();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const { today } = useAcademyNow();
   const news = useFamilyNews();
   const isNew = useIsNewNews();
@@ -38,7 +41,7 @@ export default function FamilyNewsScreen() {
   }
   const freshIn = (posts: NewsPost[]) => {
     const n = posts.filter((a) => isNew(a.id)).length;
-    return n ? `${n} new` : undefined;
+    return n ? t(`${n} new`, `새 소식 ${n}개`) : undefined;
   };
   const rows = (posts: NewsPost[]) => posts.map((a) => <NewsRow key={a.id} post={a} isNew={isNew(a.id)} today={today} onPress={() => open(a.id)} testID={`family-news-${a.id}`} />);
 
@@ -48,20 +51,20 @@ export default function FamilyNewsScreen() {
         <NewsRowsLoading count={4} testID="family-news-loading" />
       ) : news.error && !news.data.length ? (
         <Card>
-          <T variant="label">Couldn’t load the news</T>
+          <T variant="label">{t("Couldn’t load the news", "소식을 불러오지 못했어요")}</T>
           <T variant="small" tone="muted">
-            Check your connection, then pull down to try again.
+            {t("Check your connection, then pull down to try again.", "인터넷 연결을 확인한 뒤 화면을 아래로 당겨 다시 시도해 주세요.")}
           </T>
         </Card>
       ) : news.data.length ? (
         <>
           {pinned.length ? (
-            <ListSection title="Pinned" detail={freshIn(pinned)} testID="family-news-pinned">
+            <ListSection title={t("Pinned", "고정된 소식")} detail={freshIn(pinned)} testID="family-news-pinned">
               {rows(pinned)}
             </ListSection>
           ) : null}
           {months.map((m) => (
-            <ListSection key={m.key} title={monthYear(`${m.key}-01`)} detail={freshIn(m.posts)} testID={`family-news-month-${m.key}`}>
+            <ListSection key={m.key} title={monthYear(`${m.key}-01`, lang)} detail={freshIn(m.posts)} testID={`family-news-month-${m.key}`}>
               {rows(m.posts)}
             </ListSection>
           ))}
@@ -70,8 +73,8 @@ export default function FamilyNewsScreen() {
         <EmptyState
           testID="family-news-empty"
           icon={<Megaphone size={26} color={colors.mutedForeground} />}
-          title="No news yet"
-          text={`${name} posts its news for families here: closures, matches and other updates.`}
+          title={t("No news yet", "아직 소식이 없어요")}
+          text={t(`${name} posts its news for families here: closures, matches and other updates.`, "휴무, 대회 같은 아카데미 소식을 여기에 올려요.")}
         />
       )}
     </Screen>

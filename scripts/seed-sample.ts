@@ -19,6 +19,7 @@
  *
  *   npm run seed:sample                # add it (production: to the demo academy)
  *   npm run seed:sample -- --remove    # delete it, with everything the app made for the sample people
+ *   npm run seed:sample -- --contracts # the sample's enrollment contracts again, as the plan has them (after a demo)
  *   npm run seed:sample -- --login coach=you+coach@example.com
  *                                      # gives that email a sample person's access, to see the website and the phone app
  *                                      # as they do: coach (Daniel Reed), parent (the Hwang family's two children) or
@@ -36,9 +37,10 @@ import { parseArgs } from 'node:util'
 import { buildContractPdf } from '../functions/src/contractPdf'
 import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
 import { parseContract } from '../shared/src/contracts/document'
-import { RELATION_LABELS, checkContractSigning, usDate, withPreset } from '../shared/src/contracts/fill'
+import { RELATION_LABELS, checkContractSigning, relationLabel, usDate, withPreset } from '../shared/src/contracts/fill'
 import { contractFilePlace, contractFoldersToMake } from '../shared/src/contracts/filing'
 import { contractFileName, signatureFacts, signatureStatement } from '../shared/src/contracts/signing'
+import { contractIn } from '../shared/src/contracts/translation'
 import { ACADEMY_SIGNER_ID, type AcademySigner, CONTRACT_TOKEN_DOC, type ContractTemplate, templateLabel } from '../shared/src/contracts/types'
 import { type DriveActor, contractsFolderStudent, driveObjectPath, studentFolderId } from '../shared/src/drive/types'
 import { COL, DOC } from '../shared/src/paths'
@@ -63,7 +65,7 @@ import { encodePng } from './lib/png'
 import { siusPdf } from './lib/sius-pdf'
 import { deleteObject, uploadObject } from './lib/storage-rest'
 
-const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, login: { type: 'string' }, academy: { type: 'string' } } })
+const { values } = parseArgs({ options: { remove: { type: 'boolean', default: false }, login: { type: 'string' }, academy: { type: 'string' }, contracts: { type: 'boolean', default: false } } })
 const EMULATOR = !!process.env.FIRESTORE_EMULATOR_HOST
 const academyId = values.academy ?? (EMULATOR ? ACADEMY_ID : DEMO_ACADEMY_ID)
 if (!EMULATOR && academyId !== DEMO_ACADEMY_ID) {
@@ -269,6 +271,9 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
       }
       const sig = s.signed
       const png = sig ? encodePng(drawSampleSignature(sig.name)) : null
+      // A parent who read it in Korean: their PDF has the Korean too, once the contract has its translation (§36).
+      const read = sig?.lang === 'ko' && template.ko?.text ? contractIn('ko', template.text, template.ko.text) : null
+      const translation = read?.translated && template.ko ? { doc: read.doc, sha256: template.ko.sha256 } : null
       const checked = sig && png ? checkContractSigning(doc, { values: sig.values, relation: sig.relation, signature: `data:image/png;base64,${Buffer.from(png).toString('base64')}`, agree: true }) : null
       if (sig && png && checked && !checked.ok) console.warn(`  ${c.studentName}: the sample couldn't fill the contract in (${Object.keys(checked.errors).join(', ')}); it's left waiting`)
       if (sig && png && checked?.ok) {
@@ -300,12 +305,14 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
               templateSha256: template.sha256,
               sentBy: { name: manager.name, atMs: s.at.getTime() },
               academySigner: { name: signer.name, title: signer.title, typed: !signer.image },
+              translation: translation ? { sha256: translation.sha256 } : null,
             }),
             footnote: `Signed electronically ${sig.via === 'app' ? `in ${academyName}’s app` : `through ${academyName}’s website`}. The SHA-256 identifies the exact text of the contract that was signed: the same text always gives the same value.`,
           },
           sample: false,
           createdAt: sig.at,
           logo: LOGO,
+          translation: translation ? { doc: translation.doc, relation: relationLabel(sig.relation, 'ko') } : null,
         })
         const fileId = `${SAMPLE_PREFIX}contract-${key}`
         const fileName = contractFileName(c.studentName, signedOn)
@@ -607,7 +614,48 @@ async function sampleLogin(arg: string) {
   console.log('  Removed with the sample data: npm run seed:sample -- --remove')
 }
 
-;(values.remove ? remove() : values.login ? sampleLogin(values.login) : add()).catch((e) => {
+/**
+ * The sample's enrollment contracts again (--contracts), to show signing once more after a demo: the sample families'
+ * contracts, their signed copies (records and files) and their notices go, and the plan's are made again. The rest of
+ * the sample stays as it is.
+ */
+async function contractsAgain() {
+  const academy = await getDocument(base)
+  if (!academy) throw new Error(`No academy at ${base} in ${PROJECT_ID}.`)
+  const paths: string[] = []
+  for (const col of [COL.contractLinks, COL.signedContracts] as const) {
+    for (const d of (await listDocuments(`${base}/${col}`)).filter((x) => SAMPLE_RULES[col](x.id, x.data))) {
+      for (const child of CHILDREN[col] ?? []) paths.push(...(await listDocuments(`${d.path}/${child}`)).map((c) => c.path))
+      paths.push(d.path)
+    }
+  }
+  const contractFiles = (await listDocuments(`${base}/${COL.driveFiles}`)).filter((d) => isSample(contractsFolderStudent(typeof d.data.folderId === 'string' ? d.data.folderId : null)))
+  for (const d of contractFiles) await deleteObject(driveObjectPath(academyId, d.id))
+  paths.push(...contractFiles.map((d) => d.path))
+  paths.push(...(await listDocuments(`${base}/${COL.notifications}`)).filter((d) => d.data.type === 'contract_sent' && isSampleEmail(d.data.recipientKey)).map((d) => d.path))
+  await deleteDocuments(paths)
+  console.log(`- the sample's contracts: ${paths.length} documents`)
+  const timezone = String(academy.timezone ?? 'America/New_York')
+  const settings = resolveSettings((academy.settings ?? null) as SettingsOverrides | null)
+  const rules = resolveBusinessRules((academy.businessRules ?? null) as Parameters<typeof resolveBusinessRules>[0])
+  const now = new Date()
+  const { docs } = buildSampleData({
+    academyId,
+    timezone,
+    today: todayKey(timezone, now),
+    now,
+    week: settings.schedule.defaultWeek,
+    levels: settings.students.levels,
+    programs: settings.students.programs,
+    seatsPerClass: rules.seatsPerClass,
+  })
+  const folders = (await listDocuments(`${base}/${COL.driveFolders}`)).filter((d) => d.id.startsWith('student-') || d.data.parentId === null).map((d) => ({ path: d.path, data: d.data }))
+  const contracts = await sampleContracts(docs, folders, academy, timezone, now)
+  await commit(contracts.docs)
+  console.log(`+ Enrollment contracts for ${contracts.families} students: ${contracts.waiting} waiting, ${contracts.signed} signed`)
+}
+
+;(values.remove ? remove() : values.login ? sampleLogin(values.login) : values.contracts ? contractsAgain() : add()).catch((e) => {
   console.error(e)
   process.exit(1)
 })

@@ -138,6 +138,15 @@ export const NARRATIVE_LABELS: Record<NarrativeKey, string> = {
   coachNote: 'A note from the coach',
 }
 
+/** The same in Korean, as a parent reading Korean sees a report (its text stays as the academy wrote it). */
+export const NARRATIVE_LABELS_KO: Record<NarrativeKey, string> = {
+  overview: '요약',
+  strengths: '잘하는 점',
+  focusAreas: '집중할 점',
+  goals: '목표',
+  coachNote: '코치 한마디',
+}
+
 export interface SectionMeta {
   /**
    * Who wrote it: the standard text, staff by hand, or AI when an owner or admin asked for a draft ("Write with AI",
@@ -205,6 +214,13 @@ export const TREND_LABELS: Record<TrendLevel, { staff: string; family: string }>
   improving: { staff: 'Improving', family: 'Improving' },
   steady: { staff: 'Steady', family: 'Steady' },
   dipping: { staff: 'Dipping', family: 'Building back up' },
+}
+
+/** The family's words in Korean. */
+export const TREND_LABELS_KO: Record<TrendLevel, string> = {
+  improving: '오르는 중',
+  steady: '꾸준함',
+  dipping: '다시 끌어올리는 중',
 }
 
 export function trendLabel(level: TrendLevel, audience: 'staff' | 'family'): string {

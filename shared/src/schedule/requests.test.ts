@@ -158,6 +158,18 @@ describe('what families and the office are told', () => {
     )
   })
 
+  it('says it in Korean too, with the name before a fixed word', () => {
+    expect(familyClassNotice(snap(), snap({ status: 'canceled' }), now)?.ko).toEqual({ title: '수업 취소', body: '11월 3일 (화) 오후 4:30 Avery 학생 수업이 취소됐어요. 보강은 수업 탭에서 신청할 수 있어요.' })
+    expect(familyClassNotice(snap(), snap({ dateKey: '2026-11-04' }), now)?.ko?.body).toBe('Avery 학생의 11월 3일 (화) 수업을 옮겼어요. 바뀐 일정: 11월 4일 (수) 오후 4:30~6:00')
+    expect(familyBookedNotice(snap({ note: 'MU for 10/26' }), now)?.ko).toEqual({ title: '보강 예약', body: 'Avery 학생 보강을 잡았어요: 11월 3일 (화) 오후 4:30~6:00' })
+    const r = { kind: 'makeup' as const, studentName: 'Avery Stone', dateKey: '2026-11-03', startMin: 990, endMin: 1080, forDateKey: '2026-10-26', decisionNote: '' }
+    expect(decidedNotice(r, true).ko?.body).toBe('Avery 학생 보강 일정이 잡혔어요: 11월 3일 (화) 오후 4:30~6:00')
+    expect(decidedNotice(r, false).ko?.body).toBe('11월 3일 (화) 오후 4:30 Avery 학생 신청은 승인되지 않았어요. 다른 시간은 수업 탭에서 신청할 수 있어요.')
+    expect(scoreAddedNotice({ studentName: 'Avery Stone', position: 'standing', total: 186.84, shots: 20, source: 'sius' }).ko).toEqual({ title: '새 점수', body: 'Avery: 입사, 186.8점 (20발)' })
+    // What the office hears has no Korean.
+    expect(familyCanceledNotice({ studentName: 'Avery Stone', dateKey: '2026-11-03', startMin: 990 }, { name: 'Jordan Stone', role: 'parent' }).ko).toBeUndefined()
+  })
+
   it('tells a family of a new score', () => {
     expect(scoreAddedNotice({ studentName: 'Avery Stone', position: 'standing', total: 186.84, shots: 20, source: 'sius' }).body).toBe('Avery: Standing, 186.8 over 20 shots.')
     expect(scoreAddedNotice({ studentName: 'Avery Stone', position: 'prone', total: 76, wholeTotal: 76, shots: 10, source: 'paper' }).body).toBe('Avery: Prone, 76 over 10 shots.')
@@ -291,6 +303,10 @@ describe('the office suggests another class, the family answers', () => {
       type: 'request_offered',
       title: 'Another time suggested',
       body: 'For Avery’s makeup for Oct 26, the academy suggests Thu, Nov 5, 5:00 PM – 6:00 PM instead of Tue, Nov 3 at 4:30 PM. “Tuesday is full.” Accept it or ask for another time in Classes.',
+      ko: {
+        title: '다른 시간 제안',
+        body: 'Avery 학생 10월 26일 수업 보강: 신청하신 11월 3일 (화) 오후 4:30 대신 이 시간은 어떠세요? 11월 5일 (목) 오후 5:00~6:00. “Tuesday is full.” 수업 탭에서 수락하거나 다른 시간을 신청할 수 있어요.',
+      },
     })
     expect(offeredNotice({ ...r, kind: 'reschedule', forDateKey: '2026-11-02' }, { ...offer, note: '' }).body).toBe(
       'For moving Avery’s class on Nov 2, the academy suggests Thu, Nov 5, 5:00 PM – 6:00 PM instead of Tue, Nov 3 at 4:30 PM. Accept it or ask for another time in Classes.',

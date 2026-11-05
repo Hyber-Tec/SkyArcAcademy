@@ -22,6 +22,7 @@ import { useFamily } from "@/features/family/FamilyProvider";
 import { requestClass, requestError } from "@/features/requests/api";
 import { type ClassSeatsDoc, millis, useClassSeats } from "@/features/requests/data";
 import { clock, monthDay, plural, shortDay, timeRange } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
@@ -43,6 +44,8 @@ export default function AskForClassScreen() {
   const family = useFamily();
   const { branchId, settings } = useBranch();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const { today, now } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
   const horizon = requestHorizon(today, settings);
@@ -103,7 +106,10 @@ export default function AskForClassScreen() {
   const ready = !!picked && !!studentId && (kindNow === "extra" || (kindNow === "makeup" ? !!makeupFor : !!moving));
   const parent = family.who === "parent";
   const name = family.firstName(studentId);
-  const missedText = (s: SessionDoc) => `${shortDay(s.dateKey)}, ${clock(s.startMin, hour12)} (${s.status === "no_show" ? "missed" : "canceled"})`;
+  const missedText = (s: SessionDoc) =>
+    lang === "ko"
+      ? `${shortDay(s.dateKey, "ko")} ${clock(s.startMin, hour12, "ko")} (${s.status === "no_show" ? "결석" : "취소"})`
+      : `${shortDay(s.dateKey)}, ${clock(s.startMin, hour12)} (${s.status === "no_show" ? "missed" : "canceled"})`;
 
   const send = async () => {
     if (!picked || !ready || sending) return;
@@ -117,17 +123,17 @@ export default function AskForClassScreen() {
         forSessionId: kindNow === "extra" ? null : kindNow === "makeup" ? (makeupFor?.id ?? null) : (moving?.id ?? null),
         message: message.trim(),
       });
-      toast.success("Request sent", { description: "The academy approves it or suggests another time, and you’ll be told." });
+      toast.success(t("Request sent", "신청했어요"), { description: t("The academy approves it or suggests another time, and you’ll be told.", "아카데미에서 승인하거나 다른 시간을 제안하면 알려 드려요.") });
       router.back();
     } catch (e) {
-      toast.error("The request wasn’t sent", { description: requestError(e) });
+      toast.error(t("The request wasn’t sent", "신청하지 못했어요"), { description: requestError(e, t("Please try again.", "다시 시도해 주세요."), lang) });
       setSending(false);
     }
   };
 
   return (
     <>
-      <Stack.Screen options={{ title: preset === "reschedule" ? "Move a class" : "Ask for a class" }} />
+      <Stack.Screen options={{ title: preset === "reschedule" ? t("Move a class", "수업 옮기기") : t("Ask for a class", "수업 신청") }} />
       <Screen
         testID="ask-screen"
         footer={
@@ -141,7 +147,7 @@ export default function AskForClassScreen() {
               style={styles.grow}
               testID="ask-send"
             >
-              Send request
+              {t("Send request", "신청하기")}
             </Button>
           </FooterBar>
         }
@@ -149,16 +155,22 @@ export default function AskForClassScreen() {
         <T tone="muted" style={styles.intro} testID="ask-intro">
           {preset === "reschedule"
             ? moving
-              ? `Choose another time for ${parent ? `${name}’s` : "your"} class on ${shortDay(moving.dateKey)}. It stays booked until the academy approves the move.`
-              : "Choose another time for the class. It stays booked until the academy approves the move."
+              ? t(
+                  `Choose another time for ${parent ? `${name}’s` : "your"} class on ${shortDay(moving.dateKey)}. It stays booked until the academy approves the move.`,
+                  `${shortDay(moving.dateKey, "ko")} ${parent ? `${name} 학생 ` : ""}수업을 옮길 시간을 골라 주세요. 아카데미에서 승인할 때까지 원래 수업은 그대로 예약돼 있어요.`,
+                )
+              : t("Choose another time for the class. It stays booked until the academy approves the move.", "수업을 옮길 시간을 골라 주세요. 아카데미에서 승인할 때까지 원래 수업은 그대로 예약돼 있어요.")
             : onDay
-              ? `Choose a time on ${shortDay(onDay)} with a seat open. The academy approves each request, or suggests another time.`
-              : "Choose a time with a seat open. The academy approves each request, or suggests another time."}
+              ? t(
+                  `Choose a time on ${shortDay(onDay)} with a seat open. The academy approves each request, or suggests another time.`,
+                  `${shortDay(onDay, "ko")} 중 빈자리가 있는 시간을 골라 주세요. 아카데미에서 승인하거나 다른 시간을 제안해요.`,
+                )
+              : t("Choose a time with a seat open. The academy approves each request, or suggests another time.", "빈자리가 있는 시간을 골라 주세요. 아카데미에서 승인하거나 다른 시간을 제안해요.")}
         </T>
 
         {parent && family.ids.length > 1 && preset !== "reschedule" ? (
           <View style={styles.block}>
-            <SectionTitle title="For" />
+            <SectionTitle title={t("For", "자녀")} />
             <FilterChips
               value={studentId}
               onChange={(id) => {
@@ -174,24 +186,27 @@ export default function AskForClassScreen() {
 
         {preset === "reschedule" ? (
           moving ? (
-            <ListSection title="Moving" testID="ask-moving">
-              <ListRow title={`${shortDay(moving.dateKey)}, ${timeRange(moving.startMin, moving.endMin, hour12)}`} subtitle="Stays booked until the academy approves the move" />
+            <ListSection title={t("Moving", "옮길 수업")} testID="ask-moving">
+              <ListRow
+                title={lang === "ko" ? `${shortDay(moving.dateKey, "ko")} ${timeRange(moving.startMin, moving.endMin, hour12, "ko")}` : `${shortDay(moving.dateKey)}, ${timeRange(moving.startMin, moving.endMin, hour12)}`}
+                subtitle={t("Stays booked until the academy approves the move", "아카데미에서 승인할 때까지 그대로 예약돼 있어요")}
+              />
             </ListSection>
           ) : null
         ) : (
-          <ListSection title="What for" testID="ask-kind">
+          <ListSection title={t("What for", "신청 종류")} testID="ask-kind">
             <ChoiceRow
               selected={kindNow === "makeup"}
               disabled={!owed.length}
-              title="A makeup"
+              title={t("A makeup", "보강")}
               subtitle={
                 seats.loading
-                  ? "Looking for missed classes…"
+                  ? t("Looking for missed classes…", "빠진 수업을 찾고 있어요…")
                   : owed.length
-                    ? `For a class ${parent ? name : "you"} missed.`
+                    ? t(`For a class ${parent ? name : "you"} missed.`, parent ? `${name} 학생이 빠진 수업의 보강이에요.` : "빠진 수업의 보강이에요.")
                     : missed.length
-                      ? "Each missed class has a request waiting."
-                      : "No missed classes to make up."
+                      ? t("Each missed class has a request waiting.", "빠진 수업마다 이미 신청한 보강이 있어요.")
+                      : t("No missed classes to make up.", "보강할 수업이 없어요.")
               }
               onPress={() => setKind("makeup")}
               testID="ask-kind-makeup"
@@ -199,8 +214,14 @@ export default function AskForClassScreen() {
             {kindNow === "makeup" && owed.length > 1
               ? owed.map((s) => <ChoiceRow key={s.id} selected={makeupFor?.id === s.id} title={missedText(s)} onPress={() => setForId(s.id)} testID={`ask-makeup-${s.id}`} />)
               : null}
-            {kindNow === "makeup" && owed.length === 1 && makeupFor ? <ListRow title={missedText(makeupFor)} subtitle="The class it makes up" /> : null}
-            <ChoiceRow selected={kindNow === "extra"} title="An extra class" subtitle="Extra practice in an open seat." onPress={() => setKind("extra")} testID="ask-kind-extra" />
+            {kindNow === "makeup" && owed.length === 1 && makeupFor ? <ListRow title={missedText(makeupFor)} subtitle={t("The class it makes up", "보강할 수업")} /> : null}
+            <ChoiceRow
+              selected={kindNow === "extra"}
+              title={t("An extra class", "추가 수업")}
+              subtitle={t("Extra practice in an open seat.", "빈자리에서 한 번 더 연습해요.")}
+              onPress={() => setKind("extra")}
+              testID="ask-kind-extra"
+            />
           </ListSection>
         )}
 
@@ -210,15 +231,15 @@ export default function AskForClassScreen() {
         ) : daysShown.length ? (
           <>
             {daysShown.map(([day, list]) => (
-              <ListSection key={day} title={shortDay(day)} testID={`ask-day-${day}`}>
+              <ListSection key={day} title={shortDay(day, lang)} testID={`ask-day-${day}`}>
                 {list.map((c) => {
                   const open = c.seats - c.taken;
                   return (
                     <ChoiceRow
                       key={c.id}
                       selected={c.id === classId}
-                      title={timeRange(c.startMin, c.endMin, hour12)}
-                      right={`${plural(open, "seat")} open`}
+                      title={timeRange(c.startMin, c.endMin, hour12, lang)}
+                      right={t(`${plural(open, "seat")} open`, `${open}자리 남음`)}
                       onPress={() => setClassId(c.id)}
                       testID={`ask-class-${c.id}`}
                     />
@@ -228,7 +249,7 @@ export default function AskForClassScreen() {
             ))}
             {onDay && byDay.length > daysShown.length ? (
               <Button variant="ghost" wrap onPress={() => setOnDay(null)} testID="ask-other-days">
-                See other days
+                {t("See other days", "다른 날짜 보기")}
               </Button>
             ) : null}
           </>
@@ -236,12 +257,16 @@ export default function AskForClassScreen() {
           <EmptyState
             testID="ask-day-none"
             icon={<CalendarSearch size={26} color={colors.mutedForeground} />}
-            title={`No open seats on ${shortDay(onDay)}`}
-            text={byDay.length ? "Seats open up when students cancel. Other days have room now." : `No open seats until ${monthDay(horizon)}. Seats open up when students cancel, so check again soon.`}
+            title={t(`No open seats on ${shortDay(onDay)}`, `${shortDay(onDay, "ko")}에는 빈자리가 없어요`)}
+            text={
+              byDay.length
+                ? t("Seats open up when students cancel. Other days have room now.", "다른 학생이 취소하면 자리가 생겨요. 지금은 다른 날짜에 빈자리가 있어요.")
+                : t(`No open seats until ${monthDay(horizon)}. Seats open up when students cancel, so check again soon.`, `${monthDay(horizon, "ko")}까지 빈자리가 없어요. 다른 학생이 취소하면 자리가 생기니 다시 확인해 주세요.`)
+            }
             action={
               byDay.length ? (
                 <Button variant="outline" wrap onPress={() => setOnDay(null)} testID="ask-other-days">
-                  See other days
+                  {t("See other days", "다른 날짜 보기")}
                 </Button>
               ) : undefined
             }
@@ -250,18 +275,18 @@ export default function AskForClassScreen() {
           <EmptyState
             testID="ask-none"
             icon={<CalendarSearch size={26} color={colors.mutedForeground} />}
-            title="No open seats"
-            text={`No open seats until ${monthDay(horizon)}. Seats open up when students cancel, so check again soon.`}
+            title={t("No open seats", "빈자리가 없어요")}
+            text={t(`No open seats until ${monthDay(horizon)}. Seats open up when students cancel, so check again soon.`, `${monthDay(horizon, "ko")}까지 빈자리가 없어요. 다른 학생이 취소하면 자리가 생기니 다시 확인해 주세요.`)}
           />
         )}
 
         <Field
-          label="Message (optional)"
+          label={t("Message (optional)", "메시지 (선택)")}
           value={message}
           onChangeText={setMessage}
           maxLength={500}
           multiline
-          placeholder="Anything the academy should know"
+          placeholder={t("Anything the academy should know", "아카데미에 전할 말이 있으면 적어 주세요")}
           testID="ask-message"
         />
       </Screen>

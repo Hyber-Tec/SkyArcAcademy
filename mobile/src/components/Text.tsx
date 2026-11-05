@@ -19,8 +19,11 @@ export const toneColor = (colors: Colors, tone: Tone): string =>
               ? colors.primaryForeground
               : colors.foreground;
 
-/** Text in one of the app's type sizes and tones. */
+/**
+ * Text in one of the app's type sizes and tones. On iPhone, Korean lines break between words, as Korean is typeset
+ * (`hangul-word`; it changes nothing in English).
+ */
 export function T({ variant = "body", tone = "default", style, ...props }: TextProps & { variant?: Variant; tone?: Tone }) {
   const colors = useColors();
-  return <RNText {...props} style={[type[variant], { color: toneColor(colors, tone) }, style]} />;
+  return <RNText lineBreakStrategyIOS="hangul-word" {...props} style={[type[variant], { color: toneColor(colors, tone) }, style]} />;
 }

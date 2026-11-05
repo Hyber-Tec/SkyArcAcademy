@@ -1,5 +1,6 @@
 import { queryParams } from './auth'
 import type { NotificationType } from './comms'
+import type { Lang } from './i18n'
 import type { TimestampLike } from './types'
 
 /**
@@ -19,6 +20,8 @@ export interface DeviceDoc {
   appVersion: string
   /** "Apple iPhone 17 Pro, iOS 27.0": for the person's own list of devices. */
   label: string
+  /** The language its notifications come in: the app's (a parent's Korean, docs/DECISIONS.md §36); English when missing. */
+  lang?: Lang
   createdAt: TimestampLike | null
   updatedAt: TimestampLike | null
 }

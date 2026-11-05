@@ -1,5 +1,7 @@
 import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
-import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from '@shared/time'
+import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, orderedWeekdays, startOfMonth, weekdayIndex } from '@shared/time'
+import { dateText, weekdayText } from '@shared/i18n'
+import { useLang } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 
 /**
@@ -234,6 +236,8 @@ export function MonthScroller({
   }, [ready, measure, win])
 
   const weekdays = orderedWeekdays(CALENDAR_WEEK_START)
+  // A parent reading Korean: 일 월 화… and "2026년 11월" (docs/DECISIONS.md §36).
+  const lang = useLang()
   const compact = variant === 'compact'
   const columns = weekSummary ? `repeat(7, minmax(0, 1fr)) ${weekSummary.width ?? '84px'}` : 'repeat(7, minmax(0, 1fr))'
 
@@ -249,7 +253,7 @@ export function MonthScroller({
         style={{ gridTemplateColumns: columns }}
       >
         {weekdays.map((d) => (
-          <div key={d}>{compact ? WEEKDAY_SHORT[d].slice(0, 2) : WEEKDAY_SHORT[d]}</div>
+          <div key={d}>{lang === 'ko' ? weekdayText(d, 'ko', true) : compact ? WEEKDAY_SHORT[d].slice(0, 2) : WEEKDAY_SHORT[d]}</div>
         ))}
         {weekSummary ? <div>{weekSummary.label}</div> : null}
       </div>
@@ -261,7 +265,7 @@ export function MonthScroller({
           compact={compact}
           renderDay={renderDay}
           dayClassName={dayClassName}
-          title={monthTitle ? monthTitle(m) : formatDateKey(m, 'monthYear')}
+          title={monthTitle ? monthTitle(m) : dateText(m, 'monthYear', lang)}
           columns={columns}
           weekSummary={weekSummary?.render}
         />

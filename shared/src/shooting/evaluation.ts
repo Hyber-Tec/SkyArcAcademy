@@ -13,6 +13,13 @@ export const POSITION_LABELS: Record<Position, string> = {
   prone: 'Prone',
 }
 
+/** Korean shooting's own words for the positions (docs/DECISIONS.md §36). */
+export const POSITION_LABELS_KO: Record<Position, string> = {
+  standing: '입사',
+  kneeling: '슬사',
+  prone: '복사',
+}
+
 /**
  * One color per position, the same in every chart and report (Sky Arc red for standing). Checked for color-blind
  * separation on the light chart paper; charts always draw on light paper, so these never sit on a dark surface.

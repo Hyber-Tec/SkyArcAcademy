@@ -2,6 +2,7 @@ import { animate, motion, useMotionValue } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { ReportDocument } from '@/features/reports/ReportDocument'
+import { EnglishApp } from '@/site/kit/EnglishApp'
 import { cn } from '@/lib/utils'
 import { useReduced } from './motion'
 import raw from './report-sample.json'
@@ -59,7 +60,9 @@ export function ReportPreview({ width = 880, play = false, className, label, gli
     <div ref={box} className={cn('app-light relative h-full w-full overflow-hidden bg-[#efeee9]', className)}>
       <motion.div ref={mover} style={{ y }}>
         <div style={{ width, zoom }} className="px-4 pt-5 pb-10 sm:px-6">
-          <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
+          <EnglishApp>
+            <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
+          </EnglishApp>
         </div>
       </motion.div>
       {label ? <div className="pointer-events-none absolute top-3 right-3 rounded-full bg-black/80 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">{label}</div> : null}

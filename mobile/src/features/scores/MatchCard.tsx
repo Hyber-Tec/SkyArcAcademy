@@ -1,15 +1,17 @@
+import { dateText } from "@shared/i18n";
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from "@shared/scores/match";
-import { POSITION_COLORS, POSITION_LABELS, evaluationPoints } from "@shared/shooting/evaluation";
+import { POSITION_COLORS, evaluationPoints } from "@shared/shooting/evaluation";
 import { isInnerTen } from "@shared/shooting/target";
-import { formatDateKey } from "@shared/time";
 import { ChevronDown, ChevronRight, Trophy } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Card } from "@/components/Card";
 import { T } from "@/components/Text";
+import { useLang, useT } from "@/lib/lang";
 import { radius, space, useAccents, useColors } from "@/theme";
 import { MiniTarget } from "./MiniTarget";
 import { ShotReplay } from "./ShotReplay";
+import { positionLabel } from "./words";
 
 export { matchResults } from "@shared/scores/match";
 
@@ -22,6 +24,8 @@ export { matchResults } from "@shared/scores/match";
 export function MatchCard({ evaluation, results, testID }: { evaluation: MatchResult; results: MatchResult[]; testID?: string }) {
   const colors = useColors();
   const amber = useAccents().amber;
+  const t = useT();
+  const lang = useLang();
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState<string | null>(null);
   const { total, innerTens: inner, whole } = matchTotal(results);
@@ -30,7 +34,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
     [results],
   );
   const size = Math.min(width - space.lg * 4, 340);
-  const name = evaluation.match?.name?.trim() || "Competition";
+  const name = evaluation.match?.name?.trim() || t("Competition", "대회");
 
   return (
     <Card style={styles.card} testID={testID}>
@@ -43,7 +47,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
             {name}
           </T>
           <T variant="small" tone="muted">
-            {[formatDateKey(evaluation.dateKey, "medium"), evaluation.match?.course?.trim()].filter(Boolean).join(" · ")}
+            {[dateText(evaluation.dateKey, "medium", lang), evaluation.match?.course?.trim()].filter(Boolean).join(" · ")}
           </T>
         </View>
         <View style={styles.right}>
@@ -52,7 +56,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
             {inner !== null ? <T variant="label" tone="muted">{` - ${inner}`}</T> : null}
           </T>
           <T variant="tiny" tone="muted">
-            {results.length > 1 ? "the match" : POSITION_LABELS[evaluation.position]}
+            {results.length > 1 ? t("the match", "경기 전체") : positionLabel(evaluation.position, lang)}
           </T>
         </View>
       </View>
@@ -62,7 +66,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
           {results.map((r) => (
             <View key={r.id} style={[styles.position, { borderColor: colors.border }]}>
               <View style={[styles.dot, { backgroundColor: POSITION_COLORS[r.position] }]} />
-              <T variant="small">{POSITION_LABELS[r.position]}</T>
+              <T variant="small">{positionLabel(r.position, lang)}</T>
               <T variant="small" style={styles.number}>
                 {isWholeResult(r) ? String(r.total) : r.total.toFixed(1)}
                 {r.innerTens !== null ? ` - ${r.innerTens}` : ""}
@@ -82,15 +86,18 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
                   onPress={() => setOpen(shown ? null : key)}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: shown }}
-                  accessibilityLabel={`${POSITION_LABELS[r.position]}, shots ${label}: ${seriesTotalText(s, whole)}, ${seriesInnerTens(s)} inner tens. ${shown ? "Hide" : "Show"} the shots.`}
+                  accessibilityLabel={t(
+                    `${positionLabel(r.position, "en")}, shots ${label}: ${seriesTotalText(s, whole)}, ${seriesInnerTens(s)} inner tens. ${shown ? "Hide" : "Show"} the shots.`,
+                    `${positionLabel(r.position, "ko")}, ${label}: ${seriesTotalText(s, whole)}, 이너 텐 ${seriesInnerTens(s)}개. ${shown ? "발별 점수 접기" : "발별 점수 보기"}`,
+                  )}
                   style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.accent }]}
                   testID={`match-series-${key}`}
                 >
                   <MiniTarget evaluation={{ series: [s] }} color={POSITION_COLORS[r.position]} size={40} />
                   <View style={styles.grow}>
-                    <T variant="label">{`${POSITION_LABELS[r.position]} · ${label}`}</T>
+                    <T variant="label">{`${positionLabel(r.position, lang)} · ${label}`}</T>
                     <T variant="small" tone="muted">
-                      {placed ? "Tap to see the shots and play them" : "Tap to see the shots"}
+                      {placed ? t("Tap to see the shots and play them", "누르면 발별 점수와 재생을 볼 수 있어요") : t("Tap to see the shots", "누르면 발별 점수를 볼 수 있어요")}
                     </T>
                   </View>
                   <T variant="subheading" style={styles.number}>
@@ -103,13 +110,13 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
                   <View style={styles.open} testID={`match-series-open-${key}`}>
                     {placed ? <ShotReplay evaluation={{ source: r.source, series: [s] }} color={POSITION_COLORS[r.position]} size={size} autoPlay /> : null}
                     <View style={styles.shots}>
-                      {s.shots.map((t, k) => {
-                        const x = isInnerTen(t.v);
+                      {s.shots.map((shot, k) => {
+                        const x = isInnerTen(shot.v);
                         return (
                           <View key={k} style={[styles.shot, { backgroundColor: x ? amber.bg : colors.secondary }]}>
                             <T variant="tiny" tone="muted">{shotLabel(r.position, s.n, k)}</T>
                             <T variant="label" style={[styles.number, x && { color: amber.fg }]}>
-                              {whole && Number.isInteger(t.v) ? String(t.v) : t.v.toFixed(1)}
+                              {whole && Number.isInteger(shot.v) ? String(shot.v) : shot.v.toFixed(1)}
                               {x ? "*" : ""}
                             </T>
                           </View>
@@ -118,7 +125,10 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
                     </View>
                     {!placed ? (
                       <T variant="small" tone="muted" style={styles.note}>
-                        The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.
+                        {t(
+                          "The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.",
+                          "결과지에서 이 시리즈의 그림을 읽지 못해서 표적에 탄착 위치를 표시할 수 없어요.",
+                        )}
                       </T>
                     ) : null}
                   </View>
@@ -129,11 +139,14 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
         </View>
       ) : (
         <T variant="small" tone="muted">
-          Only the totals were saved for this match: its shots weren’t on the sheet, or were typed as totals.
+          {t(
+            "Only the totals were saved for this match: its shots weren’t on the sheet, or were typed as totals.",
+            "이 경기는 합계만 저장됐어요. 결과지에 발별 점수가 없었거나 합계로만 입력했어요.",
+          )}
         </T>
       )}
       <T variant="tiny" tone="muted">
-        * an inner ten. A series’ score is its total, then its inner tens.
+        {t("* an inner ten. A series’ score is its total, then its inner tens.", "* 이너 텐. 시리즈 점수는 합계 - 이너 텐 개수로 적어요.")}
       </T>
     </Card>
   );

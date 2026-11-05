@@ -1,3 +1,4 @@
+import type { Lang } from "@shared/i18n";
 import type { ClassRequestKind } from "@shared/schedule/requests";
 import { callable, errorMessage } from "@/lib/api";
 
@@ -17,7 +18,7 @@ const decide = callable<{ branchId: string; requestId: string; decision: Decisio
 const answer = callable<{ branchId: string; requestId: string; answer: "accept" | "another"; classId: string; message: string; via: "app" }, { ok: true; sessionId: string | null }>("answerClassOffer");
 
 /** The server's own words when it says no ("That class is full now…"), else a plain line. */
-export const requestError = (e: unknown, fallback = "Please try again."): string => errorMessage(e, fallback);
+export const requestError = (e: unknown, fallback = "Please try again.", lang: Lang = "en"): string => errorMessage(e, fallback, lang);
 
 export async function cancelClass(branchId: string, sessionId: string): Promise<void> {
   await cancel({ branchId, sessionId, via: "app" });

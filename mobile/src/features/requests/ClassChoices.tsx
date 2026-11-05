@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ListSection } from "@/components/List";
 import { SkeletonCards } from "@/components/Skeleton";
 import { monthDay, plural, shortDay, timeRange } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { useColors } from "@/theme";
 import type { ClassSeatsDoc } from "./data";
 
@@ -32,6 +33,8 @@ export function ClassChoices({
   testID: string;
 }) {
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const byDay = useMemo(() => {
     const m = new Map<DateKey, ClassSeatsDoc[]>();
     for (const c of choices) m.set(c.dateKey, [...(m.get(c.dateKey) ?? []), c]);
@@ -43,21 +46,21 @@ export function ClassChoices({
       <EmptyState
         testID={`${testID}-none`}
         icon={<CalendarSearch size={26} color={colors.mutedForeground} />}
-        title="No open seats"
-        text={`No other class has a seat open until ${monthDay(horizon)}.`}
+        title={t("No open seats", "빈자리가 없어요")}
+        text={t(`No other class has a seat open until ${monthDay(horizon)}.`, `${monthDay(horizon, "ko")}까지 빈자리가 있는 다른 수업이 없어요.`)}
       />
     );
   }
   return (
     <>
       {byDay.map(([day, list]) => (
-        <ListSection key={day} title={shortDay(day)} testID={`${testID}-day-${day}`}>
+        <ListSection key={day} title={shortDay(day, lang)} testID={`${testID}-day-${day}`}>
           {list.map((c) => (
             <ChoiceRow
               key={c.id}
               selected={c.id === selected}
-              title={timeRange(c.startMin, c.endMin, hour12)}
-              right={`${plural(c.seats - c.taken, "seat")} open`}
+              title={timeRange(c.startMin, c.endMin, hour12, lang)}
+              right={t(`${plural(c.seats - c.taken, "seat")} open`, `${c.seats - c.taken}자리 남음`)}
               onPress={() => onSelect(c.id)}
               testID={`${testID}-${c.id}`}
             />

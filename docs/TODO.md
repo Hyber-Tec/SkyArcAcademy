@@ -55,6 +55,10 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
       prices, add his title if you like, and upload his SVG when it comes (it replaces the typed name). From then on
       the office sends each family's contract from the student's page or the list there (every family signs again, one
       contract per child), and each signer gets their copy by email.
+    - **The Korean** (`docs/DECISIONS.md` §36): read the contract's Korean translation with the manager (in the demo
+      academy: a parent's contract with the phone or browser in Korean, and its signed PDF), then say so and Claude Code
+      puts it in the live academy (`scripts/contract.ts --ko-file`). Tell Claude Code wherever the app's Korean reads
+      oddly.
     - **The domain** once he invites you to Squarespace (`DM1`–`DM3`).
 
 ## Product questions waiting for the owner
@@ -103,10 +107,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
   only in the iPhone app (`docs/publishing/apple/rules.md`, "Sign in with Apple").
 - **SIUS PDFs from the phone**, if coaches get them there: the phone can pick files already, but reading a SIUS result
   is the website's (a server-side reader would do it).
-- **Korean and other languages:** one pass once everything works (`docs/DECISIONS.md` §6, Q14). The public website
-  too: any language, added late, even after the site is live (the owner, 2026-10-19). The owner reviews the Korean by
-  hand, since machine-written Korean doesn't read naturally, so until then the site's Korean stays a draft: don't spend
-  time polishing it.
+- **Other languages:** not now. Korean for parents is done (`docs/DECISIONS.md` §36); another language only if it's
+  really needed.
 - **The real data moved in on 2026-10-26** (Goo's call, during Apple's review: `docs/DECISIONS.md` §21). The sample
   data, the owner's test coach and the coach, parent and student review logins are gone; pay is Hourly from the start
   and Sunday is open 1–7:30 PM; the import brought in the staff, the students and their parents' contacts, and the

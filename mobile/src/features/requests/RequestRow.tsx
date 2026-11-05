@@ -1,4 +1,5 @@
-import { type ClassRequest, type ClassRequestKind, REQUEST_KIND_LABELS, REQUEST_OFFICE_STATUS_LABELS, requestHistory, requestWaitsOn } from "@shared/schedule/requests";
+import { type Lang, dateText } from "@shared/i18n";
+import { type ClassRequest, type ClassRequestKind, REQUEST_KIND_LABELS, REQUEST_KIND_LABELS_KO, REQUEST_OFFICE_STATUS_LABELS, requestHistory, requestWaitsOn } from "@shared/schedule/requests";
 import { addDays, dateKeyOf, formatDateKey, formatInstant, minutesOf, todayKey } from "@shared/time";
 import { ArrowRightLeft, CalendarPlus, ChevronRight, type LucideIcon, RotateCcw } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -14,20 +15,26 @@ const KIND: Record<ClassRequestKind, { Icon: LucideIcon; color: string }> = {
   extra: { Icon: CalendarPlus, color: "#0284C7" },
 };
 
-/** "Makeup for Oct 26", "Move from Nov 2", "Extra class". */
-export function whatFor(r: Pick<ClassRequest, "kind" | "forDateKey">): string {
+/** "Makeup for Oct 26", "Move from Nov 2", "Extra class" (10월 26일 수업 보강, 11월 2일 수업 옮기기, 추가 수업). */
+export function whatFor(r: Pick<ClassRequest, "kind" | "forDateKey">, lang: Lang = "en"): string {
+  if (lang === "ko") {
+    if (r.kind === "makeup" && r.forDateKey) return `${dateText(r.forDateKey, "monthDay", "ko")} 수업 보강`;
+    if (r.kind === "reschedule" && r.forDateKey) return `${dateText(r.forDateKey, "monthDay", "ko")} 수업 옮기기`;
+    return REQUEST_KIND_LABELS_KO[r.kind];
+  }
   if (r.kind === "makeup" && r.forDateKey) return `Makeup for ${formatDateKey(r.forDateKey, "monthDay")}`;
   if (r.kind === "reschedule" && r.forDateKey) return `Move from ${formatDateKey(r.forDateKey, "monthDay")}`;
   return REQUEST_KIND_LABELS[r.kind];
 }
 
-/** When it was asked, mid-sentence: "today, 12:29 PM", "yesterday, …", "Oct 26, 2026, 12:29 PM". */
-export function askedWhen(t: unknown, timezone: string, hour12: boolean): string {
+/** When it was asked, mid-sentence: "today, 12:29 PM", "yesterday, …", "Oct 26, 2026, 12:29 PM" (오늘 오후 12:29). */
+export function askedWhen(t: unknown, timezone: string, hour12: boolean, lang: Lang = "en"): string {
   const ms = millis(t);
-  if (!ms) return "just now";
+  if (!ms) return lang === "ko" ? "방금" : "just now";
   const day = dateKeyOf(ms, timezone);
   const today = todayKey(timezone);
-  const at = clock(minutesOf(ms, timezone), hour12);
+  const at = clock(minutesOf(ms, timezone), hour12, lang);
+  if (lang === "ko") return day === today ? `오늘 ${at}` : day === addDays(today, -1) ? `어제 ${at}` : `${dateText(day, "medium", "ko")} ${at}`;
   if (day === today) return `today, ${at}`;
   if (day === addDays(today, -1)) return `yesterday, ${at}`;
   return formatInstant(ms, timezone, { dateStyle: "medium", timeStyle: "short" });

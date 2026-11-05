@@ -2,7 +2,9 @@ import { type Evaluation, RESULT_KINDS, RESULT_KIND_LABELS, type ResultKind, kin
 import { useMemo } from "react";
 import { Badge } from "@/components/Badge";
 import { FilterChips } from "@/components/FilterChips";
+import { useLang } from "@/lib/lang";
 import { useIsDark } from "@/theme";
+import { kindLabel } from "./words";
 
 /**
  * Practice, Competition or Evaluation on every result (the manager's second meeting, docs/DECISIONS.md §23), as the
@@ -18,12 +20,13 @@ const CHIP: Record<Exclude<ResultKind, "practice">, { light: { bg: string; fg: s
 /** A competition's or an evaluation's chip; practice has none. */
 export function ResultKindChip({ e }: { e: Pick<Evaluation, "kind"> }) {
   const dark = useIsDark();
+  const lang = useLang();
   const kind = kindOf(e);
   if (kind === "practice") return null;
   const tone = CHIP[kind][dark ? "dark" : "light"];
   return (
     <Badge bg={tone.bg} fg={tone.fg}>
-      {RESULT_KIND_LABELS[kind]}
+      {kindLabel(kind, lang)}
     </Badge>
   );
 }
@@ -43,15 +46,21 @@ export function ResultKindFilter({
   onChange: (k: ResultKind | "all") => void;
   testID?: string;
 }) {
+  const lang = useLang();
   const options = useMemo(() => {
     const counts = new Map<ResultKind, number>();
     for (const e of list) counts.set(kindOf(e), (counts.get(kindOf(e)) ?? 0) + 1);
     if (counts.size < 2) return null;
     return [
-      { value: "all" as const, label: "All", count: list.length, testID: `${testID}-all` },
-      ...RESULT_KINDS.filter((k) => counts.has(k)).map((k) => ({ value: k, label: `${RESULT_KIND_LABELS[k]}${k === "practice" ? "" : "s"}`, count: counts.get(k), testID: `${testID}-${k}` })),
+      { value: "all" as const, label: lang === "ko" ? "전체" : "All", count: list.length, testID: `${testID}-all` },
+      ...RESULT_KINDS.filter((k) => counts.has(k)).map((k) => ({
+        value: k,
+        label: lang === "ko" ? kindLabel(k, "ko") : `${RESULT_KIND_LABELS[k]}${k === "practice" ? "" : "s"}`,
+        count: counts.get(k),
+        testID: `${testID}-${k}`,
+      })),
     ];
-  }, [list, testID]);
+  }, [list, testID, lang]);
   if (!options) return null;
   return <FilterChips<ResultKind | "all"> value={value} onChange={onChange} options={options} testID={testID} />;
 }

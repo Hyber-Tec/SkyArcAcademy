@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import type { Lang } from '@shared/i18n'
 import type { ResultRow } from '@shared/scores/match'
 import { type Evaluation, evaluationPoints } from '@shared/shooting/evaluation'
 import type { ShotPoint } from '@shared/shooting/target'
@@ -51,7 +52,11 @@ export function averagePointWords(p: ShotPoint): string {
 }
 
 /** Why a result has no shots on the target: typed in, or a results sheet without its pictures. */
-export function unplacedText(e: Pick<Evaluation, 'source' | 'series'>): string {
+export function unplacedText(e: Pick<Evaluation, 'source' | 'series'>, lang: Lang = 'en'): string {
+  if (lang === 'ko') {
+    if (e.source === 'sheet') return e.series.length ? '결과지에서 옮긴 기록이라 발마다 점수는 있지만 맞은 자리는 없어요.' : '결과지에서 옮긴 기록이라 합계만 있어요.'
+    return e.series.length ? '종이 표적지에서 직접 입력한 기록이라 맞은 자리는 남아 있지 않아요.' : '종이 표적지의 합계만 입력했어요.'
+  }
   if (e.source === 'sheet') return e.series.length ? 'From the results sheet: every shot’s score, but not where it landed.' : 'From the results sheet: its total only.'
   return e.series.length ? 'Typed in from the paper card, so where the shots landed isn’t recorded.' : 'Only the card’s total was typed in.'
 }

@@ -433,7 +433,18 @@ export { purgeExpired, studentLifecycleDaily } from './jobs'
 export { onMemberWritten, resendInvite } from './invites'
 export { deleteMyAccount, sendAccountEmail } from './account'
 export { onDriveFileCreated, onDriveFolderCreated, purgeDriveTrash } from './drive'
-export { contractPrefill, emailContract, getContractForSigning, getMySignedContract, previewContract, sendContract, setContractPrices, signContract, signContractSignedIn } from './contracts'
+export {
+  contractLinkForFamily,
+  contractPrefill,
+  emailContract,
+  getContractForSigning,
+  getMySignedContract,
+  previewContract,
+  sendContract,
+  setContractPrices,
+  signContract,
+  signContractSignedIn,
+} from './contracts'
 export { linkMyAccount, onSignupRequestWritten } from './signup'
 export { onProgressReportWritten, onReportViewed } from './reports'
 export { websiteMessage } from './website'

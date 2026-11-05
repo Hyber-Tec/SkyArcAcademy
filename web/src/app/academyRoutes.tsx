@@ -3,6 +3,7 @@ import { BranchProvider } from '@/branch/BranchProvider'
 import { RequireContract } from '@/features/contracts/ContractGate'
 import { PortalLayout } from '@/portals/PortalLayout'
 import { PortalHomeRedirect, RequireAuth, RequirePage, RequirePortal } from './guards'
+import { RoleLang } from './RoleLang'
 
 /** Lazy route helper: `page(() => import('./x'), 'X')`. */
 export function page<M extends Record<string, unknown>>(load: () => Promise<M>, name: keyof M): RouteObject['lazy'] {
@@ -135,6 +136,7 @@ function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
         { path: 'notifications', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyNotificationsSection') },
         { path: 'security', lazy: page(() => import('@/features/profile/SecuritySection'), 'SecuritySection') },
         { path: 'appearance', lazy: page(() => import('@/features/profile/AppearanceSection'), 'AppearanceSection') },
+        { path: 'language', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyLanguageSection') },
         { path: 'help', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyHelpSection') },
         { path: '*', element: <Navigate to={`/${portal}/profile`} replace /> },
       ],
@@ -153,7 +155,9 @@ export const academyRoute: RouteObject = {
   element: (
     <RequireAuth>
       <BranchProvider>
-        <Outlet />
+        <RoleLang>
+          <Outlet />
+        </RoleLang>
       </BranchProvider>
     </RequireAuth>
   ),

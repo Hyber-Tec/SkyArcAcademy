@@ -73,8 +73,8 @@ function ToastCard({ item }: { item: Toast }) {
       >
         <Icon size={20} color={tint} style={styles.icon} />
         <View style={styles.body}>
-          <Text style={[styles.title, { color: colors.foreground }]}>{item.title}</Text>
-          {item.description ? <Text style={[styles.description, { color: colors.mutedForeground }]}>{item.description}</Text> : null}
+          <Text lineBreakStrategyIOS="hangul-word" style={[styles.title, { color: colors.foreground }]}>{item.title}</Text>
+          {item.description ? <Text lineBreakStrategyIOS="hangul-word" style={[styles.description, { color: colors.mutedForeground }]}>{item.description}</Text> : null}
         </View>
         {item.action && (
           <Pressable

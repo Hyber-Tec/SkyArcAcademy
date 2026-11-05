@@ -10,6 +10,8 @@ export interface Outgoing {
   type: NotificationType
   title: string
   body: string
+  /** The same in Korean, for a family (AppNotification.ko). */
+  ko?: AppNotification['ko']
   /** In-app path below the branch. */
   link: string
   refs: AppNotification['refs']

@@ -1,4 +1,5 @@
-import { type DateKey, addDays, dateKeyOf, diffDays, formatDateKey } from "@shared/time";
+import { type Lang, dateText } from "@shared/i18n";
+import { type DateKey, addDays, dateKeyOf, diffDays } from "@shared/time";
 import { Stack } from "expo-router";
 import { Bell } from "lucide-react-native";
 import { useMemo } from "react";
@@ -12,20 +13,21 @@ import { SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { useAcademyNow } from "@/features/data/hooks";
 import { monthDay, weekdayName } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 import { type InboxItem, deleteInboxItem, markAllInboxRead, markInboxRead, useInbox } from "./inbox";
-import { InboxRow } from "./InboxRow";
+import { InboxRow, inboxText } from "./InboxRow";
 
 const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? null;
 
 /** A day's heading, as the website's bell words it: Today, Yesterday, the weekday this past week, then the date. */
-function dayHeading(d: DateKey, today: DateKey): string {
-  if (d === today) return "Today";
-  if (d === addDays(today, -1)) return "Yesterday";
+function dayHeading(d: DateKey, today: DateKey, lang: Lang): string {
+  if (d === today) return lang === "ko" ? "오늘" : "Today";
+  if (d === addDays(today, -1)) return lang === "ko" ? "어제" : "Yesterday";
   const ago = diffDays(d, today);
-  if (ago > 0 && ago < 7) return weekdayName(d);
-  return ago > 365 ? formatDateKey(d, "medium") : monthDay(d);
+  if (ago > 0 && ago < 7) return weekdayName(d, lang);
+  return ago > 365 ? dateText(d, "medium", lang) : monthDay(d, lang);
 }
 
 /**
@@ -38,6 +40,8 @@ function dayHeading(d: DateKey, today: DateKey): string {
 export function InboxScreen({ leads, onOpen, empty }: { leads: (n: InboxItem) => boolean; onOpen: (n: InboxItem) => void; empty: string }) {
   const { branchId, timezone, settings } = useBranch();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const { today } = useAcademyNow();
   const inbox = useInbox();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -51,28 +55,33 @@ export function InboxScreen({ leads, onOpen, empty }: { leads: (n: InboxItem) =>
       const key = ms === null ? today : dateKeyOf(ms, timezone);
       const last = out[out.length - 1];
       if (last?.key === key) last.items.push(n);
-      else out.push({ key, label: dayHeading(key, today), items: [n] });
+      else out.push({ key, label: dayHeading(key, today, lang), items: [n] });
     }
     return out;
-  }, [inbox.data, timezone, today]);
+  }, [inbox.data, timezone, today, lang]);
 
   const offer = (n: InboxItem) =>
-    showActions(n.title || "Notification", [
-      ...(n.readAt ? [] : [{ label: "Mark as read", onPress: () => markInboxRead(branchId, n) }]),
-      { label: "Delete", destructive: true, onPress: () => deleteInboxItem(branchId, n.id) },
-    ]);
+    showActions(
+      inboxText(n, lang).title || t("Notification", "알림"),
+      [
+        ...(n.readAt ? [] : [{ label: t("Mark as read", "읽음으로 표시"), onPress: () => markInboxRead(branchId, n) }]),
+        { label: t("Delete", "삭제"), destructive: true, onPress: () => deleteInboxItem(branchId, n.id, lang) },
+      ],
+      undefined,
+      { cancel: t("Cancel", "취소"), more: t("More…", "더 보기…") },
+    );
 
   return (
     <>
-      <Stack.Screen options={{ headerRight: () => (unread ? <MarkAllRead onPress={() => markAllInboxRead(branchId, inbox.data)} /> : null) }} />
+      <Stack.Screen options={{ headerRight: () => (unread ? <MarkAllRead onPress={() => markAllInboxRead(branchId, inbox.data, lang)} /> : null) }} />
       <Screen typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="inbox-screen">
         {inbox.loading ? (
           <SkeletonCards count={4} height={72} />
         ) : inbox.error && !inbox.data.length ? (
           <Card testID="inbox-error">
-            <T variant="label">Couldn’t load your notifications</T>
+            <T variant="label">{t("Couldn’t load your notifications", "알림을 불러오지 못했어요")}</T>
             <T variant="small" tone="muted">
-              Check your connection, then pull down to try again.
+              {t("Check your connection, then pull down to try again.", "인터넷 연결을 확인한 뒤 화면을 아래로 당겨 다시 시도해 주세요.")}
             </T>
           </Card>
         ) : days.length ? (
@@ -88,21 +97,21 @@ export function InboxScreen({ leads, onOpen, empty }: { leads: (n: InboxItem) =>
                     leads={leads(n)}
                     onOpen={() => onOpen(n)}
                     onLongPress={() => offer(n)}
-                    onDelete={() => deleteInboxItem(branchId, n.id)}
+                    onDelete={() => deleteInboxItem(branchId, n.id, lang)}
                     testID={`inbox-item-${n.id}`}
                   />
                 ))}
               </ListSection>
             ))}
             <T variant="small" tone="muted" style={styles.hint}>
-              Swipe a notification to the left to delete it.
+              {t("Swipe a notification to the left to delete it.", "알림을 왼쪽으로 밀면 지울 수 있어요.")}
             </T>
           </>
         ) : (
           <EmptyState
             testID="inbox-empty"
             icon={<Bell size={26} color={colors.mutedForeground} />}
-            title="No notifications yet"
+            title={t("No notifications yet", "아직 알림이 없어요")}
             text={empty}
           />
         )}
@@ -113,9 +122,10 @@ export function InboxScreen({ leads, onOpen, empty }: { leads: (n: InboxItem) =>
 
 /** The header's "Mark all read", while some are unread. */
 function MarkAllRead({ onPress }: { onPress: () => void }) {
+  const t = useT();
   return (
     <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" testID="inbox-mark-all" style={({ pressed }) => [styles.markAll, pressed && styles.pressed]}>
-      <T variant="label">Mark all read</T>
+      <T variant="label">{t("Mark all read", "모두 읽음")}</T>
     </Pressable>
   );
 }

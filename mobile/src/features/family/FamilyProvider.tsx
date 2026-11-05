@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { type StudentDoc, useLinkedIds, useLinkedStudents } from "./data";
 
@@ -30,6 +31,7 @@ const FamilyContext = createContext<FamilyState | null>(null);
  */
 export function FamilyProvider({ children }: { children: ReactNode }) {
   const { role } = useBranch();
+  const lang = useLang();
   const linked = useLinkedIds();
   const records = useLinkedStudents(linked);
   const [choice, setChoice] = useState<FamilyChoice>("all");
@@ -38,7 +40,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     const students = new Map(records.data.map((s) => [s.id, s]));
     const firstName = (id: string, fallback?: string) => {
       const s = students.get(id);
-      return (s?.firstName || s?.name.split(/\s+/)[0] || fallback?.split(/\s+/)[0] || "").trim() || "Your child";
+      return (s?.firstName || s?.name.split(/\s+/)[0] || fallback?.split(/\s+/)[0] || "").trim() || (lang === "ko" ? "자녀" : "Your child");
     };
     const ids = [...linked].sort((a, b) => firstName(a).localeCompare(firstName(b)));
     const several = role === "parent" && ids.length > 1;
@@ -55,7 +57,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       shown: child === "all" ? ids : [child],
       firstName,
     };
-  }, [records.data, records.loading, linked, role, choice]);
+  }, [records.data, records.loading, linked, role, choice, lang]);
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;
 }
@@ -69,5 +71,9 @@ export function useFamily(): FamilyState {
 /** The child switcher's choices: All, then each child by first name. */
 export function useChildChoices(): { value: FamilyChoice; label: string; testID: string }[] {
   const { ids, firstName } = useFamily();
-  return useMemo(() => [{ value: "all", label: "All", testID: "family-child-all" }, ...ids.map((id) => ({ value: id, label: firstName(id), testID: `family-child-${id}` }))], [ids, firstName]);
+  const t = useT();
+  return useMemo(
+    () => [{ value: "all", label: t("All", "전체"), testID: "family-child-all" }, ...ids.map((id) => ({ value: id, label: firstName(id), testID: `family-child-${id}` }))],
+    [ids, firstName, t],
+  );
 }
