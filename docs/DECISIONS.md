@@ -1049,3 +1049,35 @@ them (`CT2`).
 - **The sidebar:** Drive, then Scores, then Reports.
 - **1.1.0 to try on both phones** (build 9: TestFlight, Google Play's internal testing), with Sign in with Apple's
   setup done; the stores' release still waits until everything is ready (`docs/publishing/updates.md`).
+
+## 33. The electronic contract (the manager and Goo, 2026-11-04)
+
+The manager sent the academy's contract (an air rifle rental agreement and liability waiver, with the program levels
+and their monthly tuition) and two answers; Goo decided the rest the same day.
+
+- **Every family signs again, in the app** (the manager: "it'll be better if we just have all the parents sign the
+  contracts again once we move our platform to the app ... last time we had problems with our contract signatures";
+  Goo agreed). So a file put in a student's Contracts folder no longer counts as signed by itself (§31's trigger is
+  gone): the contracts signed before the app stay in the Drive as records only. The office can still mark one signed
+  on paper on the student's page, for a family that signs on paper.
+- **One contract per child, each signed on its own** (A19, the manager: "the Parent should sign both contracts for
+  each child"). A parent with two children fills in and signs two contracts, one after the other. What they typed
+  about themselves (name, phone, email, initials) carries over to the next; the child's details, the program and the
+  signature never do.
+- **The contract's words are the academy's, unchanged** (Goo: "we're not the lawyer ... we're just going to use the
+  context"); only the layout is the app's. The office keeps it in Settings → Enrollment contract as text, one thing
+  per line, with the parts to fill in marked where the paper has them (`shared/src/contracts/document.ts`): the
+  program to choose, the discounts to check, the initials, the student's and the parent's details, the equipment the
+  academy fills in, and the signatures. The text lives in the database, never in this repository (it holds prices and
+  contacts). A draft is saved as often as needed and previewed as a parent sees it, with a sample PDF. Publishing makes
+  it the contract families sign: a new version each time, with earlier ones kept for what was signed with them.
+- **It's published once the manager approves it** (Goo: "we're gonna proceed after he said it's all okay ... it's
+  their contract"). Goo sends him the e-version (the sample PDF) to review first.
+- **The signed copy is a PDF** of the contract as filled in, with the signature and the date, then a page recording
+  the signing (who, when, from where, the version and its text's SHA-256). It's filed in the student's Contracts folder
+  (owners and admins only), and the family can download it. The equipment section and the academy representative's
+  signature are left blank for the academy, as on paper; signing them in the app can come later.
+- **The prices stay in the contract:** the website never asks for payment, and the public site doesn't show the
+  tuition (Goo).
+- **Staff can try it:** the preview in Settings on the website, and More → Enrollment contract on the phone for owners
+  and admins. Both show the same form and make the same PDF, marked as a sample and filed nowhere.

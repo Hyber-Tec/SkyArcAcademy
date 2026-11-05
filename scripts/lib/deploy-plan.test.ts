@@ -73,7 +73,9 @@ describe('the functions’ entry', () => {
 describe('the deploy’s settings match the repository', () => {
   it('builds the functions as their build does', () => {
     const build = JSON.parse(readFileSync('functions/package.json', 'utf8')).scripts.build as string
-    const flags = Object.fromEntries([...build.matchAll(/--([a-z-]+)(?:=(\S+))?/g)].map(([, key, value]) => [key, value ?? true]))
+    const flags: Record<string, unknown> = Object.fromEntries([...build.matchAll(/--([a-z-]+)(?:=(\S+))?(?=\s|$)/g)].map(([, key, value]) => [key, value ?? true]))
+    // `--loader:.png=binary`: a loader for one kind of file.
+    for (const [, ext, loader] of build.matchAll(/--loader:(\S+)=(\S+)/g)) flags.loader = { ...(flags.loader as object), [ext]: loader }
     // Where it writes and its tsconfig (each copy's own) are the only differences.
     delete flags.outfile
     delete flags.tsconfig

@@ -31,8 +31,7 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
    - **The schedule (`V2`) and the hole sizes (`P1`)** are merged (#67, #68, and the phone's part in #71). The manager
      isn't asked about the scoring rule.
-   - **The manager's files:** the past results are all in (the third meeting); only the blank contract is still to
-     come (`CT2`).
+   - **The manager's files:** all in: the past results (the third meeting) and the contract (2026-11-04, `CT2`).
 7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
    a test push to your iPhone from the MacBook Pro when you say.
 8. **AI for report text** (`docs/DECISIONS.md` §26): you're a super admin (HyberTec's other developer too, §29). On
@@ -50,11 +49,9 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
     - **Sign in with Apple, once, before the next store update:** the steps in
       [`docs/publishing/apple/sign-in-with-apple.md`](publishing/apple/sign-in-with-apple.md) (Apple's developer site and
       the Firebase console).
-    - **Ask the manager** one contract per child or per family (`docs/QUESTIONS.md`, A19), when he sends the blank
-      contract.
-    - **The blank contract:** the office uploads it in Settings → Enrollment contract. From then on parents sign it before
-      using the app, so first file the contracts families already signed in each student's Contracts folder in the Drive
-      (they count as signed), or mark them signed on the student's page.
+    - **The contract** (it came on 2026-11-04; `docs/DECISIONS.md` §33): every family signs again, one contract per
+      child. Send the manager the e-version (the sample PDF from Settings → Enrollment contract) to review. Once he
+      approves it, **Publish** it there, at the launch: from then on each parent signs it in the app before using it.
     - **The domain** once he invites you to Squarespace (`DM1`–`DM3`).
 
 ## Product questions waiting for the owner

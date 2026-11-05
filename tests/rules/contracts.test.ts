@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
 import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
-import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
-// The enrollment contract (docs/DECISIONS.md §23, F4, and §31): the blank contract's uploads are owners' and admins',
-// and members read the current one (a parent signs it before using the app); the signing links are owners' and admins'
-// only, made and signed on the server, and admins cancel one still waiting. Each student's signed contract is the
-// family's to read; the server writes it, and owners and admins mark one signed on paper or remove it.
+// The enrollment contract (docs/DECISIONS.md §23, F4, §31 and §33): owners and admins write the draft; the server
+// publishes each version, and members read the current one (a parent signs it before using the app); the signing links
+// are owners' and admins' only, made and signed on the server, and admins cancel one still waiting. Each student's
+// signed contract is the family's to read; the server writes it, and owners and admins mark one signed on paper or
+// remove it.
 
 let env: RulesTestEnvironment
 const A = 'alpha-academy'
@@ -29,28 +29,27 @@ const member = (email: string, role: string, extra: Record<string, unknown> = {}
 
 const ctx = (email: string) => env.authenticatedContext(email.split('@')[0], { email, email_verified: true })
 const db = (email: string) => ctx(email).firestore()
-const storage = (email: string) => ctx(email).storage()
 const actor = (email: string) => ({ uid: email.split('@')[0], email, name: email.split('@')[0] })
-const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])
 const TEMPLATE_ID = 'T1234567890abcdefghi'
 
-const template = (email: string, id: string, extra: Record<string, unknown> = {}) => ({
-  name: 'Enrollment contract.pdf',
-  size: 5,
-  pages: 3,
+const template = (email: string, extra: Record<string, unknown> = {}) => ({
+  title: 'ENROLLMENT AGREEMENT',
+  text: '# ENROLLMENT AGREEMENT\n[[sign: Parent Signature]]',
   sha256: 'a'.repeat(64),
-  path: `branches/${A}/contracts/templates/${id}.pdf`,
+  version: 2,
   current: true,
-  uploadedAt: serverTimestamp(),
-  uploadedBy: actor(email),
+  publishedAt: Timestamp.now(),
+  publishedBy: actor(email),
   ...extra,
 })
+
+const draft = (email: string, extra: Record<string, unknown> = {}) => ({ text: '# ENROLLMENT AGREEMENT\n[[sign: Parent Signature]]', updatedAt: serverTimestamp(), updatedBy: actor(email), ...extra })
 
 const link = (extra: Record<string, unknown> = {}) => ({
   studentId: 's1',
   studentName: 'Student One',
   templateId: TEMPLATE_ID,
-  templateName: 'Enrollment contract.pdf',
+  templateName: 'ENROLLMENT AGREEMENT (version 2)',
   token: 't'.repeat(43),
   status: 'sent',
   createdAt: Timestamp.now(),
@@ -76,7 +75,8 @@ const signedByServer = (studentId: string) => ({
   relation: 'parent',
   signerEmail: 'other@a.test',
   templateId: TEMPLATE_ID,
-  templateName: 'Enrollment contract.pdf',
+  templateName: 'ENROLLMENT AGREEMENT (version 2)',
+  values: { 'selected-level': 'team' },
   fileId: 'f1',
   fileName: 'Student enrollment contract.pdf',
   linkId: null,
@@ -130,60 +130,49 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/kid@a.test`), member('kid@a.test', 'student', { studentId: 's1' }))
     await setDoc(doc(d, `branches/${A}/students/s1`), { name: 'Student One', status: 'enrolled' })
     await setDoc(doc(d, `branches/${A}/students/s2`), { name: 'Student Two', status: 'enrolled' })
-    await setDoc(doc(d, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { ...template(ADMIN, TEMPLATE_ID), uploadedAt: Timestamp.now() })
-    await setDoc(doc(d, `branches/${A}/contractTemplates/OLD4567890abcdefghij`), { ...template(ADMIN, 'OLD4567890abcdefghij'), current: false, uploadedAt: Timestamp.now() })
+    await setDoc(doc(d, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), template(ADMIN))
+    await setDoc(doc(d, `branches/${A}/contractTemplates/OLD4567890abcdefghij`), template(ADMIN, { version: 1, current: false }))
+    await setDoc(doc(d, `branches/${A}/contractTemplates/draft`), { ...draft(ADMIN), updatedAt: Timestamp.now() })
     await setDoc(doc(d, `branches/${A}/signedContracts/s2`), signedByServer('s2'))
     await setDoc(doc(d, `branches/${A}/contractLinks/waiting`), link())
     await setDoc(doc(d, `branches/${A}/contractLinks/done`), link({ status: 'signed', signedAt: Timestamp.now() }))
-    await uploadBytes(ref(c.storage(), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`), PDF, { contentType: 'application/pdf' })
   })
 })
 
-describe('the blank contract', () => {
-  it('owners and admins read every upload; members read the current one and its files, nobody else', async () => {
+describe('the contract', () => {
+  it('owners and admins read every version and the draft; members read the current one, nobody else', async () => {
     await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
     await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
+    await assertSucceeds(getDoc(doc(db('owner@a.test'), `branches/${A}/contractTemplates/draft`)))
     await assertSucceeds(getDocs(query(collection(db('owner@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
     await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
     await assertSucceeds(getDoc(doc(db('kid@a.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
     await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/draft`)))
+    await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/contractTemplates/draft`)))
     await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/contractTemplates`)))
     await assertFails(getDoc(doc(db('stranger@b.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
-    await assertSucceeds(getBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
-    await assertSucceeds(getBytes(ref(storage('parent@a.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
-    await assertFails(getBytes(ref(storage('stranger@b.test'), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
   })
 
-  it('takes its pages as pictures from owners and admins only, once', async () => {
-    const page = `branches/${A}/contracts/templates/${TEMPLATE_ID}-p1.jpg`
-    const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0])
-    await assertFails(uploadBytes(ref(storage('coach@a.test'), page), JPEG, { contentType: 'image/jpeg' }))
-    await assertFails(uploadBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${TEMPLATE_ID}-p1.png`), JPEG, { contentType: 'image/png' }))
-    await assertFails(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'text/html' }))
-    await assertSucceeds(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'image/jpeg' }))
-    await assertFails(uploadBytes(ref(storage(ADMIN), page), JPEG, { contentType: 'image/jpeg' }))
-    await assertSucceeds(getBytes(ref(storage('kid@a.test'), page)))
-    await assertSucceeds(setDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/P1234567890abcdefghi`), template(ADMIN, 'P1234567890abcdefghi', { pageImages: 3 })))
-    await assertFails(setDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/Q1234567890abcdefghi`), template(ADMIN, 'Q1234567890abcdefghi', { pageImages: 99 })))
-  })
-
-  it('takes a new upload from owners and admins, as themselves, and retires the one before, for good', async () => {
-    const id = 'U1234567890abcdefghi'
+  it('takes the draft from owners and admins, as themselves, and nothing else', async () => {
     const a = db(ADMIN)
-    await assertSucceeds(uploadBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${id}.pdf`), PDF, { contentType: 'application/pdf' }))
-    await assertFails(uploadBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/${id}.pdf`), PDF, { contentType: 'application/pdf' }))
-    await assertFails(uploadBytes(ref(storage(ADMIN), `branches/${A}/contracts/templates/V1234567890abcdefghi.pdf`), PDF, { contentType: 'text/html' }))
-    await assertFails(uploadBytes(ref(storage('coach@a.test'), `branches/${A}/contracts/templates/W1234567890abcdefghi.pdf`), PDF, { contentType: 'application/pdf' }))
-    await assertFails(deleteObject(ref(storage(ADMIN), `branches/${A}/contracts/templates/${TEMPLATE_ID}.pdf`)))
-    await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/${id}`), template('someone@a.test', id)))
-    await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/${id}`), template(ADMIN, id, { path: `branches/${A}/drive/x` })))
-    await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/${id}`), template(ADMIN, id, { sha256: 'not a hash' })))
-    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/contractTemplates/${id}`), template('coach@a.test', id)))
-    await assertSucceeds(setDoc(doc(a, `branches/${A}/contractTemplates/${id}`), template(ADMIN, id)))
-    await assertSucceeds(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { current: false, replacedAt: serverTimestamp(), replacedBy: actor(ADMIN) }))
-    await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { current: true }))
-    await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${id}`), { name: 'Other.pdf' }))
-    await assertFails(deleteDoc(doc(a, `branches/${A}/contractTemplates/${id}`)))
+    const at = `branches/${A}/contractTemplates/draft`
+    await assertSucceeds(setDoc(doc(a, at), draft(ADMIN)))
+    await assertSucceeds(setDoc(doc(db('owner@a.test'), at), draft('owner@a.test', { text: '' })))
+    await assertFails(setDoc(doc(a, at), draft('someone@a.test')))
+    await assertFails(setDoc(doc(a, at), draft(ADMIN, { current: true })))
+    await assertFails(setDoc(doc(a, at), draft(ADMIN, { text: 'x'.repeat(200_001) })))
+    await assertFails(setDoc(doc(db('coach@a.test'), at), draft('coach@a.test')))
+    await assertFails(setDoc(doc(db('parent@a.test'), at), draft('parent@a.test')))
+    await assertFails(deleteDoc(doc(a, at)))
+  })
+
+  it('is published on the server only: nobody writes a version from the app', async () => {
+    const a = db(ADMIN)
+    await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/U1234567890abcdefghi`), template(ADMIN)))
+    await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { current: false, replacedAt: serverTimestamp(), replacedBy: actor(ADMIN) }))
+    await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { text: 'Other words' }))
+    await assertFails(deleteDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
   })
 })
 

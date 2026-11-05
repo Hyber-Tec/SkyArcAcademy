@@ -13,11 +13,11 @@ import { FinalCta, PageHero } from '../components/blocks'
  * The privacy policy and Help, as pages of the website (the App Store and Google Play link both: the policy's address
  * and the Support URL; the phone app opens them too). The policy is the academy's, approved by it on 2026-10-20 (the
  * owner), and updated on 2026-11-03 for accounts made in the app, Sign in with Apple and the enrollment contract
- * (docs/DECISIONS.md §31); its English is the text in force, so the Korean page shows it in English under a note. Help
+ * (docs/DECISIONS.md §31), and on 2026-11-04 for the details a family fills in on the contract (§33); its English is the text in force, so the Korean page shows it in English under a note. Help
  * is translated like the rest of the site (a draft the owner reviews). The academy's email and phone come from
  * Settings → Academy.
  */
-const UPDATED: DateKey = '2026-11-03'
+const UPDATED: DateKey = '2026-11-04'
 const EFFECTIVE: DateKey = '2026-10-20'
 
 const TEXT = {
@@ -157,10 +157,11 @@ export function Privacy() {
               <strong>Parents and guardians.</strong> Your name, email address, phone number and relationship to the student.
             </>,
             <>
-              <strong>The enrollment contract.</strong> When a parent or guardian signs the academy’s contract, in the app, on this website or from a link the academy
-              sends: the name they type, their relationship to the student, the signature they draw, the date and time, their network address, their browser or phone,
-              and the email they’re signed in with, if they are. These go on a page added to the signed contract, which is kept with the student’s records, where only
-              the academy’s owners and admins see it; the family can download their own copy.
+              <strong>The enrollment contract.</strong> When a parent or guardian fills in and signs the academy’s contract, in the app, on this website or from a link
+              the academy sends: what they fill in (the program they choose, the discounts they check, their initials, the student’s name and date of birth, and their
+              own name, phone number and email), their relationship to the student, the signature they draw, the date and time, their network address, their browser
+              or phone, and the email they’re signed in with, if they are. These make up the signed contract, a PDF kept with the student’s records, where only the
+              academy’s owners and admins see it; the family can download their own copy.
             </>,
             <>
               <strong>Students.</strong> Name, grade, school, date of birth, level and program, contact details we’re given, class schedule, attendance, and notes from

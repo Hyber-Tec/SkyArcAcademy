@@ -150,6 +150,12 @@ started: *already works*, *small change* or *new work*.
     student waits for their parent. Contracts signed before count once the manager files them in the student's
     Contracts folder (or marks them signed on paper), and Settings → Enrollment contract lists who has signed. **What's
     left is the manager's:** the blank contract, uploaded in Settings → Enrollment contract when it comes.
+  - *The contract came (2026-11-04), with the manager's answers:* every family signs again in the app (a filed
+    contract no longer counts by itself), one contract per child, each signed on its own. It's an electronic contract
+    now: the academy's words, unchanged, read on the phone as a page, with the program, the discounts, the initials,
+    the student's and the parent's details filled in where the paper has them, then the signature; the signed copy is a
+    PDF of it as filled in. The office writes it in Settings → Enrollment contract and publishes it once the manager
+    approves the e-version ([`DECISIONS.md`](DECISIONS.md) §33).
 
 ### CP: Competitions
 - ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**
@@ -263,8 +269,8 @@ started: *already works*, *small change* or *new work*.
 
 ## 7. What we need from the manager
 
-- [ ] **The blank contract** (digital): the signing in the app is built (`CT2`); it starts once the office uploads the
-  contract in Settings → Enrollment contract. With it, Goo asks him: one contract per child, or one per family?
+- ✅ **The blank contract** (digital), 2026-11-04, with his answer: one contract per child (`CT2`). Next: he reviews the
+  e-version, then it's published in Settings → Enrollment contract.
 - [ ] **An invitation to the domain's Squarespace account**, to connect the .com → `DM1`
 
 Everything else is in hand, or the manager's own work in the app.

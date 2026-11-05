@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StudentStatus } from '../types'
-import { contractGate, firstNames, templatePagePath } from './gate'
+import { contractGate, firstNames } from './gate'
 
 const s = (id: string, name: string, status: StudentStatus = 'enrolled') => ({ id, name, status })
 
@@ -33,11 +33,5 @@ describe('firstNames', () => {
     expect(firstNames(['Ava Monroe', 'Leo Monroe'])).toBe('Ava and Leo')
     expect(firstNames(['Ava Monroe', 'Leo Monroe', 'Mia Monroe'])).toBe('Ava, Leo and Mia')
     expect(firstNames([])).toBe('')
-  })
-})
-
-describe('templatePagePath', () => {
-  it('keeps the pictures beside the PDF', () => {
-    expect(templatePagePath('skyarc', 'abc', 2)).toBe('branches/skyarc/contracts/templates/abc-p2.jpg')
   })
 })

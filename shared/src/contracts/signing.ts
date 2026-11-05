@@ -2,11 +2,12 @@ import { APP_URL } from '../brand'
 import { cleanFileName } from '../drive/files'
 import { dateKeyOf, formatDateKey, formatInstantTime } from '../time'
 import type { WithId } from '../types'
-import { type ContractLink, SIGNER_RELATIONS, type SignerRelation } from './types'
+import { RELATION_LABELS } from './fill'
+import type { ContractLink, SignerRelation } from './types'
 
 /**
- * The signing link and what the signer sends, checked the same way in the browser, the phone app and on the server
- * (functions/src/contracts.ts), and the words of the signature page the server adds to the contract.
+ * The signing link, and the words of the page the server adds to a signed contract to record the signing
+ * (functions/src/contracts.ts). What the signer sends is checked in shared/src/contracts/fill.ts.
  */
 
 /** A link's token: 32 random bytes, base64url (43 characters). Anything else isn't one of ours. */
@@ -51,53 +52,6 @@ export function studentContract(links: readonly WithId<ContractLink>[], nowMs: n
   return { state: link ? (linkState(link, nowMs) as StudentContract['state']) : 'none', link, lastSigned }
 }
 
-// ------------------------------------------------------------- signing
-
-export type SigningField = 'name' | 'relation' | 'signature' | 'agree'
-
-export interface SigningInput {
-  name?: unknown
-  relation?: unknown
-  signature?: unknown
-  agree?: unknown
-}
-
-export interface Signing {
-  name: string
-  relation: SignerRelation
-  /** A PNG, as a data URL. */
-  signature: string
-}
-
-/** The drawn signature's PNG, as a data URL: at most this many characters (about 1 MB). */
-export const SIGNATURE_MAX_CHARS = 1_400_000
-
-/**
- * Names the signature page can print: letters with their accents, spaces, hyphens, apostrophes and periods. The page's
- * font has no other alphabets yet (English only for now, CLAUDE.md), so other letters are asked for in English.
- */
-const PRINTABLE_NAME = /^[A-Za-zÀ-ÖØ-öø-ÿ' .\-’]+$/
-
-export function cleanSignerName(name: unknown): string {
-  return typeof name === 'string' ? name.replace(/\s+/g, ' ').trim().slice(0, 100) : ''
-}
-
-/** What the signer sends, checked: each problem said for its field, in the signer's words. */
-export function checkSigning(input: SigningInput): { ok: true; value: Signing } | { ok: false; errors: Partial<Record<SigningField, string>> } {
-  const errors: Partial<Record<SigningField, string>> = {}
-  const name = cleanSignerName(input.name)
-  if (name && !PRINTABLE_NAME.test(name)) errors.name = 'Type your name in English letters.'
-  else if (name.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '').length < 2 || !name.includes(' ')) errors.name = 'Type your first and last name.'
-  const relation = input.relation
-  if (relation !== 'parent' && relation !== 'guardian') errors.relation = 'Choose parent or guardian.'
-  const signature = input.signature
-  if (typeof signature !== 'string' || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(signature) || signature.length < 200) errors.signature = 'Sign in the box with your finger or mouse.'
-  else if (signature.length > SIGNATURE_MAX_CHARS) errors.signature = 'The signature is too large. Clear it and sign again.'
-  if (input.agree !== true) errors.agree = 'Check the box to agree to sign electronically.'
-  if (Object.keys(errors).length) return { ok: false, errors }
-  return { ok: true, value: { name, relation: relation as SignerRelation, signature: signature as string } }
-}
-
 // ------------------------------------------------------------- the signature page
 
 export interface SignatureFactsInput {
@@ -112,6 +66,7 @@ export interface SignatureFactsInput {
   userAgent: string
   /** How it was signed: with a signing link (its token), or by a parent signed in to the app or the website. */
   how: { link: string } | { account: string; where: 'app' | 'website' }
+  /** The contract's title and version ("Enrollment Agreement (version 1)"). */
   templateName: string
   templateSha256: string
 }
@@ -132,17 +87,17 @@ export function signatureFacts(i: SignatureFactsInput): { label: string; value: 
   return [
     { label: 'Academy', value: i.academyName },
     { label: 'Student', value: i.studentName },
-    { label: 'Signed by', value: `${i.signerName} (${SIGNER_RELATIONS[i.relation].toLowerCase()})` },
+    { label: 'Signed by', value: `${i.signerName} (${RELATION_LABELS[i.relation].toLowerCase()})` },
     { label: 'Signed on', value: signedOnText(i.signedAtMs, i.timezone) },
     { label: 'IP address', value: i.ip || 'Unknown' },
     { label: 'link' in i.how || i.how.where === 'website' ? 'Browser' : 'Device', value: i.userAgent || 'Unknown' },
     'link' in i.how ? { label: 'Signing link', value: i.how.link } : { label: 'Account', value: `${i.how.account} (signed in ${i.how.where === 'app' ? 'to the app' : 'on the website'})` },
     { label: 'Contract signed', value: i.templateName },
-    { label: 'Its SHA-256', value: i.templateSha256 },
+    { label: 'Its text’s SHA-256', value: i.templateSha256 },
   ]
 }
 
 /** The sentence above the facts: how it was signed. */
 export function signatureStatement(i: Pick<SignatureFactsInput, 'signerName' | 'studentName' | 'academyName'>): string {
-  return `${i.signerName} read this enrollment contract for ${i.studentName} with ${i.academyName}, typed their name, checked “I agree to sign this contract electronically” and drew the signature below.`
+  return `${i.signerName} read this enrollment contract for ${i.studentName} with ${i.academyName}, filled it in, typed their name, checked “I agree to sign this contract electronically” and drew the signature on it.`
 }

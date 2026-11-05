@@ -83,7 +83,7 @@ export function SendContractDialog({
               ? `Text it to ${studentFirst}’s parent or guardian${until ? `. It works until ${until}, for one signature.` : '.'}`
               : again
                 ? 'The same link, to an address on the student’s record.'
-                : `A link for ${studentFirst}’s parent or guardian to read the contract and sign it on their phone, with no account or app. It works for ${CONTRACT_LINK_DAYS} days, for one signature.`}
+                : `A link for ${studentFirst}’s parent or guardian to fill in the contract and sign it on their phone, with no account or app. It works for ${CONTRACT_LINK_DAYS} days, for one signature.`}
           </DialogDescription>
         </DialogHeader>
 

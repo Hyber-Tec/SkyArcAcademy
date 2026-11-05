@@ -67,11 +67,10 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { invalid?: boolean; 
       const stroke = live.current;
       live.current = null;
       if (!stroke) return;
-      setStrokes((s) => {
-        const next = [...s, stroke];
-        onChange?.(width > 0 && ink(next) >= MIN_INK * width);
-        return next;
-      });
+      // Told after the update, not inside it: a parent's state changed while this renders is React's warning.
+      const next = [...strokes, stroke];
+      setStrokes(next);
+      onChange?.(width > 0 && ink(next) >= MIN_INK * width);
     });
 
   useImperativeHandle(
