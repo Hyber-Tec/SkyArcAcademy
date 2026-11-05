@@ -626,7 +626,9 @@ async function fillPracticeCopy() {
       ["scripts/seed-sample.ts"],
     ];
     for (const [script, ...args] of steps) {
-      const r = spawnSync(path.join(root, "node_modules", ".bin", "tsx"), [script, ...args], { cwd: root, env, encoding: "utf8" });
+      // The scripts' own settings: the sample data builds signed contracts with the functions' code, which imports the
+      // shared code as @shared (as npm run seed:sample does).
+      const r = spawnSync(path.join(root, "node_modules", ".bin", "tsx"), ["--tsconfig", "scripts/tsconfig.json", script, ...args], { cwd: root, env, encoding: "utf8" });
       if (r.signal === "SIGINT") throw new Interrupted();
       fs.appendFileSync(log, `$ tsx ${script} ${args.join(" ")}\n${r.stdout ?? ""}${r.stderr ?? ""}\n`);
       if (r.status !== 0) {
