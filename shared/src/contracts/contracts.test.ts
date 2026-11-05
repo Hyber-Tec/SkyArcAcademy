@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { contractEmail } from '../email/contract'
 import type { WithId } from '../types'
-import { checkSigning, contractFileName, isContractToken, linkState, signUrl, signatureFacts, signedOnText, studentContract } from './signing'
+import { contractFileName, isContractToken, linkState, signUrl, signatureFacts, signedOnText, studentContract } from './signing'
 import { contractFilePlace, contractFoldersToMake } from './filing'
 import type { ContractLink } from './types'
 
@@ -9,7 +9,6 @@ const at = (ms: number) => ({ seconds: ms / 1000, nanoseconds: 0, toDate: () => 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 9, 28, 19, 41)
 const by = { uid: 'u', email: 'office@example.test', name: 'Office' }
-const PNG = `data:image/png;base64,${'iVBORw0KGgo'.padEnd(400, 'A')}`
 
 function link(id: string, extra: Partial<ContractLink> = {}): WithId<ContractLink> {
   return {
@@ -63,28 +62,6 @@ describe('signing links', () => {
   })
 })
 
-describe('what the signer sends', () => {
-  it('takes a full name, parent or guardian, a drawn signature and the agreement', () => {
-    expect(checkSigning({ name: '  Jane   Larkin ', relation: 'parent', signature: PNG, agree: true })).toEqual({ ok: true, value: { name: 'Jane Larkin', relation: 'parent', signature: PNG } })
-    expect(checkSigning({ name: 'José O’Neil-Smith Jr.', relation: 'guardian', signature: PNG, agree: true }).ok).toBe(true)
-  })
-
-  it('says what’s missing, field by field', () => {
-    const r = checkSigning({ name: 'Jane', relation: 'aunt', signature: 'data:image/jpeg;base64,abc', agree: false })
-    expect(r).toEqual({
-      ok: false,
-      errors: {
-        name: 'Type your first and last name.',
-        relation: 'Choose parent or guardian.',
-        signature: 'Sign in the box with your finger or mouse.',
-        agree: 'Check the box to agree to sign electronically.',
-      },
-    })
-    expect(checkSigning({ name: '김 지우', relation: 'parent', signature: PNG, agree: true })).toMatchObject({ ok: false, errors: { name: 'Type your name in English letters.' } })
-    expect(checkSigning({ name: 'Jane Larkin', relation: 'parent', signature: `data:image/png;base64,${'A'.repeat(1_500_000)}`, agree: true })).toMatchObject({ ok: false, errors: { signature: 'The signature is too large. Clear it and sign again.' } })
-  })
-})
-
 describe('the signature page', () => {
   it('dates the signature in the academy’s time zone', () => {
     // 19:41 UTC is 3:41 PM in New York (still daylight time) and 4:41 AM the next day in Seoul.
@@ -103,19 +80,19 @@ describe('the signature page', () => {
       ip: '203.0.113.7',
       userAgent: 'Mozilla/5.0 (iPhone)',
       how: { link: 'tok' },
-      templateName: 'Enrollment contract.pdf',
+      templateName: 'Rental Agreement (version 1)',
       templateSha256: 'ab'.repeat(32),
     })
     expect(Object.fromEntries(facts.map((f) => [f.label, f.value]))).toEqual({
       Academy: 'Sky Arc Sports Academy',
       Student: 'Mia Larkin',
-      'Signed by': 'Jane Larkin (guardian)',
+      'Signed by': 'Jane Larkin (legal guardian)',
       'Signed on': 'October 28, 2026 at 3:41 PM EDT',
       'IP address': '203.0.113.7',
       Browser: 'Mozilla/5.0 (iPhone)',
       'Signing link': 'tok',
-      'Contract signed': 'Enrollment contract.pdf',
-      'Its SHA-256': 'ab'.repeat(32),
+      'Contract signed': 'Rental Agreement (version 1)',
+      'Its text’s SHA-256': 'ab'.repeat(32),
     })
   })
 

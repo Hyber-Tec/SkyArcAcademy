@@ -6,7 +6,6 @@ import {
   availabilitySummary,
   classesSummary,
   compactRange,
-  contractSummary,
   durationWords,
   hoursSummary,
   noticesSummary,
@@ -55,13 +54,12 @@ describe('the Settings home’s sentences', () => {
     )
   })
 
-  it('says the students, the sign-up page, the notices and the contract', () => {
+  it('says the students, the sign-up page and the notices', () => {
     expect(studentsSummary(DEFAULT_SETTINGS)).toBe('9 levels, 4 programs. Paused after 20 days without classes.')
     expect(signupSummary(DEFAULT_SETTINGS)).toBe('Open to coaches and parents.')
     expect(signupSummary(with_((s) => (s.signup.roles = ['coach', 'parent', 'student'])))).toBe('Open to coaches, parents and students.')
     expect(signupSummary(with_((s) => (s.signup.enabled = false)))).toBe('Closed: nobody can ask for access.')
     expect(noticesSummary(DEFAULT_SETTINGS)).toBe('Coaches hear of class changes within 24 hours. The office is reminded of first classes. 3 post categories.')
-    expect(contractSummary(false)).toContain('No contract uploaded yet')
     expect(durationWords(90)).toBe('1 h 30 min')
   })
 

@@ -744,35 +744,23 @@ service cloud.firestore {
 
       // ------------------------------------------------------ contracts
 
-      // The enrollment contract (shared/src/contracts, docs/DECISIONS.md §23, F4, and §31). Each upload of the
-      // academy's blank contract is kept (a link names the one it was sent with); the newest is current, and uploading
-      // another retires it. Members read the current one (a parent signs it before using the app), owners and admins
-      // every one. Contracts are signed on the server (functions/src/contracts.ts): signed in, or with a link, which the
-      // server makes and emails and admins cancel while it waits. The signed copies are Drive files in the Contracts
-      // folder, which only owners and admins see.
+      // The enrollment contract (shared/src/contracts, docs/DECISIONS.md §23, F4, §31 and §33). Owners and admins write
+      // the draft (`contractTemplates/draft`: its text, Settings → Enrollment contract); the server publishes it as a new
+      // version (each kept: a link and a signature name theirs), the newest current. Members read the current one (a
+      // parent signs it before using the app; the draft never has `current`), owners and admins every one. Contracts
+      // are signed on the server (functions/src/contracts.ts): signed in, or with a link, which the server makes and
+      // emails and admins cancel while it waits. The signed copies are Drive files in each student's Contracts folder,
+      // which only owners and admins see.
       match /contractTemplates/{templateId} {
-        function validTemplate(d) {
-          return d.keys().hasOnly(['name', 'size', 'pages', 'sha256', 'path', 'pageImages', 'current', 'uploadedAt',
-                                   'uploadedBy', 'replacedAt', 'replacedBy'])
-            && d.name is string && d.name.size() > 0 && d.name.size() <= 200
-            && d.size is int && d.size > 0 && d.size <= 10 * 1024 * 1024
-            && d.pages is int && d.pages > 0 && d.pages <= 500
-            && d.sha256 is string && d.sha256.matches('[0-9a-f]{64}')
-            && d.path == 'branches/' + b + '/contracts/templates/' + templateId + '.pdf'
-            && (!('pageImages' in d) || (d.pageImages is int && d.pageImages >= 0 && d.pageImages <= 40))
-            && d.current is bool;
+        function validDraft(d) {
+          return d.keys().hasOnly(['text', 'updatedAt', 'updatedBy'])
+            && d.text is string && d.text.size() <= 200000
+            && d.updatedAt == request.time
+            && byMe(d.updatedBy);
         }
 
         allow read: if isAdmin(b) || (isMember(b) && resource.data.current == true);
-        allow create: if isAdmin(b) && validTemplate(request.resource.data)
-          && request.resource.data.current == true
-          && request.resource.data.uploadedAt == request.time
-          && byMe(request.resource.data.uploadedBy);
-        allow update: if isAdmin(b) && resource.data.current == true
-          && request.resource.data.current == false
-          && request.resource.data.replacedAt == request.time
-          && byMe(request.resource.data.replacedBy)
-          && changed().hasOnly(['current', 'replacedAt', 'replacedBy']);
+        allow create, update: if templateId == 'draft' && isAdmin(b) && validDraft(request.resource.data);
         allow delete: if false;
       }
 

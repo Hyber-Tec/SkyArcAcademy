@@ -1,27 +1,29 @@
 import { httpsCallable } from 'firebase/functions'
 import { useEffect, useMemo, useState } from 'react'
-import { LuCircleCheck, LuDownload, LuFileText, LuMail, LuPhone, LuRotateCw } from 'react-icons/lu'
+import { LuCircleCheck, LuDownload, LuMail, LuPhone, LuRotateCw } from 'react-icons/lu'
 import { useParams } from 'react-router'
-import type { Signing, SigningField } from '@shared/contracts/signing'
+import { parseContract } from '@shared/contracts/document'
+import { prefillValues } from '@shared/contracts/fill'
+import type { ContractSignRequest } from '@shared/contracts/types'
 import { formatPhone } from '@shared/people'
-import { formatInstant } from '@shared/time'
+import { dateKeyOf, formatInstant } from '@shared/time'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { ContractPages } from '@/features/contracts/ContractPages'
-import { type SignOutcome, SigningForm } from '@/features/contracts/SigningForm'
+import { type SignOutcome, ContractSigning } from '@/features/contracts/ContractSigning'
+import { pdfBytes, savePdf } from '@/features/contracts/pdf'
 import { functions } from '@/lib/firebase'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 
 /**
- * /sign/{token}: where a parent or guardian reads the academy's enrollment contract and signs it (docs/DECISIONS.md
- * §23, F4), from the link the office texted or emailed them. No account and no app: it works on any phone's browser.
- * The contract shows as its pages (with a download); then their full name, parent or guardian, the agreement to sign
- * electronically and a signature drawn with a finger or a mouse. The server builds the signed PDF
- * (functions/src/contracts.ts); they can download their copy for a while. A link that expired, was used or was
- * canceled says so, with how to reach the academy.
+ * /sign/{token}: where a parent or guardian fills in and signs the academy's enrollment contract (docs/DECISIONS.md
+ * §23, F4, and §33), from the link the office texted or emailed them. No account and no app: it works on any phone's
+ * browser. The contract reads as a page with its parts to fill in (the student's name is filled in already), then
+ * parent or guardian, a signature drawn with a finger or a mouse and the agreement to sign electronically. The server
+ * builds the signed PDF (functions/src/contracts.ts); they can download their copy for a while. A link that expired,
+ * was used or was canceled says so, with how to reach the academy.
  */
 
 interface Academy {
@@ -33,41 +35,22 @@ interface Academy {
 }
 
 type Loaded =
-  | { state: 'ready'; academy: Academy; firstName: string; expiresAt: number; contract: { name: string; pages: number; data: string } }
+  | { state: 'ready'; academy: Academy; firstName: string; studentName: string; expiresAt: number; contract: { title: string; text: string; version: number } }
   | { state: 'signed'; academy: Academy; firstName: string; signedAt: number; signerName: string; copyUntil: number; copy?: { name: string; data: string } }
   | { state: 'expired'; academy: Academy; firstName: string; expiresAt: number }
   | { state: 'canceled'; academy: Academy; firstName: string }
   | { state: 'invalid'; academy: Academy }
 
 const getContract = httpsCallable<{ token: string; copy?: boolean }, Loaded>(functions, 'getContractForSigning')
-const sign = httpsCallable<{ token: string; name: string; relation: string; signature: string; agree: boolean }, { ok: true; fileName: string; copyUntil: number }>(functions, 'signContract')
+const sign = httpsCallable<{ token: string } & ContractSignRequest, { ok: true; fileName: string; copyUntil: number }>(functions, 'signContract')
 
 /** "November 27, 2026", in the academy's time zone. */
 const longDate = (ms: number, academy: Academy) => formatInstant(ms, academy.timezone || 'America/New_York', { month: 'long', day: 'numeric', year: 'numeric' })
 
-function bytesOf(base64: string): Uint8Array {
-  const bin = atob(base64)
-  const out = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-  return out
-}
-
-/** Saves bytes as a PDF on the person's device. */
-function savePdf(data: Uint8Array, name: string) {
-  const url = URL.createObjectURL(new Blob([data.slice()], { type: 'application/pdf' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
-}
-
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="min-h-svh bg-muted/40 px-4 py-8 sm:py-12">
-      <div className={cn('mx-auto w-full space-y-5', wide ? 'max-w-2xl' : 'max-w-md')}>{children}</div>
+      <div className={cn('mx-auto w-full space-y-5', wide ? 'max-w-3xl' : 'max-w-md')}>{children}</div>
       <CompanyFooter className="mt-8 text-center" />
     </div>
   )
@@ -130,7 +113,7 @@ function CopyButton({ token, until, academy }: { token: string; until: number; a
     setFailed(false)
     try {
       const r = (await getContract({ token, copy: true })).data
-      if (r.state === 'signed' && r.copy) savePdf(bytesOf(r.copy.data), r.copy.name)
+      if (r.state === 'signed' && r.copy) savePdf(pdfBytes(r.copy.data), r.copy.name)
       else setFailed(true)
     } catch {
       setFailed(true)
@@ -247,16 +230,17 @@ export function SignContractPage() {
 }
 
 function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: { name: string; copyUntil: number }) => void }) {
-  const pdf = useMemo(() => bytesOf(loaded.contract.data), [loaded.contract.data])
-  const [showPages, setShowPages] = useState(true)
+  const now = useNow()
+  const doc = useMemo(() => parseContract(loaded.contract.text).doc, [loaded.contract.text])
+  const initial = useMemo(() => prefillValues(doc, { studentName: loaded.studentName }), [doc, loaded.studentName])
 
-  async function onSign(signing: Signing): Promise<SignOutcome> {
+  async function onSign(request: ContractSignRequest): Promise<SignOutcome> {
     try {
-      const r = (await sign({ token, ...signing, agree: true })).data
-      onSigned({ name: signing.name, copyUntil: r.copyUntil })
+      const r = (await sign({ token, ...request })).data
+      onSigned({ name: request.name ?? '', copyUntil: r.copyUntil })
       window.scrollTo({ top: 0 })
     } catch (err) {
-      const f = err as { code?: string; details?: { errors?: Partial<Record<SigningField, string>>; state?: string } }
+      const f = err as { code?: string; details?: { errors?: Record<string, string>; state?: string } }
       if (f.details?.errors) return { errors: f.details.errors }
       if (f.code === 'functions/failed-precondition') return { problem: 'This link can’t be signed any more. Reload the page to see why.' }
       if (f.code === 'functions/resource-exhausted') return { problem: 'Too many tries just now. Please wait a few minutes, then sign again.' }
@@ -268,20 +252,20 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
     <Shell wide>
       <Card>
         <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">Enrollment contract for {loaded.firstName}</h1>
-        <p className="mt-2 text-center text-sm text-muted-foreground">Please read the contract, then sign at the bottom of this page. It takes a few minutes.</p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">Please read the contract, fill it in and sign at the bottom of this page. It takes a few minutes.</p>
       </Card>
 
-      <section className="space-y-3" aria-label="The contract">
-        {showPages ? <ContractPages data={pdf} onFail={() => setShowPages(false)} /> : <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">The contract can’t be shown on this page. Download it to read it.</p>}
-        <Button variant="outline" className="w-full" onClick={() => savePdf(pdf, loaded.contract.name)}>
-          <LuFileText /> Download the contract (PDF)
-        </Button>
-      </section>
-
-      <SigningForm
-        who={loaded.firstName}
+      <ContractSigning
+        doc={doc}
+        studentFirst={loaded.firstName}
+        initial={initial}
+        today={dateKeyOf(now, loaded.academy.timezone || 'America/New_York')}
         onSign={onSign}
-        note={<>Signing adds a page to the contract with your name, the date and time, your internet address and your browser. The link works until {longDate(loaded.expiresAt, loaded.academy)}, for one signature.</>}
+        note={
+          <>
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The link works until {longDate(loaded.expiresAt, loaded.academy)}, for one signature.
+          </>
+        }
       />
 
       <Contact academy={loaded.academy} lead="Questions about the contract? Contact the academy:" />

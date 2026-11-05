@@ -14,6 +14,7 @@ export default function MoreLayout() {
       <Stack.Screen name="security" options={{ title: "Sign-in & security", headerLargeTitle: false }} />
       <Stack.Screen name="students" options={{ title: "Students", headerLargeTitle: false }} />
       <Stack.Screen name="payroll" options={{ title: "Payroll", headerLargeTitle: false }} />
+      <Stack.Screen name="contract" options={{ title: "Enrollment contract", headerLargeTitle: false }} />
     </Stack>
   );
 }

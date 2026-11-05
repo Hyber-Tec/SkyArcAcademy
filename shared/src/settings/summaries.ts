@@ -121,10 +121,6 @@ export function websiteSummary(newMessages: number): string {
   return newMessages ? `${plural(newMessages, 'new message')} from families. Photos, coaches, reviews and the hours it shows.` : 'Photos, coaches, reviews, the hours it shows, and the trial requests it sends.'
 }
 
-export function contractSummary(uploaded: boolean): string {
-  return uploaded ? 'The blank contract is uploaded. Send a signing link from a student’s page.' : 'No contract uploaded yet. Upload the blank PDF families sign.'
-}
-
 /** "Changed Pay & time clock settings (Goo C., 2 h ago)" */
 export function activitySummary(last: { summary: string; who: string; atMs: number } | null, nowMs: number): string {
   if (!last) return 'Every change to settings, the schedule, people and pay: who and when.'

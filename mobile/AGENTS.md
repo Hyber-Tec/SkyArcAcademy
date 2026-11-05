@@ -38,7 +38,8 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
   (app)/(staff)/       owners, admins and coaches (each seeing what the rules give their role): (tabs) Home · Schedule ·
                        Scan · Students · More for the office, Home · Schedule · Availability · Scan · More for coaches
                        (their Students is More's first row); More's pages (more/: students, coaches, payroll, account,
-                       notifications, security); and the screens that open over the tabs (class/[id], coach/[id] and
+                       notifications, security, and contract: the enrollment contract as a parent sees it, the
+                       office's); and the screens that open over the tabs (class/[id], coach/[id] and
                        availability-day sheets, the office's add-seat and move-seat (a student into a class's open seat,
                        or to another class), requests (every request from families: waiting on the office, on a
                        family's answer, decided) and request/[id] (one, to approve, decline or suggest another time,
@@ -94,7 +95,8 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
                        target), access, account (deleting an account), contracts (signing the enrollment contract before
-                       using the app: ContractGate, the signature pad), family (what a family reads: their students,
+                       using the app: ContractGate, the contract as a page to fill in (ContractForm, ContractSheet),
+                       the signature pad), family (what a family reads: their students,
                        classes, scores and shared reports, and the academy's news (news.ts); the child switcher; their
                        classes (classes.ts: brothers and sisters in the same class together) and the class cards; the
                        Classes tab (the owner's remake, 2026-10-29: clear at a glance, for every age): its top
@@ -199,12 +201,18 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   in with Apple (`src/lib/appleSignIn.ts`, expo-apple-authentication with a nonce from expo-crypto) is Apple's rule
   (guideline 4.8) beside Google; deleting an Apple account confirms with Apple and revokes the app's Apple tokens
   (Apple's rule too). Android has no Apple button.
-- **The enrollment contract comes first** (docs/DECISIONS.md §31): once the academy has one, the family's part shows
-  ContractGate (src/features/contracts/SignContract.tsx) until each of their students at the academy has a signed one
-  (`contractGate`, `@shared/contracts/gate`): the contract's pages as the website saved them (the PDF itself when there
-  are none), the children a parent signs for (one signature, a copy each), their name, parent or guardian, a finger
-  signature (SignaturePad, drawn with Skia) and the agreement; `signContractSignedIn` signs it on the server. A student
-  waits for their parent. Anything that can't be read opens the app rather than locking anyone out.
+- **The enrollment contract comes first** (docs/DECISIONS.md §31 and §33): once the academy has published one, the
+  family's part shows ContractGate (src/features/contracts/SignContract.tsx) until each of their students at the academy
+  has a signed one (`contractGate`, `@shared/contracts/gate`). The contract is the academy's text with its fields marked
+  (`@shared/contracts/document`), drawn by ContractForm as a page of the app with the parts to fill in where the paper
+  has them (the option chosen, the boxes checked, the initials, the student's and the signer's details), then the
+  signing (parent or guardian, a finger signature drawn with Skia in SignaturePad, the date, the agreement), checked as
+  the server checks it (`checkContractSigning`, `@shared/contracts/fill`). One contract per child, each signed on its
+  own, A to Z: `contractPrefill` fills in what the records know, and what the parent typed about themselves carries to
+  the next child's; `signContractSignedIn` signs it on the server, which makes the PDF. A student waits for their
+  parent. Anything that can't be read opens the app rather than locking anyone out. Owners and admins see it as a
+  parent does in More → Enrollment contract (the draft or the published one, for a made-up student), where trying to
+  sign makes the sample PDF (`previewContract`) to open or share; nothing is filed.
 - **Zoomable pictures** use `ZoomCanvas` (in a page: `ZoomScrollView`, or `Screen zoomable`): it follows each finger,
   so a hand's late second finger or first-lifted one never makes the picture jump, and the page waits for it natively.
   Test a gesture as a hand does it (the second finger landing late, one lifting first), not only both at once.

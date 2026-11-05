@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { LuCopy, LuExternalLink, LuFileCheck, LuLock, LuMail, LuRotateCcw, LuSend, LuX } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { parseContract } from '@shared/contracts/document'
+import { RELATION_LABELS, contractSummary } from '@shared/contracts/fill'
 import { signUrl, signedOnText, studentContract } from '@shared/contracts/signing'
-import { SIGNED_VIA_LABELS, SIGNER_RELATIONS, type SignedContract } from '@shared/contracts/types'
+import { type ContractTemplate, SIGNED_VIA_LABELS, type SignedContract } from '@shared/contracts/types'
 import { contractsFolderId } from '@shared/drive/types'
+import { COL } from '@shared/paths'
 import { formatInstant } from '@shared/time'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -15,6 +18,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { branchDocRef, useDoc } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/lib/useNow'
 import { askToSignAgain, cancelLink, markSignedOnPaper, useContractTemplates, useSignedContract, useStudentContractLinks } from './api'
@@ -29,11 +33,11 @@ const STATE: Record<'none' | 'sent' | 'expired' | 'signed', { label: string; cla
 }
 
 /**
- * A student's enrollment contract, on their page (owners and admins; F4 and docs/DECISIONS.md §31): signed (by whom,
- * when and how: in the app, on the website, by link or on paper, with the signed PDF, which opens from the Drive, and
- * "Ask to sign again"), or not yet: then a parent signs it in the app before using it, and the office can send a link
- * (waiting since when, until when, with Copy link, Email and Cancel; or expired) or mark one signed on paper. Its foot
- * leads to the student's Contracts folder, where the signed copies are (and where the office files a paper one).
+ * A student's enrollment contract, on their page (owners and admins; F4 and docs/DECISIONS.md §31 and §33): signed (by
+ * whom, when and how: in the app, on the website, by link or on paper, what the family chose in it, the signed PDF,
+ * which opens from the Drive, and "Ask to sign again"), or not yet: then a parent signs it in the app before using
+ * it, and the office can send a link (waiting since when, until when, with Copy link, Email and Cancel; or expired) or
+ * mark one signed on paper. Its foot leads to the student's Contracts folder, where the signed copies are.
  */
 export function StudentContractCard({ student, priv }: { student: WithId<Student>; priv: StudentPrivateProfile | null }) {
   const { branchId, actor, timezone } = useBranch()
@@ -49,7 +53,7 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
   // A link lasts 30 days: its dates need no year.
   const day = (t: { toMillis?: () => number } | null | undefined) => (t?.toMillis ? formatInstant(t.toMillis(), timezone, { month: 'short', day: 'numeric' }) : 'today')
   const signedLine = (l: NonNullable<typeof c.lastSigned>) =>
-    `${l.signer?.name ?? 'Someone'} (${l.signer ? SIGNER_RELATIONS[l.signer.relation].toLowerCase() : 'parent'}) signed it on ${l.signedAt?.toMillis ? signedOnText(l.signedAt.toMillis(), timezone) : 'just now'}.`
+    `${l.signer?.name ?? 'Someone'} (${l.signer ? RELATION_LABELS[l.signer.relation].toLowerCase() : 'parent'}) signed it on ${l.signedAt?.toMillis ? signedOnText(l.signedAt.toMillis(), timezone) : 'just now'}.`
 
   async function again(sc: WithId<SignedContract>) {
     const ok = await confirm({
@@ -90,7 +94,7 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
       </Button>
     ) : (
       <p className="text-xs text-muted-foreground">
-        Upload the academy’s contract in{' '}
+        Publish the academy’s contract in{' '}
         <Link to="/admin/settings/contract" className="font-medium underline underline-offset-2">
           Settings
         </Link>{' '}
@@ -107,6 +111,7 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
       <>
         <p className="text-sm">{signedText(signed, timezone)}</p>
         {signed.note ? <p className="text-xs text-muted-foreground">“{signed.note}”</p> : null}
+        {signed.values && signed.templateId ? <ChosenInContract templateId={signed.templateId} values={signed.values} /> : null}
         <div className="flex flex-wrap gap-2">
           {signed.fileId ? (
             <Button size="sm" variant="outline" asChild>
@@ -200,11 +205,33 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
 function signedText(sc: SignedContract, timezone: string): string {
   const when = sc.signedAt?.toMillis ? signedOnText(sc.signedAt.toMillis(), timezone) : 'just now'
   if (sc.via === 'paper') return `Signed on paper: marked by ${sc.markedBy?.name || 'the office'} on ${when}.`
-  const who = `${sc.signerName || 'Someone'}${sc.relation ? ` (${SIGNER_RELATIONS[sc.relation].toLowerCase()})` : ''}`
+  const who = `${sc.signerName || 'Someone'}${sc.relation ? ` (${RELATION_LABELS[sc.relation].toLowerCase()})` : ''}`
   return `${who} signed it ${SIGNED_VIA_LABELS[sc.via]} on ${when}${sc.signerEmail ? `, as ${sc.signerEmail}` : ''}.`
 }
 
-/** Marks a student's contract signed on paper (or before the app), with a note: their family isn't asked to sign it. */
+/**
+ * What the family chose in their contract, read with the version they signed (owners and admins read every one): the
+ * option and its price, and what they checked. The PDF in the Drive holds the rest.
+ */
+function ChosenInContract({ templateId, values }: { templateId: string; values: NonNullable<SignedContract['values']> }) {
+  const { branchId } = useBranch()
+  const { data: template } = useDoc<ContractTemplate>(branchDocRef(branchId, COL.contractTemplates, templateId))
+  const text = template?.text ?? ''
+  const rows = useMemo(() => (text ? contractSummary(parseContract(text).doc, values) : []), [text, values])
+  if (!rows.length) return null
+  return (
+    <dl className="grid gap-x-3 gap-y-0.5 rounded-lg bg-muted/50 px-3 py-2 text-xs sm:grid-cols-[auto_1fr]" data-testid="student-contract-summary">
+      {rows.map((r) => (
+        <div key={r.label} className="contents">
+          <dt className="text-muted-foreground">{r.label}</dt>
+          <dd className="font-medium">{r.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** Marks a student's contract signed on paper, with a note: their family isn't asked to sign it in the app. */
 function PaperDialog({ student, onClose }: { student: WithId<Student>; onClose: () => void }) {
   const { branchId, actor } = useBranch()
   const [note, setNote] = useState('')
@@ -230,12 +257,12 @@ function PaperDialog({ student, onClose }: { student: WithId<Student>; onClose: 
           <DialogHeader>
             <DialogTitle>Mark {first}’s contract signed?</DialogTitle>
             <DialogDescription>
-              For a contract signed on paper, or before the app: {first}’s family won’t be asked to sign it in the app. Filing the signed copy in {first}’s Contracts folder in the Drive marks it signed too.
+              For a family who signed the academy’s contract on paper instead: {first}’s family won’t be asked to sign it in the app. Keep the signed paper in {first}’s Contracts folder in the Drive, with the others.
             </DialogDescription>
           </DialogHeader>
           <Field>
             <FieldLabel htmlFor="paper-note">Note (optional)</FieldLabel>
-            <Input id="paper-note" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="Signed on paper in September" />
+            <Input id="paper-note" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="Signed at the front desk" />
             <FieldDescription>When or how it was signed, for the office.</FieldDescription>
           </Field>
           <DialogFooter>

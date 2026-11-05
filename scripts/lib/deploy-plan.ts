@@ -118,5 +118,5 @@ export function splitEntry(source: string): { reExports: ReExport[]; own: string
   return { reExports, own }
 }
 
-/** The functions' build options (functions/package.json's `build`), without where it writes. */
-export const FUNCTIONS_BUILD = { bundle: true, platform: 'node', target: 'node22', format: 'esm', packages: 'external' } as const
+/** The functions' build options (functions/package.json's `build`), without where it writes. The logo goes in as bytes. */
+export const FUNCTIONS_BUILD = { bundle: true, platform: 'node', target: 'node22', format: 'esm', packages: 'external', loader: { '.png': 'binary' } } as const

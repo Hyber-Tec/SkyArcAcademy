@@ -9,16 +9,21 @@ import { useFamily } from '@/features/family/data'
 import { branchCol, branchDocRef, useQuery } from '@/lib/firestore'
 
 /**
- * What a family needs to sign before using the website (docs/DECISIONS.md §31): the academy's current contract, and
- * each of their students' signed one, read one by one as the rules allow (shared/src/contracts/gate.ts decides).
+ * What a family needs to sign before using the website (docs/DECISIONS.md §31 and §33): the academy's published
+ * contract, and each of their students' signed one, read one by one as the rules allow (shared/src/contracts/gate.ts
+ * decides).
  */
 
-/** The academy's current blank contract (any member reads it), or null when there's none. */
+/**
+ * The academy's published contract (any member reads it), or null when there's none. One without text (an upload from
+ * before the contract was written in Settings) is none: there's nothing to fill in.
+ */
 export function useCurrentContract() {
   const { branchId } = useBranch()
   const q = useMemo(() => query(branchCol(branchId, COL.contractTemplates), where('current', '==', true), limit(1)), [branchId])
   const state = useQuery<ContractTemplate>(q, `current-contract-${branchId}`)
-  return { template: state.data[0] ?? null, loading: state.loading, error: state.error }
+  const template = state.data[0]
+  return { template: template && typeof template.text === 'string' && template.text.trim() ? template : null, loading: state.loading, error: state.error }
 }
 
 /** The students' signed contracts, live, one listener each. */
