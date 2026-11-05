@@ -1,3 +1,4 @@
+import type { Lang } from "@shared/i18n";
 import { POSITION_COLORS, POSITION_LABELS, inOrder, wholePer10 } from "@shared/shooting/evaluation";
 import { personalBestIds, positionProgress } from "@shared/shooting/progress";
 import { canReplay } from "@shared/shooting/replay";
@@ -27,6 +28,8 @@ import { BestBadge, ScoreHead, scoreFacts, useCardPicture } from "@/features/sco
 import { ShotDarts, ShotSheet } from "@/features/scores/ShotDarts";
 import { MatchCard, matchResults } from "@/features/scores/MatchCard";
 import { ShotReplay } from "@/features/scores/ShotReplay";
+import { positionLabel } from "@/features/scores/words";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
@@ -42,6 +45,7 @@ export default function FamilyScoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { name } = useBranch();
   const colors = useColors();
+  const t = useT();
   const family = useFamily();
   const score = useEvaluation(id ?? null);
   // Only the family's own students' (the rules say so; the phone's copy of what another account saw on it doesn't).
@@ -63,11 +67,11 @@ export default function FamilyScoreScreen() {
         <EmptyState
           testID="family-score-missing"
           icon={<SearchX size={26} color={colors.mutedForeground} />}
-          title="This score isn’t available"
-          text={`It may have been removed. Ask ${name} if you were expecting it.`}
+          title={t("This score isn’t available", "이 점수를 볼 수 없어요")}
+          text={t(`It may have been removed. Ask ${name} if you were expecting it.`, "삭제됐을 수 있어요. 기다리던 점수라면 아카데미에 문의해 주세요.")}
           action={
             <Button variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/scores"))} testID="family-score-back">
-              Back to scores
+              {t("Back to scores", "점수로 돌아가기")}
             </Button>
           }
         />
@@ -81,6 +85,8 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
   const { settings } = useBranch();
   const family = useFamily();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const reduced = useReducedMotion();
   const { width } = useWindowDimensions();
   // The student's other results, for how this one compares (the same listener as the Scores tab's for one student).
@@ -100,19 +106,26 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
   const inner = width - space.lg * 2 - space.sm * 2;
   const target = Math.min(width - space.lg * 4, 380);
   const fileReady = !!f && f.status === "ready" && !f.trashed;
-  const fileLine = file.loading ? "Loading…" : fileReady ? f.name : "Not available: it may have been removed";
-  const cardNote = picture.scanned && !flat ? (picture.failed ? "The card’s picture couldn’t be opened. Check your connection, then try again." : !file.loading && !fileReady ? "The card’s picture isn’t available. Its scores are below." : null) : null;
+  const fileLine = file.loading ? t("Loading…", "불러오는 중…") : fileReady ? f.name : t("Not available: it may have been removed", "볼 수 없어요. 삭제됐을 수 있어요");
+  const cardNote =
+    picture.scanned && !flat
+      ? picture.failed
+        ? t("The card’s picture couldn’t be opened. Check your connection, then try again.", "표적지 사진을 열지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.")
+        : !file.loading && !fileReady
+          ? t("The card’s picture isn’t available. Its scores are below.", "표적지 사진이 없어요. 점수는 아래에서 볼 수 있어요.")
+          : null
+      : null;
 
   return (
     <>
-      <Stack.Screen options={{ title: scoreTitle(e) }} />
+      <Stack.Screen options={{ title: scoreTitle(e, lang) }} />
       <Screen typing={false} zoomable={picture.scanned} testID="family-score-screen">
-        <ScoreHead evaluation={e} name={e.studentName} dateKey={e.dateKey} hour12={settings.general.timeFormat !== "24h"} facts={scoreFacts(e)} figure="whole">
+        <ScoreHead evaluation={e} name={e.studentName} dateKey={e.dateKey} hour12={settings.general.timeFormat !== "24h"} facts={scoreFacts(e, 0, lang)} figure="whole">
           <View style={styles.chips}>
             <View style={[styles.chip, { backgroundColor: colors.secondary }]}>
               <View style={[styles.dot, { backgroundColor: color }]} />
               <T variant="tiny" style={styles.chipText}>
-                {POSITION_LABELS[e.position]}
+                {positionLabel(e.position, lang)}
               </T>
             </View>
             {best ? <BestBadge position={e.position} testID="family-score-best" /> : null}
@@ -132,25 +145,36 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
           <View style={[styles.quote, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: colors.brand }]} testID="family-score-note">
             <View style={styles.quoteHead}>
               <MessageSquareQuote size={16} color={colors.brandText} />
-              <T variant="label">Coach’s note</T>
+              <T variant="label">{t("Coach’s note", "코치 한마디")}</T>
             </View>
             <T style={styles.prose}>{e.note.trim()}</T>
           </View>
         ) : null}
 
-        <Compare e={e} own={own.data} loading={own.loading} first={family.firstName(e.studentId, e.studentName)} you={family.who === "student"} />
+        <Compare e={e} own={own.data} loading={own.loading} first={family.firstName(e.studentId, e.studentName)} you={family.who === "student"} lang={lang} />
 
         <CompareCard anchor={e} evaluations={own.data} loading={own.loading} onOpen={(id) => router.push({ pathname: "/score/[id]", params: { id } })} testID="family-compare" />
 
         {sius ? (
-          <ListSection title="Shots" footer={`Tap a shot to see it larger.${e.sighters ? ` Before them, ${e.sighters} sighters (never counted).` : ""}`} testID="family-score-shots">
+          <ListSection
+            title={t("Shots", "발별 점수")}
+            footer={t(
+              `Tap a shot to see it larger.${e.sighters ? ` Before them, ${e.sighters} sighters (never counted).` : ""}`,
+              `발을 누르면 크게 볼 수 있어요.${e.sighters ? ` 그 전에 시사 ${e.sighters}발을 쐈어요 (점수에는 넣지 않아요).` : ""}`,
+            )}
+            testID="family-score-shots"
+          >
             <View style={styles.inset}>
               <ShotDarts evaluation={e} color={color} width={inner} current={current} onOpen={setOpenShot} />
             </View>
           </ListSection>
         ) : mode === "card" && review ? (
           picture.scanned ? (
-            <ListSection title="The card" footer={flat ? "Each bull’s score is beside it. Pinch the card with two fingers to zoom in, or double-tap it." : undefined} testID="family-score-card">
+            <ListSection
+              title={t("The card", "표적지")}
+              footer={flat ? t("Each bull’s score is beside it. Pinch the card with two fingers to zoom in, or double-tap it.", "표적마다 옆에 점수가 있어요. 두 손가락으로 벌리거나 두 번 탭하면 크게 볼 수 있어요.") : undefined}
+              testID="family-score-card"
+            >
               <View style={styles.inset}>
                 {flat ? (
                   <CardView image={flat} width={flat.width()} height={flat.height()} review={review} viewWidth={inner} plain testID="score-card" />
@@ -167,27 +191,34 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
               </View>
             </ListSection>
           ) : (
-            <ListSection title="Scores" footer="Typed from the card bull by bull, without where the shots landed." testID="family-score-bulls">
+            <ListSection
+              title={t("Scores", "점수")}
+              footer={t("Typed from the card bull by bull, without where the shots landed.", "표적지를 보고 표적마다 점수를 입력했어요. 탄착 위치는 없어요.")}
+              testID="family-score-bulls"
+            >
               <View style={styles.inset}>
                 <BullTiles review={review} plain />
               </View>
             </ListSection>
           )
         ) : mode === "total" ? (
-          <ListSection title="Score" testID="family-score-total-only">
-            <ListRow title={`${e.total} out of ${e.shots * 10}`} subtitle="Only the card’s total was kept, without its bulls." />
+          <ListSection title={t("Score", "점수")} testID="family-score-total-only">
+            <ListRow
+              title={t(`${e.total} out of ${e.shots * 10}`, `${e.shots * 10}점 만점에 ${e.total}점`)}
+              subtitle={t("Only the card’s total was kept, without its bulls.", "표적지의 총점만 저장했어요. 표적별 점수는 없어요.")}
+            />
           </ListSection>
         ) : (
-          <ListSection title="Shots" testID="family-score-values">
-            <ListRow title={e.series.flatMap((s) => s.shots.map((t) => t.v)).join("  ")} />
+          <ListSection title={t("Shots", "발별 점수")} testID="family-score-values">
+            <ListRow title={e.series.flatMap((s) => s.shots.map((shot) => shot.v)).join("  ")} />
           </ListSection>
         )}
 
         {e.fileId ? (
-          <ListSection title="The original" testID="family-score-original">
+          <ListSection title={t("The original", "원본")} testID="family-score-original">
             <ListRow
               icon={<RowIcon>{sius ? <FileText size={17} color={colors.foreground} /> : <FileImage size={17} color={colors.foreground} />}</RowIcon>}
-              title={sius ? "The SIUS result (PDF)" : "The card’s photo"}
+              title={sius ? t("The SIUS result (PDF)", "SIUS 기록 (PDF)") : t("The card’s photo", "표적지 사진")}
               subtitle={fileLine}
               onPress={fileReady ? () => router.push({ pathname: "/file/[id]", params: { id: e.fileId! } }) : undefined}
               testID="family-score-file"
@@ -205,9 +236,10 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
  * How a result compares with the student's others in its position (whole scores per 10 shots, as the charts count
  * them): the position's average, the result before it, and the best so far (a tap opens it).
  */
-function Compare({ e, own, loading, first, you }: { e: EvaluationDoc; own: EvaluationDoc[]; loading: boolean; first: string; you: boolean }) {
+function Compare({ e, own, loading, first, you, lang }: { e: EvaluationDoc; own: EvaluationDoc[]; loading: boolean; first: string; you: boolean; lang: Lang }) {
   const colors = useColors();
-  const label = POSITION_LABELS[e.position].toLowerCase();
+  const ko = lang === "ko";
+  const label = ko ? positionLabel(e.position, "ko") : POSITION_LABELS[e.position].toLowerCase();
   const value = wholePer10(e);
   const facts = useMemo(() => {
     const list = inOrder(own.filter((x) => x.position === e.position && x.shots > 0));
@@ -227,9 +259,9 @@ function Compare({ e, own, loading, first, you }: { e: EvaluationDoc; own: Evalu
   if (count < 2) {
     return (
       <Card style={styles.compare} testID="family-score-compare">
-        <T variant="label">How it compares</T>
+        <T variant="label">{ko ? "다른 기록과 비교" : "How it compares"}</T>
         <T variant="small" tone="muted">
-          {`The first ${label} result: the ones after it compare with it here.`}
+          {ko ? `첫 ${label} 기록이에요. 다음 기록부터 여기서 비교해요.` : `The first ${label} result: the ones after it compare with it here.`}
         </T>
       </Card>
     );
@@ -239,67 +271,75 @@ function Compare({ e, own, loading, first, you }: { e: EvaluationDoc; own: Evalu
     <Card style={styles.compare} testID="family-score-compare">
       <View style={styles.compareHead}>
         <T variant="label" style={styles.grow}>
-          How it compares
+          {ko ? "다른 기록과 비교" : "How it compares"}
         </T>
         <T variant="small" tone="muted">
-          per 10 shots
+          {ko ? "10발 평균" : "per 10 shots"}
         </T>
       </View>
       {progress.average !== null ? (
         <View style={[styles.fact, { backgroundColor: colors.secondary }]} testID="family-score-vs-average">
           <View style={styles.grow}>
-            <T variant="small" tone="muted">{`${whose[0].toUpperCase()}${whose.slice(1)} ${label} average`}</T>
-            <T variant="small" style={styles.number}>{`${one(progress.average)} over ${count} results`}</T>
+            <T variant="small" tone="muted">{ko ? `${first}의 ${label} 평균` : `${whose[0].toUpperCase()}${whose.slice(1)} ${label} average`}</T>
+            <T variant="small" style={styles.number}>{ko ? `${one(progress.average)} (기록 ${count}개)` : `${one(progress.average)} over ${count} results`}</T>
           </View>
-          <Versus diff={round(value - progress.average)} words={["above", "below"]} />
+          <Versus diff={round(value - progress.average)} words={ko ? ["높아요", "낮아요"] : ["above", "below"]} ko={ko} />
         </View>
       ) : null}
       {previous && prevValue !== null ? (
         <Pressable
           onPress={() => open(previous.id)}
           accessibilityRole="button"
-          accessibilityLabel={`The ${label} result before it, ${monthDay(previous.dateKey)}: ${one(prevValue)}${prevIsBest ? ", the best so far" : ""}. Opens it.`}
+          accessibilityLabel={
+            ko
+              ? `직전 ${label} 기록, ${monthDay(previous.dateKey, lang)}: ${one(prevValue)}${prevIsBest ? ", 지금까지 최고 기록" : ""}. 누르면 열어요.`
+              : `The ${label} result before it, ${monthDay(previous.dateKey)}: ${one(prevValue)}${prevIsBest ? ", the best so far" : ""}. Opens it.`
+          }
           style={({ pressed }) => [styles.fact, { backgroundColor: pressed ? colors.accent : colors.secondary }]}
           testID="family-score-vs-previous"
         >
           <View style={styles.grow}>
-            <T variant="small" tone="muted">{`The ${label} result before it`}</T>
+            <T variant="small" tone="muted">{ko ? `직전 ${label} 기록` : `The ${label} result before it`}</T>
             <View style={styles.value}>
-              <T variant="small" style={styles.number}>{`${one(prevValue)} on ${monthDay(previous.dateKey)}`}</T>
+              <T variant="small" style={styles.number}>{ko ? `${monthDay(previous.dateKey, lang)} · ${one(prevValue)}` : `${one(prevValue)} on ${monthDay(previous.dateKey)}`}</T>
               {prevIsBest ? (
                 <>
                   <Trophy size={12} color={colors.warning} />
                   <T variant="small" tone="muted">
-                    the best so far
+                    {ko ? "지금까지 최고" : "the best so far"}
                   </T>
                 </>
               ) : null}
             </View>
           </View>
-          <Versus diff={round(value - prevValue)} words={["higher", "lower"]} />
+          <Versus diff={round(value - prevValue)} words={ko ? ["높아요", "낮아요"] : ["higher", "lower"]} ko={ko} />
         </Pressable>
       ) : null}
       {bestMark && !prevIsBest ? (
         isBest ? (
           <View style={[styles.fact, { backgroundColor: colors.warningTint }]} testID="family-score-is-best">
             <T variant="small" style={[styles.grow, { color: colors.warning, fontWeight: "600" }]}>
-              {`${whose[0].toUpperCase()}${whose.slice(1)} best ${label} result so far`}
+              {ko ? `지금까지 ${first}의 ${label} 최고 기록이에요` : `${whose[0].toUpperCase()}${whose.slice(1)} best ${label} result so far`}
             </T>
           </View>
         ) : (
           <Pressable
             onPress={() => open(bestMark.id)}
             accessibilityRole="button"
-            accessibilityLabel={`The best ${label} result so far, ${monthDay(bestMark.dateKey)}: ${one(bestMark.per10)}. Opens it.`}
+            accessibilityLabel={
+              ko
+                ? `지금까지 ${label} 최고 기록, ${monthDay(bestMark.dateKey, lang)}: ${one(bestMark.per10)}. 누르면 열어요.`
+                : `The best ${label} result so far, ${monthDay(bestMark.dateKey)}: ${one(bestMark.per10)}. Opens it.`
+            }
             style={({ pressed }) => [styles.fact, { backgroundColor: pressed ? colors.accent : colors.secondary }]}
             testID="family-score-to-best"
           >
             <View style={styles.grow}>
-              <T variant="small" tone="muted">{`The best ${label} result so far`}</T>
-              <T variant="small" style={styles.number}>{`${one(bestMark.per10)} on ${monthDay(bestMark.dateKey)}`}</T>
+              <T variant="small" tone="muted">{ko ? `지금까지 ${label} 최고 기록` : `The best ${label} result so far`}</T>
+              <T variant="small" style={styles.number}>{ko ? `${monthDay(bestMark.dateKey, lang)} · ${one(bestMark.per10)}` : `${one(bestMark.per10)} on ${monthDay(bestMark.dateKey)}`}</T>
             </View>
             <T variant="small" tone="muted">
-              Open
+              {ko ? "열기" : "Open"}
             </T>
           </Pressable>
         )
@@ -309,7 +349,7 @@ function Compare({ e, own, loading, first, you }: { e: EvaluationDoc; own: Evalu
 }
 
 /** A difference in calm words, never red (as the website says it): "1.3 above", "2 lower", "the same". */
-function Versus({ diff, words }: { diff: number; words: [up: string, down: string] }) {
+function Versus({ diff, words, ko = false }: { diff: number; words: [up: string, down: string]; ko?: boolean }) {
   const colors = useColors();
   const Icon = diff > 0 ? ArrowUpRight : diff < 0 ? ArrowDownRight : ArrowRight;
   const tone = diff > 0 ? colors.success : colors.mutedForeground;
@@ -317,7 +357,7 @@ function Versus({ diff, words }: { diff: number; words: [up: string, down: strin
     <View style={styles.versus}>
       <Icon size={14} color={tone} />
       <T variant="small" style={[styles.versusText, { color: tone }]}>
-        {diff === 0 ? "the same" : `${one(Math.abs(diff))} ${diff > 0 ? words[0] : words[1]}`}
+        {diff === 0 ? (ko ? "같아요" : "the same") : `${one(Math.abs(diff))}${ko ? "점" : ""} ${diff > 0 ? words[0] : words[1]}`}
       </T>
     </View>
   );

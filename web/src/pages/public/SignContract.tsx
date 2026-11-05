@@ -195,7 +195,7 @@ function BackToApp() {
   return (
     <div className="mt-5 flex items-start gap-2 rounded-xl border p-4 text-sm" data-testid="back-to-app">
       <LuSmartphone className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <p className="text-muted-foreground">{t('You can close this page now: the app opens by itself.', '이제 이 화면을 닫으면 앱이 바로 열려요.')}</p>
+      <p className="text-muted-foreground">{t('You can close this page now and go back to the app.', '이제 이 화면을 닫고 앱으로 돌아가 주세요.')}</p>
     </div>
   )
 }

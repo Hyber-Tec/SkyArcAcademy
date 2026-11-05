@@ -1,80 +1,118 @@
-import { parseContract, pricedChoice } from "@shared/contracts/document";
-import { type ContractValues, carriedValues, prefillValues, presetValues } from "@shared/contracts/fill";
 import { type GateStudent, contractGate } from "@shared/contracts/gate";
-import type { ContractLink, ContractPdf, ContractPrefillResult, ContractSignRequest, ContractSignedResult } from "@shared/contracts/types";
-import { todayKey } from "@shared/time";
-import { CircleCheck, Download } from "lucide-react-native";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Modal, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import type { ContractLink } from "@shared/contracts/types";
+import * as WebBrowser from "expo-web-browser";
+import { FileSignature } from "lucide-react-native";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { AppState, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HelpLinks } from "@/components/AuthParts";
 import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { Button } from "@/components/Button";
 import { ContactButtons } from "@/components/ContactButtons";
+import { LangSwitch } from "@/components/LangSwitch";
 import { Loading } from "@/components/Loading";
-import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
 import { useFamily } from "@/features/family/FamilyProvider";
-import { useAcademyContact, useAcademySigner, useContractTemplate, useWaitingContracts } from "@/features/family/data";
+import { useAcademyContact, useWaitingContracts } from "@/features/family/data";
 import { callable, errorMessage } from "@/lib/api";
-import { appVersion, deviceLabel } from "@/lib/device";
+import { env } from "@/lib/env";
+import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/state/AuthProvider";
 import { useBranch } from "@/state/BranchProvider";
-import { space, useColors } from "@/theme";
-import { ContractSheet } from "./ContractForm";
-import { PdfView, openPdf } from "./PdfSheet";
+import { radius, space, useColors } from "@/theme";
 
-const signCall = callable<ContractSignRequest & { branchId: string; studentId: string; linkId: string; where: "app"; device: string }, ContractSignedResult>("signContractSignedIn");
-const prefillCall = callable<{ branchId: string }, ContractPrefillResult>("contractPrefill");
-const copyCall = callable<{ branchId: string; studentId: string }, ContractPdf>("getMySignedContract");
+const linkCall = callable<{ branchId: string; studentId: string }, { path: string; linkId: string }>("contractLinkForFamily");
 
 const firstNameOf = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 type Waiting = ContractLink & { id: string };
 
-/** A child whose contract was just signed here, and where the signer's copy was emailed. */
-type SignedKid = { id: string; name: string; emailedTo: string[] };
+/**
+ * While a contract's page is open over the app, the word that it's signed waits until the parent is back in the app
+ * (under the page, they wouldn't see it): on iPhone until the page closes, on Android until the app is in front again
+ * (its browser tab doesn't say when it closes).
+ */
+let backFromPage: Promise<void> | null = null;
+
+/** Marks a contract's page as open over the app; the function it returns says the parent is back. */
+function pageOpen(): () => void {
+  let back = () => {};
+  const page = new Promise<void>((resolve) => {
+    back = () => {
+      if (backFromPage === page) backFromPage = null;
+      resolve();
+    };
+  });
+  backFromPage = page;
+  return back;
+}
+
+/** The next time the app comes back to the front. */
+function appInFront(): Promise<void> {
+  return new Promise((resolve) => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      sub.remove();
+      resolve();
+    });
+  });
+}
 
 /**
  * Signing before using the app (docs/DECISIONS.md §31: "they have to sign first", and §34): once the office has sent a
  * student's enrollment contract, the family's part of the app opens only when it's signed (shared/src/contracts/
- * gate.ts). A parent fills it in and signs it here, one contract for each child (§33); a student waits for their
- * parent. Nothing is asked before the office sends one. Once signed, the parent is asked whether to save their copy (it
- * stays under More, by the child). Until the gate is known, the app shows its loading screen; a contract that can't be
- * read never locks anyone out. A super admin viewing the app as a family isn't asked.
+ * gate.ts). The contract itself is the website's (Goo, 2026-11-05: "writing the contract can be all done by website,
+ * just like the QR code"): a parent opens each child's contract from here, on its page on the website, in the language
+ * they read the app in, and signs it there; the app opens by itself once every one is signed, and the copy is under More.
+ * A student waits for their parent. Nothing is asked before the office sends one. Until the gate is known, the app shows
+ * its loading screen; a contract that can't be read never locks anyone out. A super admin viewing the app as a family
+ * isn't asked.
  */
 export function ContractGate({ children }: { children: ReactNode }) {
   const { role, viewAs } = useBranch();
   const { ids, students, loading } = useFamily();
+  const t = useT();
   const waiting = useWaitingContracts(ids);
-  // The children signed for here, for the copy to save (asked over the next contract, or the app).
-  const [justSigned, setJustSigned] = useState<SignedKid[]>([]);
   const byStudent = useMemo(() => {
     const map = new Map<string, Waiting>();
     for (const l of [...waiting.data].sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))) if (!map.has(l.studentId)) map.set(l.studentId, l);
     return map;
   }, [waiting.data]);
-  if (viewAs) return children;
-  if ((loading || waiting.loading) && !justSigned.length) return <Loading label="Opening Sky Arc" />;
   const gate = contractGate({ role, students: [...students.values()], waiting: new Set(byStudent.keys()) });
-  const saved = <SaveCopies kids={justSigned} onDone={() => setJustSigned([])} />;
-  if (gate.open) {
-    return (
-      <>
-        {children}
-        {saved}
-      </>
-    );
-  }
+  useSignedNotice(gate.toSign, !loading && !waiting.loading && role === "parent");
+  if (viewAs) return children;
+  if (loading || waiting.loading) return <Loading label={t("Opening Sky Arc", "Sky Arc를 여는 중…")} />;
+  if (gate.open) return children;
   if (role === "student") return <WaitForParent />;
-  return (
-    <>
-      <SignBeforeUsing toSign={gate.toSign} waiting={byStudent} onSigned={(kid) => setJustSigned((d) => [...d, kid])} />
-      {saved}
-    </>
-  );
+  return <SignOnWebsite toSign={gate.toSign} />;
+}
+
+/**
+ * A contract signed on the website while the app waited for it: a word that it's done, and where the copy is, once the
+ * parent is back in the app.
+ */
+function useSignedNotice(toSign: GateStudent[], ready: boolean) {
+  const t = useT();
+  const before = useRef<GateStudent[] | null>(null);
+  const key = toSign.map((k) => k.id).join(",");
+  useEffect(() => {
+    if (!ready) return;
+    const last = before.current;
+    before.current = toSign;
+    for (const kid of last ?? []) {
+      if (toSign.some((k) => k.id === kid.id)) continue;
+      const first = firstNameOf(kid.name);
+      void (backFromPage ?? Promise.resolve()).then(() =>
+        toast.success(t(`${first}’s contract is signed`, `${first} 학생 계약서에 서명했어요`), {
+          description: t("Your copy is under More → Enrollment contract.", "사본은 더보기 → 등록 계약서에서 볼 수 있어요."),
+        }),
+      );
+    }
+    // Only when the list changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ready]);
 }
 
 /** A student's own login, until a parent signs: who signs, and how to reach the academy. */
@@ -106,220 +144,92 @@ function WaitForParent() {
 }
 
 /**
- * A parent fills in and signs each contract the office sent, one child at a time (the manager, 2026-11-04: "the parent
- * should sign both contracts for each child"), A to Z, each as the office sent it (its version, the program it
- * suggested, its discounts). What the records know fills the form (the child's name and birth date, the parent's name,
- * phone and email), and what the parent typed about themselves carries to the next child's; the program, the child's
- * details and the signature never do.
+ * A parent's contracts to sign, one per child (the manager, 2026-11-04: "the parent should sign both contracts for each
+ * child"), A to Z: each opens on the website in the phone's in-app browser, in the language the parent reads the app
+ * in, and closes back here. The website's page is the QR code's: it shows the contract as the office sent it (its
+ * version, the program it suggested, its discounts), and the copy to download and by email once signed.
  */
-function SignBeforeUsing({ toSign, waiting, onSigned }: { toSign: GateStudent[]; waiting: Map<string, Waiting>; onSigned: (kid: SignedKid) => void }) {
-  const { branchId } = useBranch();
-  const { email } = useAuth();
-  const [prefill, setPrefill] = useState<ContractPrefillResult | null>(null);
-  const [carry, setCarry] = useState<ContractValues>({});
-  // Signed here: the next child shows at once, before the contract's record comes back.
-  const [signedHere, setSignedHere] = useState<string[]>([]);
-  const [total] = useState(toSign.length);
-  const left = toSign.filter((k) => !signedHere.includes(k.id));
-  const child = left[0] ?? null;
-  const link = child ? waiting.get(child.id) : undefined;
-
-  useEffect(() => {
-    let live = true;
-    prefillCall({ branchId }).then(
-      (r) => live && setPrefill(r),
-      // Without the records the form starts with the student's name and the account's email: nothing is locked.
-      () => live && setPrefill({ students: [], signer: { name: "", phone: "", email: email ?? "" } }),
-    );
-    return () => {
-      live = false;
-    };
-  }, [branchId, email]);
-
-  if (!child || !link) return <Loading label="Opening Sky Arc" />;
-  return (
-    <OneContract
-      key={link.id}
-      child={child}
-      link={link}
-      n={Math.min(signedHere.length + 1, Math.max(total, 1))}
-      total={Math.max(total, signedHere.length + left.length)}
-      prefill={prefill}
-      carry={carry}
-      onSigned={(values, emailedTo) => {
-        setCarry(values);
-        setSignedHere((d) => [...d, child.id]);
-        onSigned({ id: child.id, name: child.name, emailedTo });
-      }}
-    />
-  );
-}
-
-/** One child's contract, as the office sent it. */
-function OneContract({
-  child,
-  link,
-  n,
-  total,
-  prefill,
-  carry,
-  onSigned,
-}: {
-  child: GateStudent;
-  link: Waiting;
-  n: number;
-  total: number;
-  prefill: ContractPrefillResult | null;
-  carry: ContractValues;
-  onSigned: (carried: ContractValues, emailedTo: string[]) => void;
-}) {
-  const { branchId, name: academy, timezone, isDemo } = useBranch();
-  const { email, signOut } = useAuth();
-  const template = useContractTemplate(link.templateId);
-  const signer = useAcademySigner();
-  const text = template.data?.text ?? "";
-  const doc = useMemo(() => parseContract(text).doc, [text]);
-  if (template.loading || signer.loading) return <Loading label="Opening the contract" />;
-  if (!text) return <Loading label="Opening the contract" />;
-
-  const first = firstNameOf(child.name);
-  const known = prefill?.students.find((s) => s.id === child.id) ?? null;
-  const preset = presetValues(doc, link.preset ?? {});
-  const initial = { ...prefillValues(doc, { studentName: child.name, email: email ?? "" }), ...preset, ...carry };
-  const late = prefill
-    ? {
-        ...prefillValues(doc, { studentName: known?.name || child.name, dob: known?.dob ?? null, signerName: prefill.signer.name, phone: prefill.signer.phone, email: prefill.signer.email || email || "" }),
-        ...preset,
-        ...carry,
-      }
-    : null;
-  const choice = pricedChoice(doc);
-  const suggested = choice && typeof link.preset?.[choice.id] === "string" ? (link.preset[choice.id] as string) : null;
-
-  return (
-    <ContractSheet
-      doc={doc}
-      firstName={first}
-      today={todayKey(timezone)}
-      initial={initial}
-      prefill={late}
-      insetTop
-      testID="contract-sign"
-      submitLabel={`Sign ${first}’s contract`}
-      submitTestID="sign-contract"
-      offer={{ suggested, academySigner: signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image ?? null } : null }}
-      header={
-        <View style={styles.head}>
-          <SkyArcLogo height={56} />
-          {total > 1 ? (
-            <T variant="label" tone="muted" style={styles.center} testID="contract-count">
-              Contract {n} of {total}
-            </T>
-          ) : null}
-          <T variant="title" style={styles.center} testID="contract-child-title">
-            Enrollment contract for {first}
-          </T>
-          <T tone="muted" style={styles.center}>
-            {academy} sent you {first}’s contract. Please read it, check the program, fill it in and sign it at the end.
-            {total > 1 ? " Each child has their own contract." : ""}
-          </T>
-        </View>
-      }
-      onSubmit={async (s) => {
-        try {
-          const r = await signCall({
-            branchId,
-            studentId: child.id,
-            linkId: link.id,
-            where: "app",
-            device: `Sky Arc app ${appVersion()} on ${deviceLabel()}`,
-            values: s.values,
-            name: s.name,
-            relation: s.relation,
-            signature: s.signature,
-            agree: true,
-          });
-          if (!r.signed) toast.success(`${first}’s contract was signed already`);
-          onSigned(carriedValues(doc, s.values), r.emailedTo ?? []);
-        } catch (e) {
-          const details = (e as { details?: { errors?: Record<string, string> } }).details;
-          if (details?.errors) return { errors: details.errors };
-          return { problem: errorMessage(e, "The contract couldn’t be signed just now. Check your connection and try again.") };
-        }
-      }}
-      footer={
-        <View style={styles.footer}>
-          <T variant="small" tone="muted">
-            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address, this phone and the email you’re signed in with. The academy keeps it,{" "}
-            {isDemo ? "and you can save your copy." : "and you get your copy by email and can save it."}
-          </T>
-          <Button variant="outline" onPress={() => void signOut()} testID="contract-sign-out">
-            Sign out
-          </Button>
-          <DeleteAccountLink academyName={academy} />
-        </View>
-      }
-    />
-  );
-}
-
-/**
- * Once signed: their copy to save now (the share sheet: Save to Files, Mail…), or later from More, by the child (the
- * owner, 2026-11-05: "ask, hey, you want to download the contract or not").
- */
-function SaveCopies({ kids, onDone }: { kids: SignedKid[]; onDone: () => void }) {
-  const { branchId } = useBranch();
+function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
+  const { branchId, name: academy } = useBranch();
+  const { signOut } = useAuth();
+  const contact = useAcademyContact();
+  const insets = useSafeAreaInsets();
   const colors = useColors();
-  const [busy, setBusy] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  // On an iPhone the PDF opens in the same sheet (one sheet at a time); on Android, the share sheet.
-  const [pdf, setPdf] = useState<{ uri: string; name: string } | null>(null);
-  const one = kids.length === 1;
-  const emailed = [...new Set(kids.flatMap((k) => k.emailedTo))];
-  async function save(kid: SignedKid) {
-    setBusy(kid.id);
+  const t = useT();
+  const lang = useLang();
+  const [opening, setOpening] = useState<string | null>(null);
+  const one = toSign.length === 1;
+  const first = firstNameOf(toSign[0]?.name ?? "");
+
+  async function open(kid: GateStudent) {
+    setOpening(kid.id);
+    const back = pageOpen();
     try {
-      await openPdf(await copyCall({ branchId, studentId: kid.id }), setPdf);
-      setSaved(true);
+      const { path } = await linkCall({ branchId, studentId: kid.id });
+      await WebBrowser.openBrowserAsync(`${env.webUrl}${path}?lang=${lang}&from=app`, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        controlsColor: "#0A0A0A",
+        dismissButtonStyle: "done",
+      });
+      // On iPhone the page is closed by now; on Android it's open over the app until the app is in front again.
+      if (Platform.OS === "android") void appInFront().then(back);
+      else back();
     } catch (e) {
-      toast.error(errorMessage(e, "The signed copy couldn’t be downloaded just now."));
+      back();
+      toast.error(errorMessage(e, t("The contract couldn’t be opened. Check your connection and try again.", "계약서를 열지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."), lang));
     } finally {
-      setBusy(null);
+      setOpening(null);
     }
   }
+
   return (
-    <Modal visible={kids.length > 0} animationType="slide" presentationStyle="pageSheet" onRequestClose={onDone}>
-      {pdf ? (
-        <PdfView pdf={pdf} onClose={() => setPdf(null)} />
-      ) : (
-        <SafeAreaView style={[styles.fill, { backgroundColor: colors.grouped }]} edges={SHEET_EDGES}>
-          <ScrollView contentContainerStyle={styles.saved} testID="contract-signed">
-            <View style={styles.icon}>
-              <CircleCheck size={44} color={colors.success} />
+    <ScrollView style={{ backgroundColor: colors.grouped }} contentContainerStyle={[styles.page, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]} testID="contract-sign">
+      <View style={styles.head}>
+        <SkyArcLogo height={56} />
+        <T variant="title" style={styles.center} testID="contract-child-title">
+          {one ? t(`Please sign ${first}’s enrollment contract`, `${first} 학생 등록 계약서에 서명해 주세요`) : t("Please sign your children’s enrollment contracts", "자녀 등록 계약서에 서명해 주세요")}
+        </T>
+        <T tone="muted" style={styles.center}>
+          {one
+            ? t(
+                `${academy} sent you ${first}’s contract. It opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once it’s signed.`,
+                `${academy}에서 ${first} 학생 계약서를 보냈어요. 아카데미 웹사이트에서 계약서를 읽고 작성한 뒤 서명해 주세요. 몇 분이면 끝나고, 서명하면 앱이 바로 열려요.`,
+              )
+            : t(
+                `${academy} sent you a contract for each child. Each opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once they’re all signed.`,
+                `${academy}에서 자녀마다 계약서를 보냈어요. 아카데미 웹사이트에서 하나씩 읽고 작성한 뒤 서명해 주세요. 몇 분이면 끝나고, 모두 서명하면 앱이 바로 열려요.`,
+              )}
+        </T>
+      </View>
+      <View style={styles.list}>
+        {toSign.map((kid) => (
+          <View key={kid.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID={`contract-to-sign-${kid.id}`}>
+            <View style={styles.cardHead}>
+              <FileSignature size={20} color={colors.foreground} />
+              <T variant="label" style={styles.fill}>
+                {t(`${firstNameOf(kid.name)}’s enrollment contract`, `${firstNameOf(kid.name)} 학생 등록 계약서`)}
+              </T>
             </View>
-            <T variant="title" style={styles.center}>
-              {one ? `${firstNameOf(kids[0]?.name ?? "")}’s contract is signed` : "Your contracts are signed"}
-            </T>
-            <T tone="muted" style={styles.center} testID="contract-signed-note">
-              {emailed.length
-                ? `Thank you. The academy has its copy, and yours is on its way to ${emailed.join(", ")}. Would you like to save it too?`
-                : "Thank you. The academy has its copy. Would you like to save yours?"}
-            </T>
-            {kids.map((k) => (
-              <Button key={k.id} size="lg" wrap variant={one ? "default" : "outline"} icon={<Download size={18} color={one ? colors.primaryForeground : colors.foreground} />} busy={busy === k.id} onPress={() => void save(k)} testID={`save-copy-${k.id}`}>
-                {one ? "Save the contract (PDF)" : `${firstNameOf(k.name)}’s contract (PDF)`}
-              </Button>
-            ))}
-            <Button size="lg" variant="ghost" onPress={onDone} testID="contract-signed-later">
-              {saved ? "Done" : "Not now"}
+            <Button size="lg" wrap busy={opening === kid.id} disabled={opening !== null && opening !== kid.id} onPress={() => void open(kid)} testID={`contract-open-${kid.id}`}>
+              {t("Read and sign", "읽고 서명하기")}
             </Button>
-            <T variant="small" tone="muted" style={styles.center}>
-              You can save it any time from More, under {one ? firstNameOf(kids[0]?.name ?? "") : "each child"}.
-            </T>
-          </ScrollView>
-        </SafeAreaView>
-      )}
-    </Modal>
+          </View>
+        ))}
+      </View>
+      <T variant="small" tone="muted" style={styles.center}>
+        {t(
+          "Once it’s signed, your copy comes by email, and it stays under More → Enrollment contract.",
+          "서명하면 사본이 이메일로 오고, 더보기 → 등록 계약서에서도 언제든 볼 수 있어요.",
+        )}
+      </T>
+      {contact && (contact.phone || contact.email) ? <ContactButtons phone={contact.phone} email={contact.email} name={academy} /> : null}
+      <Button size="lg" variant="outline" onPress={() => void signOut()} testID="contract-sign-out">
+        {t("Sign out", "로그아웃")}
+      </Button>
+      <DeleteAccountLink academyName={academy} />
+      <HelpLinks />
+      <LangSwitch />
+    </ScrollView>
   );
 }
 
@@ -328,7 +238,7 @@ const styles = StyleSheet.create({
   page: { gap: space.lg, paddingHorizontal: space.lg },
   head: { alignItems: "center", gap: space.sm },
   center: { textAlign: "center" },
-  footer: { gap: space.lg },
-  saved: { alignItems: "stretch", gap: space.md, padding: space.xl, paddingTop: space.xxl },
-  icon: { alignSelf: "center" },
+  list: { gap: space.md },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.lg, padding: space.md, gap: space.md },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
 });

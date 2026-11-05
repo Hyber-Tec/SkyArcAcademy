@@ -1,5 +1,6 @@
-import { DEFAULT_REPORT_OPTIONS, type ProgressReportDoc } from "@shared/reports/types";
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, pointOf } from "@shared/shooting/evaluation";
+import { josa } from "@shared/i18n";
+import { DEFAULT_REPORT_OPTIONS, NARRATIVE_LABELS_KO, type ProgressReportDoc } from "@shared/reports/types";
+import { POSITIONS, POSITION_COLORS, type Position, pointOf } from "@shared/shooting/evaluation";
 import { ArrowRight, Check, Crosshair, Flag, MessageSquareQuote, Target } from "lucide-react-native";
 import { type ReactNode, useMemo, useState } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
@@ -10,15 +11,26 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
 import { hasPlacedShots, playPoints } from "@/features/scores/playback";
 import { ShotReplay } from "@/features/scores/ShotReplay";
+import { positionLabel } from "@/features/scores/words";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useIsDark } from "@/theme";
 import { DistributionBar, INK, Sparkline, TrendChart, trendSeries } from "./charts";
-import { evaluationsText, one, preparedOn, signed } from "./format";
+import { evaluationsText, one, periodText, preparedOn, signed } from "./format";
 import { Comparison, Heading, PositionRows, type Tile, TileGrid } from "./ReportParts";
 import { TrendChip } from "./TrendChip";
 
 /** A progress report as stored, with its ID. */
 type Report = ProgressReportDoc & { id: string };
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** The previous report's period, short, in Korean: "9월" for a whole month ("September 2026"), else "지난 리포트". */
+function previousKo(label: string): string {
+  const m = /^([A-Z][a-z]+) \d{4}$/.exec(label);
+  const i = m ? MONTHS.indexOf(m[1]) : -1;
+  return i >= 0 ? `${i + 1}월` : "지난 리포트";
+}
 
 /** The position with the most results (ties: the better average). */
 function mainPosition(r: Report): Position | null {
@@ -37,6 +49,9 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
   const { timezone } = useBranch();
   const colors = useColors();
   const dark = useIsDark();
+  const t = useT();
+  const lang = useLang();
+  const ko = lang === "ko";
   const { width } = useWindowDimensions();
   const f = r.facts;
   const o = { ...DEFAULT_REPORT_OPTIONS, ...r.options };
@@ -59,42 +74,79 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
   );
   const [chosen, setChosen] = useState<Position | null>(null);
   const target = targets.find((t) => t.pos === chosen) ?? targets[0] ?? null;
-  const shots = useMemo(() => (target ? playPoints(target.points) : []), [target]);
+  const shots = useMemo(() => (target ? playPoints(target.points, lang) : []), [target, lang]);
   const counted = f.distribution.tens + f.distribution.nines + f.distribution.eights + f.distribution.lower;
   const showTargets = o.showTargets && (!!target || counted > 0);
   const main = mainPosition(r);
   const compare = main ? series.filter((p) => p.position === main) : [];
 
-  const prevShort = f.previous ? (/^[A-Z][a-z]+ \d{4}$/.test(f.previous.periodLabel) ? f.previous.periodLabel.slice(0, 3) : "the last report") : null;
+  const prevShort = f.previous ? (ko ? previousKo(f.previous.periodLabel) : /^[A-Z][a-z]+ \d{4}$/.test(f.previous.periodLabel) ? f.previous.periodLabel.slice(0, 3) : "the last report") : null;
   const spark = (values: (number | null)[]) => <Sparkline values={values} color={colors.brandText} />;
+  const classes = f.attendance.attended + f.attendance.missed;
   const tiles: Tile[] = [
-    { label: "Evaluations", value: String(f.evaluations.total), sub: { text: `${f.evaluations.shots} scored shots`, tone: "flat" }, testID: "report-tile-evaluations" },
+    {
+      label: t("Evaluations", "기록 수"),
+      value: String(f.evaluations.total),
+      sub: { text: t(`${f.evaluations.shots} scored shots`, `총 ${f.evaluations.shots}발`), tone: "flat" },
+      testID: "report-tile-evaluations",
+    },
     ...(f.average !== null
       ? [
           {
-            label: "Average per 10 shots",
+            label: t("Average per 10 shots", "10발 평균"),
             value: one(f.average),
             spark: spark(series.map((p) => p.wholePer10)),
             sub:
               f.deltaAverage !== null && prevShort
-                ? { text: f.deltaAverage === 0 ? `same as ${prevShort}` : `${signed(f.deltaAverage)} vs. ${prevShort}`, tone: f.deltaAverage > 0 ? ("up" as const) : f.deltaAverage < 0 ? ("down" as const) : ("flat" as const) }
-                : { text: "out of 100", tone: "flat" as const },
+                ? {
+                    text:
+                      f.deltaAverage === 0
+                        ? t(`same as ${prevShort}`, `${josa(prevShort, "과/와")} 같음`)
+                        : t(`${signed(f.deltaAverage)} vs. ${prevShort}`, `${prevShort} 대비 ${signed(f.deltaAverage)}`),
+                    tone: f.deltaAverage > 0 ? ("up" as const) : f.deltaAverage < 0 ? ("down" as const) : ("flat" as const),
+                  }
+                : { text: t("out of 100", "100점 만점"), tone: "flat" as const },
             testID: "report-tile-average",
           },
         ]
       : []),
-    ...(f.decimal !== null ? [{ label: "Decimal average", value: one(f.decimal), spark: spark(sius.map((p) => p.per10)), sub: { text: "SIUS results, out of 109", tone: "flat" as const } }] : []),
-    ...(f.innerTensPct !== null
-      ? [{ label: "Inner tens", value: `${f.innerTensPct}%`, spark: spark(sius.map((p) => (p.innerTens !== null && p.shots ? (p.innerTens / p.shots) * 100 : null))), sub: { text: "shots of 10.2 or better", tone: "flat" as const } }]
+    ...(f.decimal !== null
+      ? [{ label: t("Decimal average", "소수점 평균"), value: one(f.decimal), spark: spark(sius.map((p) => p.per10)), sub: { text: t("SIUS results, out of 109", "SIUS 기록, 109점 만점"), tone: "flat" as const } }]
       : []),
-    ...(f.groupMm !== null ? [{ label: "Group size", value: `${one(f.groupMm)} mm`, spark: spark(sius.map((p) => p.groupMm)), sub: { text: "average; smaller is tighter", tone: "flat" as const } }] : []),
+    ...(f.innerTensPct !== null
+      ? [
+          {
+            label: t("Inner tens", "이너 텐"),
+            value: `${f.innerTensPct}%`,
+            spark: spark(sius.map((p) => (p.innerTens !== null && p.shots ? (p.innerTens / p.shots) * 100 : null))),
+            sub: { text: t("shots of 10.2 or better", "10.2점 이상인 발"), tone: "flat" as const },
+          },
+        ]
+      : []),
+    ...(f.groupMm !== null
+      ? [
+          {
+            label: t("Group size", "탄착군 크기"),
+            value: t(`${one(f.groupMm)} mm`, `${one(f.groupMm)}mm`),
+            spark: spark(sius.map((p) => p.groupMm)),
+            sub: { text: t("average; smaller is tighter", "평균, 작을수록 잘 모여요"), tone: "flat" as const },
+          },
+        ]
+      : []),
     ...(o.showAttendance && f.attendance.percent !== null
-      ? [{ label: "Attendance", value: `${f.attendance.percent}%`, sub: { text: `${f.attendance.attended} of ${f.attendance.attended + f.attendance.missed} classes`, tone: "flat" as const }, testID: "report-tile-attendance" }]
+      ? [
+          {
+            label: t("Attendance", "출석률"),
+            value: `${f.attendance.percent}%`,
+            sub: { text: t(`${f.attendance.attended} of ${classes} classes`, `수업 ${classes}번 중 ${f.attendance.attended}번`), tone: "flat" as const },
+            testID: "report-tile-attendance",
+          },
+        ]
       : []),
   ];
 
   const contact = [r.snapshot?.academyName, r.snapshot?.contact?.phone, r.snapshot?.contact?.email, r.snapshot?.contact?.website].filter(Boolean).join(" · ");
-  const prepared = preparedOn(r, timezone);
+  const prepared = preparedOn(r, timezone, lang);
   const strengths = (n.strengths ?? []).filter((s) => s.trim());
   const focus = (n.focusAreas ?? []).filter((s) => s.trim());
   const goals = (n.goals ?? []).filter((g) => g.goal.trim() || g.measure.trim());
@@ -107,19 +159,25 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
       <Card style={styles.hero} testID="report-hero">
         <SkyArcLogo height={40} />
         <T variant="tiny" tone="muted" style={styles.kicker} numberOfLines={2}>
-          {(r.customName || "Progress report").toUpperCase()} · {r.period.label.toUpperCase()}
+          {(r.customName || t("Progress report", "성장 리포트")).toUpperCase()} · {periodText(r.period, lang).toUpperCase()}
         </T>
         <T variant="title" testID="report-student">
           {r.student?.name || r.studentName}
         </T>
         <T variant="small" tone="muted">
-          {[r.student?.level ? `Level: ${r.student.level}` : "", r.student?.program ? `Program: ${r.student.program}` : "", evaluationsText(f.evaluations.total)].filter(Boolean).join(" · ")}
+          {[
+            r.student?.level ? t(`Level: ${r.student.level}`, `레벨: ${r.student.level}`) : "",
+            r.student?.program ? t(`Program: ${r.student.program}`, `프로그램: ${r.student.program}`) : "",
+            t(evaluationsText(f.evaluations.total), `기록 ${f.evaluations.total}개`),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </T>
         {level ? (
           <View style={styles.trend}>
             <TrendChip level={level} testID="report-trend" />
             <T variant="tiny" tone="muted">
-              From the scores across the period
+              {t("From the scores across the period", "이 기간의 점수로 계산했어요")}
             </T>
           </View>
         ) : null}
@@ -129,7 +187,7 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
 
       {n.overview?.trim() ? (
         <Section>
-          <Heading icon={Crosshair}>This period at a glance</Heading>
+          <Heading icon={Crosshair}>{t("This period at a glance", "이번 기간 요약")}</Heading>
           <Card>
             <T style={styles.prose} testID="report-overview">
               {n.overview.trim()}
@@ -141,7 +199,7 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
       {strengths.length ? (
         <View style={[styles.box, { backgroundColor: colors.successTint }]} testID="report-strengths">
           <T variant="label" style={{ color: colors.success }}>
-            Strengths
+            {t("Strengths", NARRATIVE_LABELS_KO.strengths)}
           </T>
           {strengths.map((s, i) => (
             <View key={i} style={styles.point}>
@@ -154,7 +212,7 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
       {focus.length ? (
         <View style={[styles.box, { backgroundColor: colors.warningTint }]} testID="report-focus">
           <T variant="label" style={{ color: colors.warning }}>
-            Focus areas
+            {t("Focus areas", NARRATIVE_LABELS_KO.focusAreas)}
           </T>
           {focus.map((s, i) => (
             <View key={i} style={styles.point}>
@@ -169,26 +227,31 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
         <Card style={styles.gap} testID="report-chart">
           <View style={styles.cardHead}>
             <T variant="label" style={styles.grow}>
-              Scores over time
+              {t("Scores over time", "점수 변화")}
             </T>
             <T variant="small" tone="muted">
-              per 10 shots
+              {t("per 10 shots", "10발 평균")}
             </T>
           </View>
           <View style={[styles.paper, paper]}>
-            <TrendChart series={trendSeries(series)} from={r.period.from} to={r.period.to} />
+            <TrendChart series={trendSeries(series, lang)} from={r.period.from} to={r.period.to} />
           </View>
           <T variant="tiny" tone="muted">
-            Tap the chart to read a date’s scores.
+            {t("Tap the chart to read a date’s scores.", "차트를 누르면 그날 점수를 볼 수 있어요.")}
           </T>
         </Card>
       ) : null}
 
       {showTargets ? (
         <Card style={styles.gap} testID="report-targets">
-          <T variant="label">Where the shots went</T>
+          <T variant="label">{t("Where the shots went", "탄착 위치")}</T>
           {targets.length > 1 ? (
-            <SegmentedControl<Position> value={target?.pos ?? targets[0].pos} onChange={setChosen} options={targets.map((t) => ({ value: t.pos, label: POSITION_LABELS[t.pos] }))} testID="report-position" />
+            <SegmentedControl<Position>
+              value={target?.pos ?? targets[0].pos}
+              onChange={setChosen}
+              options={targets.map((x) => ({ value: x.pos, label: positionLabel(x.pos, lang) }))}
+              testID="report-position"
+            />
           ) : null}
           {target ? (
             <View style={styles.replay}>
@@ -197,14 +260,17 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
                 shots={shots}
                 color={POSITION_COLORS[target.pos]}
                 size={Math.min(inner, 340)}
-                caption={`${POSITION_LABELS[target.pos]} · ${target.shots} shots in ${target.points.length} ${target.points.length === 1 ? "result" : "results"} · the cross marks the average`}
+                caption={t(
+                  `${positionLabel(target.pos, "en")} · ${target.shots} shots in ${target.points.length} ${target.points.length === 1 ? "result" : "results"} · the cross marks the average`,
+                  `${positionLabel(target.pos, "ko")} · 기록 ${target.points.length}개 · ${target.shots}발 · 십자는 평균 탄착점이에요`,
+                )}
               />
             </View>
           ) : null}
           {counted ? (
             <View style={[styles.paper, paper]}>
               <T variant="small" style={[styles.paperTitle, { color: INK.secondary }]}>
-                Every counted shot by score
+                {t("Every counted shot by score", "점수별 발 수")}
               </T>
               <DistributionBar {...f.distribution} />
             </View>
@@ -216,14 +282,14 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
 
       {o.showComparison && compare.length >= 2 && main ? (
         <Section>
-          <Heading icon={Target}>{`First vs latest · ${POSITION_LABELS[main]}`}</Heading>
+          <Heading icon={Target}>{t(`First vs latest · ${positionLabel(main, "en")}`, `처음과 최근 비교 · ${positionLabel(main, "ko")}`)}</Heading>
           <Comparison a={compare[0]} b={compare[compare.length - 1]} width={inner} />
         </Section>
       ) : null}
 
       {goals.length ? (
         <Section testID="report-goals">
-          <Heading icon={Flag}>Goals for next period</Heading>
+          <Heading icon={Flag}>{t("Goals for next period", "다음 기간 목표")}</Heading>
           <Card style={styles.goals}>
             {goals.map((g, i) => (
               <View key={i} style={[styles.goal, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: space.md }]}>
@@ -251,7 +317,7 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
           <View style={styles.cardHead}>
             <MessageSquareQuote size={16} color={colors.brandText} />
             <T variant="label" style={styles.shrink}>
-              A note from the coach
+              {t("A note from the coach", NARRATIVE_LABELS_KO.coachNote)}
             </T>
           </View>
           <T style={styles.prose}>“{n.coachNote.trim()}”</T>
@@ -265,7 +331,10 @@ export function ReportBody({ r, top, bottom }: { r: Report; top?: ReactNode; bot
           </T>
         ) : null}
         <T variant="small" tone="muted" style={styles.center}>
-          Questions about this report? We’re happy to talk.{prepared ? ` Prepared ${prepared}.` : ""}
+          {t(
+            `Questions about this report? We’re happy to talk.${prepared ? ` Prepared ${prepared}.` : ""}`,
+            `궁금한 점이 있으면 언제든 편하게 물어보세요.${prepared ? ` ${prepared}에 작성했어요.` : ""}`,
+          )}
         </T>
       </View>
       {bottom}

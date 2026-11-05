@@ -79,6 +79,7 @@ export function Button({
       {children !== undefined && children !== null && (
         <Text
           numberOfLines={wrap ? undefined : 1}
+          lineBreakStrategyIOS="hangul-word"
           style={[
             { color: fg, fontSize: size === "sm" ? 14 : 16, fontWeight: variant === "link" ? "500" : "600", textDecorationLine: variant === "link" ? "underline" : "none" },
             wrap && styles.wrapLabel,

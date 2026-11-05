@@ -1,11 +1,14 @@
+import type { Lang } from "@shared/i18n";
 import type { EvaluationPoint } from "@shared/reports/types";
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS } from "@shared/shooting/evaluation";
+import { POSITIONS, POSITION_COLORS } from "@shared/shooting/evaluation";
 import { type DateKey, diffDays } from "@shared/time";
 import { useState } from "react";
 import { type LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle, Line, Path, Polyline, Text as SvgText } from "react-native-svg";
 import { T } from "@/components/Text";
 import { monthDay, shortDay } from "@/features/schedule/format";
+import { positionLabel } from "@/features/scores/words";
+import { useLang } from "@/lib/lang";
 import { radius, space } from "@/theme";
 import { one } from "./format";
 
@@ -57,12 +60,15 @@ export interface TrendSeries {
  * The scores-over-time lines: one per position, whole scores per 10 shots (the reports' scale, where SIUS results and
  * paper cards compare), a SIUS result's decimal in its readout.
  */
-export function trendSeries(points: readonly Pick<EvaluationPoint, "position" | "dateKey" | "wholePer10" | "per10" | "source">[]): TrendSeries[] {
+export function trendSeries(points: readonly Pick<EvaluationPoint, "position" | "dateKey" | "wholePer10" | "per10" | "source">[], lang: Lang = "en"): TrendSeries[] {
+  const ko = lang === "ko";
   return POSITIONS.map((pos) => ({
     key: pos,
-    label: POSITION_LABELS[pos],
+    label: positionLabel(pos, lang),
     color: POSITION_COLORS[pos],
-    points: points.filter((p) => p.position === pos).map((p) => ({ dateKey: p.dateKey, value: p.wholePer10, detail: p.source === "sius" ? `${one(p.per10)} decimal` : "paper card" })),
+    points: points
+      .filter((p) => p.position === pos)
+      .map((p) => ({ dateKey: p.dateKey, value: p.wholePer10, detail: p.source === "sius" ? (ko ? `소수점 ${one(p.per10)}` : `${one(p.per10)} decimal`) : ko ? "종이 표적지" : "paper card" })),
   })).filter((s) => s.points.length);
 }
 
@@ -85,6 +91,8 @@ function yBounds(values: number[], cap: number) {
 export function TrendChart({ series, from, to, cap = 100, height = 190, testID }: { series: TrendSeries[]; from: DateKey; to: DateKey; cap?: number; height?: number; testID?: string }) {
   const [width, onLayout] = useWidth();
   const [active, setActive] = useState<DateKey | null>(null);
+  const lang = useLang();
+  const ko = lang === "ko";
   const L = 30;
   const R = Math.max(L + 40, width - 30);
   const T_ = 12;
@@ -141,8 +149,12 @@ export function TrendChart({ series, from, to, cap = 100, height = 190, testID }
         onLayout={onLayout}
         onPress={(e) => pick(e.nativeEvent.locationX)}
         accessibilityRole="image"
-        accessibilityLabel={`Scores per 10 shots from ${monthDay(from)} to ${monthDay(to)}: ${series.map((s) => `${s.label} ${s.points.map((p) => one(p.value)).join(", ")}`).join("; ")}`}
-        accessibilityHint="Tap a date to read its scores"
+        accessibilityLabel={
+          ko
+            ? `10발 평균 점수, ${monthDay(from, lang)}부터 ${monthDay(to, lang)}까지: ${series.map((s) => `${s.label} ${s.points.map((p) => one(p.value)).join(", ")}`).join("; ")}`
+            : `Scores per 10 shots from ${monthDay(from)} to ${monthDay(to)}: ${series.map((s) => `${s.label} ${s.points.map((p) => one(p.value)).join(", ")}`).join("; ")}`
+        }
+        accessibilityHint={ko ? "날짜를 누르면 그날 점수를 읽어 줘요" : "Tap a date to read its scores"}
       >
         {width ? (
           <Svg width={width} height={height}>
@@ -156,7 +168,7 @@ export function TrendChart({ series, from, to, cap = 100, height = 190, testID }
             ))}
             {labels.map((d) => (
               <SvgText key={`d${d}`} x={x(d)} y={height - 6} textAnchor={d === from ? "start" : d === to ? "end" : "middle"} fontSize={10} fill={INK.muted}>
-                {monthDay(d)}
+                {monthDay(d, lang)}
               </SvgText>
             ))}
             {active ? <Line x1={x(active)} x2={x(active)} y1={T_ - 4} y2={B} stroke={INK.secondary} strokeWidth={1} opacity={0.5} /> : null}
@@ -187,9 +199,9 @@ export function TrendChart({ series, from, to, cap = 100, height = 190, testID }
         )}
       </Pressable>
       {active ? (
-        <Pressable onPress={() => setActive(null)} style={styles.readout} accessibilityRole="button" accessibilityLabel="Clear the chosen date" testID="report-chart-readout">
+        <Pressable onPress={() => setActive(null)} style={styles.readout} accessibilityRole="button" accessibilityLabel={ko ? "고른 날짜 지우기" : "Clear the chosen date"} testID="report-chart-readout">
           <T variant="tiny" style={{ color: INK.muted }}>
-            {shortDay(active)}
+            {shortDay(active, lang)}
           </T>
           {here.map(({ s, p }, i) => (
             <View key={`${s.key}${i}`} style={styles.readoutRow}>
@@ -237,19 +249,20 @@ export function Legend({ items, shape = "line" }: { items: { key: string; label:
 
 /** Every counted shot by whole score, as one bar (2 points between its parts) with a legend of the counts. */
 export function DistributionBar({ tens, nines, eights, lower }: { tens: number; nines: number; eights: number; lower: number }) {
+  const ko = useLang() === "ko";
   const total = tens + nines + eights + lower;
   if (!total) return null;
   const parts = [
-    { key: "tens", label: "10", n: tens, color: RING_COLORS.tens },
-    { key: "nines", label: "9", n: nines, color: RING_COLORS.nines },
-    { key: "eights", label: "8", n: eights, color: RING_COLORS.eights },
-    { key: "lower", label: "7 or less", n: lower, color: RING_COLORS.lower },
+    { key: "tens", label: ko ? "10점" : "10", n: tens, color: RING_COLORS.tens },
+    { key: "nines", label: ko ? "9점" : "9", n: nines, color: RING_COLORS.nines },
+    { key: "eights", label: ko ? "8점" : "8", n: eights, color: RING_COLORS.eights },
+    { key: "lower", label: ko ? "7점 이하" : "7 or less", n: lower, color: RING_COLORS.lower },
   ];
   const pct = (n: number) => `${Math.round((n / total) * 1000) / 10}%`;
   const shown = parts.filter((p) => p.n > 0);
   return (
     <View testID="report-distribution">
-      <View style={styles.bar} accessible accessibilityRole="image" accessibilityLabel={parts.map((p) => `${p.label}: ${p.n} shots`).join(", ")}>
+      <View style={styles.bar} accessible accessibilityRole="image" accessibilityLabel={parts.map((p) => (ko ? `${p.label}: ${p.n}발` : `${p.label}: ${p.n} shots`)).join(", ")}>
         {shown.map((p, i) => (
           <View
             key={p.key}

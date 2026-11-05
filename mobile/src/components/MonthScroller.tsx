@@ -1,7 +1,9 @@
-import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, startOfMonth, weekdayIndex } from "@shared/time";
+import { weekdayText } from "@shared/i18n";
+import { CALENDAR_WEEK_START, type DateKey, WEEKDAYS, WEEKDAY_SHORT, addDays, addMonths, endOfMonth, formatDateKey, orderedWeekdays, parseDateKey, startOfMonth, weekdayIndex } from "@shared/time";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, StyleSheet, View, type LayoutChangeEvent, type ViewToken } from "react-native";
 import { T } from "@/components/Text";
+import { useLang } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 
 /**
@@ -190,11 +192,12 @@ const VIEWABILITY = { itemVisiblePercentThreshold: 1 };
 /** The weekday letters above the months, from Sunday as the months are, lined up with the day columns. */
 export function WeekdayHeader({ inset = space.sm }: { inset?: number }) {
   const colors = useColors();
+  const lang = useLang();
   return (
     <View style={[styles.weekdays, { paddingHorizontal: inset, borderBottomColor: colors.border }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {orderedWeekdays(CALENDAR_WEEK_START).map((d) => (
         <T key={d} variant="tiny" tone="muted" style={styles.weekday}>
-          {WEEKDAY_SHORT[d].toUpperCase()}
+          {lang === "ko" ? weekdayText(d, "ko", true) : WEEKDAY_SHORT[d].toUpperCase()}
         </T>
       ))}
     </View>
@@ -266,6 +269,19 @@ const MonthBlock = memo(
 
 /** "October 2026", the year muted. */
 export function MonthTitle({ month, compact = false }: { month: DateKey; compact?: boolean }) {
+  const lang = useLang();
+  if (lang === "ko") {
+    // "2026년 11월", the month the larger: the way Korean calendars title a month.
+    const { year, month: m } = parseDateKey(month);
+    return (
+      <T variant={compact ? "label" : "heading"}>
+        <T variant={compact ? "label" : "heading"} tone="muted" style={styles.year}>
+          {year}년{" "}
+        </T>
+        {m}월
+      </T>
+    );
+  }
   const [name, year] = formatDateKey(month, "monthYear").split(" ");
   return (
     <T variant={compact ? "label" : "heading"}>

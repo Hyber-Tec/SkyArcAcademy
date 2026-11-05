@@ -21,6 +21,7 @@ import { ScoreRow } from "@/features/family/ScoreRow";
 import { scoreTones } from "@/features/scores/format";
 import { PositionTiles, ScoresChart, ShotPattern } from "@/features/family/ScoreSummary";
 import { monthYear, plural } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 
 /** Results listed at first, and added by "Show more". */
@@ -37,6 +38,8 @@ const PAGE = 30;
 export default function FamilyScoresScreen() {
   const family = useFamily();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const { today } = useAcademyNow();
   const { width } = useWindowDimensions();
   const scores = useFamilyEvaluations(family.ids);
@@ -73,9 +76,10 @@ export default function FamilyScoresScreen() {
   const target = Math.min(width - space.lg * 4, 340);
   const open = (id: string) => router.push({ pathname: "/score/[id]", params: { id } });
   const whose = family.who === "student" ? "your" : single ? `${family.firstName(family.shown[0])}’s` : "your children’s";
+  const whoseKo = single ? `${family.firstName(family.shown[0])}의` : "자녀";
 
   return (
-    <Screen title="Scores" typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-scores">
+    <Screen title={t("Scores", "점수")} typing={false} onRefresh={() => new Promise((r) => setTimeout(r, 600))} testID="family-scores">
       {!family.ids.length ? (
         <NotLinked />
       ) : (
@@ -84,7 +88,7 @@ export default function FamilyScoresScreen() {
             <ChildSwitcher />
             <ResultKindFilter list={theirs} value={kindNow} onChange={setKind} testID="family-scores-kind" />
             <T tone="muted" style={styles.intro}>
-              {`Every result from ${whose} classes, newest first.`}
+              {t(`Every result from ${whose} classes, newest first.`, `${whoseKo} 수업 기록을 모두 모았어요. 최근 기록부터 보여요.`)}
             </T>
           </View>
           {scores.loading ? (
@@ -95,20 +99,23 @@ export default function FamilyScoresScreen() {
             </View>
           ) : scores.error && !scores.data.length ? (
             <Card>
-              <T variant="label">Couldn’t load the scores</T>
+              <T variant="label">{t("Couldn’t load the scores", "점수를 불러오지 못했어요")}</T>
               <T variant="small" tone="muted">
-                Check your connection, then pull down to try again.
+                {t("Check your connection, then pull down to try again.", "인터넷 연결을 확인한 뒤 화면을 아래로 당겨 다시 시도해 주세요.")}
               </T>
             </Card>
           ) : !list.length ? (
             <EmptyState
               testID="family-scores-empty"
               icon={<Target size={26} color={colors.mutedForeground} />}
-              title="No scores yet"
+              title={t("No scores yet", "아직 점수가 없어요")}
               text={
                 family.who === "student"
                   ? "Your results show here after your classes, once your coach adds them: SIUS results and paper cards."
-                  : `${single ? `${family.firstName(family.shown[0])}’s` : "Your children’s"} results show here after classes, once the coach adds them: SIUS results and paper cards.`
+                  : t(
+                      `${single ? `${family.firstName(family.shown[0])}’s` : "Your children’s"} results show here after classes, once the coach adds them: SIUS results and paper cards.`,
+                      "수업 후 코치가 SIUS 기록이나 종이 표적지를 올리면 여기에 보여요.",
+                    )
               }
             />
           ) : (
@@ -124,7 +131,7 @@ export default function FamilyScoresScreen() {
                   const own = list.filter((e) => e.studentId === id);
                   return (
                     <View key={id} style={styles.block} testID={`family-scores-child-${id}`}>
-                      <SectionTitle title={family.firstName(id)} detail={own.length ? plural(own.length, "result") : undefined} />
+                      <SectionTitle title={family.firstName(id)} detail={own.length ? t(plural(own.length, "result"), `기록 ${own.length}개`) : undefined} />
                       {own.length ? (
                         <>
                           <PositionTiles evaluations={own} onOpen={(x) => open(x)} testID={`family-scores-tiles-${id}`} />
@@ -132,9 +139,9 @@ export default function FamilyScoresScreen() {
                         </>
                       ) : (
                         <Card>
-                          <T variant="label">No scores yet</T>
+                          <T variant="label">{t("No scores yet", "아직 점수가 없어요")}</T>
                           <T variant="small" tone="muted">
-                            {`${family.firstName(id)}’s results show here after classes, once the coach adds them.`}
+                            {t(`${family.firstName(id)}’s results show here after classes, once the coach adds them.`, "수업 후 코치가 기록을 올리면 여기에 보여요.")}
                           </T>
                         </Card>
                       )}
@@ -143,7 +150,7 @@ export default function FamilyScoresScreen() {
                 })
               )}
               {months.map(({ month, rows, total }) => (
-                <ListSection key={month} title={monthYear(`${month}-01`)} detail={plural(total, "result")} testID={`family-scores-month-${month}`}>
+                <ListSection key={month} title={monthYear(`${month}-01`, lang)} detail={t(plural(total, "result"), `기록 ${total}개`)} testID={`family-scores-month-${month}`}>
                   {rows.map((e) => (
                     <ScoreRow
                       key={e.id}
@@ -159,7 +166,7 @@ export default function FamilyScoresScreen() {
               ))}
               {list.length > count ? (
                 <Button variant="outline" onPress={() => setCount((c) => c + PAGE)} testID="family-scores-more">
-                  {`Show more (${list.length - count} older)`}
+                  {t(`Show more (${list.length - count} older)`, `더 보기 (이전 기록 ${list.length - count}개)`)}
                 </Button>
               ) : null}
             </>

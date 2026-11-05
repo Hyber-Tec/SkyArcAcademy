@@ -25,10 +25,12 @@ import { ScoreRow } from "@/features/family/ScoreRow";
 import { scoreTones } from "@/features/scores/format";
 import { familyClassId, familyClasses } from "@/features/family/classes";
 import { longDay } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { space, useColors } from "@/theme";
 
-function greeting(nowMin: number): string {
+function greeting(nowMin: number, lang: "en" | "ko"): string {
+  if (lang === "ko") return nowMin < 12 * 60 ? "좋은 아침이에요" : "안녕하세요";
   if (nowMin < 12 * 60) return "Good morning";
   if (nowMin < 17 * 60) return "Good afternoon";
   return "Good evening";
@@ -52,6 +54,8 @@ const LATEST_NEWS = 2;
 export default function FamilyHomeScreen() {
   const { settings, member, actor, viewAs } = useBranch();
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const family = useFamily();
   const { today, nowMin } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -102,11 +106,11 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
         <T variant="title" accessibilityRole="header" style={styles.greeting} testID="family-home-greeting">
-          {greeting(nowMin)}
-          {first ? `, ${first}` : ""}
+          {greeting(nowMin, lang)}
+          {first ? (lang === "ko" ? `, ${first}님` : `, ${first}`) : ""}
         </T>
         <T tone="muted" testID="family-home-date">
-          {longDay(today)}
+          {longDay(today, lang)}
         </T>
       </View>
 
@@ -123,14 +127,14 @@ export default function FamilyHomeScreen() {
           <ChildSwitcher />
 
           <View style={styles.section}>
-            <SectionTitle title={nextGroups.length > 1 ? "Next classes" : "Next class"} icon={CalendarDays} tone="red" />
+            <SectionTitle title={t(nextGroups.length > 1 ? "Next classes" : "Next class", "다음 수업")} icon={CalendarDays} tone="red" />
             {sessions.loading ? (
               <SkeletonCards count={1} height={150} />
             ) : sessions.error ? (
               <Card>
-                <T variant="label">Couldn’t load the classes</T>
+                <T variant="label">{t("Couldn’t load the classes", "수업을 불러오지 못했어요")}</T>
                 <T variant="small" tone="muted">
-                  Check your connection, then pull down to try again.
+                  {t("Check your connection, then pull down to try again.", "인터넷 연결을 확인한 뒤 화면을 아래로 당겨 다시 시도해 주세요.")}
                 </T>
               </Card>
             ) : (
@@ -144,9 +148,16 @@ export default function FamilyHomeScreen() {
                       <CalendarX2 size={20} color={colors.mutedForeground} />
                     </View>
                     <View style={styles.grow}>
-                      <T variant="label">{parent ? `Nothing booked for ${namesList(nothingFor.map((id) => family.firstName(id)))}` : "Nothing booked yet"}</T>
+                      <T variant="label">
+                        {parent
+                          ? t(
+                              `Nothing booked for ${namesList(nothingFor.map((id) => family.firstName(id)))}`,
+                              `${namesList(nothingFor.map((id) => family.firstName(id)), "ko")} 학생은 예정된 수업이 없어요`,
+                            )
+                          : t("Nothing booked yet", "아직 예정된 수업이 없어요")}
+                      </T>
                       <T variant="small" tone="muted">
-                        {parent ? "Classes the academy books show here." : "Your classes show here once the academy books them."}
+                        {parent ? t("Classes the academy books show here.", "아카데미에서 수업을 잡으면 여기에 보여요.") : t("Your classes show here once the academy books them.", "아카데미에서 수업을 잡으면 여기에 보여요.")}
                       </T>
                     </View>
                   </Card>
@@ -157,9 +168,9 @@ export default function FamilyHomeScreen() {
 
           <AcademyNews today={today} />
 
-          <ListSection title="Latest scores" icon={Target} tone="blue" testID="family-home-scores">
+          <ListSection title={t("Latest scores", "최근 점수")} icon={Target} tone="blue" testID="family-home-scores">
             {scores.loading ? (
-              <ListRow title="Loading scores…" />
+              <ListRow title={t("Loading scores…", "점수를 불러오는 중…")} />
             ) : latestScores.rows.length ? (
               [
                 ...latestScores.rows.map((e) => (
@@ -178,18 +189,21 @@ export default function FamilyHomeScreen() {
                       <ListRow
                         key="none"
                         icon={<ToneIcon icon={Target} tone="blue" />}
-                        title={`No scores yet for ${namesList(latestScores.none.map((id) => family.firstName(id)))}`}
+                        title={t(
+                          `No scores yet for ${namesList(latestScores.none.map((id) => family.firstName(id)))}`,
+                          `${namesList(latestScores.none.map((id) => family.firstName(id)), "ko")} 학생은 아직 점수가 없어요`,
+                        )}
                         testID="family-home-scores-none"
                       />,
                     ]
                   : []),
-                <ListRow key="all" title="All scores" onPress={() => router.navigate("/scores")} testID="family-home-all-scores" />,
+                <ListRow key="all" title={t("All scores", "전체 점수")} onPress={() => router.navigate("/scores")} testID="family-home-all-scores" />,
               ]
             ) : (
               <ListRow
                 icon={<ToneIcon icon={Target} tone="blue" />}
-                title="No scores yet"
-                subtitle="Results show here after classes, once the coach adds them."
+                title={t("No scores yet", "아직 점수가 없어요")}
+                subtitle={t("Results show here after classes, once the coach adds them.", "수업 후 코치가 기록을 올리면 여기에 보여요.")}
                 testID="family-home-no-scores"
               />
             )}
@@ -208,17 +222,18 @@ export default function FamilyHomeScreen() {
 function AcademyNews({ today }: { today: DateKey }) {
   const news = useFamilyNews();
   const isNew = useIsNewNews();
+  const t = useT();
   if (!news.data.length) return null;
   const fresh = news.data.filter((a) => isNew(a.id)).length;
   const shown = news.data.slice(0, LATEST_NEWS);
   return (
-    <ListSection title="From the academy" icon={Megaphone} tone="teal" detail={fresh ? `${fresh} new` : undefined} testID="family-home-news">
+    <ListSection title={t("From the academy", "아카데미 소식")} icon={Megaphone} tone="teal" detail={fresh ? t(`${fresh} new`, `새 소식 ${fresh}개`) : undefined} testID="family-home-news">
       {[
         ...shown.map((a) => (
           <NewsRow key={a.id} post={a} isNew={isNew(a.id)} today={today} onPress={() => router.push({ pathname: "/news/[id]", params: { id: a.id } })} testID={`family-home-news-${a.id}`} />
         )),
         ...(news.data.length > shown.length
-          ? [<ListRow key="all" title="All news" right={String(news.data.length)} onPress={() => router.push("/news")} testID="family-home-all-news" />]
+          ? [<ListRow key="all" title={t("All news", "전체 소식")} right={String(news.data.length)} onPress={() => router.push("/news")} testID="family-home-all-news" />]
           : []),
       ]}
     </ListSection>

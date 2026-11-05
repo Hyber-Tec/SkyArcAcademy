@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
 import { T } from "@/components/Text";
-import { duration, longDay, shortDay, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
+import { duration, longDay, shortDay, startsIn, timeLeft, timeRange, weekdayInitial } from "@/features/schedule/format";
+import { useLang } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 import type { FamilyClass } from "./classes";
 import { FamilyStatus } from "./FamilyStatus";
@@ -26,12 +27,13 @@ interface When {
 /** The weekday and the day of the month, in a small tile at a row's left (today's in the brand's red). */
 function DateTile({ dateKey, today }: { dateKey: DateKey; today: DateKey }) {
   const colors = useColors();
+  const lang = useLang();
   const on = dateKey === today;
   const fg = on ? colors.brandText : colors.foreground;
   return (
     <View style={[styles.tile, { backgroundColor: on ? colors.brandTint : colors.secondary }]} accessible={false}>
       <T variant="tiny" style={[styles.tileDay, { color: on ? colors.brandText : colors.mutedForeground }]}>
-        {shortDay(dateKey).slice(0, 3).toUpperCase()}
+        {lang === "ko" ? weekdayInitial(dateKey, "ko") : shortDay(dateKey).slice(0, 3).toUpperCase()}
       </T>
       <T style={[styles.tileDate, { color: fg }]}>{parseDateKey(dateKey).day}</T>
     </View>
@@ -41,11 +43,12 @@ function DateTile({ dateKey, today }: { dateKey: DateKey; today: DateKey }) {
 /** "NOW", on a class that's on. */
 function NowPill() {
   const colors = useColors();
+  const lang = useLang();
   return (
     <View style={[styles.now, { backgroundColor: colors.brandTint }]}>
       <View style={[styles.nowDot, { backgroundColor: colors.brand }]} />
       <T variant="tiny" style={{ color: colors.brandText, fontWeight: "700" }}>
-        NOW
+        {lang === "ko" ? "진행 중" : "NOW"}
       </T>
     </View>
   );
@@ -81,6 +84,7 @@ export function FamilyClassRow({
   testID?: string;
 }) {
   const colors = useColors();
+  const lang = useLang();
   const { who, firstName, shown } = useFamily();
   // A child's name where more than one child shows.
   const named = who === "parent" && shown.length > 1;
@@ -90,9 +94,9 @@ export function FamilyClassRow({
   const only = group.sessions[0];
   const names = group.sessions.map((s) => firstName(s.studentId, s.studentName));
   const off = group.active.length === 0;
-  const note = single ? familyNote(only.note) : "";
-  const length = duration(group.endMin - group.startMin);
-  const label = [shortDay(group.dateKey), timeRange(group.startMin, group.endMin, when.hour12), length, who === "parent" ? namesList(names) : null].filter(Boolean).join(", ");
+  const note = single ? familyNote(only.note, lang) : "";
+  const length = duration(group.endMin - group.startMin, lang);
+  const label = [shortDay(group.dateKey, lang), timeRange(group.startMin, group.endMin, when.hour12, lang), length, who === "parent" ? namesList(names, lang) : null].filter(Boolean).join(", ");
   return (
     <Pressable
       testID={testID}
@@ -105,7 +109,7 @@ export function FamilyClassRow({
       <View style={styles.grow}>
         <View style={styles.line}>
           <T variant="label" style={[styles.shrink, off && { color: colors.mutedForeground, textDecorationLine: "line-through" }]}>
-            {timeRange(group.startMin, group.endMin, when.hour12)}
+            {timeRange(group.startMin, group.endMin, when.hour12, lang)}
           </T>
           {live ? <NowPill /> : null}
           <View style={styles.grow} />
@@ -125,7 +129,7 @@ export function FamilyClassRow({
         {single
           ? null
           : group.sessions.map((s, i) => {
-              const n = familyNote(s.note);
+              const n = familyNote(s.note, lang);
               return (
                 <View key={s.id} style={styles.child}>
                   <View style={styles.nameLine}>
@@ -155,15 +159,17 @@ export function FamilyClassRow({
  */
 export function NextClassCard({ group, when, onPress, testID }: { group: FamilyClass; when: When; onPress: () => void; testID?: string }) {
   const colors = useColors();
+  const lang = useLang();
   const { who, firstName } = useFamily();
-  const near = relativeDay(group.dateKey, when.today);
+  const near = relativeDay(group.dateKey, when.today, lang);
   const live = isOnNow(group, when.today, when.nowMin);
-  const label = near ? `${near} · ${shortDay(group.dateKey)}` : longDay(group.dateKey);
-  const soon = group.dateKey === when.today ? (live ? timeLeft(group.endMin - when.nowMin) : startsIn(group.startMin - when.nowMin)) : null;
+  const label = near ? `${near} · ${shortDay(group.dateKey, lang)}` : longDay(group.dateKey, lang);
+  const soon = group.dateKey === when.today ? (live ? timeLeft(group.endMin - when.nowMin, lang) : startsIn(group.startMin - when.nowMin, lang)) : null;
   const names = group.sessions.map((s) => firstName(s.studentId, s.studentName));
-  const time = timeRange(group.startMin, group.endMin, when.hour12);
+  const time = timeRange(group.startMin, group.endMin, when.hour12, lang);
+  const length = duration(group.endMin - group.startMin, lang);
   return (
-    <Card onPress={onPress} testID={testID} accessibilityLabel={[label, time, duration(group.endMin - group.startMin), who === "parent" ? namesList(names) : null, soon].filter(Boolean).join(", ")} style={styles.card}>
+    <Card onPress={onPress} testID={testID} accessibilityLabel={[label, time, length, who === "parent" ? namesList(names, lang) : null, soon].filter(Boolean).join(", ")} style={styles.card}>
       <View style={styles.line}>
         <T variant="small" numberOfLines={1} style={[styles.when, { color: group.dateKey === when.today ? colors.brandText : colors.mutedForeground }]}>
           {label.toUpperCase()}
@@ -177,10 +183,10 @@ export function NextClassCard({ group, when, onPress, testID }: { group: FamilyC
       <T variant="title" style={styles.time} numberOfLines={1} adjustsFontSizeToFit>
         {time}
       </T>
-      <T tone="muted">{duration(group.endMin - group.startMin)}</T>
+      <T tone="muted">{length}</T>
       {who === "student" ? (
         group.sessions.map((s) => {
-          const note = familyNote(s.note);
+          const note = familyNote(s.note, lang);
           return (
             <View key={s.id} style={styles.studentLine}>
               <FamilyStatus status={s.status} ended={false} />
@@ -195,7 +201,7 @@ export function NextClassCard({ group, when, onPress, testID }: { group: FamilyC
       ) : (
         <View style={[styles.children, { borderTopColor: colors.border }]}>
           {group.sessions.map((s, i) => {
-            const note = familyNote(s.note);
+            const note = familyNote(s.note, lang);
             return (
               <View key={s.id} style={styles.kid}>
                 <Avatar name={s.studentName} size={30} />

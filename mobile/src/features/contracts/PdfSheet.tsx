@@ -1,4 +1,5 @@
 import type { ContractPdf } from "@shared/contracts/types";
+import type { Lang } from "@shared/i18n";
 import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { ActivityIndicator, Modal, Platform, StyleSheet, View } from "react-native";
@@ -7,6 +8,7 @@ import WebView from "react-native-webview";
 import { Button } from "@/components/Button";
 import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
+import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { space, useColors } from "@/theme";
 
@@ -26,12 +28,13 @@ export function cachePdf(pdf: ContractPdf): { uri: string; name: string } {
 }
 
 /** The phone's share sheet for a PDF: Save to Files, Mail, Messages, a printer… */
-export async function sharePdf(uri: string, name: string) {
+export async function sharePdf(uri: string, name: string, lang: Lang = "en") {
+  const ko = lang === "ko";
   try {
-    if (!(await Sharing.isAvailableAsync())) return void toast.error("Sharing isn’t available on this phone");
+    if (!(await Sharing.isAvailableAsync())) return void toast.error(ko ? "이 기기에서는 공유할 수 없어요" : "Sharing isn’t available on this phone");
     await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: name });
   } catch {
-    toast.error("Couldn’t share the PDF");
+    toast.error(ko ? "PDF를 공유하지 못했어요" : "Couldn’t share the PDF");
   }
 }
 
@@ -41,17 +44,19 @@ export async function sharePdf(uri: string, name: string) {
  */
 export function PdfView({ pdf, onClose }: { pdf: { uri: string; name: string }; onClose: () => void }) {
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: colors.background }]} edges={SHEET_EDGES}>
       <View style={[styles.bar, { borderBottomColor: colors.border }]}>
         <T variant="label" numberOfLines={1} style={styles.fill}>
           {pdf.name}
         </T>
-        <Button variant="ghost" onPress={() => void sharePdf(pdf.uri, pdf.name)} testID="contract-pdf-share">
-          Save
+        <Button variant="ghost" onPress={() => void sharePdf(pdf.uri, pdf.name, lang)} testID="contract-pdf-share">
+          {t("Save", "저장")}
         </Button>
         <Button variant="ghost" onPress={onClose} testID="contract-pdf-done">
-          Done
+          {t("Done", "닫기")}
         </Button>
       </View>
       {/* The web view may read this one file only (a folder there leaves an iPhone's page blank). */}
@@ -80,10 +85,10 @@ export function PdfSheet({ pdf, onClose }: { pdf: { uri: string; name: string } 
 }
 
 /** Opens a PDF: in the sheet on an iPhone, the share sheet on Android. */
-export async function openPdf(pdf: ContractPdf, show: (p: { uri: string; name: string }) => void) {
+export async function openPdf(pdf: ContractPdf, show: (p: { uri: string; name: string }) => void, lang: Lang = "en") {
   const file = cachePdf(pdf);
   if (Platform.OS === "ios") show(file);
-  else await sharePdf(file.uri, file.name);
+  else await sharePdf(file.uri, file.name, lang);
 }
 
 const styles = StyleSheet.create({

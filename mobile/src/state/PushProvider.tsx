@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { pick } from "@shared/i18n";
 import { type RemoteMessage, getInitialNotification, getMessaging, onMessage, onNotificationOpenedApp } from "@react-native-firebase/messaging";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
@@ -11,7 +12,7 @@ import { useInbox } from "@/features/notifications/inbox";
 import { pushReason } from "@/features/notifications/PhoneNotifications";
 import { type PushOpen, dataOfNotification, firstTime, openFamilyNotice, openStaffNotice, pushOpenOf } from "@/features/notifications/pushOpen";
 import { isPush, notificationPermission, requestNotificationPermission, setAppBadge } from "@/lib/notify";
-import { useLang } from "@/lib/lang";
+import { useLang, useT } from "@/lib/lang";
 import { onPushTokenChange, registerThisDevice } from "@/lib/push";
 import { toast } from "@/lib/toast";
 import { space } from "@/theme";
@@ -76,7 +77,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
   const arrived = useEffectEvent((title: string | null | undefined, body: string | null | undefined, data: Record<string, unknown> | null | undefined, messageId?: string | null) => {
     const push = pushOpenOf(data);
     if (!firstTime("shown", push?.id ?? messageId)) return;
-    toast.info(title || "New notification", { description: body ?? undefined, duration: 7000, onPress: push ? () => open(push) : undefined });
+    toast.info(title || pick(lang, "New notification", "새 알림"), { description: body ?? undefined, duration: 7000, onPress: push ? () => open(push) : undefined });
   });
 
   useEffect(() => {
@@ -125,8 +126,8 @@ export function PushProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(ASKED_KEY, new Date().toISOString()).catch(() => undefined);
     if (!turnOn) return;
     if ((await requestNotificationPermission()) === "granted") {
-      await registerThisDevice(true);
-      toast.success("Notifications are on");
+      await registerThisDevice(true, lang);
+      toast.success(pick(lang, "Notifications are on", "알림을 켰어요"));
     }
   };
 
@@ -141,6 +142,8 @@ export function PushProvider({ children }: { children: ReactNode }) {
 /** The app's own question before the phone's: what notifications bring, and where to change it later. */
 function AskForNotifications({ open, onAnswer }: { open: boolean; onAnswer: (turnOn: boolean) => void }) {
   const branch = useBranch();
+  const t = useT();
+  const lang = useLang();
   return (
     <Dialog
       open={open}
@@ -149,18 +152,18 @@ function AskForNotifications({ open, onAnswer }: { open: boolean; onAnswer: (tur
       footer={
         <View style={styles.buttons}>
           <Button size="lg" onPress={() => onAnswer(true)} testID="push-ask-on">
-            Turn on notifications
+            {t("Turn on notifications", "알림 켜기")}
           </Button>
           <Button size="lg" variant="outline" onPress={() => onAnswer(false)} testID="push-ask-later">
-            Not now
+            {t("Not now", "나중에")}
           </Button>
         </View>
       }
     >
-      <T variant="heading">Get notified?</T>
-      <T>{pushReason(branch)}</T>
+      <T variant="heading">{t("Get notified?", "알림을 받을까요?")}</T>
+      <T>{pushReason(branch, lang)}</T>
       <T variant="small" tone="muted">
-        You can change it any time in More → Notifications.
+        {t("You can change it any time in More → Notifications.", "더보기 → 알림에서 언제든 바꿀 수 있어요.")}
       </T>
     </Dialog>
   );

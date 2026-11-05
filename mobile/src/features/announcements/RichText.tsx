@@ -1,8 +1,10 @@
+import type { Lang } from "@shared/i18n";
 import { Image } from "expo-image";
 import { ImageOff } from "lucide-react-native";
 import { type ReactNode, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import { T } from "@/components/Text";
+import { useLang, useT } from "@/lib/lang";
 import { openUrl, reachable } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import { type Colors, radius, space, type, useColors } from "@/theme";
@@ -19,12 +21,15 @@ const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 const BULLETS = ["•", "◦", "▪"];
 
 /** Opens a link in a post: a web page in the phone's browser, an email or a phone number in the phone's own app. */
-function openLink(href: string) {
+function openLink(href: string, lang: Lang) {
   if (/^https?:/i.test(href)) {
-    void openUrl(reachable(href));
+    void openUrl(reachable(href), lang);
     return;
   }
-  Linking.openURL(href).catch(() => toast.error(/^mailto:/i.test(href) ? "No mail app to write with" : "Couldn’t open the link", { description: href.replace(/^(mailto|tel):/i, "") }));
+  const ko = lang === "ko";
+  Linking.openURL(href).catch(() =>
+    toast.error(/^mailto:/i.test(href) ? (ko ? "메일을 보낼 앱이 없어요" : "No mail app to write with") : ko ? "링크를 열지 못했어요" : "Couldn’t open the link", { description: href.replace(/^(mailto|tel):/i, "") }),
+  );
 }
 
 /**
@@ -44,19 +49,20 @@ export function RichText({ blocks, onOpenPicture, testID }: { blocks: Block[]; o
 
 function Blocks({ blocks, depth, muted, onOpenPicture }: { blocks: Block[]; depth: number; muted: boolean; onOpenPicture: (picture: PostPicture) => void }) {
   const colors = useColors();
+  const lang = useLang();
   const text: TextStyle = { color: muted ? colors.mutedForeground : colors.foreground };
   return blocks.map((block, i) => {
     switch (block.kind) {
       case "paragraph":
         return (
           <Text key={i} style={[styles.body, text]}>
-            {inlines(block.content, colors)}
+            {inlines(block.content, colors, lang)}
           </Text>
         );
       case "heading":
         return (
           <Text key={i} accessibilityRole="header" style={[HEADINGS[block.level], text, i > 0 && styles.headingGap]}>
-            {inlines(block.content, colors)}
+            {inlines(block.content, colors, lang)}
           </Text>
         );
       case "list": {
@@ -105,7 +111,7 @@ function Blocks({ blocks, depth, muted, onOpenPicture }: { blocks: Block[]; dept
 }
 
 /** A paragraph's pieces: plain text as it is, marked text in its style, links that open. */
-function inlines(content: Inline[], colors: Colors): ReactNode[] {
+function inlines(content: Inline[], colors: Colors, lang: Lang): ReactNode[] {
   return content.map((piece, i) => {
     if (piece.kind === "break") return "\n";
     if (!Object.keys(piece.marks).length) return piece.text;
@@ -114,9 +120,9 @@ function inlines(content: Inline[], colors: Colors): ReactNode[] {
       <Text
         key={i}
         style={markStyle(piece.marks, colors)}
-        onPress={href ? () => openLink(href) : undefined}
+        onPress={href ? () => openLink(href, lang) : undefined}
         accessibilityRole={href ? "link" : undefined}
-        accessibilityHint={href ? (/^https?:/i.test(href) ? "Opens the page" : undefined) : undefined}
+        accessibilityHint={href ? (/^https?:/i.test(href) ? (lang === "ko" ? "페이지를 열어요" : "Opens the page") : undefined) : undefined}
       >
         {piece.text}
       </Text>
@@ -138,6 +144,7 @@ function markStyle(m: Marks, colors: Colors): TextStyle {
 /** A picture: as wide as it is, up to the page's width, in its own shape; a tap opens it full screen. */
 function Picture({ src, alt, onOpen }: { src: string; alt: string; onOpen: (picture: PostPicture) => void }) {
   const colors = useColors();
+  const t = useT();
   const [room, setRoom] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -151,15 +158,15 @@ function Picture({ src, alt, onOpen }: { src: string; alt: string; onOpen: (pict
         <View style={[styles.pictureFailed, { borderColor: colors.border, backgroundColor: colors.cardMuted }]} testID="news-picture-failed">
           <ImageOff size={18} color={colors.mutedForeground} />
           <T variant="small" tone="muted" style={styles.shrink}>
-            The picture couldn’t be loaded. Check your connection, then open the news again.
+            {t("The picture couldn’t be loaded. Check your connection, then open the news again.", "사진을 불러오지 못했어요. 인터넷 연결을 확인하고 소식을 다시 열어 주세요.")}
           </T>
         </View>
       ) : room ? (
         <Pressable
           onPress={() => onOpen({ uri, alt: name })}
           accessibilityRole="imagebutton"
-          accessibilityLabel={name ? `Picture: ${name}` : "Picture"}
-          accessibilityHint="Opens it full screen"
+          accessibilityLabel={name ? t(`Picture: ${name}`, `사진: ${name}`) : t("Picture", "사진")}
+          accessibilityHint={t("Opens it full screen", "전체 화면으로 열어요")}
           style={({ pressed }) => pressed && styles.pressed}
           testID="news-picture"
         >

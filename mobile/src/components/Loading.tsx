@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { T } from "@/components/Text";
+import { useT } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 
 /**
@@ -23,8 +24,9 @@ export function Loading({ label }: { label: string }) {
 /** A spinner in the middle of a screen's content. */
 export function Spinner({ label }: { label?: string }) {
   const colors = useColors();
+  const t = useT();
   return (
-    <View style={styles.spinner} accessibilityLabel={label ?? "Loading"}>
+    <View style={styles.spinner} accessibilityLabel={label ?? t("Loading", "불러오는 중")}>
       <ActivityIndicator color={colors.mutedForeground} />
       {label ? <T tone="muted">{label}</T> : null}
     </View>

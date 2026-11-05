@@ -2,6 +2,7 @@ import { familyStatusLabel } from "@shared/schedule/family";
 import type { SessionStatus } from "@shared/settings/defaults";
 import { StyleSheet } from "react-native";
 import { Badge } from "@/components/Badge";
+import { useLang } from "@/lib/lang";
 import { useColors, useStatusColors } from "@/theme";
 
 /**
@@ -11,11 +12,12 @@ import { useColors, useStatusColors } from "@/theme";
  */
 export function FamilyStatus({ status, ended }: { status: SessionStatus; ended: boolean }) {
   const colors = useColors();
+  const lang = useLang();
   const tone = useStatusColors();
   const quiet = status === "pending" || (ended && status === "confirmed");
   return (
     <Badge bg={quiet ? colors.secondary : tone[status].bg} fg={quiet ? colors.mutedForeground : tone[status].text} style={styles.badge}>
-      {familyStatusLabel(status, ended)}
+      {familyStatusLabel(status, ended, lang)}
     </Badge>
   );
 }

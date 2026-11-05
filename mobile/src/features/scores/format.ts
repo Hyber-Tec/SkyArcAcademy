@@ -1,10 +1,12 @@
-import { type Evaluation, POSITION_LABELS, SOURCE_LABELS, per10 } from "@shared/shooting/evaluation";
+import type { Lang } from "@shared/i18n";
+import { type Evaluation, POSITION_LABELS, per10 } from "@shared/shooting/evaluation";
 import { formatDateKey } from "@shared/time";
+import { positionLabel, sourceLabel } from "./words";
 
 /** How a score reads in the app, the same on the student's page and the score's own screen. */
 
-/** "Standing · Paper". */
-export const scoreTitle = (e: Pick<Evaluation, "position" | "source">) => `${POSITION_LABELS[e.position]} · ${SOURCE_LABELS[e.source]}`;
+/** "Standing · Paper" ("입사 · 종이 표적지"). */
+export const scoreTitle = (e: Pick<Evaluation, "position" | "source">, lang: Lang = "en") => `${positionLabel(e.position, lang)} · ${sourceLabel(e.source, lang)}`;
 
 /** The total as the source gives it: SIUS with its decimal, a paper card whole. */
 export const scoreTotal = (e: Pick<Evaluation, "source" | "total">) => (e.source === "sius" ? e.total.toFixed(1) : String(e.total));

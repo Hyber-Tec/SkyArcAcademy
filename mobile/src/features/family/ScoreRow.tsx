@@ -1,4 +1,4 @@
-import { POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from "@shared/shooting/evaluation";
+import { POSITION_COLORS, per10, wholePer10 } from "@shared/shooting/evaluation";
 import { ChevronRight, MessageSquareQuote } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
@@ -9,6 +9,8 @@ import { scoreTotal } from "@/features/scores/format";
 import { MiniTarget } from "@/features/scores/MiniTarget";
 import { ResultKindChip } from "@/features/scores/kinds";
 import { BestBadge } from "@/features/scores/ScoreParts";
+import { positionLabel, sourceLabel } from "@/features/scores/words";
+import { useLang, useT } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 
 /**
@@ -41,22 +43,26 @@ export function ScoreRow({
   testID?: string;
 }) {
   const colors = useColors();
+  const t = useT();
+  const lang = useLang();
   const whole = wholePer10(e);
   const decimal = e.source === "sius" ? per10(e.total, e.shots) : null;
   const color = POSITION_COLORS[e.position];
   const note = !!e.note?.trim();
-  const total = e.source === "sius" || e.shots !== 10 ? `total ${scoreTotal(e)}` : null;
+  const position = positionLabel(e.position, lang);
+  const source = sourceLabel(e.source, lang);
+  const total = e.source === "sius" || e.shots !== 10 ? t(`total ${scoreTotal(e)}`, `총점 ${scoreTotal(e)}`) : null;
   // Each part kept whole on its line: a long one moves down rather than breaking ("total / 195.5").
-  const line = [who ? POSITION_LABELS[e.position] : name, SOURCE_LABELS[e.source], shortDay(e.dateKey), `${e.shots} shots`, total]
+  const line = [who ? position : name, source, shortDay(e.dateKey, lang), t(`${e.shots} shots`, `${e.shots}발`), total]
     .filter((x): x is string => !!x)
     .map((x) => x.replace(/ /g, " "))
     .join(" · ");
   const label = [
-    who ? `${who}, ${POSITION_LABELS[e.position]}, ${SOURCE_LABELS[e.source]}` : `${POSITION_LABELS[e.position]}, ${SOURCE_LABELS[e.source]}`,
+    who ? `${who}, ${position}, ${source}` : `${position}, ${source}`,
     line,
-    whole !== null ? `${one(whole)} per 10 shots${decimal !== null ? `, ${one(decimal)} in decimals` : ""}` : null,
-    best ? "a new personal best" : null,
-    note ? "with a coach’s note" : null,
+    whole !== null ? t(`${one(whole)} per 10 shots${decimal !== null ? `, ${one(decimal)} in decimals` : ""}`, `10발 평균 ${one(whole)}${decimal !== null ? `, 소수점 ${one(decimal)}` : ""}`) : null,
+    best ? t("a new personal best", "개인 최고 기록") : null,
+    note ? t("with a coach’s note", "코치 한마디 있음") : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -73,7 +79,7 @@ export function ScoreRow({
         <View style={styles.title}>
           <View style={[styles.dot, { backgroundColor: color }]} />
           <T variant="label" numberOfLines={1} style={styles.shrink}>
-            {who ?? POSITION_LABELS[e.position]}
+            {who ?? position}
           </T>
           {best ? <BestBadge position={e.position} /> : null}
           <ResultKindChip e={e} />
@@ -93,7 +99,7 @@ export function ScoreRow({
           ) : null}
         </T>
         <T variant="tiny" tone="muted">
-          per 10
+          {t("per 10", "10발 평균")}
         </T>
       </View>
       <ChevronRight size={16} color={colors.mutedForeground} />

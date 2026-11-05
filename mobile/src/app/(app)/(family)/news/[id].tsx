@@ -10,6 +10,7 @@ import { PostAttachments, PostCard, PostLoading } from "@/features/announcements
 import type { PostPicture } from "@/features/announcements/RichText";
 import { useAcademyNow } from "@/features/data/hooks";
 import { type NewsPost, useNewsPost, useReadReceipt } from "@/features/family/news";
+import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { useColors } from "@/theme";
 
@@ -24,6 +25,7 @@ import { useColors } from "@/theme";
 export default function FamilyNewsPostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
+  const t = useT();
   const { post, loading } = useNewsPost(id ?? null);
   useReadReceipt(post);
 
@@ -40,11 +42,11 @@ export default function FamilyNewsPostScreen() {
         <EmptyState
           testID="news-post-missing"
           icon={<Megaphone size={26} color={colors.mutedForeground} />}
-          title="This news isn’t available"
-          text="It may have been taken down, or it isn’t shared with families."
+          title={t("This news isn’t available", "이 소식을 볼 수 없어요")}
+          text={t("It may have been taken down, or it isn’t shared with families.", "내려갔거나 가족에게 공개하지 않은 소식이에요.")}
           action={
             <Button variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/news"))} testID="news-post-back">
-              Back to news
+              {t("Back to news", "소식으로 돌아가기")}
             </Button>
           }
         />
@@ -56,6 +58,7 @@ export default function FamilyNewsPostScreen() {
 
 function PostBody({ a }: { a: NewsPost }) {
   const { timezone, settings, name } = useBranch();
+  const lang = useLang();
   const { today } = useAcademyNow();
   const [picture, setPicture] = useState<PostPicture | null>(null);
   const hour12 = settings.general.timeFormat !== "24h";
@@ -63,7 +66,7 @@ function PostBody({ a }: { a: NewsPost }) {
   return (
     <>
       <Screen typing={false} testID="news-post-screen">
-        <PostCard post={a} meta={`${a.authorName?.trim() || name} · ${postedAt(a, timezone, today, hour12)}`} onOpenPicture={setPicture} />
+        <PostCard post={a} meta={`${a.authorName?.trim() || name} · ${postedAt(a, timezone, today, hour12, lang)}`} onOpenPicture={setPicture} />
         <PostAttachments post={a} onOpen={(f) => router.push({ pathname: "/news/attachment", params: { id: a.id, path: f.path } })} />
       </Screen>
       <ImageViewer image={picture} onClose={() => setPicture(null)} />

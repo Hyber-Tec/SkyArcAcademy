@@ -1,4 +1,5 @@
 import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useT } from "@/lib/lang";
 import { useColors } from "@/theme";
 
 /**
@@ -8,26 +9,27 @@ import { useColors } from "@/theme";
  */
 export default function FamilyTabs() {
   const colors = useColors();
+  const t = useT();
   return (
     <NativeTabs tintColor={colors.foreground} labelVisibilityMode="labeled">
       <NativeTabs.Trigger name="index" testID="family-tab-home">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("Home", "홈")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "house", selected: "house.fill" }} md="home" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="classes" testID="family-tab-classes">
-        <NativeTabs.Trigger.Label>Classes</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("Classes", "수업")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "calendar", selected: "calendar" }} md="calendar_month" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scores" testID="family-tab-scores">
-        <NativeTabs.Trigger.Label>Scores</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("Scores", "점수")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "target", selected: "target" }} md="track_changes" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="reports" testID="family-tab-reports">
-        <NativeTabs.Trigger.Label>Reports</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("Reports", "리포트")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "chart.line.uptrend.xyaxis", selected: "chart.line.uptrend.xyaxis" }} md="monitoring" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more" testID="family-tab-more">
-        <NativeTabs.Trigger.Label>More</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("More", "더보기")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: "ellipsis.circle", selected: "ellipsis.circle.fill" }} md="more_horiz" />
       </NativeTabs.Trigger>
     </NativeTabs>

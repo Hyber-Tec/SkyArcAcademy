@@ -1,8 +1,9 @@
 import { useImage } from "@shopify/react-native-skia";
+import { type Lang, dateText } from "@shared/i18n";
 import { type Evaluation, POSITION_LABELS, type Position, wholePer10 } from "@shared/shooting/evaluation";
 import { offsetWords } from "@shared/shooting/target";
 import { FLAT_SIZE, wasScanned } from "@shared/targets/flat";
-import { type DateKey, formatDateKey } from "@shared/time";
+import type { DateKey } from "@shared/time";
 import { Trophy } from "lucide-react-native";
 import { type ReactNode, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
@@ -13,8 +14,10 @@ import { useLocalCopy } from "@/features/drive/download";
 import { one } from "@/features/reports/format";
 import { waitingCopy } from "@/features/scan/uploads";
 import { clock } from "@/features/schedule/format";
+import { useLang, useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 import { scorePer10, scoreTotal } from "./format";
+import { leaningKo, offsetText, positionLabel } from "./words";
 
 /**
  * What a score's screen shows that doesn't change it, the same for the staff (src/app/(app)/(staff)/score/[id].tsx,
@@ -23,7 +26,17 @@ import { scorePer10, scoreTotal } from "./format";
  */
 
 /** "20 shots · 3 inner tens · group 12.4 mm · sits right and low" (and, while a card is checked, its missing shots). */
-export function scoreFacts(e: Pick<Evaluation, "source" | "shots" | "innerTens" | "groupMm" | "mpi">, missing = 0): string[] {
+export function scoreFacts(e: Pick<Evaluation, "source" | "shots" | "innerTens" | "groupMm" | "mpi">, missing = 0, lang: Lang = "en"): string[] {
+  if (lang === "ko") {
+    const where = offsetText(e.mpi, "ko");
+    return [
+      `${e.shots}발`,
+      e.innerTens !== null ? `이너 텐 ${e.innerTens}개` : null,
+      e.groupMm !== null ? `탄착군 ${e.groupMm}mm` : null,
+      e.mpi ? (where ? leaningKo(where) : "중앙에 모임") : null,
+      missing ? `${missing}발 빠짐 (0점)` : null,
+    ].filter((x): x is string => !!x);
+  }
   const where = offsetWords(e.mpi);
   return [
     `${e.shots} shots`,
@@ -60,6 +73,8 @@ export function ScoreHead({
   figure?: "decimal" | "whole";
   children?: ReactNode;
 }) {
+  const t = useT();
+  const lang = useLang();
   const sius = e.source === "sius";
   const decimal = scorePer10(e);
   const whole = wholePer10(e);
@@ -69,7 +84,7 @@ export function ScoreHead({
         ? { value: decimal ?? "–", under: null }
         : null
       : e.shots !== 10 || sius
-        ? { value: whole !== null ? one(whole) : "–", under: sius && decimal !== null ? `${one(decimal)} decimal` : null }
+        ? { value: whole !== null ? one(whole) : "–", under: sius && decimal !== null ? t(`${one(decimal)} decimal`, `소수점 ${one(decimal)}`) : null }
         : null;
   return (
     <Card style={styles.head}>
@@ -79,8 +94,8 @@ export function ScoreHead({
             {name}
           </T>
           <T variant="small" tone="muted" testID="score-when">
-            {formatDateKey(dateKey, "medium")}
-            {sius && e.timeMin !== null ? `, ${clock(e.timeMin, hour12)}` : ""}
+            {dateText(dateKey, "medium", lang)}
+            {sius && e.timeMin !== null ? `, ${clock(e.timeMin, hour12, lang)}` : ""}
           </T>
         </View>
         {/* Per 10 shots, for results of another length (a card of ten already reads out of 100). */}
@@ -88,7 +103,7 @@ export function ScoreHead({
           <View style={styles.per10} testID="score-per10">
             <T variant="stat">{corner.value}</T>
             <T variant="tiny" tone="muted">
-              per 10
+              {t("per 10", "10발 평균")}
             </T>
             {corner.under ? (
               <T variant="tiny" tone="muted">
@@ -138,16 +153,20 @@ export function useCardPicture(e: EvaluationDoc | null) {
  */
 export function BestBadge({ position, testID }: { position?: Position; testID?: string }) {
   const colors = useColors();
+  const t = useT();
   return (
     <View
       style={[styles.best, { backgroundColor: colors.warningTint }]}
       accessible
-      accessibilityLabel={`A new personal best${position ? `: higher than every earlier ${POSITION_LABELS[position].toLowerCase()} result` : ""}`}
+      accessibilityLabel={t(
+        `A new personal best${position ? `: higher than every earlier ${POSITION_LABELS[position].toLowerCase()} result` : ""}`,
+        `개인 최고 기록${position ? `. 지금까지의 ${positionLabel(position, "ko")} 기록 중 가장 높아요` : ""}`,
+      )}
       testID={testID}
     >
       <Trophy size={11} color={colors.warning} />
       <T variant="tiny" style={[styles.bestText, { color: colors.warning }]} numberOfLines={1}>
-        New best
+        {t("New best", "최고 기록")}
       </T>
     </View>
   );
