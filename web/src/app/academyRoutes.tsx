@@ -136,6 +136,7 @@ function familyRoutes(portal: 'parent' | 'student'): RouteObject[] {
         { path: 'notifications', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyNotificationsSection') },
         { path: 'security', lazy: page(() => import('@/features/profile/SecuritySection'), 'SecuritySection') },
         { path: 'appearance', lazy: page(() => import('@/features/profile/AppearanceSection'), 'AppearanceSection') },
+        { path: 'language', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyLanguageSection') },
         { path: 'help', lazy: page(() => import('@/features/family/ProfilePage'), 'FamilyHelpSection') },
         { path: '*', element: <Navigate to={`/${portal}/profile`} replace /> },
       ],

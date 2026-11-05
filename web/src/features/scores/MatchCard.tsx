@@ -1,11 +1,13 @@
 import { type ReactNode, useState } from 'react'
 import { LuChevronDown, LuPencilLine, LuTrophy } from 'react-icons/lu'
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from '@shared/scores/match'
-import { POSITION_COLORS, POSITION_LABELS, evaluationPoints } from '@shared/shooting/evaluation'
+import { dateText } from '@shared/i18n'
+import { POSITION_COLORS, evaluationPoints } from '@shared/shooting/evaluation'
 import { isInnerTen } from '@shared/shooting/target'
-import { formatDateKey } from '@shared/time'
+import { positionIn } from '@/features/family/familyText'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { MiniTarget } from '@/features/scores/TargetPlot'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 
 /**
@@ -17,26 +19,28 @@ import { cn } from '@/lib/utils'
  * with its menu beside the total (`aside`).
  */
 export function MatchCard({ evaluation, results, aside, className = 'border-t px-5 py-4' }: { evaluation: MatchResult; results: MatchResult[]; aside?: ReactNode; className?: string }) {
+  const lang = useLang()
+  const t = useT()
   const [open, setOpen] = useState<string | null>(null)
   const { total, innerTens, whole } = matchTotal(results)
   const rows = results.flatMap((r) => r.series.map((s) => ({ key: `${r.id}-${s.n}`, r, s, points: evaluationPoints({ series: [s] }) })))
   const shown = rows.find((x) => x.key === open) ?? null
   return (
-    <section className={className} aria-label="The match" data-testid="match-card">
+    <section className={className} aria-label={t('The match', '경기')} data-testid="match-card">
       <div className="flex items-center gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
           <LuTrophy className="size-4.5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{evaluation.match?.name?.trim() || 'Competition'}</h3>
-          <p className="truncate text-xs text-muted-foreground">{[formatDateKey(evaluation.dateKey, 'medium'), evaluation.match?.course?.trim()].filter(Boolean).join(' · ')}</p>
+          <h3 className="truncate text-sm font-semibold">{evaluation.match?.name?.trim() || t('Competition', '대회')}</h3>
+          <p className="truncate text-xs text-muted-foreground">{[dateText(evaluation.dateKey, 'medium', lang), evaluation.match?.course?.trim()].filter(Boolean).join(' · ')}</p>
         </div>
         <div className="text-right">
           <div className="text-lg font-semibold tabular-nums">
             {whole ? total : total.toFixed(1)}
             {innerTens !== null ? <span className="text-sm font-medium text-muted-foreground"> - {innerTens}</span> : null}
           </div>
-          <div className="text-[11px] text-muted-foreground">{results.length > 1 ? 'the match' : POSITION_LABELS[evaluation.position]}</div>
+          <div className="text-[11px] text-muted-foreground">{results.length > 1 ? t('the match', '경기 합계') : positionIn(evaluation.position, lang)}</div>
         </div>
         {aside}
       </div>
@@ -46,7 +50,7 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
           {results.map((r) => (
             <span key={r.id} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs">
               <span className="size-2 rounded-full" style={{ background: POSITION_COLORS[r.position] }} />
-              {POSITION_LABELS[r.position]}
+              {positionIn(r.position, lang)}
               <span className="font-semibold tabular-nums">
                 {isWholeResult(r) ? r.total : r.total.toFixed(1)}
                 {r.innerTens !== null ? ` - ${r.innerTens}` : ''}
@@ -76,7 +80,7 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
               )}
               {/* The position first, in words (the third meeting, CP3), then the shots as the sheet numbers them. */}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{POSITION_LABELS[r.position]}</span>
+                <span className="block truncate text-sm font-medium">{positionIn(r.position, lang)}</span>
                 <span className="block truncate text-xs text-muted-foreground tabular-nums">{seriesLabel(r.position, s)}</span>
               </span>
               <span className="text-sm font-semibold tabular-nums">
@@ -88,18 +92,22 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Only the totals were saved for this match: its shots weren’t on the sheet, or were typed as totals.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t('Only the totals were saved for this match: its shots weren’t on the sheet, or were typed as totals.', '이 경기는 합계만 저장됐어요. 결과지에 발마다 점수가 없었거나, 합계로 입력했어요.')}
+        </p>
       )}
 
       {shown ? (
         <div className="mt-3 flex flex-col items-center gap-3 rounded-xl border bg-card p-4" data-testid="match-series-open">
           <p className="text-sm font-semibold">
-            {POSITION_LABELS[shown.r.position]} · {seriesLabel(shown.r.position, shown.s)}
+            {positionIn(shown.r.position, lang)} · {seriesLabel(shown.r.position, shown.s)}
           </p>
           {shown.points.length ? (
             <ShotReplay key={shown.key} evaluation={{ source: shown.r.source, series: [shown.s] }} color={POSITION_COLORS[shown.r.position]} size={300} autoPlay />
           ) : (
-            <p className="text-center text-xs text-balance text-muted-foreground">The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.</p>
+            <p className="text-center text-xs text-balance text-muted-foreground">
+              {t('The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.', '결과지에서 이 시리즈의 그림을 읽지 못해서 표적에 맞은 자리가 없어요.')}
+            </p>
           )}
           <div className="flex flex-wrap justify-center gap-1.5">
             {shown.s.shots.map((t, k) => {
@@ -117,7 +125,7 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
           </div>
         </div>
       ) : null}
-      <p className="mt-2 text-[11px] text-muted-foreground">* an inner ten. A series’ score is its total, then its inner tens.</p>
+      <p className="mt-2 text-[11px] text-muted-foreground">{t('* an inner ten. A series’ score is its total, then its inner tens.', '* 이너 텐. 시리즈 점수는 합계 - 이너 텐 수예요.')}</p>
     </section>
   )
 }

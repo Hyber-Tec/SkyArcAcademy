@@ -8,6 +8,12 @@
 /* The public website (src/site) has its own stylesheet. */
 @source not "./site";
 
+/* Korean breaks lines between words, as Korean is typeset (as on the public website); a long address still wraps. */
+html:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 /* Rich text (announcements): editor and rendered posts share these styles. */
 @layer components {
   .rich-content {

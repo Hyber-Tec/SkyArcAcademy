@@ -4,6 +4,7 @@ import { LuDownload, LuFileX2, LuScanSearch, LuX } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { categoryOf, isViewableImage } from '@shared/drive/files'
 import type { DriveFile } from '@shared/drive/types'
+import { dateText } from '@shared/i18n'
 import { COL } from '@shared/paths'
 import { type Evaluation, POSITION_LABELS } from '@shared/shooting/evaluation'
 import { ringRadiusMm } from '@shared/shooting/target'
@@ -21,7 +22,9 @@ import { CardPicture } from '@/features/scores/card/CardPicture'
 import { SHOT_COLOR, scoreLabel, useTouchScreen } from '@/features/scores/card/parts'
 import { prefersReducedMotion, shotOffset } from '@/features/scores/playback'
 import { branchDocRef } from '@/lib/firestore'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
+import { positionIn } from './familyText'
 
 /**
  * A result's original, for its family to look at and keep: the SIUS printout (PDF), or the paper card's picture. A card
@@ -100,17 +103,22 @@ function Note({ title, children }: { title: string; children: React.ReactNode })
 
 export function ResultOriginal({ e, onClose }: { e: WithId<Evaluation>; onClose: () => void }) {
   const { branchId } = useBranch()
+  const lang = useLang()
+  const t = useT()
   const original = useOriginal(e)
   const file = 'file' in original ? original.file : null
   const sius = e.source === 'sius'
-  const title = `${POSITION_LABELS[e.position]} ${sius ? 'SIUS result' : 'paper card'} · ${formatDateKey(e.dateKey, 'medium')}`
+  const title =
+    lang === 'ko'
+      ? `${positionIn(e.position, 'ko')} ${sius ? 'SIUS 결과' : '종이 표적지'} · ${dateText(e.dateKey, 'medium', 'ko')}`
+      : `${POSITION_LABELS[e.position]} ${sius ? 'SIUS result' : 'paper card'} · ${formatDateKey(e.dateKey, 'medium')}`
 
   const download = async () => {
     if (!file) return
     try {
       await downloadFile(branchId, file)
     } catch {
-      toast.error('The file couldn’t be downloaded', { description: 'Try again in a moment.' })
+      toast.error(t('The file couldn’t be downloaded', '파일을 내려받지 못했어요'), { description: t('Try again in a moment.', '잠시 후 다시 시도해 주세요.') })
     }
   }
 
@@ -131,12 +139,12 @@ export function ResultOriginal({ e, onClose }: { e: WithId<Evaluation>; onClose:
           </div>
           {file ? (
             // Phones: the icon alone, so the title keeps its room.
-            <Button variant="outline" size="sm" aria-label="Download" onClick={() => void download()} data-testid="original-download">
+            <Button variant="outline" size="sm" aria-label={t('Download', '다운로드')} onClick={() => void download()} data-testid="original-download">
               <LuDownload />
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">{t('Download', '다운로드')}</span>
             </Button>
           ) : null}
-          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose}>
+          <Button variant="ghost" size="icon" aria-label={t('Close', '닫기')} onClick={onClose}>
             <LuX />
           </Button>
         </div>
@@ -146,11 +154,13 @@ export function ResultOriginal({ e, onClose }: { e: WithId<Evaluation>; onClose:
               <Spinner className="size-6" />
             </div>
           ) : original.status === 'missing' ? (
-            <Note title="The original isn’t available">It may have been moved or removed from the academy’s files. The scores stay here.</Note>
+            <Note title={t('The original isn’t available', '원본을 볼 수 없어요')}>
+              {t('It may have been moved or removed from the academy’s files. The scores stay here.', '아카데미 파일에서 옮겨졌거나 지워졌을 수 있어요. 점수는 그대로 여기에 있어요.')}
+            </Note>
           ) : original.status === 'failed' ? (
-            <Note title="The file couldn’t be opened">Check your connection and try again.</Note>
+            <Note title={t('The file couldn’t be opened', '파일을 열지 못했어요')}>{t('Check your connection and try again.', '인터넷 연결을 확인하고 다시 시도해 주세요.')}</Note>
           ) : original.status === 'other' ? (
-            <Note title="This kind of file can’t be shown here">Download it to open it.</Note>
+            <Note title={t('This kind of file can’t be shown here', '여기서는 이 파일을 볼 수 없어요')}>{t('Download it to open it.', '다운로드해서 열어 주세요.')}</Note>
           ) : original.status === 'card' ? (
             <CardView image={original.image} e={e} />
           ) : original.as === 'pdf' ? (
@@ -176,6 +186,7 @@ export function ResultOriginal({ e, onClose }: { e: WithId<Evaluation>; onClose:
  * the centre. On a wide screen the card fills the left and the rest sits beside it; on a phone, under it.
  */
 function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
+  const t = useT()
   const review = useMemo(() => savedReview(e), [e])
   const touch = useTouchScreen()
   const [bull, setBull] = useState<number | null>(null)
@@ -196,12 +207,15 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
           review={review}
           selected={bull}
           onBull={(n) => setBull((b) => (b === n ? null : n))}
-          label="The card with each bull’s score. Choose a bull to see it up close; zoom with the wheel, a pinch, or the + and − keys, and 0 to see it whole."
+          label={t(
+            'The card with each bull’s score. Choose a bull to see it up close; zoom with the wheel, a pinch, or the + and − keys, and 0 to see it whole.',
+            '표적별 점수가 표시된 표적지예요. 표적을 고르면 크게 볼 수 있어요. 휠, 두 손가락, + − 키로 확대하고 0을 누르면 전체가 보여요.',
+          )}
           className="mx-auto w-full lg:h-full lg:w-auto lg:max-w-full"
           style={{ aspectRatio: `${FLAT_SIZE.width} / ${FLAT_SIZE.height}` }}
         />
       </div>
-      <aside className="space-y-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto" aria-label="The card’s scores">
+      <aside className="space-y-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto" aria-label={t('The card’s scores', '표적지 점수')}>
         <section className="rounded-xl border bg-card p-4">
           <p className="flex items-baseline gap-1.5">
             <span className="text-3xl leading-none font-semibold tabular-nums" data-testid="card-view-total">
@@ -210,9 +224,9 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
             <span className="text-muted-foreground tabular-nums">/ {most}</span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {e.shots} shots{e.groupMm !== null ? ` · group ${e.groupMm} mm` : ''}
+            {t(`${e.shots} shots${e.groupMm !== null ? ` · group ${e.groupMm} mm` : ''}`, `${e.shots}발${e.groupMm !== null ? ` · 탄착군 ${e.groupMm} mm` : ''}`)}
           </p>
-          <div className="mt-3 grid grid-cols-5 gap-1.5" role="group" aria-label="The bulls">
+          <div className="mt-3 grid grid-cols-5 gap-1.5" role="group" aria-label={t('The bulls', '표적별 점수')}>
             {review.bulls.map((b) => {
               const values = b.shots.map((s) => s.value)
               const label = scoreLabel(values)
@@ -221,7 +235,7 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
                   key={b.n}
                   type="button"
                   aria-pressed={bull === b.n}
-                  aria-label={`Bull ${b.n}: ${values.length ? values.join(' and ') : 'no shot found, a 0'}. Show it up close`}
+                  aria-label={t(`Bull ${b.n}: ${values.length ? values.join(' and ') : 'no shot found, a 0'}. Show it up close`, `${b.n}번 표적: ${values.length ? values.join(', ') : '찾은 발이 없어 0점'}. 크게 보기`)}
                   onClick={() => setBull((x) => (x === b.n ? null : b.n))}
                   className={cn(
                     'flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border bg-card transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50',
@@ -242,7 +256,9 @@ function CardView({ image, e }: { image: ImageBitmap; e: WithId<Evaluation> }) {
           ) : (
             <p className="flex items-start gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               <LuScanSearch className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {touch ? 'Tap a bull to see it up close. Pinch the card to zoom.' : 'Click a bull to see it up close. Scroll on the card to zoom, and drag to look around.'}
+              {touch
+                ? t('Tap a bull to see it up close. Pinch the card to zoom.', '표적을 누르면 크게 볼 수 있어요. 두 손가락으로 표적지를 확대해 보세요.')
+                : t('Click a bull to see it up close. Scroll on the card to zoom, and drag to look around.', '표적을 누르면 크게 볼 수 있어요. 표적지 위에서 스크롤하면 확대되고, 끌어서 둘러볼 수 있어요.')}
             </p>
           )}
         </div>
@@ -283,25 +299,46 @@ function BullUpClose({ image, bull, perBull, holeRadius }: { image: CanvasImageS
     }
   }, [image, bull, holeRadius])
 
+  const lang = useLang()
+  const t = useT()
   const values = bull.shots.map((s) => s.value)
   const missing = Math.max(0, perBull - bull.shots.length)
   return (
-    <section className="flex items-start gap-4 rounded-xl border bg-card p-3" aria-label={`Bull ${bull.n} up close`} data-testid="bull-up-close">
-      <canvas ref={ref} style={{ width: CLOSE_PX, height: CLOSE_PX }} className="shrink-0 rounded-lg border bg-white" role="img" aria-label={`Bull ${bull.n} on the card, its ${bull.shots.length > 1 ? 'shots' : 'shot'} ringed in green`} />
+    <section className="flex items-start gap-4 rounded-xl border bg-card p-3" aria-label={t(`Bull ${bull.n} up close`, `${bull.n}번 표적 크게 보기`)} data-testid="bull-up-close">
+      <canvas
+        ref={ref}
+        style={{ width: CLOSE_PX, height: CLOSE_PX }}
+        className="shrink-0 rounded-lg border bg-white"
+        role="img"
+        aria-label={t(`Bull ${bull.n} on the card, its ${bull.shots.length > 1 ? 'shots' : 'shot'} ringed in green`, `표적지의 ${bull.n}번 표적이에요. 맞은 자리는 초록 원으로 표시했어요`)}
+      />
       <div className="min-w-0 pt-0.5">
-        <p className="text-xs text-muted-foreground">Bull {bull.n}</p>
+        <p className="text-xs text-muted-foreground">{t(`Bull ${bull.n}`, `${bull.n}번 표적`)}</p>
         <p className="text-3xl leading-tight font-semibold tabular-nums">{scoreLabel(values)}</p>
         <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
           {bull.shots.map((shot, i) => {
-            const at = shot.x !== null && shot.y !== null ? shotOffset({ x: shot.x, y: shot.y }) : null
+            const at = shot.x !== null && shot.y !== null ? shotOffset({ x: shot.x, y: shot.y }, lang) : null
+            const centre = at && (at.words === 'centre' || at.words === '정중앙')
             return (
               <li key={i}>
                 {bull.shots.length > 1 ? `${shot.value}: ` : ''}
-                {at ? (at.words === 'centre' ? 'right in the centre' : `${at.mm} mm from the centre, ${at.words}`) : 'typed in, no place on the card'}
+                {at
+                  ? centre
+                    ? t('right in the centre', '정중앙')
+                    : t(`${at.mm} mm from the centre, ${at.words}`, `중심에서 ${at.words} ${at.mm} mm`)
+                  : t('typed in, no place on the card', '직접 입력해서 표적지에 자리가 없어요')}
               </li>
             )
           })}
-          {missing ? <li>{missing === perBull ? 'No shot found here' : `${missing === 1 ? 'One shot' : `${missing} shots`} not found`}: {missing === 1 ? 'it counts' : 'they count'} as 0.</li> : null}
+          {missing ? (
+            <li>
+              {lang === 'ko'
+                ? missing === perBull
+                  ? '여기서 찾은 발이 없어서 0점으로 계산해요.'
+                  : `${missing}발을 찾지 못해서 0점으로 계산해요.`
+                : `${missing === perBull ? 'No shot found here' : `${missing === 1 ? 'One shot' : `${missing} shots`} not found`}: ${missing === 1 ? 'it counts' : 'they count'} as 0.`}
+            </li>
+          ) : null}
         </ul>
       </div>
     </section>

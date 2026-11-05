@@ -1,6 +1,7 @@
 import { LuChartLine, LuChevronRight } from 'react-icons/lu'
 import { Link, useSearchParams } from 'react-router'
-import { formatInstant } from '@shared/time'
+import { dateText } from '@shared/i18n'
+import { dateKeyOf, formatInstant } from '@shared/time'
 import { useBranch } from '@/branch/BranchProvider'
 import { PageHeader } from '@/components/app/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { plural } from '@/features/home/parts'
 import { useFamilyReports } from '@/features/reports/data'
 import { type Report, one, toDate } from '@/features/reports/model'
+import { useLang, useT } from '@/lib/lang'
 import { type Family, useFamily, useIsNewReport } from './data'
+import { periodIn } from './familyText'
 import { ContactCard, FamilyTrend, KidFilter, KidMark, NotLinked } from './FamilyWidgets'
 
 /**
@@ -26,11 +29,12 @@ export function FamilyReportsPage() {
   const isNew = useIsNewReport()
   const shown = data.filter((r) => kid === 'all' || r.studentId === kid)
   const showKid = family.kids.length > 1 && kid === 'all'
+  const t = useT()
 
   if (family.notLinked) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <PageHeader title="Reports" />
+        <PageHeader title={t('Reports', '리포트')} />
         <NotLinked family={family} />
       </div>
     )
@@ -38,14 +42,14 @@ export function FamilyReportsPage() {
 
   const description =
     family.who === 'student'
-      ? `How you’re doing, from ${branch.name}.`
+      ? t(`How you’re doing, from ${branch.name}.`, `${branch.name}에서 보낸 성장 리포트예요.`)
       : kid === 'all' && family.kids.length > 1
-        ? `How your children are doing, from ${branch.name}.`
-        : `How ${family.firstName(kid === 'all' ? family.ids[0] : kid)} is doing, from ${branch.name}.`
+        ? t(`How your children are doing, from ${branch.name}.`, `${branch.name}에서 보낸 자녀 성장 리포트예요.`)
+        : t(`How ${family.firstName(kid === 'all' ? family.ids[0] : kid)} is doing, from ${branch.name}.`, `${branch.name}에서 보낸 ${family.firstName(kid === 'all' ? family.ids[0] : kid)}의 성장 리포트예요.`)
 
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <PageHeader title="Reports" description={family.loading ? '\u00a0' : description} className="mb-4" />
+      <PageHeader title={t('Reports', '리포트')} description={family.loading ? '\u00a0' : description} className="mb-4" />
       <div className="mb-4">
         <KidFilter family={family} value={kid} onChange={(id) => setParams(id === 'all' ? {} : { child: id }, { replace: true })} />
       </div>
@@ -65,8 +69,8 @@ export function FamilyReportsPage() {
             <EmptyMedia variant="icon">
               <LuChartLine />
             </EmptyMedia>
-            <EmptyTitle>No reports yet</EmptyTitle>
-            <EmptyDescription>{branch.name} shares a progress report here when one is ready.</EmptyDescription>
+            <EmptyTitle>{t('No reports yet', '아직 받은 리포트가 없어요')}</EmptyTitle>
+            <EmptyDescription>{t(`${branch.name} shares a progress report here when one is ready.`, `${branch.name}에서 성장 리포트를 보내면 여기에 보여요.`)}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
@@ -79,6 +83,8 @@ export function FamilyReportsPage() {
 
 function ReportItem({ r, family, showKid, isNew }: { r: Report; family: Family; showKid: boolean; isNew: boolean }) {
   const { timezone } = useBranch()
+  const lang = useLang()
+  const t = useT()
   const shared = toDate(r.sharedAt)
   const trend = r.options?.showStatus !== false ? (r.facts?.trend?.level ?? null) : null
   return (
@@ -99,10 +105,10 @@ function ReportItem({ r, family, showKid, isNew }: { r: Report; family: Family; 
               <span className="text-muted-foreground/60">·</span>
             </span>
           ) : null}
-          <span className="font-semibold">{r.customName || 'Progress report'}</span>
-          {isNew ? <Badge className="bg-brand-solid text-white">New</Badge> : null}
+          <span className="font-semibold">{r.customName || t('Progress report', '성장 리포트')}</span>
+          {isNew ? <Badge className="bg-brand-solid text-white">{t('New', 'NEW')}</Badge> : null}
         </div>
-        <p className="mt-0.5 text-sm text-muted-foreground">{r.period.label}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{periodIn(r.period, lang)}</p>
         {trend ? (
           <span className="mt-2 inline-flex sm:hidden">
             <FamilyTrend level={trend} />
@@ -110,12 +116,20 @@ function ReportItem({ r, family, showKid, isNew }: { r: Report; family: Family; 
         ) : null}
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {r.facts?.average != null ? (
-            <span>
-              <span className="text-sm font-semibold text-foreground tabular-nums">{one(r.facts.average)}</span> average per 10 shots
-            </span>
+            lang === 'ko' ? (
+              <span>
+                10발 평균 <span className="text-sm font-semibold text-foreground tabular-nums">{one(r.facts.average)}</span>
+              </span>
+            ) : (
+              <span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{one(r.facts.average)}</span> average per 10 shots
+              </span>
+            )
           ) : null}
-          <span>{plural(r.evaluationCount, 'scored evaluation')}</span>
-          {shared ? <span>Shared {formatInstant(shared, timezone, { month: 'short', day: 'numeric', year: 'numeric' })}</span> : null}
+          <span>{lang === 'ko' ? `기록 ${r.evaluationCount}개` : plural(r.evaluationCount, 'scored evaluation')}</span>
+          {shared ? (
+            <span>{lang === 'ko' ? `${dateText(dateKeyOf(shared, timezone), 'long', 'ko')} 공유` : `Shared ${formatInstant(shared, timezone, { month: 'short', day: 'numeric', year: 'numeric' })}`}</span>
+          ) : null}
         </p>
       </div>
       {trend ? (

@@ -1,9 +1,10 @@
 import { LuCircleAlert, LuMessageSquareQuote, LuPencilLine, LuScanSearch, LuTrophy } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { type Evaluation, POSITION_LABELS } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_LABELS, POSITION_LABELS_KO } from '@shared/shooting/evaluation'
 import { wasScanned } from '@shared/targets/flat'
 import type { WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { cardPath } from './card/parts'
 import { unplacedText } from './results'
@@ -13,9 +14,10 @@ import { unplacedText } from './results'
  * 10 shots than every earlier result in its position. Staff and families see it alike.
  */
 export function BestBadge({ position, size = 'md', words = 'always', className }: { position: Evaluation['position']; size?: 'sm' | 'md'; words?: 'always' | 'wide'; className?: string }) {
+  const t = useT()
   return (
     <span
-      title={`A new personal best: higher than every earlier ${POSITION_LABELS[position].toLowerCase()} result`}
+      title={t(`A new personal best: higher than every earlier ${POSITION_LABELS[position].toLowerCase()} result`, `개인 최고 기록이에요. 지금까지의 ${POSITION_LABELS_KO[position]} 기록 중 가장 높아요.`)}
       className={cn(
         'inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 font-medium whitespace-nowrap text-amber-900 ring-1 ring-amber-300/70 ring-inset dark:bg-amber-950/60 dark:text-amber-200 dark:ring-amber-800',
         size === 'sm' ? 'h-4 px-1.5 text-[10px]' : 'h-5 px-2 text-xs',
@@ -25,7 +27,7 @@ export function BestBadge({ position, size = 'md', words = 'always', className }
     >
       <LuTrophy className={size === 'sm' ? 'size-2.5' : 'size-3'} aria-hidden />
       {/* `wide`: the words only where the list has room (its container's width), the trophy alone on a phone. */}
-      <span className={words === 'wide' ? 'sr-only @md:not-sr-only' : undefined}>New best</span>
+      <span className={words === 'wide' ? 'sr-only @md:not-sr-only' : undefined}>{t('New best', '최고 기록')}</span>
     </span>
   )
 }
@@ -75,10 +77,11 @@ export function ResultNotes({ results, mode }: { results: WithId<Evaluation>[]; 
 
 /** In place of the target, for a result whose shots have no places. */
 export function UnplacedTarget({ e, className }: { e: Pick<Evaluation, 'source' | 'series'>; className?: string }) {
+  const lang = useLang()
   return (
     <div className={cn('flex aspect-square w-full max-w-[16rem] flex-col items-center justify-center gap-2 rounded-full border border-dashed p-10 text-center text-sm text-balance text-muted-foreground', className)}>
       <LuPencilLine className="size-5" />
-      {unplacedText(e)}
+      {unplacedText(e, lang)}
     </div>
   )
 }

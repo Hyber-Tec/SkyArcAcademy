@@ -1,12 +1,14 @@
 import { LuCheck } from 'react-icons/lu'
 import { type ThemeSetting, useTheme } from '@/components/app/theme'
+import { useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { SectionTitle } from './ProfileLayout'
+import { THEME_LABELS_KO } from './themeText'
 
-const OPTIONS: { value: ThemeSetting; label: string; hint: string }[] = [
-  { value: 'light', label: 'Light', hint: 'Always light' },
-  { value: 'dark', label: 'Dark', hint: 'Always dark' },
-  { value: 'system', label: 'System', hint: 'Follows this device' },
+const OPTIONS: { value: ThemeSetting; label: string; hint: string; hintKo: string }[] = [
+  { value: 'light', label: 'Light', hint: 'Always light', hintKo: '항상 밝게' },
+  { value: 'dark', label: 'Dark', hint: 'Always dark', hintKo: '항상 어둡게' },
+  { value: 'system', label: 'System', hint: 'Follows this device', hintKo: '이 기기 설정을 따라요' },
 ]
 
 /** A small drawing of the app in one theme (the system option shows both halves). */
@@ -39,10 +41,11 @@ function Preview({ mode }: { mode: ThemeSetting }) {
 /** Profile → Appearance: light, dark or the device's setting (remembered on this device). */
 export function AppearanceSection() {
   const { theme, setTheme } = useTheme()
+  const t = useT()
   return (
     <div>
-      <SectionTitle title="Appearance" description="How the website looks on this device." />
-      <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3 sm:gap-4">
+      <SectionTitle title={t('Appearance', '화면')} description={t('How the website looks on this device.', '이 기기에서 웹사이트를 밝게 또는 어둡게 볼 수 있어요.')} />
+      <div role="radiogroup" aria-label={t('Theme', '화면 모드')} className="grid grid-cols-3 gap-3 sm:gap-4">
         {OPTIONS.map((o) => {
           const on = theme === o.value
           return (
@@ -62,8 +65,8 @@ export function AppearanceSection() {
               </div>
               <div className="flex items-center gap-2 px-3 py-2.5">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{o.label}</span>
-                  <span className="hidden truncate text-xs text-muted-foreground sm:block">{o.hint}</span>
+                  <span className="block text-sm font-medium">{t(o.label, THEME_LABELS_KO[o.value])}</span>
+                  <span className="hidden truncate text-xs text-muted-foreground sm:block">{t(o.hint, o.hintKo)}</span>
                 </span>
                 {on ? (
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">

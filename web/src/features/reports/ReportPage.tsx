@@ -3,15 +3,17 @@ import { useEffect, useMemo } from 'react'
 import { LuArrowLeft, LuDownload, LuPencil } from 'react-icons/lu'
 import { useNavigate, useParams } from 'react-router'
 import { COL, branchColPath } from '@shared/paths'
-import { reportName } from '@shared/reports/compose'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { FullPageMessage, FullPageSpinner } from '@/components/app/FullPage'
 import { Button } from '@/components/ui/button'
+import { periodIn } from '@/features/family/familyText'
 import { db } from '@/lib/firebase'
 import { branchCol, branchDocRef, useDoc } from '@/lib/firestore'
+import { useLang, useT } from '@/lib/lang'
 import { ReportDocument } from './ReportDocument'
 import { reportSeenKey } from './model'
+import { reportNameIn } from './reportText'
 
 /**
  * `/report/{id}`: the report as families see it, ready to print or save as a PDF. Families get Back and Download PDF;
@@ -25,10 +27,12 @@ export function ReportPage() {
   const { data: r, loading, error } = useDoc<ProgressReportDoc>(ref)
   const family = role === 'parent' || role === 'student'
   const staffPortal = portal === 'admin' || portal === 'coach' ? portal : null
+  const lang = useLang()
+  const t = useT()
 
   useEffect(() => {
-    if (r) document.title = `${r.student.name} – Progress report – ${r.period.label}`
-  }, [r])
+    if (r) document.title = lang === 'ko' ? `${r.student.name} – 성장 리포트 – ${periodIn(r.period, 'ko')}` : `${r.student.name} – Progress report – ${r.period.label}`
+  }, [r, lang])
 
   // The family's view receipt: written once (the rules refuse a second), remembered in this browser. An owner or admin
   // previewing the family's view writes nothing.
@@ -61,9 +65,15 @@ export function ReportPage() {
     else navigate(family ? `/${role}/reports` : `/${staffPortal ?? 'app'}/reports`)
   }
 
-  if (loading) return <FullPageSpinner label="Loading the report…" />
+  if (loading) return <FullPageSpinner label={t('Loading the report…', '리포트를 불러오는 중…')} />
   if (!r || error) {
-    return <FullPageMessage title="Report not available" description="It may have been deleted, or it isn’t shared with you." actions={[{ label: 'Go back', onClick: back }]} />
+    return (
+      <FullPageMessage
+        title={t('Report not available', '리포트를 볼 수 없어요')}
+        description={t('It may have been deleted, or it isn’t shared with you.', '삭제됐거나 아직 공유되지 않은 리포트예요.')}
+        actions={[{ label: t('Go back', '돌아가기'), onClick: back }]}
+      />
+    )
   }
 
   return (
@@ -71,11 +81,11 @@ export function ReportPage() {
       <div className="sticky top-0 z-30 border-b border-black/5 bg-[#efeee9]/90 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-[816px] items-center gap-2 px-3 py-2.5 sm:px-0">
           <Button variant="ghost" size="sm" onClick={back} className="text-[#0b0b0b] hover:bg-black/5">
-            <LuArrowLeft /> Back
+            <LuArrowLeft /> {t('Back', '뒤로')}
           </Button>
           {/* On a phone the bar has no room for the title; the report's own header right below names the period. */}
           <div className="min-w-0 flex-1 truncate text-center text-sm font-medium text-[#52514e]">
-            <span className="hidden sm:inline">{reportName(r)}</span>
+            <span className="hidden sm:inline">{reportNameIn(r, lang)}</span>
           </div>
           {staffPortal ? (
             <Button variant="ghost" size="sm" className="text-[#0b0b0b] hover:bg-black/5" onClick={() => navigate(`/${staffPortal}/reports/${reportId}`)}>
@@ -83,7 +93,7 @@ export function ReportPage() {
             </Button>
           ) : null}
           <Button size="sm" onClick={() => window.print()} className="bg-[#0b0b0b] text-white hover:bg-[#0b0b0b]/90">
-            <LuDownload /> Download PDF
+            <LuDownload /> {t('Download PDF', 'PDF 다운로드')}
           </Button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { cn } from "cn"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/lang"
 import { LuX } from "react-icons/lu"
 
 function Dialog({
@@ -53,6 +54,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const t = useT()
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -74,7 +76,7 @@ function DialogContent({
             >
               <LuX
               />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t("Close", "닫기")}</span>
             </Button>
           </DialogPrimitive.Close>
         )}

@@ -1,8 +1,8 @@
 import type { EvaluationPoint } from '@shared/reports/types'
 import { type Evaluation, pointOf } from '@shared/shooting/evaluation'
 import { type ReplayShot, replayShots, showsTenths } from '@shared/shooting/replay'
+import { type Lang, dateText } from '@shared/i18n'
 import { type ShotPoint, offsetWords, targetViewMm } from '@shared/shooting/target'
-import { formatDateKey } from '@shared/time'
 
 /**
  * What the website's shot replay plays: one result's shots in firing order (shared/src/shooting/replay.ts), or a
@@ -27,8 +27,14 @@ export interface PlayShot {
 
 const scoreText = (sius: boolean, v: number) => (sius ? v.toFixed(1) : String(Math.round(v)))
 
+/** "Shot 7 of 20", "20발 중 7번째". */
+export const shotOfText = (n: number, of: number, lang: Lang = 'en'): string => (lang === 'ko' ? `${of}발 중 ${n}번째` : `Shot ${n} of ${of}`)
+
+/** "Series 2", "2시리즈". */
+export const seriesText = (n: number, lang: Lang = 'en'): string => (lang === 'ko' ? `${n}시리즈` : `Series ${n}`)
+
 /** One result's shots (SIUS series by series, a paper card bull by bull). */
-export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>): PlayShot[] {
+export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>, lang: Lang = 'en'): PlayShot[] {
   const sius = showsTenths(e)
   const shots = replayShots(e)
   return shots.map((s) => ({
@@ -37,8 +43,8 @@ export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>): PlaySh
     value: s.value,
     valueText: scoreText(sius, s.value),
     point: s.point,
-    of: `Shot ${s.n} of ${shots.length}`,
-    context: s.series !== null ? `Series ${s.series}` : null,
+    of: shotOfText(s.n, shots.length, lang),
+    context: s.series !== null ? seriesText(s.series, lang) : null,
     runningText: scoreText(sius, s.running),
   }))
 }
@@ -47,7 +53,7 @@ export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>): PlaySh
  * A report's results (oldest first), each one's shots in the order they were fired. One result plays as itself (its
  * series aren't kept in a report, so none are named); several play one after another under their dates.
  */
-export function playPoints(points: readonly EvaluationPoint[]): PlayShot[] {
+export function playPoints(points: readonly EvaluationPoint[], lang: Lang = 'en'): PlayShot[] {
   const several = points.length > 1
   const out: PlayShot[] = []
   for (const p of points) {
@@ -61,8 +67,8 @@ export function playPoints(points: readonly EvaluationPoint[]): PlayShot[] {
         value: m.v,
         valueText: scoreText(sius, m.v),
         point: pointOf(m),
-        of: `Shot ${i + 1} of ${p.marks.length}`,
-        context: several ? formatDateKey(p.dateKey, 'monthDay') : null,
+        of: shotOfText(i + 1, p.marks.length, lang),
+        context: several ? dateText(p.dateKey, 'monthDay', lang) : null,
         runningText: several ? null : scoreText(sius, running),
       })
     })
@@ -89,9 +95,17 @@ export function dartView(shots: readonly Pick<ReplayShot, 'point'>[]): number {
   )
 }
 
-/** How far a shot sits from the centre (mm, one decimal) and which way in words ("low left", or "centre"). */
-export function shotOffset(p: ShotPoint): { mm: string; words: string } {
-  return { mm: Math.hypot(p.x, p.y).toFixed(1), words: offsetWords(p, 0.5) ?? 'centre' }
+/** How far a shot sits from the centre (mm, one decimal) and which way in words ("low left", or "centre"; "왼쪽 아래"). */
+export function shotOffset(p: ShotPoint, lang: Lang = 'en'): { mm: string; words: string } {
+  return { mm: Math.hypot(p.x, p.y).toFixed(1), words: lang === 'ko' ? (offsetWordsKo(p, 0.5) ?? '정중앙') : (offsetWords(p, 0.5) ?? 'centre') }
+}
+
+/** Which way the shots lean, in Korean: "왼쪽 아래", "위" (as shared/src/shooting/target.ts's offsetWords). */
+export function offsetWordsKo(p: ShotPoint | null, withinMm = 1.5): string | null {
+  if (!p) return null
+  const h = Math.abs(p.x) >= withinMm ? (p.x > 0 ? '오른쪽' : '왼쪽') : ''
+  const v = Math.abs(p.y) >= withinMm ? (p.y > 0 ? '위' : '아래') : ''
+  return [h, v].filter(Boolean).join(' ') || null
 }
 
 /** Playback speeds, in the order the speed button steps through them. */

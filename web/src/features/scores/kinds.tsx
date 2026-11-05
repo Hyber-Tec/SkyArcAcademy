@@ -1,7 +1,11 @@
 import { type ResultKind, RESULT_KINDS, RESULT_KIND_LABELS, kindOf } from '@shared/shooting/evaluation'
 import type { Evaluation } from '@shared/shooting/evaluation'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
+
+/** The kinds in Korean, for a parent reading Korean (docs/DECISIONS.md §36). */
+const RESULT_KIND_LABELS_KO: Record<ResultKind, string> = { practice: '연습', competition: '대회', evaluation: '평가' }
 
 /**
  * Practice, Competition or Evaluation on every result (the manager's second meeting, docs/DECISIONS.md §23): picked when
@@ -26,13 +30,16 @@ const CHIP: Record<Exclude<ResultKind, 'practice'>, string> = {
 
 /** A competition's or an evaluation's chip; practice, the usual, has none. */
 export function ResultKindChip({ e, className }: { e: Pick<Evaluation, 'kind'>; className?: string }) {
+  const lang = useLang()
   const kind = kindOf(e)
   if (kind === 'practice') return null
-  return <span className={cn('inline-flex h-4 shrink-0 items-center rounded px-1.5 text-[10px] font-semibold', CHIP[kind], className)}>{RESULT_KIND_LABELS[kind]}</span>
+  return <span className={cn('inline-flex h-4 shrink-0 items-center rounded px-1.5 text-[10px] font-semibold', CHIP[kind], className)}>{lang === 'ko' ? RESULT_KIND_LABELS_KO[kind] : RESULT_KIND_LABELS[kind]}</span>
 }
 
 /** A filter over results: everything, or one kind; shown only when results of more than one kind exist. */
 export function ResultKindFilter({ list, value, onChange }: { list: readonly Pick<Evaluation, 'kind'>[]; value: ResultKind | 'all'; onChange: (k: ResultKind | 'all') => void }) {
+  const lang = useLang()
+  const t = useT()
   const counts = new Map<ResultKind, number>()
   for (const e of list) counts.set(kindOf(e), (counts.get(kindOf(e)) ?? 0) + 1)
   if (counts.size < 2) return null
@@ -48,9 +55,9 @@ export function ResultKindFilter({ list, value, onChange }: { list: readonly Pic
     </button>
   )
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Which results">
-      {chip('all', 'All', list.length)}
-      {RESULT_KINDS.filter((k) => counts.has(k)).map((k) => chip(k, `${RESULT_KIND_LABELS[k]}${k === 'practice' ? '' : 's'}`, counts.get(k) ?? 0))}
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Which results', '기록 종류')}>
+      {chip('all', t('All', '전체'), list.length)}
+      {RESULT_KINDS.filter((k) => counts.has(k)).map((k) => chip(k, lang === 'ko' ? RESULT_KIND_LABELS_KO[k] : `${RESULT_KIND_LABELS[k]}${k === 'practice' ? '' : 's'}`, counts.get(k) ?? 0))}
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { COL } from '@shared/paths'
 import type { ProgressReportDoc } from '@shared/reports/types'
 import { type Evaluation, inOrder } from '@shared/shooting/evaluation'
-import { type DateKey, addDays, formatDateKey } from '@shared/time'
+import { type Lang, dateText, pick } from '@shared/i18n'
+import { type DateKey, addDays } from '@shared/time'
 import type { BranchContact, Session, Student, WithId } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { useBranch } from '@/branch/BranchProvider'
@@ -185,8 +186,9 @@ export function useFamily(): Family {
   }
 }
 
-/** "Jiwoo", "Jiwoo and Minjun", "Ana, Jiwoo and Minjun". */
-export function andList(names: string[]): string {
+/** "Jiwoo", "Jiwoo and Minjun", "Ana, Jiwoo and Minjun" (Korean: "Jiwoo, Minjun"). */
+export function andList(names: string[], lang: Lang = 'en'): string {
+  if (lang === 'ko') return names.join(', ')
   return names.length > 2 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join(' and ')
 }
 
@@ -228,13 +230,12 @@ export function useIsNewReport(): (r: Pick<ProgressReportDoc, 'firstViewedAt'> &
 /** A class has ended (by its absolute end, so a class later today is still to come). */
 export const hasEnded = (s: Pick<Session, 'endAt'>, now: number) => (s.endAt?.toMillis?.() ?? 0) <= now
 
-/** "Today", "Tomorrow" or "Tue, Oct 20" (with the weekday after Today and Tomorrow when asked). */
-export function dayTitle(d: DateKey, today: DateKey, withDate = true) {
-  const label = formatDateKey(d, 'weekdayMedium')
-  if (d === today) return withDate ? `Today · ${label}` : 'Today'
-  if (d === addDays(today, 1)) return withDate ? `Tomorrow · ${label}` : 'Tomorrow'
-  if (d === addDays(today, -1)) return withDate ? `Yesterday · ${label}` : 'Yesterday'
-  return label
+/** "Today", "Tomorrow" or "Tue, Oct 20" (with the weekday after Today and Tomorrow when asked); "오늘", "11월 5일 (목)". */
+export function dayTitle(d: DateKey, today: DateKey, withDate = true, lang: Lang = 'en') {
+  const label = dateText(d, 'weekdayMedium', lang)
+  const near = d === today ? pick(lang, 'Today', '오늘') : d === addDays(today, 1) ? pick(lang, 'Tomorrow', '내일') : d === addDays(today, -1) ? pick(lang, 'Yesterday', '어제') : null
+  if (!near) return label
+  return withDate ? `${near} · ${label}` : near
 }
 
 /** The academy's contact details (Settings → Academy), from its public profile; the academy's own doc before that. */

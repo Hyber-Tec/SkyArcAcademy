@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 
 /**
  * English · 한국어: the page's language, each name in its own language (docs/DECISIONS.md §36). On the pages before
- * signing in, a contract's link and a parent's Profile; remembered in this browser.
+ * signing in, a contract's link, the contracts a parent signs before the portal opens, and a parent's Profile;
+ * remembered in this browser.
  */
 export function LangSwitch({ className }: { className?: string }) {
   const { lang, setLang } = useLangChoice()
