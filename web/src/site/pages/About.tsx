@@ -8,8 +8,8 @@ import { useSite } from '@/site/kit/site'
 import { BookButton, Container, SectionHead } from '../components/bits'
 import { CoachPortrait, FinalCta, FocusChips, PageHero, VisitUs, crmLang } from '../components/blocks'
 
-const STORY_PHOTO = l('Photo needed: an athlete in focus', '사진 필요: 집중하는 선수')
-const HERO_PHOTO = l('Photo needed: coaching on the range', '사진 필요: 사대에서의 코칭')
+const STORY_PHOTO = l('Photo needed: an athlete in focus', '사진 준비 중: 집중하는 선수')
+const HERO_PHOTO = l('Photo needed: coaching on the range', '사진 준비 중: 사대에서 코칭하는 모습')
 
 const VALUE_ICONS = [LuShieldCheck, LuTarget, LuSprout, LuUsers]
 

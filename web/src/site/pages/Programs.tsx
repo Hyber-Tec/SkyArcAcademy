@@ -30,7 +30,7 @@ import { FinalCta, PageHero } from '../components/blocks'
 import { LEVEL_FILL, LevelVisual } from '../components/LevelPath'
 import { T } from '../i18n'
 
-const HERO_PHOTO = l('Photo needed: a match on the range', '사진 필요: 사대 위의 경기')
+const HERO_PHOTO = l('Photo needed: a match on the range', '사진 준비 중: 사대에서 열린 경기')
 
 function LevelText({ level, index }: { level: Level; index: number }) {
   const { t } = useSite()

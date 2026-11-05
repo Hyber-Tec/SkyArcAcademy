@@ -1,5 +1,6 @@
 import { type AnchorHTMLAttributes, type ReactNode, createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { LangContext, browserLang, storeLang, storedLang } from '@/lib/lang'
 import { PAGE_META, type Page, isSitePath } from '../paths'
 import { ACADEMY, type L, type Lang, TITLES, keepWhole } from './content'
 
@@ -37,6 +38,24 @@ export function hrefFor(path: string, lang: Lang): string {
   return `/${clean}`
 }
 
+/** Crawlers and page checkers read the page they asked for: never sent to another language. */
+const isBot = () => /bot|crawl|spider|slurp|lighthouse|headless/i.test(navigator.userAgent)
+
+/**
+ * The page a visit opens on: the Korean one for an English address when the visitor chose Korean before (the switch,
+ * here or in the portal: the same choice, 'skyarc:lang'), or chose nothing and their browser prefers Korean
+ * (docs/DECISIONS.md §36). Never the other way, and never over a choice of English. The address becomes the Korean
+ * page's in place, so Back doesn't return to the English one; the HTML, its canonical address and hreflang stay as built.
+ */
+function firstRoute(): Route {
+  const route = parseLocation(location.pathname, location.search)
+  if (route.lang === 'en' && isSitePath(location.pathname) && !isBot() && (storedLang() ?? browserLang()) === 'ko') {
+    history.replaceState(history.state, '', hrefFor(route.path, 'ko') + location.search + location.hash)
+    return parseLocation(location.pathname, location.search)
+  }
+  return route
+}
+
 const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches
 
 interface SiteValue extends Route {
@@ -52,7 +71,7 @@ interface SiteValue extends Route {
 const Ctx = createContext<SiteValue | null>(null)
 
 export function SiteProvider({ children }: { children: ReactNode }) {
-  const [route, setRoute] = useState<Route>(() => parseLocation(location.pathname, location.search))
+  const [route, setRoute] = useState<Route>(firstRoute)
   // Where to scroll once the next page is drawn: the top, a section, or back to where the reader was (Back).
   const scrollTo = useRef<number | 'top' | 'section' | null>(null)
 
@@ -161,13 +180,21 @@ export function SiteProvider({ children }: { children: ReactNode }) {
         window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(path, route.lang) }))
       },
       setLang: (lang) => {
+        // The visitor's choice, kept for their next visit and the portal's sign-in (web/src/lib/lang.ts).
+        storeLang(lang)
         window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(route.path, lang) + (route.query ? `?${route.query}` : '') }))
       },
       param: (name) => new URLSearchParams(route.query).get(name),
     }),
     [route],
   )
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  // The app's own parts on the site (its dialogs and sheets) speak the page's language too.
+  const appLang = useMemo(() => ({ lang: route.lang, chosen: storedLang(), setLang: value.setLang }), [route.lang, value.setLang])
+  return (
+    <Ctx.Provider value={value}>
+      <LangContext value={appLang}>{children}</LangContext>
+    </Ctx.Provider>
+  )
 }
 
 export function useSite(): SiteValue {

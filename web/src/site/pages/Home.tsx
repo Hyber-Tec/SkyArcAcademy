@@ -20,7 +20,7 @@ import { T } from '../i18n'
 
 const FACT_ICONS = [LuTarget, LuLayers, LuUserRound, LuActivity]
 
-const HERO_PHOTO = l('Photo needed: athletes on the range', '사진 필요: 사대 위의 선수들')
+const HERO_PHOTO = l('Photo needed: athletes on the range', '사진 준비 중: 사대의 선수들')
 
 /** The hero's card: how every athlete starts, and the way to ask for a first time. */
 function NextTrialCard({ className }: { className?: string }) {
