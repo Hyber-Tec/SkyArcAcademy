@@ -6,8 +6,12 @@
  * in the app stay (the file's are used for a program the current contract doesn't have), unless --file-prices says to
  * use the file's. Nothing changes when the text is the same as the current version's.
  *
+ * With --signer (and --title), it also sets who signs for the academy (§35): their name is typed on the academy's line
+ * of every contract signed from then on, until the office uploads or draws the signature in Settings, which it keeps.
+ *
  *   npx tsx scripts/contract.ts --academy skyarc --file docs/internal/contract/enrollment-contract.txt          # what it would do
  *   npx tsx scripts/contract.ts --academy skyarc --file docs/internal/contract/enrollment-contract.txt --apply  # do it
+ *   npx tsx scripts/contract.ts --academy skyarc --signer "Full Name" --title "Director" --apply               # who signs
  *
  * Once for each academy: skyarc, then demo. Uses the developer's gcloud login (scripts/lib/firestore-rest.ts);
  * SKYARC_PROJECT and FIRESTORE_EMULATOR_HOST as the other scripts (the practice copy: SKYARC_PROJECT=demo-skyarc
@@ -18,23 +22,62 @@ import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
 import { dollarsText, parseContract, pricedChoice, withPrices } from '../shared/src/contracts/document'
-import { CONTRACT_TEXT_MAX, type ContractTemplate } from '../shared/src/contracts/types'
+import { ACADEMY_SIGNER_ID, type AcademySigner, CONTRACT_TEXT_MAX, type ContractTemplate } from '../shared/src/contracts/types'
 import type { DriveActor } from '../shared/src/drive/types'
 import { COL, ROOT } from '../shared/src/paths'
 import { type BatchWrite, PROJECT_ID, commitBatch, getDocument, listDocuments } from './lib/firestore-rest'
 
-const { values } = parseArgs({ options: { academy: { type: 'string' }, file: { type: 'string' }, apply: { type: 'boolean', default: false }, 'file-prices': { type: 'boolean', default: false } } })
+const { values } = parseArgs({
+  options: {
+    academy: { type: 'string' },
+    file: { type: 'string' },
+    apply: { type: 'boolean', default: false },
+    'file-prices': { type: 'boolean', default: false },
+    signer: { type: 'string' },
+    title: { type: 'string' },
+  },
+})
 const BY: DriveActor = { uid: 'contract-script', email: '', name: 'HyberTec' }
+
+/** The audit entry of a change the script makes, as the system's. */
+const audit = (at: Date, action: string, entityType: string, entityId: string, summary: string): Record<string, unknown> => ({
+  at,
+  actorUid: BY.uid,
+  actorEmail: 'system',
+  actorName: BY.name,
+  actorRole: 'system',
+  action,
+  category: 'contracts',
+  entityType,
+  entityId,
+  summary,
+  context: '',
+  dateKey: null,
+  studentId: null,
+  studentName: null,
+  coachId: null,
+  coachName: null,
+  changes: [],
+  via: 'function',
+})
 
 async function main() {
   const academyId = values.academy
   if (academyId !== ACADEMY_ID && academyId !== DEMO_ACADEMY_ID) throw new Error(`Say which academy: --academy ${ACADEMY_ID} or --academy ${DEMO_ACADEMY_ID}.`)
-  if (!values.file) throw new Error('Say which file has the contract: --file docs/internal/contract/enrollment-contract.txt')
+  if (!values.file && !values.signer) throw new Error('Say what to set up: --file docs/internal/contract/enrollment-contract.txt (the contract), --signer "Full Name" (who signs for the academy), or both.')
   const base = `${ROOT.branches}/${academyId}`
   console.log(`The enrollment contract, in ${PROJECT_ID} (${base})${values.apply ? '' : ': a dry run, nothing is written (add --apply to do it)'}`)
   if (!(await getDocument(base))) throw new Error(`No academy at ${base} in ${PROJECT_ID}.`)
+  const at = new Date()
+  const writes = [...(values.file ? await contract(base, values.file, at) : []), ...(values.signer ? await signer(base, values.signer, values.title ?? '', at) : [])]
+  if (!values.apply || !writes.length) return
+  await commitBatch(writes)
+  console.log('Done.')
+}
 
-  let text = readFileSync(values.file, 'utf8').replace(/\r\n?/g, '\n').trim()
+/** The contract in the file, as the current version (a new one, unless it's the same text). */
+async function contract(base: string, file: string, at: Date): Promise<BatchWrite[]> {
+  let text = readFileSync(file, 'utf8').replace(/\r\n?/g, '\n').trim()
   if (text.length > CONTRACT_TEXT_MAX) throw new Error('The contract is too long.')
   const { doc, problems } = parseContract(text)
   if (problems.length) throw new Error(`Fix the contract first:\n${problems.map((p) => `  line ${p.line}: ${p.message}`).join('\n')}`)
@@ -52,15 +95,16 @@ async function main() {
     text = next
   }
   const sha256 = createHash('sha256').update(text).digest('hex')
-  if (current?.t.sha256 === sha256) return console.log(`It's the current contract already (version ${current.t.version}): nothing to do.`)
+  if (current?.t.sha256 === sha256) {
+    console.log(`It's the current contract already (version ${current.t.version}): nothing to do.`)
+    return []
+  }
 
   const version = Math.max(0, ...versions.map((v) => v.t.version || 0)) + 1
   const choice = pricedChoice(doc)
   console.log(`“${doc.title}”, version ${version}${current ? `, after version ${current.t.version}` : ', the first'}.`)
   if (choice) for (const o of pricedChoice(parseContract(text).doc)?.options ?? []) console.log(`  ${o.title}: ${o.price}`)
-  if (!values.apply) return
 
-  const at = new Date()
   const id = randomBytes(15).toString('base64url').slice(0, 20)
   const template: Omit<ContractTemplate, 'publishedAt'> & { publishedAt: Date } = { title: doc.title, text, sha256, version, current: true, publishedAt: at, publishedBy: BY }
   const writes: BatchWrite[] = []
@@ -68,29 +112,30 @@ async function main() {
   writes.push({ create: `${base}/${COL.contractTemplates}/${id}`, data: { ...template } })
   writes.push({
     set: `${base}/${COL.auditLog}/contract-script-${at.getTime()}`,
-    data: {
-      at,
-      actorUid: BY.uid,
-      actorEmail: 'system',
-      actorName: BY.name,
-      actorRole: 'system',
-      action: 'contract.publish',
-      category: 'contracts',
-      entityType: 'contractTemplate',
-      entityId: id,
-      summary: `Set up the enrollment contract, version ${version} (“${doc.title}”): the office sends it to each family from the student’s page`,
-      context: '',
-      dateKey: null,
-      studentId: null,
-      studentName: null,
-      coachId: null,
-      coachName: null,
-      changes: [],
-      via: 'function',
-    },
+    data: audit(at, 'contract.publish', 'contractTemplate', id, `Set up the enrollment contract, version ${version} (“${doc.title}”): the office sends it to each family from the student’s page`),
   })
-  await commitBatch(writes)
-  console.log(`Done: version ${version} is the contract the office sends from now on.`)
+  return writes
+}
+
+/** Who signs for the academy: their name, typed on its line, keeping a signature image the office set in Settings. */
+async function signer(base: string, name: string, title: string, at: Date): Promise<BatchWrite[]> {
+  const clean = name.replace(/\s+/g, ' ').trim()
+  if (!clean || clean.length > 100 || title.length > 100) throw new Error('Give the signer’s full name (and title), at most 100 characters each.')
+  const path = `${base}/${COL.contractSigner}/${ACADEMY_SIGNER_ID}`
+  const now = (await getDocument(path)) as Partial<AcademySigner> | null
+  const image = typeof now?.image === 'string' ? now.image : null
+  if (now?.name === clean && (now.title ?? '') === title.trim()) {
+    console.log(`${clean} signs for the academy already: nothing to do.`)
+    return []
+  }
+  console.log(`The academy’s signature: ${[clean, title.trim()].filter(Boolean).join(', ')}, ${image ? 'with the signature image on file' : 'the name typed (no signature image yet)'}.`)
+  return [
+    { set: path, data: { name: clean, title: title.trim(), image, updatedAt: at, updatedBy: BY } },
+    {
+      set: `${base}/${COL.auditLog}/contract-signer-${at.getTime()}`,
+      data: audit(at, 'contract.signer', 'contractSigner', ACADEMY_SIGNER_ID, `Set who signs for the academy on the enrollment contract: ${[clean, title.trim()].filter(Boolean).join(', ')}`),
+    },
+  ]
 }
 
 main().catch((e) => {

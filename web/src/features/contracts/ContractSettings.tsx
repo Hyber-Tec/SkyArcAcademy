@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { LuDownload, LuEraser, LuEye, LuFileText, LuPenLine, LuTrash2, LuUpload } from 'react-icons/lu'
+import { LuDownload, LuEraser, LuEye, LuFileText, LuPenLine, LuTrash2, LuType, LuUpload } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { dollarsText, parseContract, pricedChoice } from '@shared/contracts/document'
 import { optionHeading, prefillValues } from '@shared/contracts/fill'
@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useNow } from '@/lib/useNow'
 import { previewContract, removeAcademySigner, saveAcademySigner, setContractPrices, useAcademySigner, useContractLinks, useContractTemplates } from './api'
 import { type SignOutcome, ContractSigning } from './ContractSigning'
+import { TypedName } from './ContractView'
 import { savePdf } from './pdf'
 import { SignaturePad, type SignaturePadHandle } from './SignaturePad'
 
@@ -235,15 +236,16 @@ function SignerCard() {
   const { confirm, dialog } = useConfirm()
   const [name, setName] = useState<string | null>(null)
   const [title, setTitle] = useState<string | null>(null)
-  const [image, setImage] = useState<string | null>(null)
+  // A new image, or null to type the name instead; undefined: as saved.
+  const [image, setImage] = useState<string | null | undefined>(undefined)
   const [drawing, setDrawing] = useState(false)
   const [busy, setBusy] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const current = signer.data
   const shownName = name ?? current?.name ?? ''
   const shownTitle = title ?? current?.title ?? ''
-  const shownImage = image ?? current?.image ?? null
-  const dirty = name !== null || title !== null || image !== null
+  const shownImage = image !== undefined ? image : (current?.image ?? null)
+  const dirty = name !== null || title !== null || image !== undefined
 
   async function pick(f: File | undefined) {
     if (!f) return
@@ -258,13 +260,13 @@ function SignerCard() {
   }
 
   async function save() {
-    if (!shownName.trim() || !shownImage) return
+    if (!shownName.trim()) return
     setBusy(true)
     try {
       await saveAcademySigner(branchId, actor, { name: shownName, title: shownTitle, image: shownImage })
       setName(null)
       setTitle(null)
-      setImage(null)
+      setImage(undefined)
       toast.success('The academy’s signature is saved', { description: 'It’s on every contract signed from now on.' })
     } catch (e) {
       toast.error('Couldn’t save the signature', { description: (e as Error).message })
@@ -293,15 +295,26 @@ function SignerCard() {
     <Card data-testid="contract-signer">
       <CardHeader>
         <CardTitle>The academy’s signature</CardTitle>
-        <CardDescription>Put on every contract a family signs, on the academy’s line, with the date they sign. Upload the signature (SVG or PNG), or draw it here.</CardDescription>
+        <CardDescription>
+          Put on every contract a family signs, on the academy’s line, with the date they sign. Upload the signature (SVG or PNG), or draw it here; until there’s one, the name below is typed on the line.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {signer.loading ? (
           <Skeleton className="h-28 w-full" />
         ) : (
           <>
-            <div className="flex min-h-24 items-center justify-center rounded-lg border bg-white p-3" data-testid="signer-image">
-              {shownImage ? <img src={shownImage} alt="The academy’s signature" className="max-h-24 w-auto max-w-full object-contain" /> : <span className="text-sm text-muted-foreground">No signature yet: the academy’s line is left blank.</span>}
+            <div className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-lg border bg-white p-3" data-testid="signer-image">
+              {shownImage ? (
+                <img src={shownImage} alt="The academy’s signature" className="max-h-24 w-auto max-w-full object-contain" />
+              ) : shownName.trim() ? (
+                <>
+                  <TypedName name={shownName.trim()} />
+                  <span className="text-xs text-zinc-500">No signature image yet: the name is typed on the academy’s line.</span>
+                </>
+              ) : (
+                <span className="text-sm text-zinc-500">Nobody signs for the academy yet: its line is left blank.</span>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <input ref={file} type="file" accept="image/svg+xml,image/png" className="hidden" onChange={(e) => void pick(e.target.files?.[0]).finally(() => (e.target.value = ''))} data-testid="signer-file" />
@@ -311,6 +324,11 @@ function SignerCard() {
               <Button variant="outline" size="sm" onClick={() => setDrawing(true)} data-testid="signer-draw">
                 <LuPenLine /> Draw it
               </Button>
+              {shownImage ? (
+                <Button variant="ghost" size="sm" onClick={() => setImage(null)} data-testid="signer-typed">
+                  <LuType /> Type the name instead
+                </Button>
+              ) : null}
               {current && !dirty ? (
                 <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void remove()}>
                   <LuTrash2 /> Remove
@@ -328,7 +346,7 @@ function SignerCard() {
               </Field>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => void save()} disabled={busy || !dirty || !shownName.trim() || !shownImage} data-testid="signer-save">
+              <Button onClick={() => void save()} disabled={busy || !dirty || !shownName.trim()} data-testid="signer-save">
                 {busy ? <Spinner /> : null} Save the signature
               </Button>
               {dirty ? (
@@ -337,7 +355,7 @@ function SignerCard() {
                   onClick={() => {
                     setName(null)
                     setTitle(null)
-                    setImage(null)
+                    setImage(undefined)
                   }}
                 >
                   Undo
@@ -431,7 +449,7 @@ function PreviewDialog({ text, onClose }: { text: string; onClose: () => void })
           today={dateKeyOf(now, timezone)}
           onSign={onSign}
           signLabel="Make the sample PDF"
-          academySigner={signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image } : null}
+          academySigner={signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image ?? null } : null}
           note={<>A preview: the PDF is marked as a sample on every page.</>}
         />
       </DialogContent>

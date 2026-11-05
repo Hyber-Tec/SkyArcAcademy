@@ -23,6 +23,8 @@ export interface Mail {
   /** Shown as the sender's name, e.g. "Sky Arc Sports Academy". */
   fromName: string
   replyTo?: string | null
+  /** Files sent with it: a signed contract's PDF. */
+  attachments?: { filename: string; content: Buffer; contentType: string }[]
 }
 
 const emulated = process.env.FUNCTIONS_EMULATOR === 'true'
@@ -34,6 +36,7 @@ export async function sendMail(mail: Mail): Promise<SendResult> {
     mkdirSync(dir, { recursive: true })
     const file = join(dir, `${Date.now()}-${mail.to.replace(/[^a-z0-9@.]+/gi, '_')}.html`)
     writeFileSync(file, `<!-- To: ${mail.to} | From: ${mail.fromName} | Reply-To: ${mail.replyTo ?? ''} | Subject: ${mail.subject} -->\n${mail.html}`)
+    for (const a of mail.attachments ?? []) writeFileSync(`${file}-${a.filename.replace(/[^a-z0-9.@-]+/gi, '_')}`, a.content)
     logger.info(`Email (emulator, not sent) to ${mail.to}: ${mail.subject} → ${file}`)
     return { status: 'sent' }
   }
@@ -49,6 +52,7 @@ export async function sendMail(mail: Mail): Promise<SendResult> {
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
+      attachments: mail.attachments,
     })
     return { status: 'sent' }
   } catch (e) {

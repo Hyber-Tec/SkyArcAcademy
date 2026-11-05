@@ -12,6 +12,7 @@ import {
   RELATION_LABELS,
   checkContractSigning,
   checkPreset,
+  emailsIn,
   prefillValues,
   presetValues,
   shownValue,
@@ -24,13 +25,16 @@ import { contractFilePlace, contractFoldersToMake } from '@shared/contracts/fili
 import {
   ACADEMY_SIGNER_ID,
   type AcademySigner,
+  type ShownSigner,
   CONTRACT_PRICE_MAX,
   CONTRACT_TOKEN_DOC,
   type ContractLink,
+  type ContractLinkSignedResult,
   type ContractLinkToken,
   type ContractPrefillResult,
   type ContractSendRequest,
   type ContractSendResult,
+  type ContractSignedResult,
   type ContractTemplate,
   SIGNED_COPY_DAYS,
   type SignedContract,
@@ -38,11 +42,12 @@ import {
   templateLabel,
 } from '@shared/contracts/types'
 import { type DriveActor, contractsFolderId, driveObjectPath, studentFolderId } from '@shared/drive/types'
-import { contractEmail } from '@shared/email/contract'
+import { contractEmail, signedCopyEmail } from '@shared/email/contract'
 import { COL, ROOT, emailKey } from '@shared/paths'
 import { dateKeyOf } from '@shared/time'
 import type { Branch, Member, Student, StudentPrivateProfile } from '@shared/types'
 import { LIGHT, db } from './app'
+import logoPng from '../../web/public/brand/skyarc-logo-email.png'
 import { buildContractPdf } from './contractPdf'
 import { gmailAppPassword, sendMail } from './email'
 import { sendNotifications } from './notify'
@@ -59,8 +64,8 @@ import { familyOf } from './recipients'
  * the front desk, or the email): `getContractForSigning` shows it, `signContract` signs it. Either way the server
  * builds the PDF (the contract as filled in, the family's signature and the academy's, a page recording the signing),
  * files it in the student's Contracts folder (in their folder), which only owners and admins see, the student's
- * `signedContracts` record says it's signed, and the office is told in their inbox. The family gets their copy through
- * `getMySignedContract`. A contract's document is named by its link's token's SHA-256, and the token is kept apart
+ * `signedContracts` record says it's signed, the signer gets their copy by email (§35), and the office is told in
+ * their inbox. The family downloads their copy through `getMySignedContract` too. A contract's document is named by its link's token's SHA-256, and the token is kept apart
  * (owners and admins read it, for the QR code), so it never appears in an address, a log or an audit entry; it signs
  * once, until the office withdraws it. The public functions check the token and limit how often one network address
  * can ask, as `websiteMessage` does.
@@ -93,14 +98,23 @@ async function academyOf(branchId: string) {
   return { name: branch?.name || ACADEMY_NAME, email: branch?.contact?.email || '', phone: branch?.contact?.phone || '', timezone: branch?.timezone || 'America/New_York' }
 }
 
-/** The academy's signature on file (Settings → Enrollment contract), or null when there's none yet. */
-async function academySignerOf(branchId: string) {
+/**
+ * The academy's signature on file (Settings → Enrollment contract): who signs and the image, or none for their name
+ * typed (§35); null when nobody is set yet.
+ */
+async function academySignerOf(branchId: string): Promise<ShownSigner | null> {
   const s = (await db.doc(`${ROOT.branches}/${branchId}/${COL.contractSigner}/${ACADEMY_SIGNER_ID}`).get()).data() as AcademySigner | undefined
-  if (!s?.name || typeof s.image !== 'string' || !/^data:image\/png;base64,/.test(s.image)) return null
-  return { name: s.name, title: s.title ?? '', image: s.image }
+  if (!s?.name) return null
+  return { name: s.name, title: s.title ?? '', image: typeof s.image === 'string' && /^data:image\/png;base64,/.test(s.image) ? s.image : null }
 }
 
 const pngBytes = (dataUrl: string) => Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64')
+
+/** The academy's signature as the PDF takes it: the image's bytes, or none for the name typed. */
+const signerForPdf = (s: ShownSigner | null) => (s ? { name: s.name, title: s.title, image: s.image ? pngBytes(s.image) : null } : null)
+
+/** The logo over the PDF's first page: the bundle has its bytes (functions/package.json); a test run, only its name. */
+const LOGO = logoPng instanceof Uint8Array ? logoPng : null
 
 /** The caller's network address ("" when there's none to tell, as in the emulators). */
 function addressOf(raw: { headers: Record<string, string | string[] | undefined>; ip?: string }): string {
@@ -284,10 +298,11 @@ export const previewContract = onCall({ timeoutSeconds: 60, memory: '512MiB', ..
       signerName: checked.ok ? checked.value.name : typeof input.name === 'string' ? input.name : '',
       relation: RELATION_LABELS[relation].toLowerCase(),
       signedOn: usDate(dateKeyOf(now, academy.timezone)),
-      academySigner: signer ? { name: signer.name, title: signer.title, image: pngBytes(signer.image) } : null,
+      academySigner: signerForPdf(signer),
       record: null,
       sample: true,
       createdAt: now,
+      logo: LOGO,
     })
   } catch (e) {
     logger.error('The contract preview could not be built', { branchId: b, error: String(e) })
@@ -476,6 +491,7 @@ export const getContractForSigning = onCall({ timeoutSeconds: 60, memory: '512Mi
     contract: { title: template.title, text: template.text, version: template.version },
     preset: link.preset ?? {},
     academySigner: signer,
+    emailsCopy: !isDemoAcademy(branchId),
   }
 })
 
@@ -514,7 +530,7 @@ async function storeSignedCopy(input: {
       signerName: signing.name,
       relation: RELATION_LABELS[signing.relation].toLowerCase(),
       signedOn: usDate(dateKeyOf(signedAt, academy.timezone)),
-      academySigner: signer ? { name: signer.name, title: signer.title, image: pngBytes(signer.image) } : null,
+      academySigner: signerForPdf(signer),
       record: {
         statement: signatureStatement({ signerName: signing.name, studentName, academyName: academy.name }),
         facts: signatureFacts({
@@ -530,12 +546,13 @@ async function storeSignedCopy(input: {
           templateName: input.template.label,
           templateSha256: input.template.sha256,
           sentBy: input.sentBy,
-          academySigner: signer ? { name: signer.name, title: signer.title } : null,
+          academySigner: signer ? { name: signer.name, title: signer.title, typed: !signer.image } : null,
         }),
         footnote: `Signed electronically ${'link' in input.how || input.how.where === 'website' ? `through ${academy.name}’s website` : `in ${academy.name}’s app`}. The SHA-256 identifies the exact text of the contract that was signed: the same text always gives the same value.`,
       },
       sample: false,
       createdAt: signedAt,
+      logo: LOGO,
     })
   } catch (e) {
     logger.error('The signed contract could not be built', { branchId, error: String(e) })
@@ -545,7 +562,7 @@ async function storeSignedCopy(input: {
   const fileName = contractFileName(studentName, dateKeyOf(signedAt, academy.timezone))
   const object = getStorage().bucket().file(driveObjectPath(branchId, fileRef.id))
   await object.save(Buffer.from(pdf), { resumable: false, contentType: 'application/pdf', metadata: { contentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}` } })
-  return { fileRef, fileName, size: pdf.length, object }
+  return { fileRef, fileName, size: pdf.length, object, pdf }
 }
 const SYSTEM: DriveActor = { uid: 'contract-signing', email: '', name: 'Contract signing' }
 
@@ -654,6 +671,57 @@ async function tellOffice(branchId: string, student: { id: string; name: string 
   }
 }
 
+/**
+ * The signer's copy, emailed as they sign (§35, the owner: "let's follow the law"): the PDF, to the address they typed
+ * in the contract and the account they signed in with, so everyone who signs keeps the contract as signed (the E-SIGN
+ * Act, 15 U.S.C. §7001(e), and Georgia's Uniform Electronic Transactions Act: a copy they can keep and print). The
+ * demo academy never emails, and test addresses get none. Recorded on the contract; a failure is only logged: it's
+ * signed, and the copy is in the app and the Drive.
+ */
+async function emailSignedCopy(input: {
+  branchId: string
+  id: string
+  link: ContractLink
+  academy: Academy
+  doc: ContractDocument
+  signing: ContractSigning
+  signerEmail: string | null
+  copy: { fileName: string; pdf: Uint8Array }
+}): Promise<string[]> {
+  const { branchId: b, link, academy, copy } = input
+  const to = [...new Set([...emailsIn(input.doc, input.signing.values), ...(input.signerEmail ? [input.signerEmail] : [])].map(emailKey))].filter((e) => e.includes('@') && !isReservedEmail(e))
+  if (!to.length || isDemoAcademy(b)) return []
+  const sent: string[] = []
+  for (const address of to) {
+    const mail = signedCopyEmail({
+      to: address,
+      academyName: academy.name,
+      studentFirstName: firstNameOf(undefined, link.studentName),
+      signerName: input.signing.name,
+      fileName: copy.fileName,
+      academyEmail: academy.email,
+      academyPhone: academy.phone,
+    })
+    const result = await sendMail({
+      to: address,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+      fromName: academy.name,
+      replyTo: academy.email || null,
+      attachments: [{ filename: copy.fileName, content: Buffer.from(copy.pdf), contentType: 'application/pdf' }],
+    })
+    if (result.status === 'sent') sent.push(address)
+    else logger.warn('The signed copy could not be emailed', { branchId: b, status: result.status })
+  }
+  if (sent.length) {
+    await linkRef(b, input.id)
+      .update({ copyEmailedTo: sent, copyEmailedAt: FieldValue.serverTimestamp() })
+      .catch((e) => logger.error('The signed copy was emailed: recording it failed', { branchId: b, error: String(e) }))
+  }
+  return sent
+}
+
 /** Why a contract can't be signed any more, in the family's words. */
 function notWaiting(status: ContractLink['status'] | 'invalid') {
   if (status === 'signed') return new HttpsError('failed-precondition', 'This contract is signed already.', { state: 'signed' })
@@ -665,7 +733,8 @@ function notWaiting(status: ContractLink['status'] | 'invalid') {
  * Signing a contract the office sent (in the app, on the website or with its link), once: what the family filled in,
  * with the office's discounts as it set them, built into the PDF with both signatures, filed in the student's Contracts
  * folder in the Drive (owners and admins only), the contract marked signed and the student's contract signed, with an
- * audit entry, and the owners and admins told. False when the other parent signed it meanwhile (nothing more is filed).
+ * audit entry, the signer's copy emailed to them, and the owners and admins told. False when the other parent signed it
+ * meanwhile (nothing more is filed).
  */
 async function signSent(input: {
   branchId: string
@@ -679,7 +748,7 @@ async function signSent(input: {
   signerEmail: string | null
   /** "with the link", "in the app", "on the website": for the audit entry and the office's notice. */
   where: string
-}): Promise<{ signed: boolean; fileName: string | null }> {
+}): Promise<ContractSignedResult> {
   const { branchId, id, link } = input
   const base = `${ROOT.branches}/${branchId}`
   const [academy, signer, { template, doc }] = await Promise.all([academyOf(branchId), academySignerOf(branchId), templateOf(branchId, link.templateId)])
@@ -733,19 +802,20 @@ async function signSent(input: {
   }
   if (!filed) {
     await copy.object.delete({ ignoreNotFound: true }).catch(() => undefined)
-    return { signed: false, fileName: null }
+    return { signed: false, fileName: null, emailedTo: [] }
   }
+  const emailedTo = await emailSignedCopy({ branchId, id, link, academy, doc, signing, signerEmail: input.signerEmail, copy })
   await tellOffice(
     branchId,
     student,
-    `${choiceWords(doc, signing.values, link.preset ?? {})}Signed by ${name} (${RELATION_LABELS[relation].toLowerCase()}) ${input.where}${input.signerEmail ? `, as ${input.signerEmail}` : ''}. The signed copy is in ${link.studentName}’s Contracts folder in the Drive.`,
+    `${choiceWords(doc, signing.values, link.preset ?? {})}Signed by ${name} (${RELATION_LABELS[relation].toLowerCase()}) ${input.where}${input.signerEmail ? `, as ${input.signerEmail}` : ''}. The signed copy is in ${link.studentName}’s Contracts folder in the Drive${emailedTo.length ? `, and ${name.split(' ')[0]} got theirs by email (${emailedTo.join(', ')})` : ''}.`,
     `contract-${id}`,
   )
-  return { signed: true, fileName: copy.fileName }
+  return { signed: true, fileName: copy.fileName, emailedTo }
 }
 
 /** Signing with the contract's link (anyone who has it, once: the QR code at the front desk, or the email). */
-export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...LIGHT }, async (req) => {
+export const signContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds: 120, memory: '512MiB', ...LIGHT }, async (req): Promise<ContractLinkSignedResult> => {
   const input = (req.data ?? {}) as { token?: unknown }
   const ip = addressOf(req.rawRequest)
   const userAgent = String(req.rawRequest.headers['user-agent'] ?? '').slice(0, 400)
@@ -762,7 +832,7 @@ export const signContract = onCall({ timeoutSeconds: 120, memory: '512MiB', ...L
   const r = await signSent({ branchId, id, link, request: req.data, ip, userAgent, how: { link: input.token as string }, via: 'link', signerEmail: null, where: 'with the link' })
   if (!r.signed) throw notWaiting('signed')
   const signedAt = Date.now()
-  return { ok: true, fileName: r.fileName, copyUntil: signedAt + SIGNED_COPY_DAYS * DAY }
+  return { ok: true, fileName: r.fileName, copyUntil: signedAt + SIGNED_COPY_DAYS * DAY, emailedTo: r.emailedTo }
 })
 
 // ------------------------------------------------------------------ signing in the app
@@ -808,7 +878,7 @@ export const contractPrefill = onCall({ timeoutSeconds: 30, ...LIGHT }, async (r
  * account that signed on its record page. One the other parent signed meanwhile is left as it is. Students don't
  * sign: their parent does.
  */
-export const signContractSignedIn = onCall({ timeoutSeconds: 120, memory: '512MiB', ...LIGHT }, async (req) => {
+export const signContractSignedIn = onCall({ secrets: [gmailAppPassword], timeoutSeconds: 120, memory: '512MiB', ...LIGHT }, async (req): Promise<ContractSignedResult> => {
   const input = (req.data ?? {}) as { branchId?: unknown; studentId?: unknown; linkId?: unknown; where?: unknown; device?: unknown }
   const caller = await familyCaller(input.branchId, req.auth)
   const branchId = input.branchId as string
@@ -818,7 +888,7 @@ export const signContractSignedIn = onCall({ timeoutSeconds: 120, memory: '512Mi
   const id = typeof input.linkId === 'string' && /^[0-9a-f]{64}$/.test(input.linkId) ? input.linkId : ''
   const link = id ? ((await linkRef(branchId, id).get()).data() as ContractLink | undefined) : undefined
   if (!link || link.studentId !== studentId) throw notWaiting('invalid')
-  if (link.status === 'signed') return { signed: false, fileName: null }
+  if (link.status === 'signed') return { signed: false, fileName: null, emailedTo: [] }
   if (link.status !== 'sent') throw notWaiting(link.status)
   if (!(await withinLimits([{ key: limitKey('account', caller.uid), max: 20, window: HOUR }]))) {
     throw new HttpsError('resource-exhausted', 'Too many tries just now. Please wait a few minutes, then try again.')

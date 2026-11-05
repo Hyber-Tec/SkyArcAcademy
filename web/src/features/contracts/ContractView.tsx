@@ -1,7 +1,7 @@
 import { LuCheck, LuEraser } from 'react-icons/lu'
 import { type ContractBlock, type ContractDocument, type ContractField, type Line, dollarsText, pricedChoice, signerField } from '@shared/contracts/document'
 import { type ContractValues, RELATION_LABELS, SIGN_KEYS, optionHeading, optionPrices, tuitionOf, tuitionText, typingDate, usDate } from '@shared/contracts/fill'
-import type { SignerRelation } from '@shared/contracts/types'
+import type { ShownSigner, SignerRelation } from '@shared/contracts/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -36,7 +36,7 @@ interface ViewProps {
   /** The option the office suggested, marked so (the family may choose another). */
   suggested?: string | null
   /** The academy's signature on file, shown on its line. */
-  academySigner?: { name: string; title: string; image: string } | null
+  academySigner?: ShownSigner | null
 }
 
 /**
@@ -398,14 +398,25 @@ function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk
 }
 
 /** The academy's signature line: the academy's signature on file, put on as the family signs (or left for the academy). */
-function AcademySign({ label, signer, today }: { label: string; signer: { name: string; title: string; image: string } | null; today: string }) {
+/** A name typed as a signature (the academy's, until it has an image: §35), in a serif italic as the PDF prints it. */
+export function TypedName({ name, className }: { name: string; className?: string }) {
+  return (
+    <div className={cn('rounded-md bg-white px-2 py-1 font-serif text-2xl text-zinc-900 italic', className)} data-testid="typed-signature">
+      {name}
+    </div>
+  )
+}
+
+function AcademySign({ label, signer, today }: { label: string; signer: ShownSigner | null; today: string }) {
   return (
     <div className="grid gap-3 rounded-lg border border-dashed px-3 py-3 sm:grid-cols-[1fr_8rem] sm:items-end" data-testid="contract-academy-sign">
       <div className="min-w-0">
-        {signer ? (
+        {signer?.image ? (
           <div className="mb-1 rounded-md bg-white px-2 py-1">
             <img src={signer.image} alt={`${signer.name}’s signature`} className="h-12 w-auto max-w-full object-contain" />
           </div>
+        ) : signer ? (
+          <TypedName name={signer.name} className="mb-1" />
         ) : null}
         <div className="font-medium">{label}</div>
         <div className="text-xs text-muted-foreground">

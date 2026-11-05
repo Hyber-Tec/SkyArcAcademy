@@ -139,6 +139,9 @@ export function StudentContract({ student, profile }: { student: Student & { id:
   const rows = [
     <ListRow key="status" title={waiting ? "Waiting to sign" : sc ? "Signed" : "Not signed"} subtitle={status} testID="student-contract-status" />,
     ...summary.map((r) => <ListRow key={`sum-${r.label}`} title={<T variant="small" tone="muted">{r.label}</T>} subtitle={<T variant="small">{r.value}</T>} />),
+    ...(!waiting && sc && c.lastSigned?.id === sc.linkId && c.lastSigned?.copyEmailedTo?.length
+      ? [<ListRow key="copy" title={<T variant="small" tone="muted">Their copy, emailed to</T>} subtitle={<T variant="small">{c.lastSigned.copyEmailedTo.join(", ")}</T>} testID="student-contract-copy" />]
+      : []),
     ...(waiting
       ? [
           <ListRow key="qr" icon={<ToneIcon icon={QrIcon} tone="blue" />} title="QR code to sign here" subtitle="A parent at the front desk scans it with their phone" onPress={() => setSheet("qr")} testID="student-contract-qr" />,

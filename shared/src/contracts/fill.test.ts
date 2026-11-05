@@ -5,6 +5,7 @@ import {
   checkContractSigning,
   checkPreset,
   contractSummary,
+  emailsIn,
   missingParts,
   prefillValues,
   presetValues,
@@ -127,6 +128,12 @@ describe('the form’s values', () => {
 
   it('carries the signer’s own details to the next child, never the child’s', () => {
     expect(carriedValues(doc, { ...filled, 'parent-initials': 'JL' })).toEqual({ 'parent-initials': 'JL', name: 'Jane Larkin', telephone: '(555) 010-1234', email: 'Jane@Example.test' })
+  })
+
+  it('finds the address the signer gave, for their copy', () => {
+    expect(emailsIn(doc, { ...filled, email: ' Jane@Example.test ' })).toEqual(['jane@example.test'])
+    expect(emailsIn(doc, { ...filled, email: 'not an address' })).toEqual([])
+    expect(emailsIn(doc, {})).toEqual([])
   })
 
   it('shows each value as the contract does, and sums up the choices for the office', () => {

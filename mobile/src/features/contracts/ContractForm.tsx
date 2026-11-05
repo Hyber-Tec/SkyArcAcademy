@@ -13,11 +13,11 @@ import {
   typingDate,
   usDate,
 } from "@shared/contracts/fill";
-import type { SignerRelation } from "@shared/contracts/types";
+import type { ShownSigner, SignerRelation } from "@shared/contracts/types";
 import * as Haptics from "expo-haptics";
 import { Check, Eraser } from "lucide-react-native";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, type TextInputProps, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, type TextInputProps, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ErrorBox } from "@/components/AuthParts";
 import { Button } from "@/components/Button";
@@ -41,7 +41,7 @@ import { SignaturePad, type SignaturePadHandle } from "./SignaturePad";
 export interface Offer {
   /** The program the office suggested (the family may choose another). */
   suggested: string | null;
-  academySigner: { name: string; title: string; image: string } | null;
+  academySigner: ShownSigner | null;
 }
 
 const NO_OFFER: Offer = { suggested: null, academySigner: null };
@@ -410,9 +410,14 @@ function Block({
         sign
       ) : (
         <View style={styles.academySign} testID="contract-academy-sign">
-          {offer.academySigner ? (
+          {offer.academySigner?.image ? (
             <View style={styles.academyInk}>
               <Image source={{ uri: offer.academySigner.image }} style={styles.academyImage} resizeMode="contain" accessibilityLabel={`${offer.academySigner.name}’s signature`} />
+            </View>
+          ) : offer.academySigner ? (
+            // No image yet: their name typed, as the PDF prints it (§35).
+            <View style={styles.academyInk} testID="typed-signature">
+              <Text style={styles.typedName}>{offer.academySigner.name}</Text>
             </View>
           ) : null}
           <View style={[styles.blank, { borderBottomColor: colors.border }]} />
@@ -790,6 +795,7 @@ const styles = StyleSheet.create({
   academySign: { gap: space.xs, marginTop: space.md },
   academyInk: { backgroundColor: "#ffffff", borderRadius: radius.md, alignSelf: "flex-start", paddingHorizontal: space.sm, paddingVertical: space.xs },
   academyImage: { width: 180, height: 48 },
+  typedName: { fontFamily: Platform.select({ ios: "Times New Roman", default: "serif" }), fontStyle: "italic", fontSize: 24, color: "#18181b" },
   missing: { borderWidth: 1, borderRadius: radius.lg, padding: space.md, gap: space.xs },
   missingRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.xs },
 });

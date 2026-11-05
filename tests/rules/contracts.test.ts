@@ -201,18 +201,21 @@ describe('the academy’s signature', () => {
   it('owners and admins set it, as themselves; every member reads it', async () => {
     await assertSucceeds(setDoc(doc(db(ADMIN), at), signer(ADMIN)))
     await assertSucceeds(setDoc(doc(db('owner@a.test'), at), signer('owner@a.test', { title: '' })))
+    // A name alone: it's typed on the academy's line until there's an image (§35).
+    await assertSucceeds(setDoc(doc(db(ADMIN), at), signer(ADMIN, { image: null })))
     await assertSucceeds(getDoc(doc(db('parent@a.test'), at)))
     await assertSucceeds(getDoc(doc(db('coach@a.test'), at)))
     await assertFails(getDoc(doc(db('stranger@b.test'), at)))
     await assertSucceeds(deleteDoc(doc(db(ADMIN), at)))
   })
 
-  it('takes a name and a PNG only, from nobody else', async () => {
+  it('takes a name and a PNG (or none) only, from nobody else', async () => {
     const a = db(ADMIN)
     await assertFails(setDoc(doc(a, at), signer('someone@a.test')))
     await assertFails(setDoc(doc(a, at), signer(ADMIN, { name: '' })))
     await assertFails(setDoc(doc(a, at), signer(ADMIN, { image: 'data:image/svg+xml;base64,PHN2Zz4=' })))
     await assertFails(setDoc(doc(a, at), signer(ADMIN, { image: `data:image/png;base64,${'A'.repeat(400_001)}` })))
+    await assertFails(setDoc(doc(a, at), signer(ADMIN, { image: 7 })))
     await assertFails(setDoc(doc(a, at), signer(ADMIN, { extra: true })))
     await assertFails(setDoc(doc(a, `branches/${A}/contractSigner/other`), signer(ADMIN)))
     await assertFails(setDoc(doc(db('coach@a.test'), at), signer('coach@a.test')))

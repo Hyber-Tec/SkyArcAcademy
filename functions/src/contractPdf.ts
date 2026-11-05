@@ -1,15 +1,15 @@
 import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, StandardFonts, degrees, rgb } from 'pdf-lib'
 import { type ContractBlock, type ContractDocument, type Run, pricedChoice } from '@shared/contracts/document'
 import { type ContractValues, shownValue, tuitionOf, tuitionText } from '@shared/contracts/fill'
-import logoPng from '../../web/public/brand/skyarc-logo-email.png'
 
 /**
  * The signed enrollment contract as a PDF (docs/DECISIONS.md §33 and §34): the academy's contract laid out page by
  * page, as the family filled it in (the option chosen and its price after the discounts the office checked, the boxes
  * checked, their initials, the student's and their own details, their signature and the date), the academy's signature
- * as on file, the academy's other parts left for the academy, then a page recording the signing (who, when, from where,
- * which version: shared/src/contracts/signing.ts writes its words). Settings' preview builds the same PDF marked as a
- * sample. The words are the contract's own; only the layout is the app's.
+ * as on file (or its signer's name typed, until there's one: §35), the academy's other parts left for the academy, then a
+ * page recording the signing (who, when, from where, which version: shared/src/contracts/signing.ts writes its words).
+ * Settings' preview builds the same PDF marked as a sample, and the sample data its demo contracts
+ * (scripts/seed-sample.ts). The words are the contract's own; only the layout is the app's.
  */
 
 export interface ContractPdfInput {
@@ -22,13 +22,18 @@ export interface ContractPdfInput {
   relation: string
   /** Beside the signature: "11/04/2026", in the academy's time zone. */
   signedOn: string
-  /** The academy's signature on file (a PNG) and who signs for it, put on its line with the same date; none: left blank. */
+  /**
+   * The academy's signature on file (a PNG) and who signs for it, put on its line with the same date: without an image,
+   * their name typed there instead; none: left blank.
+   */
   academySigner: { name: string; title: string; image: Uint8Array | null } | null
   /** The page recording the signing; none on a sample. */
   record: { statement: string; facts: { label: string; value: string }[]; footnote: string } | null
   /** A preview (Settings, or More → Enrollment contract on the phone): every page says it's a sample. */
   sample: boolean
   createdAt: Date
+  /** The academy's logo over the first page (the email logo's PNG); none leaves the title alone. */
+  logo?: Uint8Array | null
 }
 
 const W = 612
@@ -127,6 +132,8 @@ class Layout {
   signature: PDFImage | null = null
   /** The academy's signature on file. */
   academySignature: PDFImage | null = null
+  /** The font of a name typed as a signature (the academy's, until it has an image). */
+  typed: PDFFont | null = null
 
   constructor(
     readonly pdf: PDFDocument,
@@ -373,6 +380,11 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
         const png = L.academySignature
         const scale = Math.min((sigW - 12) / png.width, 30 / png.height)
         L.page.drawImage(png, { x: M + 6, y: lineY + 2, width: png.width * scale, height: png.height * scale })
+      } else if (academy && L.typed) {
+        // No image yet: the signer's name typed on the line, as an electronic signature.
+        const name = pdfText(academy.name)
+        const size = Math.min(17, (17 * (sigW - 12)) / Math.max(1, L.typed.widthOfTextAtSize(name, 17)))
+        L.page.drawText(name, { x: M + 6, y: lineY + 5, size, font: L.typed, color: INK })
       }
       if ((family || academy) && input.signedOn) L.page.drawText(pdfText(input.signedOn), { x: M + sigW + 32, y: lineY + 5, size: 10.5, font: f.regular, color: INK })
       const labels = wrapRuns(plainRuns(b.label), 8, sigW, f)
@@ -431,12 +443,12 @@ function drawRecord(L: Layout, record: NonNullable<ContractPdfInput['record']>) 
 export async function buildContractPdf(input: ContractPdfInput): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const f: Fonts = { regular: await pdf.embedFont(StandardFonts.Helvetica), bold: await pdf.embedFont(StandardFonts.HelveticaBold) }
-  // The bundle has the logo's bytes (functions/package.json); a test run, only its name.
-  const logo = logoPng instanceof Uint8Array ? await pdf.embedPng(logoPng) : null
+  const logo = input.logo ? await pdf.embedPng(input.logo) : null
   const title = input.doc.title || 'Enrollment contract'
   const L = new Layout(pdf, f, logo, title)
   if (input.signature) L.signature = await pdf.embedPng(input.signature)
   if (input.academySigner?.image) L.academySignature = await pdf.embedPng(input.academySigner.image)
+  else if (input.academySigner) L.typed = await pdf.embedFont(StandardFonts.TimesRomanItalic)
   L.newPage()
   for (const b of input.doc.blocks) drawBlock(L, b, input)
   if (input.record) drawRecord(L, input.record)

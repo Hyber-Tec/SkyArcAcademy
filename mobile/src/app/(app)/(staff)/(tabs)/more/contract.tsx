@@ -75,7 +75,7 @@ function Preview({ text, version, tabs }: { text: string; version: number; tabs:
         testID="contract-preview"
         submitLabel="Try signing"
         submitTestID="contract-preview-sign"
-        offer={{ suggested: null, academySigner: signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image } : null }}
+        offer={{ suggested: null, academySigner: signer.data ? { name: signer.data.name, title: signer.data.title, image: signer.data.image ?? null } : null }}
         header={
           <View style={styles.head}>
             {tabs}

@@ -122,10 +122,18 @@ describe('the signed contract', () => {
     expect(pages.join(' ')).not.toContain('Signature record')
   })
 
-  it('leaves the academy’s line blank until it has a signature on file', async () => {
+  it('leaves the academy’s line blank until someone signs for it', async () => {
     const all = (await pagesText(await buildContractPdf({ ...signed, academySigner: null }))).join(' ')
     expect(all).toContain('Club Representative')
     expect(all).not.toContain('Signed for the academy')
+  })
+
+  it('types the signer’s name on the academy’s line until it has a signature image', async () => {
+    const page = (await pagesText(await buildContractPdf({ ...signed, academySigner: { name: 'Sam Director', title: '', image: null } }))).find((p) => p.includes('Club Representative')) ?? ''
+    expect(page).toContain('Sam Director')
+    expect(page).toContain('Signed for the academy by Sam Director')
+    // Dated as the family's is.
+    expect(page.split('10/28/2026').length - 1).toBe(2)
   })
 
   it('prints what its font has', () => {
