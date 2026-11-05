@@ -3,20 +3,25 @@ import { ROLE_LABELS } from "@shared/roles";
 import { formatDateKey, formatInstant } from "@shared/time";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Bell, Eye, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import type { ContractPdf } from "@shared/contracts/types";
+import { Bell, Eye, FileSignature, Globe, KeyRound, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
+import { useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ListRow, ListSection, RowIcon, ToneIcon } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
+import { PdfSheet, openPdf } from "@/features/contracts/PdfSheet";
 import { useSignedContracts } from "@/features/family/data";
 import { AcademyContact } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { studentLine } from "@/features/students/format";
+import { callable, errorMessage } from "@/lib/api";
 import { env } from "@/lib/env";
 import { openWebsite } from "@/lib/links";
+import { toast } from "@/lib/toast";
 import { type AppearancePref, useAppearance } from "@/state/AppearanceProvider";
 import { useAuth } from "@/state/AuthProvider";
 import { useBranch } from "@/state/BranchProvider";
@@ -33,13 +38,16 @@ function signInLine(methods: SignInMethods): string {
   return `You sign in with ${signInWays(methods).replace(/email and password$/i, "your email and password")}`;
 }
 
+const copyCall = callable<{ branchId: string; studentId: string }, ContractPdf>("getMySignedContract");
+
 /**
  * Everything else, kept short: the account signed in and how it signs in (Sign-in & security), the children (or the
- * student's own record) as the academy has them, with who signed their enrollment contract, the appearance, how to reach the academy, help, the privacy policy,
- * the website, which version this is, signing out, and deleting the account: the website's Profile, for families.
+ * student's own record) as the academy has them, each one's enrollment contract (who signed it and when, to view or
+ * save: docs/DECISIONS.md §34), the appearance, how to reach the academy, help, the privacy policy, the website, which
+ * version this is, signing out, and deleting the account: the website's Profile, for families.
  */
 export default function FamilyMoreScreen() {
-  const { actor, member, name, portal, canViewAs, viewAs, timezone } = useBranch();
+  const { actor, member, name, portal, canViewAs, viewAs, timezone, branchId } = useBranch();
   const { email, methods, signOut } = useAuth();
   const { pref, setPref } = useAppearance();
   const family = useFamily();
@@ -49,9 +57,22 @@ export default function FamilyMoreScreen() {
   const version = `${Application.nativeApplicationVersion ?? "1.0.0"} (${Application.nativeBuildVersion ?? "1"})`;
   const built = [env.buildCommit, env.builtAt ? builtWhen(env.builtAt) : ""].filter(Boolean).join(", ");
   const parent = family.who === "parent";
+  const [opening, setOpening] = useState<string | null>(null);
+  const [pdf, setPdf] = useState<{ uri: string; name: string } | null>(null);
+  async function openCopy(studentId: string) {
+    setOpening(studentId);
+    try {
+      await openPdf(await copyCall({ branchId, studentId }), setPdf);
+    } catch (e) {
+      toast.error(errorMessage(e, "The signed copy couldn’t be opened just now."));
+    } finally {
+      setOpening(null);
+    }
+  }
 
   return (
     <Screen title="More" typing={false} testID="family-more">
+      <PdfSheet pdf={pdf} onClose={() => setPdf(null)} />
       <ListSection title="Signed in">
         <ListRow
           icon={<Avatar name={actor.name} url={member.photoURL} size={40} />}
@@ -95,7 +116,6 @@ export default function FamilyMoreScreen() {
             const line = s ? studentLine(s) : "";
             // The rest of what the website's Account shows: the school, and since when the classes go.
             const more = s ? [s.school?.trim(), s.firstSessionDate ? `Classes since ${formatDateKey(s.firstSessionDate, "monthYear")}` : null].filter(Boolean).join(" · ") : "";
-            const contract = signedById.get(id);
             return (
               <ListRow
                 key={id}
@@ -112,11 +132,6 @@ export default function FamilyMoreScreen() {
                           {more}
                         </T>
                       ) : null}
-                      {contract ? (
-                        <T variant="small" tone="muted" testID={`family-more-contract-${id}`}>
-                          {contract.via === "paper" ? "Enrollment contract signed on paper" : `Enrollment contract signed by ${contract.signerName || "a parent"}${contract.signedAt?.toMillis ? ` on ${formatInstant(contract.signedAt.toMillis(), timezone, { month: "short", day: "numeric", year: "numeric" })}` : ""}`}
-                        </T>
-                      ) : null}
                     </View>
                   ) : undefined
                 }
@@ -128,6 +143,34 @@ export default function FamilyMoreScreen() {
           <ListRow title={parent ? "No children linked yet" : "Not linked yet"} subtitle={`Ask ${name} to link ${parent ? "your child to your account" : "your account to your student record"}.`} />
         )}
       </ListSection>
+
+      {family.ids.length ? (
+        <ListSection title={family.ids.length === 1 || !parent ? "Enrollment contract" : "Enrollment contracts"} footer={`${name} sends each contract when it’s time to sign.`} testID="family-more-contracts">
+          {family.ids.map((id) => {
+            const s = family.students.get(id);
+            const contract = signedById.get(id);
+            const when = contract?.signedAt?.toMillis ? formatInstant(contract.signedAt.toMillis(), timezone, { month: "short", day: "numeric", year: "numeric" }) : "";
+            const canOpen = !!contract?.fileId && !viewAs;
+            return (
+              <ListRow
+                key={id}
+                icon={<ToneIcon icon={FileSignature} tone="green" />}
+                title={family.ids.length > 1 || parent ? (s?.name ?? family.firstName(id)) : "Your contract"}
+                subtitle={
+                  !contract
+                    ? "None yet"
+                    : contract.via === "paper"
+                      ? `Signed on paper${when ? `, recorded ${when}` : ""}`
+                      : `Signed by ${contract.signerName || "a parent"}${when ? ` on ${when}` : ""}${canOpen ? " · View or save" : ""}`
+                }
+                right={opening === id ? <ActivityIndicator /> : undefined}
+                onPress={canOpen ? () => void openCopy(id) : undefined}
+                testID={`family-more-contract-${id}`}
+              />
+            );
+          })}
+        </ListSection>
+      ) : null}
 
       <ListSection title="Appearance">
         <View style={[styles.segment, { backgroundColor: colors.card, borderColor: colors.border }]}>

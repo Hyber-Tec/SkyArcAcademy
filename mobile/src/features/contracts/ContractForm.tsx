@@ -1,10 +1,23 @@
-import { type ContractBlock, type ContractDocument, type Line, signerField } from "@shared/contracts/document";
-import { type ContractSigning, type ContractValues, RELATION_LABELS, SIGN_KEYS, checkContractSigning, missingParts, typingDate, usDate } from "@shared/contracts/fill";
+import { type ContractBlock, type ContractDocument, type Line, dollarsText, pricedChoice, signerField } from "@shared/contracts/document";
+import {
+  type ContractSigning,
+  type ContractValues,
+  RELATION_LABELS,
+  SIGN_KEYS,
+  checkContractSigning,
+  missingParts,
+  optionHeading,
+  optionPrices,
+  tuitionOf,
+  tuitionText,
+  typingDate,
+  usDate,
+} from "@shared/contracts/fill";
 import type { SignerRelation } from "@shared/contracts/types";
 import * as Haptics from "expo-haptics";
 import { Check, Eraser } from "lucide-react-native";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, type TextInputProps, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, type TextInputProps, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ErrorBox } from "@/components/AuthParts";
 import { Button } from "@/components/Button";
@@ -16,11 +29,22 @@ import { radius, space, useColors } from "@/theme";
 import { SignaturePad, type SignaturePadHandle } from "./SignaturePad";
 
 /**
- * The academy's enrollment contract as a page of the app (docs/DECISIONS.md §33): its words as the office wrote them
- * (shared/src/contracts/document.ts), with the parts the family fills in where the paper has them (the option chosen,
- * the boxes checked, the initials, the student's and the signer's details), then the signature. The academy's own parts
- * show as the academy's, to fill in later. What's typed is checked as the server checks it (shared/src/contracts/fill.ts).
+ * The academy's enrollment contract as a page of the app (docs/DECISIONS.md §33 and §34): its words as the manager
+ * approved them (shared/src/contracts/document.ts), with the parts the family fills in where the paper has them (the
+ * program chosen, a short card each, the office's suggestion marked and each price after the discounts; the boxes
+ * checked, the initials, the student's and the signer's details), then the signature. The academy's own parts show as
+ * the academy's: the discounts the office checked, its signature, the rest to fill in later. What's typed is checked as
+ * the server checks it (shared/src/contracts/fill.ts).
  */
+
+/** What the office set on the contract it sent, and the academy's signature: shown, never changed by the family. */
+export interface Offer {
+  /** The program the office suggested (the family may choose another). */
+  suggested: string | null;
+  academySigner: { name: string; title: string; image: string } | null;
+}
+
+const NO_OFFER: Offer = { suggested: null, academySigner: null };
 
 /** What the signing part holds beside the contract's fields. */
 export interface SignState {
@@ -81,13 +105,19 @@ function Box({ on, invalid = false }: { on: boolean; invalid?: boolean }) {
 }
 
 /** A section's bar, as the paper heads its information boxes: dark for the family's, red for the academy's. */
-function Bar({ title, academy = false }: { title: string; academy?: boolean }) {
+function Bar({ title, academy = false, note }: { title: string; academy?: boolean; note?: string }) {
   const colors = useColors();
+  const color = academy ? "#ffffff" : colors.primaryForeground;
   return (
-    <View style={[styles.bar, { backgroundColor: academy ? colors.brandSolid : colors.primary }]}>
-      <T variant="tiny" style={[styles.barText, { color: academy ? "#ffffff" : colors.primaryForeground }]}>
+    <View style={[styles.bar, styles.barRow, { backgroundColor: academy ? colors.brandSolid : colors.primary }]}>
+      <T variant="tiny" style={[styles.barText, styles.grow, { color }]}>
         {title}
       </T>
+      {note ? (
+        <T variant="tiny" style={{ color }}>
+          {note}
+        </T>
+      ) : null}
     </View>
   );
 }
@@ -181,16 +211,22 @@ function SignPart({
 /** One block of the contract: its words, or a part to fill in. */
 function Block({
   block,
+  doc,
   values,
   onValue,
   errors,
   sign,
+  offer,
+  today,
 }: {
   block: ContractBlock;
+  doc: ContractDocument;
   values: ContractValues;
   onValue: (id: string, value: string | string[]) => void;
   errors: Record<string, string>;
   sign: ReactNode;
+  offer: Offer;
+  today: string;
 }) {
   const colors = useColors();
   switch (block.kind) {
@@ -248,70 +284,47 @@ function Block({
           ))}
         </View>
       );
-    case "choose": {
-      const chosen = block.options.find((o) => o.id === values[block.id]);
-      return (
-        <View style={styles.part}>
-          <T variant="label">{block.label}</T>
-          <T variant="small" tone="muted">
-            Choose one.
-          </T>
-          {block.options.map((o) => {
-            const on = chosen?.id === o.id;
-            return (
-              <Pressable
-                key={o.id}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: on }}
-                onPress={() => {
-                  if (on) return;
-                  void Haptics.selectionAsync().catch(() => undefined);
-                  onValue(block.id, o.id);
-                }}
-                style={({ pressed }) => [
-                  styles.option,
-                  { borderColor: on ? colors.primary : errors[block.id] ? colors.destructive : colors.border, backgroundColor: on ? colors.secondary : pressed ? colors.accent : colors.card },
-                  on && styles.optionOn,
-                ]}
-                testID={`contract-choose-${o.id}`}
-              >
-                <View style={[styles.mark, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary : "transparent" }]}>
-                  {on ? <Check size={13} color={colors.primaryForeground} strokeWidth={3} /> : null}
-                </View>
-                <View style={styles.grow}>
-                  <T variant="label">{o.title}</T>
-                  {o.lines.map((l, i) => (
-                    <T key={i} variant="small" tone="muted">
-                      {l}
-                    </T>
-                  ))}
-                </View>
-                {o.price ? (
-                  <T variant="label" style={styles.price}>
-                    {o.price}
-                  </T>
-                ) : null}
-              </Pressable>
-            );
-          })}
-          {chosen ? (
-            <View style={[styles.boxed, styles.left, { borderColor: colors.border, backgroundColor: colors.cardMuted }]} testID="contract-chosen">
-              <T variant="small">
-                <Text style={styles.bold}>{block.label}:</Text> {chosen.title}
-              </T>
-              {block.priceLabel ? (
-                <T variant="small">
-                  <Text style={styles.bold}>{block.priceLabel}:</Text> {chosen.price}
-                </T>
-              ) : null}
-            </View>
-          ) : null}
-          <Problem text={errors[block.id]} />
-        </View>
-      );
-    }
+    case "choose":
+      return <Choose block={block} doc={doc} values={values} onValue={onValue} error={errors[block.id]} suggested={offer.suggested} />;
     case "check": {
       const list = Array.isArray(values[block.id]) ? (values[block.id] as string[]) : [];
+      if (block.by === "academy") {
+        // The office checked these as it sent the contract: the family reads them, and asks the office about a change.
+        const choice = pricedChoice(doc);
+        const option = choice ? (values[choice.id] as string | undefined) : undefined;
+        return (
+          <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]} testID="contract-academy-check">
+            <Bar title={block.label} academy note="Set by the academy" />
+            {block.options.map((o, i) => {
+              const on = list.includes(o.id);
+              const left = on && !!option && o.except.includes(option);
+              return (
+                <View key={o.id} style={[styles.checkRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID={`contract-discount-${o.id}`}>
+                  <Box on={on} />
+                  <View style={styles.grow}>
+                    <T tone={on ? "default" : "muted"}>{o.text}</T>
+                    {left ? (
+                      <T variant="small" tone="muted">
+                        Doesn’t apply to the program chosen.
+                      </T>
+                    ) : null}
+                  </View>
+                  {on && o.amount !== null && !left ? (
+                    <T variant="label" style={styles.price}>
+                      −{dollarsText(o.amount)}
+                    </T>
+                  ) : null}
+                </View>
+              );
+            })}
+            <View style={[styles.sectionFoot, { borderTopColor: colors.border, backgroundColor: colors.cardMuted }]}>
+              <T variant="small" tone="muted">
+                {list.length ? "The academy applied these." : "None applied."} Ask the academy if one should change.
+              </T>
+            </View>
+          </View>
+        );
+      }
       return (
         <View style={styles.part}>
           <T variant="label">{block.label}</T>
@@ -396,17 +409,146 @@ function Block({
       return block.by === "family" ? (
         sign
       ) : (
-        <View style={styles.academySign}>
+        <View style={styles.academySign} testID="contract-academy-sign">
+          {offer.academySigner ? (
+            <View style={styles.academyInk}>
+              <Image source={{ uri: offer.academySigner.image }} style={styles.academyImage} resizeMode="contain" accessibilityLabel={`${offer.academySigner.name}’s signature`} />
+            </View>
+          ) : null}
           <View style={[styles.blank, { borderBottomColor: colors.border }]} />
           <T variant="small" tone="muted">
             {block.label}
           </T>
           <T variant="small" tone="muted">
-            Signed by the academy, with the date.
+            {offer.academySigner
+              ? `Signed for the academy by ${[offer.academySigner.name, offer.academySigner.title].filter(Boolean).join(", ")}, as you sign. Date: ${usDate(today)}`
+              : "Signed by the academy, with the date."}
           </T>
         </View>
       );
   }
+}
+
+/**
+ * The programs to choose from, a short card each (the owner, 2026-11-05: "make each card better… straightforward"):
+ * its name over the rest of it, its price after the discounts the office checked (the price before them struck
+ * through), the office's suggestion marked; the one chosen opens to its details. Under them, what was chosen and its
+ * price, as the paper's boxes have them.
+ */
+function Choose({
+  block,
+  doc,
+  values,
+  onValue,
+  error,
+  suggested,
+}: {
+  block: Extract<ContractBlock, { kind: "choose" }>;
+  doc: ContractDocument;
+  values: ContractValues;
+  onValue: (id: string, value: string | string[]) => void;
+  error?: string;
+  suggested: string | null;
+}) {
+  const colors = useColors();
+  const chosen = block.options.find((o) => o.id === values[block.id]);
+  const priced = pricedChoice(doc) === block;
+  const prices = priced ? optionPrices(doc, values) : null;
+  const tuition = priced ? tuitionOf(doc, values) : null;
+  return (
+    <View style={styles.part}>
+      <T variant="label">{block.label}</T>
+      <T variant="small" tone="muted">
+        Choose one. Tap a program to see what it includes.
+      </T>
+      {block.options.map((o) => {
+        const on = chosen?.id === o.id;
+        const { name, sub } = optionHeading(o.title);
+        const price = prices?.get(o.id);
+        return (
+          <Pressable
+            key={o.id}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            accessibilityLabel={`${o.title}, ${price ? `${price.now} ${price.per}` : o.price}${suggested === o.id ? ", suggested by the academy" : ""}`}
+            onPress={() => {
+              if (on) return;
+              void Haptics.selectionAsync().catch(() => undefined);
+              onValue(block.id, o.id);
+            }}
+            style={({ pressed }) => [
+              styles.option,
+              { borderColor: on ? colors.primary : error ? colors.destructive : colors.border, backgroundColor: on ? colors.secondary : pressed ? colors.accent : colors.card },
+              on && styles.optionOn,
+            ]}
+            testID={`contract-choose-${o.id}`}
+          >
+            <View style={styles.optionHead}>
+              <View style={[styles.mark, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary : "transparent" }]}>
+                {on ? <Check size={13} color={colors.primaryForeground} strokeWidth={3} /> : null}
+              </View>
+              <View style={styles.grow}>
+                <T variant="label" style={styles.optionName}>
+                  {name}
+                </T>
+                {sub ? (
+                  <T variant="tiny" tone="muted" style={styles.optionSub}>
+                    {sub}
+                  </T>
+                ) : null}
+              </View>
+              {o.price ? (
+                <View style={styles.priceBox}>
+                  {price?.was ? (
+                    <T variant="tiny" tone="muted" style={styles.was}>
+                      {price.was}
+                    </T>
+                  ) : null}
+                  <T variant="label" style={styles.now}>
+                    {price ? price.now : o.price}
+                  </T>
+                  {price?.per ? (
+                    <T variant="tiny" tone="muted">
+                      {price.per}
+                    </T>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+            {suggested === o.id ? (
+              <View style={[styles.suggested, { backgroundColor: colors.brandTint }]} testID="contract-suggested">
+                <T variant="tiny" style={[styles.suggestedText, { color: colors.brandText }]}>
+                  Suggested by the academy
+                </T>
+              </View>
+            ) : null}
+            {on && o.lines.length ? (
+              <View style={[styles.details, { borderTopColor: colors.border }]}>
+                {o.lines.map((l, i) => (
+                  <T key={i} variant="small" tone="muted">
+                    {l}
+                  </T>
+                ))}
+              </View>
+            ) : null}
+          </Pressable>
+        );
+      })}
+      {chosen ? (
+        <View style={[styles.boxed, styles.left, { borderColor: colors.border, backgroundColor: colors.cardMuted }]} testID="contract-chosen">
+          <T variant="small">
+            <Text style={styles.bold}>{block.label}:</Text> {chosen.title}
+          </T>
+          {block.priceLabel ? (
+            <T variant="small">
+              <Text style={styles.bold}>{block.priceLabel}:</Text> {tuition ? tuitionText(tuition) : chosen.price}
+            </T>
+          ) : null}
+        </View>
+      ) : null}
+      <Problem text={error} />
+    </View>
+  );
 }
 
 /**
@@ -424,6 +566,7 @@ export function ContractForm({
   today,
   pad,
   positions,
+  offer = NO_OFFER,
 }: {
   doc: ContractDocument;
   values: ContractValues;
@@ -437,6 +580,7 @@ export function ContractForm({
   today: string;
   pad: RefObject<SignaturePadHandle | null>;
   positions: RefObject<Record<string, number>>;
+  offer?: Offer;
 }) {
   const colors = useColors();
   const familySign = doc.blocks.find((b) => b.kind === "sign" && b.by === "family");
@@ -457,7 +601,7 @@ export function ContractForm({
         const id = "id" in b ? b.id : null;
         return (
           <View key={id ?? `b${i}`} onLayout={id ? place(id) : undefined}>
-            <Block block={b} values={values} onValue={onValue} errors={errors} sign={b.kind === "sign" && b.by === "family" ? signPart(b.label) : null} />
+            <Block block={b} doc={doc} values={values} onValue={onValue} errors={errors} sign={b.kind === "sign" && b.by === "family" ? signPart(b.label) : null} offer={offer} today={today} />
           </View>
         );
       })}
@@ -485,6 +629,7 @@ export function ContractSheet({
   onSubmit,
   insetTop = false,
   testID,
+  offer = NO_OFFER,
 }: {
   doc: ContractDocument;
   firstName: string;
@@ -499,6 +644,8 @@ export function ContractSheet({
   /** The screen has no header above it: keep clear of the status bar. */
   insetTop?: boolean;
   testID: string;
+  /** What the office set on the contract it sent, and the academy's signature. */
+  offer?: Offer;
 }) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
@@ -568,7 +715,7 @@ export function ContractSheet({
     >
       {header}
       <View onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
-        <ContractForm doc={doc} values={values} onValue={onValue} sign={sign} onSign={onSign} errors={shown} firstName={firstName} today={today} pad={pad} positions={positions} />
+        <ContractForm doc={doc} values={values} onValue={onValue} sign={sign} onSign={onSign} errors={shown} firstName={firstName} today={today} pad={pad} positions={positions} offer={offer} />
       </View>
       {missing.length ? (
         <View style={[styles.missing, { borderColor: colors.destructive, backgroundColor: colors.destructiveTint }]} testID="contract-missing">
@@ -613,8 +760,17 @@ const styles = StyleSheet.create({
   number: { minWidth: 22 },
   boxed: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.md, padding: space.md, gap: space.xs, alignItems: "center" },
   part: { gap: space.sm, marginTop: space.xs },
-  option: { flexDirection: "row", alignItems: "flex-start", gap: space.md, borderWidth: 1, borderRadius: radius.lg, padding: space.md },
+  option: { borderWidth: 1, borderRadius: radius.lg, padding: space.md, gap: space.sm },
   optionOn: { borderWidth: 2, padding: space.md - 1 },
+  optionHead: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
+  optionName: { fontWeight: "700", letterSpacing: 0.2 },
+  optionSub: { letterSpacing: 0.6, marginTop: 1 },
+  priceBox: { alignItems: "flex-end", minWidth: 64 },
+  now: { fontSize: 17, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  was: { textDecorationLine: "line-through", fontVariant: ["tabular-nums"] },
+  suggested: { alignSelf: "flex-start", marginLeft: 22 + space.md, borderRadius: radius.full, paddingHorizontal: space.sm, paddingVertical: 2 },
+  suggestedText: { fontWeight: "700" },
+  details: { marginLeft: 22 + space.md, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.sm, gap: 2 },
   mark: { width: 22, height: 22, borderRadius: radius.full, borderWidth: 1.5, alignItems: "center", justifyContent: "center", marginTop: 1 },
   price: { fontVariant: ["tabular-nums"], textAlign: "right" },
   group: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
@@ -623,6 +779,8 @@ const styles = StyleSheet.create({
   initials: { width: 140 },
   section: { borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden", marginTop: space.xs },
   bar: { paddingHorizontal: space.md, paddingVertical: space.sm },
+  barRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  sectionFoot: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.md, paddingVertical: space.sm },
   barText: { fontWeight: "700", letterSpacing: 0.6 },
   sectionBody: { padding: space.md, gap: space.md },
   readRow: { gap: space.xs },
@@ -630,6 +788,8 @@ const styles = StyleSheet.create({
   signPart: { gap: space.md, marginTop: space.sm },
   padHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   academySign: { gap: space.xs, marginTop: space.md },
+  academyInk: { backgroundColor: "#ffffff", borderRadius: radius.md, alignSelf: "flex-start", paddingHorizontal: space.sm, paddingVertical: space.xs },
+  academyImage: { width: 180, height: 48 },
   missing: { borderWidth: 1, borderRadius: radius.lg, padding: space.md, gap: space.xs },
   missingRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.xs },
 });

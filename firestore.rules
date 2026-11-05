@@ -744,34 +744,48 @@ service cloud.firestore {
 
       // ------------------------------------------------------ contracts
 
-      // The enrollment contract (shared/src/contracts, docs/DECISIONS.md §23, F4, §31 and §33). Owners and admins write
-      // the draft (`contractTemplates/draft`: its text, Settings → Enrollment contract); the server publishes it as a new
-      // version (each kept: a link and a signature name theirs), the newest current. Members read the current one (a
-      // parent signs it before using the app; the draft never has `current`), owners and admins every one. Contracts
-      // are signed on the server (functions/src/contracts.ts): signed in, or with a link, which the server makes and
-      // emails and admins cancel while it waits. The signed copies are Drive files in each student's Contracts folder,
-      // which only owners and admins see.
+      // The enrollment contract (shared/src/contracts, docs/DECISIONS.md §23, F4, §31, §33 and §34). Its versions are
+      // the server's (scripts/contract.ts adds one, and so does a change of prices, `setContractPrices`); every member
+      // reads them, as a contract sent names its own. The office sends a student's contract (`sendContract`, the
+      // server); the student's family reads theirs (a parent signs it, a student waits for it) and owners and admins
+      // every one, and withdraw one still waiting. Its link's token is kept apart, owners' and admins' only (the QR
+      // code). Contracts are signed on the server (functions/src/contracts.ts). The signed copies are Drive files in each
+      // student's Contracts folder, which only owners and admins see.
       match /contractTemplates/{templateId} {
-        function validDraft(d) {
-          return d.keys().hasOnly(['text', 'updatedAt', 'updatedBy'])
-            && d.text is string && d.text.size() <= 200000
-            && d.updatedAt == request.time
-            && byMe(d.updatedBy);
-        }
-
-        allow read: if isAdmin(b) || (isMember(b) && resource.data.current == true);
-        allow create, update: if templateId == 'draft' && isAdmin(b) && validDraft(request.resource.data);
-        allow delete: if false;
+        allow read: if isMember(b);
+        allow write: if false;
       }
 
       match /contractLinks/{linkId} {
-        allow read: if isAdmin(b);
+        allow read: if isAdmin(b) || isFamilyOf(b, resource.data.studentId);
         allow update: if isAdmin(b) && resource.data.status == 'sent'
           && request.resource.data.status == 'canceled'
           && request.resource.data.canceledAt == request.time
           && byMe(request.resource.data.canceledBy)
           && changed().hasOnly(['status', 'canceledAt', 'canceledBy']);
         allow create, delete: if false;
+
+        match /private/{docId} {
+          allow read: if isAdmin(b);
+          allow write: if false;
+        }
+      }
+
+      // The academy's signature (`AcademySigner`, docs/DECISIONS.md §34): the server puts it on every contract signed.
+      // Owners and admins set it in Settings; every member reads it (the family sees it on the contract).
+      match /contractSigner/{docId} {
+        function validSigner(d) {
+          return d.keys().hasOnly(['name', 'title', 'image', 'updatedAt', 'updatedBy'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+            && d.title is string && d.title.size() <= 100
+            && d.image is string && d.image.size() <= 400000 && d.image.matches('^data:image/png;base64,[A-Za-z0-9+/]+=*$')
+            && d.updatedAt == request.time
+            && byMe(d.updatedBy);
+        }
+
+        allow read: if isMember(b);
+        allow create, update: if docId == 'academy' && isAdmin(b) && validSigner(request.resource.data);
+        allow delete: if isAdmin(b);
       }
 
       // Each student's signed contract (`SignedContract`, by student ID): the server writes it as one is signed. The

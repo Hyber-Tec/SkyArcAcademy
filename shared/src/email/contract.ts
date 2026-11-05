@@ -2,15 +2,16 @@ import { ACADEMY_NAME, APP_URL } from '../brand'
 import type { EmailContent } from './invite'
 import { emailLogo } from './logo'
 
-/** The email with a signing link: a parent reads and signs a student's enrollment contract (docs/DECISIONS.md §23, F4). */
+/**
+ * The email the office can send with a contract (its switch, off at first: docs/DECISIONS.md §34): a parent reads and
+ * signs a student's enrollment contract with its link, or in the app.
+ */
 export interface ContractEmailInput {
   to: string
   academyName: string
   studentFirstName: string
   /** The signing page (`/sign/{token}`). */
   url: string
-  /** "November 27, 2026": the last day the link works, in the academy's time zone. */
-  expiresOn: string
   appUrl?: string
 }
 
@@ -25,7 +26,7 @@ export function contractCopy(i: ContractEmailInput) {
     title: `${i.studentFirstName}’s enrollment contract`,
     intro: `${i.academyName} sent you ${i.studentFirstName}’s enrollment contract to read and sign. It takes a few minutes on your phone or computer, and you don’t need an account or an app.`,
     button: 'Read and sign',
-    until: `The link works until ${i.expiresOn}, for one signature. You’ll get a copy of the signed contract to keep.`,
+    until: `It’s also waiting in ${i.academyName}’s app, if you sign in with this email. Once it’s signed, you can download your copy.`,
     why: `You’re getting this because ${i.academyName} has this address as a contact for ${i.studentFirstName}.`,
   }
 }

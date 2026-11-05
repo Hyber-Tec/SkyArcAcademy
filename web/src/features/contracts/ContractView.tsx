@@ -1,6 +1,6 @@
-import { LuEraser } from 'react-icons/lu'
-import { type ContractBlock, type ContractDocument, type ContractField, type Line, signerField } from '@shared/contracts/document'
-import { type ContractValues, RELATION_LABELS, SIGN_KEYS, typingDate, usDate } from '@shared/contracts/fill'
+import { LuCheck, LuEraser } from 'react-icons/lu'
+import { type ContractBlock, type ContractDocument, type ContractField, type Line, dollarsText, pricedChoice, signerField } from '@shared/contracts/document'
+import { type ContractValues, RELATION_LABELS, SIGN_KEYS, optionHeading, optionPrices, tuitionOf, tuitionText, typingDate, usDate } from '@shared/contracts/fill'
 import type { SignerRelation } from '@shared/contracts/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -33,13 +33,19 @@ interface ViewProps {
   onClear: () => void
   /** Today (YYYY-MM-DD) in the academy's time zone: the date beside the signature. */
   today: string
+  /** The option the office suggested, marked so (the family may choose another). */
+  suggested?: string | null
+  /** The academy's signature on file, shown on its line. */
+  academySigner?: { name: string; title: string; image: string } | null
 }
 
 /**
- * The academy's contract as a page (docs/DECISIONS.md §33): its own words, top to bottom, with the parts the family
- * fills in where the paper has them (the option they choose, the boxes they check, their initials, the student's and
- * their own details), the academy's parts shown as the academy's, and the signature at the end. Every part carries
- * `data-part` (its field ID, or a `SIGN_KEYS` key), so the form can take the family to what's missing.
+ * The academy's contract as a page (docs/DECISIONS.md §33 and §34): its own words, top to bottom, with the parts the
+ * family fills in where the paper has them (the program they choose, a card each, with the office's suggestion marked
+ * and each price after the discounts; the boxes they check, their initials, the student's and their own details), the
+ * academy's parts shown as the academy's (the discounts the office checked, its signature), and the family's
+ * signature at the end. Every part carries `data-part` (its field ID, or a `SIGN_KEYS` key), so the form can take the
+ * family to what's missing.
  */
 export function ContractView(props: ViewProps) {
   const { doc } = props
@@ -119,51 +125,43 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
           ))}
         </div>
       )
-    case 'choose': {
-      const chosen = typeof values[b.id] === 'string' ? (values[b.id] as string) : ''
-      const option = b.options.find((o) => o.id === chosen)
-      const error = errors[b.id]
-      return (
-        <div data-part={b.id} className="space-y-3">
-          <div className={cn('text-sm font-semibold', error && 'text-destructive')}>{b.label}: choose one</div>
-          <RadioGroup value={chosen} onValueChange={(v) => onValue(b.id, v)} className="grid gap-2 sm:grid-cols-2" aria-label={b.label} aria-invalid={!!error || undefined}>
-            {b.options.map((o) => (
-              <label
-                key={o.id}
-                htmlFor={`contract-${b.id}-${o.id}`}
-                className={cn(
-                  'flex cursor-pointer gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted/60',
-                  error && 'border-destructive/60',
-                )}
-                data-testid={`contract-choose-${o.id}`}
-              >
-                <RadioGroupItem value={o.id} id={`contract-${b.id}-${o.id}`} className="mt-0.5" />
-                <span className="min-w-0 flex-1 space-y-1">
-                  <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                    <span className="font-semibold">{o.title}</span>
-                    {o.price ? <span className="font-bold whitespace-nowrap">{o.price}</span> : null}
-                  </span>
-                  {o.lines.map((l, i) => (
-                    <span key={i} className="block text-xs leading-snug text-muted-foreground">
-                      {l}
-                    </span>
-                  ))}
-                </span>
-              </label>
-            ))}
-          </RadioGroup>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {option ? (
-            <dl className="divide-y rounded-lg border" data-testid="contract-chosen">
-              <Row label={b.label} value={option.title} />
-              {b.priceLabel ? <Row label={b.priceLabel} value={option.price} /> : null}
-            </dl>
-          ) : null}
-        </div>
-      )
-    }
+    case 'choose':
+      return <Choose block={b} {...props} />
     case 'check': {
       const list = Array.isArray(values[b.id]) ? (values[b.id] as string[]) : []
+      if (b.by === 'academy') {
+        // The office checked these as it sent the contract: the family reads them, and asks the office about a change.
+        const chosen = pricedChoice(props.doc)
+        const option = chosen ? (values[chosen.id] as string | undefined) : undefined
+        return (
+          <section data-part={b.id} className="overflow-hidden rounded-lg border" data-testid="contract-academy-check">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 bg-brand-solid px-3 py-2 text-white">
+              <h4 className="text-xs font-bold tracking-wide">{b.label}</h4>
+              <span className="text-xs">Set by the academy</span>
+            </div>
+            <ul className="divide-y">
+              {b.options.map((o) => {
+                const on = list.includes(o.id)
+                const left = on && !!option && o.except.includes(option)
+                return (
+                  <li key={o.id} className={cn('flex items-start gap-3 px-3 py-2.5', !on && 'text-muted-foreground')} data-testid={`contract-discount-${o.id}`}>
+                    <span className={cn('mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[4px] border', on ? 'border-foreground bg-foreground text-background' : 'border-muted-foreground/40')} aria-hidden>
+                      {on ? <LuCheck className="size-3" strokeWidth={3} /> : null}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      {o.text}
+                      {left ? <span className="block text-xs text-muted-foreground">Doesn’t apply to the program chosen.</span> : null}
+                    </span>
+                    {on && o.amount !== null && !left ? <span className="font-semibold whitespace-nowrap tabular-nums">−{dollarsText(o.amount)}</span> : null}
+                    <span className="sr-only">{on ? 'Applied' : 'Not applied'}</span>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="border-t bg-muted/40 px-3 py-2 text-xs text-muted-foreground">{list.length ? 'The academy applied these.' : 'None applied.'} Ask the academy if one should change.</p>
+          </section>
+        )
+      }
       return (
         <fieldset data-part={b.id} className="space-y-2">
           <legend className="text-sm font-semibold">{b.label}</legend>
@@ -221,8 +219,83 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
         </section>
       )
     case 'sign':
-      return b.by === 'family' ? <FamilySign block={b} {...props} /> : <AcademySign label={b.label} />
+      return b.by === 'family' ? <FamilySign block={b} {...props} /> : <AcademySign label={b.label} signer={props.academySigner ?? null} today={props.today} />
   }
+}
+
+/**
+ * The programs to choose from, a card each: its name over the rest of it, its price after the discounts the office
+ * checked (the price before them struck through), the office's suggestion marked; the one chosen opens to its
+ * details. Under them, what was chosen and its price, as the paper's boxes have them.
+ */
+function Choose({ block: b, values, onValue, errors, doc, suggested }: ViewProps & { block: Extract<ContractBlock, { kind: 'choose' }> }) {
+  const chosen = typeof values[b.id] === 'string' ? (values[b.id] as string) : ''
+  const option = b.options.find((o) => o.id === chosen)
+  const error = errors[b.id]
+  const priced = pricedChoice(doc) === b
+  const prices = priced ? optionPrices(doc, values) : null
+  const tuition = priced ? tuitionOf(doc, values) : null
+  return (
+    <div data-part={b.id} className="space-y-3">
+      <div className={cn('text-sm font-semibold', error && 'text-destructive')}>{b.label}: choose one</div>
+      <RadioGroup value={chosen} onValueChange={(v) => onValue(b.id, v)} className="grid gap-2 sm:grid-cols-2" aria-label={b.label} aria-invalid={!!error || undefined}>
+        {b.options.map((o) => {
+          const { name, sub } = optionHeading(o.title)
+          const price = prices?.get(o.id)
+          const on = o.id === chosen
+          return (
+            <label
+              key={o.id}
+              htmlFor={`contract-${b.id}-${o.id}`}
+              className={cn(
+                'flex cursor-pointer gap-3 rounded-xl border bg-card p-3.5 transition-colors hover:bg-muted/40 has-data-[state=checked]:border-foreground has-data-[state=checked]:ring-1 has-data-[state=checked]:ring-foreground',
+                error && 'border-destructive/60',
+              )}
+              data-testid={`contract-choose-${o.id}`}
+            >
+              <RadioGroupItem value={o.id} id={`contract-${b.id}-${o.id}`} className="mt-1" />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-start justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="block leading-tight font-semibold tracking-tight">{name}</span>
+                    {sub ? <span className="mt-0.5 block text-[11px] font-medium tracking-wider text-muted-foreground">{sub}</span> : null}
+                  </span>
+                  {o.price ? (
+                    <span className="shrink-0 text-right leading-tight">
+                      {price?.was ? <span className="block text-xs text-muted-foreground line-through tabular-nums">{price.was}</span> : null}
+                      <span className="block text-base font-bold tabular-nums">{price ? price.now : o.price}</span>
+                      {price?.per ? <span className="block text-[11px] text-muted-foreground">{price.per}</span> : null}
+                    </span>
+                  ) : null}
+                </span>
+                {suggested === o.id ? (
+                  <span className="mt-2 inline-flex h-5 items-center rounded-full bg-brand/10 px-2 text-[11px] font-semibold text-brand-text" data-testid="contract-suggested">
+                    Suggested by the academy
+                  </span>
+                ) : null}
+                {on && o.lines.length ? (
+                  <span className="mt-2 block space-y-0.5 border-t pt-2">
+                    {o.lines.map((l, i) => (
+                      <span key={i} className="block text-xs leading-snug text-muted-foreground">
+                        {l}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+          )
+        })}
+      </RadioGroup>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {option ? (
+        <dl className="divide-y rounded-lg border" data-testid="contract-chosen">
+          <Row label={b.label} value={option.title} />
+          {b.priceLabel ? <Row label={b.priceLabel} value={tuition ? tuitionText(tuition) : option.price} /> : null}
+        </dl>
+      ) : null}
+    </div>
+  )
 }
 
 /** A label and its value, as the paper's boxes have them ("—" for one still blank). */
@@ -324,15 +397,22 @@ function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk
   )
 }
 
-/** The academy's signature line: the academy signs it, not the family. */
-function AcademySign({ label }: { label: string }) {
+/** The academy's signature line: the academy's signature on file, put on as the family signs (or left for the academy). */
+function AcademySign({ label, signer, today }: { label: string; signer: { name: string; title: string; image: string } | null; today: string }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-dashed px-3 py-3 sm:grid-cols-[1fr_8rem]">
-      <div>
+    <div className="grid gap-3 rounded-lg border border-dashed px-3 py-3 sm:grid-cols-[1fr_8rem] sm:items-end" data-testid="contract-academy-sign">
+      <div className="min-w-0">
+        {signer ? (
+          <div className="mb-1 rounded-md bg-white px-2 py-1">
+            <img src={signer.image} alt={`${signer.name}’s signature`} className="h-12 w-auto max-w-full object-contain" />
+          </div>
+        ) : null}
         <div className="font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">Signed by the academy</div>
+        <div className="text-xs text-muted-foreground">
+          {signer ? `Signed for the academy by ${[signer.name, signer.title].filter(Boolean).join(', ')}, as you sign` : 'Signed by the academy'}
+        </div>
       </div>
-      <div className="text-xs text-muted-foreground sm:text-right">Date: —</div>
+      <div className="text-xs text-muted-foreground sm:text-right">Date: {signer ? usDate(today) : '—'}</div>
     </div>
   )
 }

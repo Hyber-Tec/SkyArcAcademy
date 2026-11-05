@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
-import { LuCopy, LuExternalLink, LuFileCheck, LuLock, LuMail, LuRotateCcw, LuSend, LuX } from 'react-icons/lu'
+import { LuExternalLink, LuFileCheck, LuLock, LuMail, LuQrCode, LuRotateCcw, LuSend, LuX } from 'react-icons/lu'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { parseContract } from '@shared/contracts/document'
-import { RELATION_LABELS, contractSummary } from '@shared/contracts/fill'
+import { type ContractValues, RELATION_LABELS, contractSummary } from '@shared/contracts/fill'
 import { signUrl, signedOnText, studentContract } from '@shared/contracts/signing'
-import { type ContractTemplate, SIGNED_VIA_LABELS, type SignedContract } from '@shared/contracts/types'
+import { type ContractLink, SIGNED_VIA_LABELS, type SignedContract } from '@shared/contracts/types'
 import { contractsFolderId } from '@shared/drive/types'
-import { COL } from '@shared/paths'
 import { formatInstant } from '@shared/time'
-import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
+import type { Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useConfirm } from '@/components/app/useConfirm'
 import { Button } from '@/components/ui/button'
@@ -18,95 +17,109 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { branchDocRef, useDoc } from '@/lib/firestore'
 import { cn } from '@/lib/utils'
-import { useNow } from '@/lib/useNow'
-import { askToSignAgain, cancelLink, markSignedOnPaper, useContractTemplates, useSignedContract, useStudentContractLinks } from './api'
-import { copyLink } from './links'
+import { emailContract, markSignedOnPaper, useContractTemplate, useContractTemplates, useContractToken, useSignedContract, useStudentContractLinks, withdrawContract } from './api'
+import { ContractQr } from './ContractQr'
+import { linkHere } from './links'
 import { SendContractDialog } from './SendContractDialog'
 
-const STATE: Record<'none' | 'sent' | 'expired' | 'signed', { label: string; className: string }> = {
+type State = 'none' | 'sent' | 'signed' | 'withdrawn'
+
+const STATE: Record<State, { label: string; className: string }> = {
   none: { label: 'Not sent', className: 'border-border text-muted-foreground' },
-  sent: { label: 'Sent', className: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200' },
-  expired: { label: 'Link expired', className: 'border-border text-muted-foreground' },
+  sent: { label: 'Waiting to sign', className: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200' },
   signed: { label: 'Signed', className: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200' },
+  withdrawn: { label: 'Withdrawn', className: 'border-border text-muted-foreground' },
 }
 
 /**
- * A student's enrollment contract, on their page (owners and admins; F4 and docs/DECISIONS.md §31 and §33): signed (by
- * whom, when and how: in the app, on the website, by link or on paper, what the family chose in it, the signed PDF,
- * which opens from the Drive, and "Ask to sign again"), or not yet: then a parent signs it in the app before using
- * it, and the office can send a link (waiting since when, until when, with Copy link, Email and Cancel; or expired) or
- * mark one signed on paper. Its foot leads to the student's Contracts folder, where the signed copies are.
+ * A student's enrollment contract, on their page (owners and admins; F4 and docs/DECISIONS.md §31, §33 and §34): sent
+ * (when, by whom, with the program suggested and the discounts, and the price after them; its QR code for the front
+ * desk, the link, Email, Change and send again, Withdraw), signed (by whom, when and how: in the app, on the website,
+ * by link or on paper, what was chosen in it, the signed PDF, which opens from the Drive, and Send a new one), or not
+ * sent yet. Its foot leads to the student's Contracts folder, where the signed copies are.
  */
-export function StudentContractCard({ student, priv }: { student: WithId<Student>; priv: StudentPrivateProfile | null }) {
+export function StudentContractCard({ student }: { student: WithId<Student> }) {
   const { branchId, actor, timezone } = useBranch()
   const { data: links, loading: linksLoading } = useStudentContractLinks(student.id)
   const { data: signed, loading: signedLoading } = useSignedContract(student.id)
   const { current: template, loading: templateLoading } = useContractTemplates()
-  const loading = linksLoading || signedLoading
-  const [dialog, setDialog] = useState<'new' | 'email' | 'paper' | null>(null)
+  const loading = linksLoading || signedLoading || templateLoading
+  const [dialog, setDialog] = useState<'send' | 'qr' | 'paper' | null>(null)
+  const [emailing, setEmailing] = useState(false)
   const { confirm, dialog: confirmDialog } = useConfirm()
-  const now = useNow()
-  const c = studentContract(links, now)
+  const c = studentContract(links)
   const first = student.firstName || student.name.split(' ')[0]
-  // A link lasts 30 days: its dates need no year.
-  const day = (t: { toMillis?: () => number } | null | undefined) => (t?.toMillis ? formatInstant(t.toMillis(), timezone, { month: 'short', day: 'numeric' }) : 'today')
-  const signedLine = (l: NonNullable<typeof c.lastSigned>) =>
-    `${l.signer?.name ?? 'Someone'} (${l.signer ? RELATION_LABELS[l.signer.relation].toLowerCase() : 'parent'}) signed it on ${l.signedAt?.toMillis ? signedOnText(l.signedAt.toMillis(), timezone) : 'just now'}.`
+  const day = (t: { toMillis?: () => number } | null | undefined) => (t?.toMillis ? formatInstant(t.toMillis(), timezone, { month: 'short', day: 'numeric', year: 'numeric' }) : 'today')
 
-  async function again(sc: WithId<SignedContract>) {
+  async function withdraw(link: WithId<ContractLink>) {
     const ok = await confirm({
-      title: 'Ask to sign the contract again?',
-      description: `${first}’s family is asked to sign the academy’s current contract again before they use the app. The signed copy stays in ${first}’s Contracts folder.`,
-      confirmLabel: 'Ask to sign again',
-    })
-    if (!ok) return
-    try {
-      await askToSignAgain(branchId, actor, sc)
-      toast.success('The family will be asked to sign again')
-    } catch (e) {
-      toast.error('Couldn’t change it', { description: (e as Error).message })
-    }
-  }
-
-  async function cancel() {
-    if (!c.link) return
-    const ok = await confirm({
-      title: 'Cancel the signing link?',
-      description: `The link stops working: ${first}’s family can’t sign with it any more. You can send a new one.`,
-      confirmLabel: 'Cancel the link',
+      title: `Withdraw ${first}’s contract?`,
+      description: `${first}’s family can’t sign it any more, in the app or with its link. Send it again with the right program or discounts.`,
+      confirmLabel: 'Withdraw it',
       destructive: true,
     })
     if (!ok) return
     try {
-      await cancelLink(branchId, actor, c.link)
-      toast.success('The link is canceled')
+      await withdrawContract(branchId, actor, link)
+      toast.success(`${first}’s contract is withdrawn`)
     } catch (e) {
-      toast.error('Couldn’t cancel the link', { description: (e as Error).message })
+      toast.error('Couldn’t withdraw it', { description: (e as Error).message })
     }
   }
 
-  const send = (label: string, variant: 'default' | 'outline' = 'default') =>
+  async function email(link: WithId<ContractLink>) {
+    setEmailing(true)
+    try {
+      const r = await emailContract(branchId, link.id)
+      if (r.emailed === 'sent') toast.success(`Emailed to ${r.emailedTo.join(', ')}`)
+      else toast.error('It wasn’t emailed', { description: r.emailed === 'demo' ? 'The demo academy doesn’t send email.' : r.emailed === 'no_address' ? 'There’s no email on the student’s record.' : 'Show the QR code, or copy the link and text it.' })
+    } catch (e) {
+      toast.error('Couldn’t email it', { description: (e as Error).message })
+    } finally {
+      setEmailing(false)
+    }
+  }
+
+  const sendButton = (label: string, variant: 'default' | 'outline' | 'ghost' = 'default') =>
     template ? (
-      <Button size="sm" variant={variant} onClick={() => setDialog('new')}>
+      <Button size="sm" variant={variant} onClick={() => setDialog('send')} data-testid="contract-send-open">
         <LuSend /> {label}
       </Button>
     ) : (
-      <p className="text-xs text-muted-foreground">
-        Publish the academy’s contract in{' '}
-        <Link to="/admin/settings/contract" className="font-medium underline underline-offset-2">
-          Settings
-        </Link>{' '}
-        to send it.
-      </p>
+      <p className="text-xs text-muted-foreground">The academy’s contract isn’t set up yet.</p>
     )
 
-  // A link signed before the office asked to sign again is history ("Earlier"), not the state.
-  const state = signed ? 'signed' : c.state === 'signed' ? 'none' : c.state
+  const state: State = c.waiting ? 'sent' : signed ? 'signed' : c.withdrawn ? 'withdrawn' : 'none'
   let body: React.ReactNode
-  if (loading || templateLoading) body = <Skeleton className="h-16 w-full" />
-  else if (signed) {
+  if (loading) body = <Skeleton className="h-16 w-full" />
+  else if (c.waiting) {
+    const l = c.waiting
+    body = (
+      <>
+        <p className="text-sm">
+          Sent {day(l.createdAt)} by {l.createdBy?.name?.split(' ')[0] || 'the office'}. Waiting for a parent to sign it in the app, on the website, or with its QR code.
+        </p>
+        <Offered link={l} />
+        {l.emailedTo?.length ? <p className="text-xs break-all text-muted-foreground">Emailed to {l.emailedTo.join(', ')}</p> : null}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setDialog('qr')} data-testid="contract-show-qr">
+            <LuQrCode /> QR code and link
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void email(l)} disabled={emailing}>
+            {emailing ? <Spinner /> : <LuMail />} Email it
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setDialog('send')} data-testid="contract-change">
+            <LuRotateCcw /> Change and send again
+          </Button>
+          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void withdraw(l)} data-testid="contract-withdraw">
+            <LuX /> Withdraw
+          </Button>
+        </div>
+        {signed ? <p className="text-xs text-muted-foreground">Signed before: {signedText(signed, timezone)}</p> : null}
+      </>
+    )
+  } else if (signed) {
     body = (
       <>
         <p className="text-sm">{signedText(signed, timezone)}</p>
@@ -120,47 +133,17 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
               </Link>
             </Button>
           ) : null}
-          <Button size="sm" variant="ghost" onClick={() => void again(signed)} data-testid="contract-sign-again">
-            <LuRotateCcw /> Ask to sign again
-          </Button>
+          {sendButton('Send a new contract', 'ghost')}
         </div>
-      </>
-    )
-  } else if (c.state === 'sent' && c.link) {
-    const l = c.link
-    body = (
-      <>
-        <p className="text-sm">
-          Sent {day(l.createdAt)} by {l.createdBy?.name?.split(' ')[0] || 'the office'}, waiting for a signature. The link works until {day(l.expiresAt)}.
-        </p>
-        {l.emailedTo?.length ? <p className="text-xs break-all text-muted-foreground">Emailed to {l.emailedTo.join(', ')}</p> : null}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => void copyLink(signUrl(l.token, window.location.origin))}>
-            <LuCopy /> Copy link
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setDialog('email')}>
-            <LuMail /> Email
-          </Button>
-          <Button size="sm" variant="ghost" className="text-destructive" aria-label="Cancel the link" onClick={() => void cancel()}>
-            <LuX /> Cancel
-          </Button>
-        </div>
-      </>
-    )
-  } else if (c.state === 'expired' && c.link) {
-    body = (
-      <>
-        <p className="text-sm">The link sent {day(c.link.createdAt)} expired on {day(c.link.expiresAt)} without a signature.</p>
-        {send('Send a new link')}
       </>
     )
   } else {
     body = (
       <>
         <p className="text-sm text-muted-foreground">
-          {template ? `Not signed yet: ${first}’s parent signs it in the app before using it. You can also send them a link.` : `${first}’s family hasn’t been sent the contract yet.`}
+          {c.withdrawn ? `The contract sent ${day(c.withdrawn.createdAt)} was withdrawn ${day(c.withdrawn.canceledAt)}.` : `Not sent yet: ${first}’s family is asked to sign once you send it.`}
         </p>
-        {send('Send the contract')}
+        {sendButton('Send the contract')}
       </>
     )
   }
@@ -172,20 +155,10 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
         {loading ? null : <span className={cn('inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-medium', STATE[state].className)}>{STATE[state].label}</span>}
       </div>
       {body}
-      {!loading && !signed ? (
-        <Button size="sm" variant="ghost" className="-ml-2 w-fit" onClick={() => setDialog('paper')} data-testid="contract-mark-paper">
+      {!loading && !signed && !c.waiting ? (
+        <Button size="sm" variant="ghost" className="-ml-2 w-fit text-muted-foreground" onClick={() => setDialog('paper')} data-testid="contract-mark-paper">
           <LuFileCheck /> Signed on paper? Mark it signed
         </Button>
-      ) : null}
-      {c.lastSigned && !signed ? (
-        <p className="text-xs text-muted-foreground">
-          Earlier: {signedLine(c.lastSigned)}{' '}
-          {c.lastSigned.fileId ? (
-            <Link to={`/admin/drive/file/${c.lastSigned.fileId}`} className="font-medium underline underline-offset-2">
-              Open it
-            </Link>
-          ) : null}
-        </p>
       ) : null}
       <Link
         to={`/admin/drive/f/${contractsFolderId(student.id)}`}
@@ -194,7 +167,8 @@ export function StudentContractCard({ student, priv }: { student: WithId<Student
       >
         <LuLock className="size-3.5" aria-hidden /> {first}’s Contracts folder, in the Drive
       </Link>
-      {dialog === 'new' || dialog === 'email' ? <SendContractDialog studentId={student.id} studentFirst={first} priv={priv} link={dialog === 'email' ? c.link : null} onClose={() => setDialog(null)} /> : null}
+      {dialog === 'send' ? <SendContractDialog student={student} start={c.waiting?.preset ?? null} onClose={() => setDialog(null)} /> : null}
+      {dialog === 'qr' && c.waiting ? <QrDialog link={c.waiting} firstName={first} onClose={() => setDialog(null)} /> : null}
       {dialog === 'paper' ? <PaperDialog student={student} onClose={() => setDialog(null)} /> : null}
       {confirmDialog}
     </div>
@@ -209,29 +183,52 @@ function signedText(sc: SignedContract, timezone: string): string {
   return `${who} signed it ${SIGNED_VIA_LABELS[sc.via]} on ${when}${sc.signerEmail ? `, as ${sc.signerEmail}` : ''}.`
 }
 
+/** What the office set on a contract it sent: the program suggested, the price after the discounts, the discounts. */
+function Offered({ link }: { link: WithId<ContractLink> }) {
+  return <ChosenInContract templateId={link.templateId} values={link.preset ?? {}} offered />
+}
+
 /**
- * What the family chose in their contract, read with the version they signed (owners and admins read every one): the
- * option and its price, and what they checked. The PDF in the Drive holds the rest.
+ * What was chosen in a contract, read with its version: the option and its price after the discounts, and what was
+ * checked. The PDF in the Drive holds the rest.
  */
-function ChosenInContract({ templateId, values }: { templateId: string; values: NonNullable<SignedContract['values']> }) {
-  const { branchId } = useBranch()
-  const { data: template } = useDoc<ContractTemplate>(branchDocRef(branchId, COL.contractTemplates, templateId))
-  const text = template?.text ?? ''
+function ChosenInContract({ templateId, values, offered = false }: { templateId: string; values: ContractValues; offered?: boolean }) {
+  const template = useContractTemplate(templateId)
+  const text = template.data?.text ?? ''
   const rows = useMemo(() => (text ? contractSummary(parseContract(text).doc, values) : []), [text, values])
   if (!rows.length) return null
   return (
     <dl className="grid gap-x-3 gap-y-0.5 rounded-lg bg-muted/50 px-3 py-2 text-xs sm:grid-cols-[auto_1fr]" data-testid="student-contract-summary">
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <div key={r.label} className="contents">
-          <dt className="text-muted-foreground">{r.label}</dt>
-          <dd className="font-medium">{r.value}</dd>
+          <dt className="text-muted-foreground">{i === 0 && offered ? 'Program suggested' : r.label}</dt>
+          <dd className="font-medium">{r.value === '—' && offered ? (i === 0 ? 'The family chooses' : 'Once the family chooses') : r.value}</dd>
         </div>
       ))}
     </dl>
   )
 }
 
-/** Marks a student's contract signed on paper, with a note: their family isn't asked to sign it in the app. */
+/** A contract still waiting: its QR code for the front desk, and its link. */
+function QrDialog({ link, firstName, onClose }: { link: WithId<ContractLink>; firstName: string; onClose: () => void }) {
+  const token = useContractToken(link.id)
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Sign {firstName}’s contract here</DialogTitle>
+          <DialogDescription>For a parent at the front desk.</DialogDescription>
+        </DialogHeader>
+        {token.data?.token ? <ContractQr url={linkHere(signUrl(token.data.token))} firstName={firstName} /> : token.loading ? <Skeleton className="h-72 w-full" /> : <p className="text-sm text-muted-foreground">The link couldn’t be read.</p>}
+        <DialogFooter>
+          <Button onClick={onClose}>Done</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Marks a student's contract signed on paper, with a note (for a family who can't sign on a phone). */
 function PaperDialog({ student, onClose }: { student: WithId<Student>; onClose: () => void }) {
   const { branchId, actor } = useBranch()
   const [note, setNote] = useState('')
@@ -257,7 +254,7 @@ function PaperDialog({ student, onClose }: { student: WithId<Student>; onClose: 
           <DialogHeader>
             <DialogTitle>Mark {first}’s contract signed?</DialogTitle>
             <DialogDescription>
-              For a family who signed the academy’s contract on paper instead: {first}’s family won’t be asked to sign it in the app. Keep the signed paper in {first}’s Contracts folder in the Drive, with the others.
+              For a family who signed the academy’s contract on paper instead. Scan the signed paper into {first}’s Contracts folder in the Drive, with the others.
             </DialogDescription>
           </DialogHeader>
           <Field>

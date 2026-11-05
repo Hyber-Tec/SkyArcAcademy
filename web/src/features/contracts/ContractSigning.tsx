@@ -12,7 +12,7 @@ import type { SignaturePadHandle } from './SignaturePad'
 export type SignOutcome = { errors?: Record<string, string>; problem?: string } | void
 
 /**
- * One child's contract, filled in and signed (docs/DECISIONS.md §33), as every signing page asks it: signed in
+ * One child's contract, filled in and signed (docs/DECISIONS.md §33 and §34), as every signing page asks it: signed in
  * before using the website, with a link (/sign/{token}), and the office's preview in Settings. The contract reads as a
  * page with its parts to fill in; signing checks them as the server does (shared/src/contracts/fill.ts) and lists
  * what's missing by the button, each a step back to it.
@@ -25,6 +25,8 @@ export function ContractSigning({
   note,
   onSign,
   signLabel = 'Sign the contract',
+  suggested = null,
+  academySigner = null,
 }: {
   doc: ContractDocument
   /** "Ava": whose contract it is. */
@@ -36,6 +38,10 @@ export function ContractSigning({
   note: React.ReactNode
   onSign: (request: ContractSignRequest) => Promise<SignOutcome>
   signLabel?: string
+  /** The program the office suggested (the family may choose another). */
+  suggested?: string | null
+  /** The academy's signature on file, shown on its line. */
+  academySigner?: { name: string; title: string; image: string } | null
 }) {
   const [values, setValues] = useState<ContractValues>(initial)
   const [sign, setSign] = useState<SignState>({ name: '', relation: '', agree: false })
@@ -100,6 +106,8 @@ export function ContractSigning({
           onInk={(ink) => ink && drop(SIGN_KEYS.signature)}
           onClear={() => pad.current?.clear()}
           today={today}
+          suggested={suggested}
+          academySigner={academySigner}
         />
       </div>
 

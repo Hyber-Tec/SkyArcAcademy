@@ -55,6 +55,7 @@ const ICONS: Record<string, LucideIcon> = {
   request_accepted: CircleCheck,
   request_asked_again: CalendarSearch,
   score_added: Target,
+  contract_sent: Signature,
   contract_signed: Signature,
   family_linked: UserCheck,
   signup_request: UserRoundPlus,

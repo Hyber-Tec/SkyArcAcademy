@@ -1,9 +1,10 @@
 import { httpsCallable } from 'firebase/functions'
 import { useEffect, useMemo, useState } from 'react'
-import { LuCircleCheck, LuDownload, LuMail, LuPhone, LuRotateCw } from 'react-icons/lu'
+import { LuCircleCheck, LuDownload, LuMail, LuPhone, LuRotateCw, LuSmartphone } from 'react-icons/lu'
 import { useParams } from 'react-router'
-import { parseContract } from '@shared/contracts/document'
-import { prefillValues } from '@shared/contracts/fill'
+import { APP_STORE_URL, PLAY_STORE_URL } from '@shared/brand'
+import { parseContract, pricedChoice } from '@shared/contracts/document'
+import { type ContractValues, prefillValues, presetValues } from '@shared/contracts/fill'
 import type { ContractSignRequest } from '@shared/contracts/types'
 import { formatPhone } from '@shared/people'
 import { dateKeyOf, formatInstant } from '@shared/time'
@@ -19,11 +20,12 @@ import { cn } from '@/lib/utils'
 
 /**
  * /sign/{token}: where a parent or guardian fills in and signs the academy's enrollment contract (docs/DECISIONS.md
- * §23, F4, and §33), from the link the office texted or emailed them. No account and no app: it works on any phone's
- * browser. The contract reads as a page with its parts to fill in (the student's name is filled in already), then
- * parent or guardian, a signature drawn with a finger or a mouse and the agreement to sign electronically. The server
- * builds the signed PDF (functions/src/contracts.ts); they can download their copy for a while. A link that expired,
- * was used or was canceled says so, with how to reach the academy.
+ * §23, F4, §33 and §34), from its QR code at the front desk or the email the office sent. No account and no app: it
+ * works on any phone's browser. The contract reads as a page with its parts to fill in (the student's name is filled in
+ * already, the program the office suggested is chosen and its discounts checked), then parent or guardian, a signature
+ * drawn with a finger or a mouse and the agreement to sign electronically. The server builds the signed PDF
+ * (functions/src/contracts.ts); they're asked whether to download their copy (it works for a few days), and pointed to
+ * the app, where it stays. A contract signed or withdrawn says so, with how to reach the academy.
  */
 
 interface Academy {
@@ -35,9 +37,16 @@ interface Academy {
 }
 
 type Loaded =
-  | { state: 'ready'; academy: Academy; firstName: string; studentName: string; expiresAt: number; contract: { title: string; text: string; version: number } }
+  | {
+      state: 'ready'
+      academy: Academy
+      firstName: string
+      studentName: string
+      contract: { title: string; text: string; version: number }
+      preset: ContractValues
+      academySigner: { name: string; title: string; image: string } | null
+    }
   | { state: 'signed'; academy: Academy; firstName: string; signedAt: number; signerName: string; copyUntil: number; copy?: { name: string; data: string } }
-  | { state: 'expired'; academy: Academy; firstName: string; expiresAt: number }
   | { state: 'canceled'; academy: Academy; firstName: string }
   | { state: 'invalid'; academy: Academy }
 
@@ -131,6 +140,30 @@ function CopyButton({ token, until, academy }: { token: string; until: number; a
   )
 }
 
+/** The academy's app, where a family signed in with the email they gave the academy finds the signed contract too. */
+function GetTheApp() {
+  return (
+    <div className="mt-5 space-y-3 rounded-xl border p-4 text-sm" data-testid="get-the-app">
+      <p className="flex items-start gap-2 font-medium">
+        <LuSmartphone className="mt-0.5 size-4 shrink-0" aria-hidden /> Get the app
+      </p>
+      <p className="text-muted-foreground">Sign in with the email you gave the academy to see classes and scores. Your signed contract is there too.</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+            App Store
+          </a>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href={PLAY_STORE_URL} target="_blank" rel="noreferrer">
+            Google Play
+          </a>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function SignContractPage() {
   const { token = '' } = useParams()
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -156,11 +189,12 @@ export function SignContractPage() {
           <div className="flex flex-col items-center text-center">
             <LuCircleCheck className="size-10 text-emerald-600" aria-hidden />
             <h1 className="mt-3 text-xl font-semibold tracking-tight">Thank you, {signed.name.split(' ')[0]}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{loaded.firstName}’s enrollment contract is signed, and the academy has its copy.</p>
+            <p className="mt-2 text-sm text-muted-foreground">{loaded.firstName}’s enrollment contract is signed, and the academy has its copy. Would you like to download yours?</p>
           </div>
           <div className="mt-6">
             <CopyButton token={token} until={signed.copyUntil} academy={loaded.academy} />
           </div>
+          <GetTheApp />
           <Contact academy={loaded.academy} lead="Questions? Contact the academy:" />
         </Card>
       </Shell>
@@ -203,23 +237,15 @@ export function SignContractPage() {
       )
     case 'canceled':
       return (
-        <Notice title="This link was canceled" academy={loaded.academy} lead="Contact the academy:">
-          <p>The academy stopped this link for {loaded.firstName}’s enrollment contract, so it can’t be signed with it. If you still need to sign, ask them for a new link.</p>
-        </Notice>
-      )
-    case 'expired':
-      return (
-        <Notice title="This link has expired" academy={loaded.academy} lead="Contact the academy:">
-          <p>
-            The link to sign {loaded.firstName}’s enrollment contract worked until {longDate(loaded.expiresAt, loaded.academy)}. Ask the academy for a new link.
-          </p>
+        <Notice title="This contract was withdrawn" academy={loaded.academy} lead="Contact the academy:">
+          <p>The academy withdrew this enrollment contract for {loaded.firstName}, so it can’t be signed any more. If they changed it, they’ll send you the new one.</p>
         </Notice>
       )
     case 'signed':
       return (
         <Notice title="This contract is already signed" academy={loaded.academy}>
           <p>
-            {loaded.signerName || 'Someone'} signed {loaded.firstName}’s enrollment contract on {longDate(loaded.signedAt, loaded.academy)}. A link signs only once.
+            {loaded.signerName || 'Someone'} signed {loaded.firstName}’s enrollment contract on {longDate(loaded.signedAt, loaded.academy)}. A contract is signed only once.
           </p>
           <CopyButton token={token} until={loaded.copyUntil} academy={loaded.academy} />
         </Notice>
@@ -232,7 +258,9 @@ export function SignContractPage() {
 function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: { name: string; copyUntil: number }) => void }) {
   const now = useNow()
   const doc = useMemo(() => parseContract(loaded.contract.text).doc, [loaded.contract.text])
-  const initial = useMemo(() => prefillValues(doc, { studentName: loaded.studentName }), [doc, loaded.studentName])
+  const initial = useMemo(() => ({ ...prefillValues(doc, { studentName: loaded.studentName }), ...presetValues(doc, loaded.preset ?? {}) }), [doc, loaded.studentName, loaded.preset])
+  const choice = pricedChoice(doc)
+  const suggested = choice && typeof loaded.preset?.[choice.id] === 'string' ? (loaded.preset[choice.id] as string) : null
 
   async function onSign(request: ContractSignRequest): Promise<SignOutcome> {
     try {
@@ -242,7 +270,7 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
     } catch (err) {
       const f = err as { code?: string; details?: { errors?: Record<string, string>; state?: string } }
       if (f.details?.errors) return { errors: f.details.errors }
-      if (f.code === 'functions/failed-precondition') return { problem: 'This link can’t be signed any more. Reload the page to see why.' }
+      if (f.code === 'functions/failed-precondition' || f.code === 'functions/not-found') return { problem: 'This contract can’t be signed any more. Reload the page to see why.' }
       if (f.code === 'functions/resource-exhausted') return { problem: 'Too many tries just now. Please wait a few minutes, then sign again.' }
       return { problem: 'The contract couldn’t be signed just now. Check your connection and try again.' }
     }
@@ -252,7 +280,7 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
     <Shell wide>
       <Card>
         <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">Enrollment contract for {loaded.firstName}</h1>
-        <p className="mt-2 text-center text-sm text-muted-foreground">Please read the contract, fill it in and sign at the bottom of this page. It takes a few minutes.</p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">{loaded.academy.name} sent you this contract. Please read it, check the program, fill it in and sign at the bottom of this page. It takes a few minutes.</p>
       </Card>
 
       <ContractSigning
@@ -261,9 +289,11 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
         initial={initial}
         today={dateKeyOf(now, loaded.academy.timezone || 'America/New_York')}
         onSign={onSign}
+        suggested={suggested}
+        academySigner={loaded.academySigner}
         note={
           <>
-            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The link works until {longDate(loaded.expiresAt, loaded.academy)}, for one signature.
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The academy keeps it, and you can download your copy.
           </>
         }
       />

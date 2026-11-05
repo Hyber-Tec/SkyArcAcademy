@@ -24,6 +24,7 @@ import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
 import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useStudentEvaluations, useStudentFiles, useStudentPrivate } from "@/features/data/hooks";
 import { timeRange } from "@/features/schedule/format";
+import { StudentContract } from "@/features/contracts/StudentContract";
 import { deleteEvaluation } from "@/features/scores/api";
 import { ResultKindChip } from "@/features/scores/kinds";
 import { FileGlyph } from "@/features/drive/DriveIcons";
@@ -131,6 +132,8 @@ export default function StudentScreen() {
             {profile.loading ? <ListRow title="Loading contacts…" /> : null}
           </ListSection>
         ) : null}
+
+        {isAdmin ? <StudentContract student={s} profile={profile.data ?? null} /> : null}
 
         <ListSection title="Classes" icon={CalendarDays} tone="red" testID="student-classes">
           {next.map((c) => (

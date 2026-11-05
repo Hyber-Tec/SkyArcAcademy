@@ -28,28 +28,23 @@ export function contractFileName(studentName: string, dateKey: string): string {
 
 const ms = (t: unknown): number => (t as { toMillis?: () => number } | null)?.toMillis?.() ?? 0
 
-export type LinkState = 'sent' | 'expired' | 'signed' | 'canceled'
-
-/** Where a link stands: waiting for a signature (until it expires), signed, or canceled. */
-export function linkState(link: Pick<ContractLink, 'status' | 'expiresAt'>, nowMs: number): LinkState {
-  if (link.status === 'signed' || link.status === 'canceled') return link.status
-  return ms(link.expiresAt) > nowMs ? 'sent' : 'expired'
-}
-
 export interface StudentContract {
-  /** The newest link that wasn't canceled: none, waiting, expired or signed. */
-  state: 'none' | Exclude<LinkState, 'canceled'>
-  link: WithId<ContractLink> | null
-  /** The newest signed one (it may be older than a link sent since). */
+  /** The contract waiting for the family's signature (one at a time: sending another withdraws it). */
+  waiting: WithId<ContractLink> | null
+  /** The newest one signed. */
   lastSigned: WithId<ContractLink> | null
+  /** The newest one sent, when the office withdrew it and sent none since. */
+  withdrawn: WithId<ContractLink> | null
 }
 
-/** A student's contract, as their page shows it, from their links. */
-export function studentContract(links: readonly WithId<ContractLink>[], nowMs: number): StudentContract {
+/** A student's contract, as their page shows it, from the contracts sent to their family. */
+export function studentContract(links: readonly WithId<ContractLink>[]): StudentContract {
   const newest = [...links].sort((a, b) => ms(b.createdAt) - ms(a.createdAt) || (a.id < b.id ? -1 : 1))
-  const link = newest.find((l) => l.status !== 'canceled') ?? null
-  const lastSigned = newest.find((l) => l.status === 'signed') ?? null
-  return { state: link ? (linkState(link, nowMs) as StudentContract['state']) : 'none', link, lastSigned }
+  return {
+    waiting: newest.find((l) => l.status === 'sent') ?? null,
+    lastSigned: newest.find((l) => l.status === 'signed') ?? null,
+    withdrawn: newest[0]?.status === 'canceled' ? newest[0] : null,
+  }
 }
 
 // ------------------------------------------------------------- the signature page
@@ -69,6 +64,10 @@ export interface SignatureFactsInput {
   /** The contract's title and version ("Enrollment Agreement (version 1)"). */
   templateName: string
   templateSha256: string
+  /** Who in the office sent it (setting the program suggested and the discounts), and when. */
+  sentBy?: { name: string; atMs: number } | null
+  /** The academy's signature put on it, as on file in Settings: who signs for the academy. */
+  academySigner?: { name: string; title: string } | null
 }
 
 /** The zone's short name at that moment ("EDT"). */
@@ -92,8 +91,12 @@ export function signatureFacts(i: SignatureFactsInput): { label: string; value: 
     { label: 'IP address', value: i.ip || 'Unknown' },
     { label: 'link' in i.how || i.how.where === 'website' ? 'Browser' : 'Device', value: i.userAgent || 'Unknown' },
     'link' in i.how ? { label: 'Signing link', value: i.how.link } : { label: 'Account', value: `${i.how.account} (signed in ${i.how.where === 'app' ? 'to the app' : 'on the website'})` },
+    ...(i.sentBy ? [{ label: 'Sent by', value: `${i.sentBy.name}, ${formatDateKey(dateKeyOf(i.sentBy.atMs, i.timezone), 'long')}` }] : []),
     { label: 'Contract signed', value: i.templateName },
     { label: 'Its text’s SHA-256', value: i.templateSha256 },
+    ...(i.academySigner
+      ? [{ label: 'The academy’s signature', value: `${[i.academySigner.name, i.academySigner.title].filter(Boolean).join(', ')}: the signature on file with the academy, put on every contract it sends` }]
+      : []),
   ]
 }
 

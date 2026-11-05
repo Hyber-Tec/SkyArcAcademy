@@ -7,23 +7,23 @@ const s = (id: string, name: string, status: StudentStatus = 'enrolled') => ({ i
 describe('contractGate', () => {
   const kids = [s('leo', 'Leo Monroe'), s('ava', 'Ava Monroe')]
 
-  it('opens the app when the academy has no contract yet', () => {
-    expect(contractGate({ role: 'parent', hasContract: false, students: kids, signed: new Set() })).toEqual({ open: true, toSign: [] })
+  it('opens the app until the office sends a contract', () => {
+    expect(contractGate({ role: 'parent', students: kids, waiting: new Set() })).toEqual({ open: true, toSign: [] })
   })
 
-  it('asks a parent to sign for each child without a signed contract, A to Z', () => {
-    expect(contractGate({ role: 'parent', hasContract: true, students: kids, signed: new Set() }).toSign.map((k) => k.id)).toEqual(['ava', 'leo'])
-    expect(contractGate({ role: 'parent', hasContract: true, students: kids, signed: new Set(['ava']) })).toEqual({ open: false, toSign: [kids[0]] })
-    expect(contractGate({ role: 'parent', hasContract: true, students: kids, signed: new Set(['ava', 'leo']) }).open).toBe(true)
+  it('asks a parent to sign each contract the office sent, A to Z', () => {
+    expect(contractGate({ role: 'parent', students: kids, waiting: new Set(['leo', 'ava']) }).toSign.map((k) => k.id)).toEqual(['ava', 'leo'])
+    expect(contractGate({ role: 'parent', students: kids, waiting: new Set(['leo']) })).toEqual({ open: false, toSign: [kids[0]] })
   })
 
   it('makes a student wait for their own', () => {
-    expect(contractGate({ role: 'student', hasContract: true, students: [kids[0]], signed: new Set() }).open).toBe(false)
+    expect(contractGate({ role: 'student', students: [kids[0]], waiting: new Set(['leo']) }).open).toBe(false)
+    expect(contractGate({ role: 'student', students: [kids[0]], waiting: new Set() }).open).toBe(true)
   })
 
   it('never stops the staff, nor for students who left', () => {
-    expect(contractGate({ role: 'coach', hasContract: true, students: kids, signed: new Set() }).open).toBe(true)
-    expect(contractGate({ role: 'parent', hasContract: true, students: [s('old', 'Old One', 'finished')], signed: new Set() }).open).toBe(true)
+    expect(contractGate({ role: 'coach', students: kids, waiting: new Set(['ava']) }).open).toBe(true)
+    expect(contractGate({ role: 'parent', students: [s('old', 'Old One', 'finished')], waiting: new Set(['old']) }).open).toBe(true)
   })
 })
 
