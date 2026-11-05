@@ -11,7 +11,7 @@ import { useTheme } from '@/components/app/theme'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FamilyContractFact } from '@/features/contracts/FamilyContractFact'
-import { useCurrentContract, useSignedFor } from '@/features/contracts/family'
+import { useSignedFor, useWaitingFor } from '@/features/contracts/family'
 import { NoticeSwitches } from '@/features/notifications/NoticeSwitches'
 import { ProfileLayout, SectionTitle } from '@/features/profile/ProfileLayout'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -105,7 +105,7 @@ export function FamilyAccountSection() {
   const { email, methods } = useAuth()
   const family = useFamily()
   const { map: signed } = useSignedFor(family.ids)
-  const { template } = useCurrentContract()
+  const { map: waiting } = useWaitingFor(family.ids)
   const base = `/${family.who}/profile`
   const you: [string, React.ReactNode][] = [
     ['Name', family.personName || '—'],
@@ -154,7 +154,7 @@ export function FamilyAccountSection() {
             </p>
           </section>
         ) : (
-          family.kids.map((k) => <KidCard key={k.id} kid={k} family={family} contract={template || signed.has(k.id) ? <FamilyContractFact studentId={k.id} signed={signed.get(k.id)} /> : null} />)
+          family.kids.map((k) => <KidCard key={k.id} kid={k} family={family} contract={<FamilyContractFact studentId={k.id} signed={signed.get(k.id)} waiting={waiting.get(k.id)} />} />)
         )}
 
         <p className="px-1 text-sm text-muted-foreground">

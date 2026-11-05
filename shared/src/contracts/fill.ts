@@ -1,11 +1,12 @@
 import { SIGNER_RELATIONS, type SignerRelation } from './types'
-import { type ContractDocument, type FamilyPart, PDF_PRINTABLE, familyFields, signerField } from './document'
+import { type ContractDocument, type FamilyPart, PDF_PRINTABLE, academyChecks, dollarsText, familyFields, pricedChoice, replaceDollars, signerField } from './document'
 
 /**
- * What a family fills in on the contract (docs/DECISIONS.md §33), checked the same way on the phone, the website and
- * the server: the option they choose, the boxes they check, their initials, the fields (the student's name and birth
- * date, their own name, phone and email), then their signature. One contract per child, each signed on its own (the
- * manager, 2026-11-04: "the parent should sign both contracts for each child").
+ * What a family fills in on the contract (docs/DECISIONS.md §33 and §34), checked the same way on the phone, the
+ * website and the server: the option they choose, the boxes they check, their initials, the fields (the student's name
+ * and birth date, their own name, phone and email), then their signature. One contract per child, each signed on its
+ * own (the manager, 2026-11-04: "the parent should sign both contracts for each child"). The office sets the rest as
+ * it sends the contract (the preset): the option it suggests, and the discounts, which only the office checks.
  */
 
 /** By field ID: an option's ID (`choose`), the checked options' IDs (`check`), or the text (a date as YYYY-MM-DD). */
@@ -187,33 +188,161 @@ export function missingParts(doc: ContractDocument, errors: Record<string, strin
   return out
 }
 
-/** A value as the contract shows it: an option's name and price, the checked options, a date as MM/DD/YYYY. */
+// ------------------------------------------------------------------ what the office sets, and the price
+
+/**
+ * What the office sets as it sends a student's contract, checked: the option it suggests (by the choice's ID: the
+ * family may choose another, or '' for none) and the academy's boxes (by their IDs: the discounts, which the family
+ * can't change). Anything else isn't part of it.
+ */
+export function checkPreset(doc: ContractDocument, raw: unknown): { ok: true; value: ContractValues } | { ok: false; error: string } {
+  const input = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
+  const choice = pricedChoice(doc)
+  const boxes = academyChecks(doc)
+  const value: ContractValues = {}
+  for (const [key, v] of Object.entries(input)) {
+    if (choice && key === choice.id) {
+      if (v === '' || v === null) continue
+      if (typeof v !== 'string' || !choice.options.some((o) => o.id === v)) return { ok: false, error: 'Choose one of the contract’s options.' }
+      value[key] = v
+      continue
+    }
+    const box = boxes.find((b) => b.id === key)
+    if (!box || !Array.isArray(v)) return { ok: false, error: 'That isn’t part of the contract.' }
+    const ids = [...new Set(v)]
+    if (!ids.every((id) => typeof id === 'string' && box.options.some((o) => o.id === id))) return { ok: false, error: `Choose from the contract’s ${box.label.toLowerCase()}.` }
+    value[key] = box.options.map((o) => o.id).filter((id) => ids.includes(id))
+  }
+  return { ok: true, value }
+}
+
+/** What a signed contract holds: what the family filled in, with the office's boxes as the office checked them. */
+export function withPreset(doc: ContractDocument, values: ContractValues, preset: ContractValues): ContractValues {
+  const out: ContractValues = { ...values }
+  for (const b of academyChecks(doc)) out[b.id] = Array.isArray(preset[b.id]) ? preset[b.id] : []
+  return out
+}
+
+/** The values a family's form starts with, from what the office set: its suggestion chosen, its boxes checked. */
+export function presetValues(doc: ContractDocument, preset: ContractValues): ContractValues {
+  const choice = pricedChoice(doc)
+  const suggested = choice && typeof preset[choice.id] === 'string' ? { [choice.id]: preset[choice.id] } : {}
+  return withPreset(doc, suggested, preset)
+}
+
+/** What a family pays: the option chosen, its price, the discounts that apply to it, and the price after them. */
+export interface Tuition {
+  /** The choice's price label ("Monthly Tuition ($)"). */
+  label: string
+  optionId: string
+  /** The option's own price, as written ("$495 / Month"), and its dollars. */
+  price: string
+  base: number
+  /** The checked discounts that apply to this option (one may leave some options out). */
+  discounts: { id: string; text: string; amount: number }[]
+  /** The price after the discounts, never below nothing. */
+  net: number
+  /** The option's price with the dollars after the discounts ("$475 / Month"). */
+  shown: string
+}
+
+/** The price after the discounts the office checked, for the option chosen; null when nothing with a price is chosen. */
+export function tuitionOf(doc: ContractDocument, values: ContractValues): Tuition | null {
+  const choice = pricedChoice(doc)
+  const option = choice?.options.find((o) => o.id === values[choice.id])
+  if (!choice || !option || option.amount === null) return null
+  const discounts: Tuition['discounts'] = []
+  for (const b of doc.blocks) {
+    if (b.kind !== 'check') continue
+    const checked = Array.isArray(values[b.id]) ? (values[b.id] as string[]) : []
+    for (const o of b.options) if (o.amount !== null && checked.includes(o.id) && !o.except.includes(option.id)) discounts.push({ id: o.id, text: o.text, amount: o.amount })
+  }
+  const net = Math.max(0, option.amount - discounts.reduce((sum, d) => sum + d.amount, 0))
+  const shown = discounts.length ? replaceDollars(option.price, net) : option.price
+  return { label: choice.priceLabel, optionId: option.id, price: option.price, base: option.amount, discounts, net, shown }
+}
+
+/** "BEGINNER · FOUNDATION · 1 HR" → "BEGINNER" over "FOUNDATION · 1 HR": an option's name as a card shows it. */
+export function optionHeading(title: string): { name: string; sub: string } {
+  const [name, ...rest] = title.split(/\s+·\s+/)
+  return { name: name ?? title, sub: rest.join(' · ') }
+}
+
+/**
+ * Each option's price as a card shows it: its dollars after the discounts checked (each option's own: a discount may
+ * leave it out), what it was before them, and the rest of its words ("$475", "$495", "/ Month").
+ */
+export function optionPrices(doc: ContractDocument, values: ContractValues): Map<string, { now: string; was: string | null; per: string }> {
+  const out = new Map<string, { now: string; was: string | null; per: string }>()
+  const choice = pricedChoice(doc)
+  for (const o of choice?.options ?? []) {
+    if (o.amount === null) {
+      out.set(o.id, { now: o.price, was: null, per: '' })
+      continue
+    }
+    const t = tuitionOf(doc, { ...values, [choice!.id]: o.id })
+    const per = replaceDollars(o.price, 0).replace('$0', '').trim()
+    out.set(o.id, { now: dollarsText(t?.net ?? o.amount), was: t && t.net !== o.amount ? dollarsText(o.amount) : null, per })
+  }
+  return out
+}
+
+/** Words compared as names: lower case, letters and digits only ("Sharp Shooter" and "Sharpshooter" are one). */
+const nameKey = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+/**
+ * The program to suggest as the office sends a student's contract: the one their last contract chose (by its ID), or
+ * the one their level or program on their record names, by the program's name ("Beginner" → "BEGINNER · FOUNDATION")
+ * or by its details (a level the program lists: "Marksman" → the one with "2 hrs / week · Marksman"), the first that
+ * does; or none (''). The office changes it as it likes.
+ */
+export function suggestedOption(doc: ContractDocument, hints: readonly (string | null | undefined)[]): string {
+  const options = pricedChoice(doc)?.options ?? []
+  for (const hint of hints) {
+    const h = nameKey(hint ?? '')
+    if (!h) continue
+    const found =
+      options.find((o) => o.id === hint) ??
+      options.find((o) => nameKey(optionHeading(o.title).name) === h) ??
+      options.find((o) => nameKey(o.title).startsWith(h)) ??
+      options.find((o) => o.lines.some((l) => l.split(/[·/,]/).some((word) => nameKey(word) === h)))
+    if (found) return found.id
+  }
+  return ''
+}
+
+/** "$475 / Month ($495, less $20 in discounts)", or the price as it is when nothing comes off. */
+export function tuitionText(t: Tuition): string {
+  if (!t.discounts.length) return t.shown
+  return `${t.shown} (${dollarsText(t.base)}, less ${dollarsText(t.base - t.net)} in discount${t.discounts.length > 1 ? 's' : ''})`
+}
+
+/** A value as the contract shows it: an option's name, the checked options (the office's too), a date as MM/DD/YYYY. */
 export function shownValue(doc: ContractDocument, id: string, values: ContractValues): string {
   const v = values[id]
-  for (const part of familyFields(doc)) {
-    if (part.id !== id) continue
-    if (part.kind === 'choose') return part.block.options.find((o) => o.id === v)?.title ?? ''
-    if (part.kind === 'check') {
+  for (const b of doc.blocks) {
+    if (b.kind === 'choose' && b.id === id) return b.options.find((o) => o.id === v)?.title ?? ''
+    if (b.kind === 'check' && b.id === id) {
       const list = Array.isArray(v) ? v : []
-      return part.block.options.filter((o) => list.includes(o.id)).map((o) => o.text).join('; ')
+      return b.options.filter((o) => list.includes(o.id)).map((o) => o.text).join('; ')
     }
-    if (part.kind === 'field' && part.fill === 'date' && typeof v === 'string') return usDate(v)
-    return typeof v === 'string' ? v : ''
   }
+  for (const part of familyFields(doc)) if (part.id === id && part.kind === 'field' && part.fill === 'date' && typeof v === 'string') return usDate(v)
   return typeof v === 'string' ? v : ''
 }
 
 /**
- * What the office reads at a glance on a student's page (the PDF holds the rest): the option chosen and its price,
- * and what was checked (or "None").
+ * What the office reads at a glance on a student's page (the PDF holds the rest): the option chosen and its price
+ * after the discounts, and what was checked (or "None").
  */
 export function contractSummary(doc: ContractDocument, values: ContractValues): { label: string; value: string }[] {
   const out: { label: string; value: string }[] = []
+  const tuition = tuitionOf(doc, values)
   for (const b of doc.blocks) {
     if (b.kind === 'choose') {
       const o = b.options.find((x) => x.id === values[b.id])
       out.push({ label: b.label, value: o?.title ?? '—' })
-      if (b.priceLabel) out.push({ label: b.priceLabel, value: o?.price ?? '—' })
+      if (b.priceLabel) out.push({ label: b.priceLabel, value: tuition && b === pricedChoice(doc) ? tuitionText(tuition) : (o?.price ?? '—') })
     } else if (b.kind === 'check') out.push({ label: b.label, value: shownValue(doc, b.id, values) || 'None' })
   }
   return out

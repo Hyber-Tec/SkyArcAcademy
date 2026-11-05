@@ -155,7 +155,7 @@ export function IdentityColumn({
       {isAdmin ? <FamilyCard student={student} priv={priv} onEdit={() => onTab('info', '?edit=family')} /> : null}
 
       {/* The enrollment contract (F4): owners and admins send it from here and see where it stands. */}
-      {isAdmin ? <StudentContractCard student={student} priv={priv} /> : null}
+      {isAdmin ? <StudentContractCard student={student} /> : null}
     </aside>
   )
 }

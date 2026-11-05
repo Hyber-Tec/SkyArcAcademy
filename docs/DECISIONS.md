@@ -1081,3 +1081,65 @@ and their monthly tuition) and two answers; Goo decided the rest the same day.
   tuition (Goo).
 - **Staff can try it:** the preview in Settings on the website, and More → Enrollment contract on the phone for owners
   and admins. Both show the same form and make the same PDF, marked as a sample and filed nowhere.
+
+## 34. The office sends each contract (Goo and the manager, 2026-11-05)
+
+Goo and the manager read the e-version and approved the contract as it is. Goo then changed how it reaches families,
+and answered the questions sent with it.
+
+- **The contract is final, and nobody edits it in the app** (Goo: "the PDF we have is already good enough, it's
+  verified ... we're not going to have any edit mode"). Its text is set up once in the live academy and the demo one by
+  `scripts/contract.ts`, from the file kept on the owner's machine (`docs/internal/contract/`). A new contract, if one
+  ever comes, is set up the same way. The draft and Publish are gone from Settings.
+- **The office changes only the prices** ("only thing you need to worry about is adding the price"). Settings →
+  Enrollment contract lists each program with its price, and so does the phone's More → Enrollment contract. Saving
+  makes a new version. The contracts sent from then on show the new prices; one already sent keeps its prices until it's
+  sent again, and one already signed keeps its own.
+- **The office sends each family's contract; families don't open it on their own** ("admin first, then contract to
+  parents"). From the student's page (website or phone), or from the list of families in Settings, the office:
+  - picks the program it suggests (the family can still choose another: "they still should be able to choose others");
+  - checks the discounts (below);
+  - sees the price after them and who it goes to, with whether each parent has the app;
+  - sends it.
+
+  The parents in the app are told there and on their phones. A family is asked to sign only once their child's
+  contract is sent, and a student's own login waits for their parent, as before.
+- **Only the office checks the discounts** ("if anyone can just click that then they all can get discounted"). The
+  family sees them as the academy's and can't change them; one that's wrong is fixed by the office:
+  - **Withdraw** stops the contract, so it can't be signed any more;
+  - **Change and send again** withdraws it and sends a new one.
+
+  Each discount takes its dollars off the price chosen, and one can leave programs out: Bring Your Own Gun doesn't apply
+  to Precision. The contract's text marks this (`[[academy check: …]]`, with `| $20 | except: …`) without changing its
+  words.
+- **The price shown is after the discounts** (Goo: "the app should show the price after a discount"). The program
+  cards show it, with the price before them struck through. The contract and the PDF say "$545 / Month ($565, less $20
+  in discount)".
+- **Emailing the family is a switch, off at first** ("default it's going to be off, but if they turn on they also get
+  an email"). When it's on, the parents on the student's record get the link; the parents in the app are told there
+  either way. The office can email a contract still waiting again.
+- **A parent at the front desk scans a QR code** (Goo asked how walk-ins should sign). After sending, the office's
+  screen shows the contract's QR code:
+  - the parent scans it with their own phone's camera and signs there, with no account or app;
+  - "Sign on this device" opens it on the academy's tablet, computer or phone instead;
+  - no paper, no scanning.
+
+  Links no longer expire: one works until it's signed or withdrawn.
+- **New families:** the office adds the student with their parents' emails (Students → Add student, then the Info
+  tab), sends the contract, and shows the QR code. When a parent later makes an account in the app with that email,
+  the app finds their child by it (§31) and their signed contract is there.
+- **Afterwards, the parent is asked whether to download a copy** ("ask hey you want to download the contract or not").
+  The website downloads the PDF; the phone opens it to save (Save to Files, Mail…). Either way it stays where they can
+  find it:
+  - Profile → Account on the website;
+  - More → Enrollment contract on the phone;
+  - for a link, a few days on its page, then the app.
+- **The equipment section stays blank** for the academy, as the past contracts had it.
+- **The academy's signature fills itself in** ("it doesn't have to be his actual signature, we can have just digital
+  signature ... autofill"). Settings → Enrollment contract takes the signature, uploaded (an SVG or PNG from the
+  manager) or drawn there, with who signs and their title. It goes on the academy's line of every contract signed from
+  then on, with the same date. The record page says it was put on from the one on file, and who sent the contract.
+  Until there is one, the academy's line stays blank. Signing each contract by hand in the app can come later.
+- **The program cards are short** (Goo: "make each card better ... straightforward"). Each shows its name over the
+  rest of it ("BEGINNER" over "FOUNDATION · 1 HR") and the price after the discounts, with the office's suggestion
+  marked; the one chosen opens to its details.

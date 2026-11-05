@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type DocumentData, type Query, collection, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "@react-native-firebase/firestore";
-import type { ContractTemplate, SignedContract } from "@shared/contracts/types";
+import { ACADEMY_SIGNER_ID, type AcademySigner, type ContractLink, type ContractTemplate, type SignedContract } from "@shared/contracts/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { ProgressReportDoc } from "@shared/reports/types";
 import type { ClassRequest } from "@shared/schedule/requests";
@@ -121,6 +121,30 @@ export function useCurrentContract() {
   const { branchId } = useBranch();
   const state = useMerged<ContractTemplate>(`contract-template-${branchId}`, () => [{ kind: "query", ref: query(col(branchId, COL.contractTemplates), where("current", "==", true), limit(1)) }]);
   return { template: state.data[0] ?? null, loading: state.loading };
+}
+
+/**
+ * The contracts the office sent the students' family, still waiting for a parent's signature (docs/DECISIONS.md §34),
+ * one query each, as the rules allow.
+ */
+export function useWaitingContracts(ids: readonly string[]) {
+  const { branchId } = useBranch();
+  const list = stable(ids);
+  return useMerged<ContractLink>(list.length ? `waiting-contracts-${branchId}-${list.join(",")}` : null, () =>
+    list.map((id) => ({ kind: "query", ref: query(col(branchId, COL.contractLinks), where("studentId", "==", id), where("status", "==", "sent")) })),
+  );
+}
+
+/** One version of the enrollment contract (the one a contract was sent with: any member reads it). */
+export function useContractTemplate(templateId: string | null) {
+  const { branchId } = useBranch();
+  return useDoc<ContractTemplate>(templateId ? `${ROOT.branches}/${branchId}/${COL.contractTemplates}/${templateId}` : null);
+}
+
+/** The academy's signature on file, put on every contract a family signs. */
+export function useAcademySigner() {
+  const { branchId } = useBranch();
+  return useDoc<AcademySigner>(`${ROOT.branches}/${branchId}/${COL.contractSigner}/${ACADEMY_SIGNER_ID}`);
 }
 
 /** The students' signed enrollment contracts (`SignedContract`), one document each, as the rules allow. */

@@ -49,9 +49,11 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
     - **Sign in with Apple, once, before the next store update:** the steps in
       [`docs/publishing/apple/sign-in-with-apple.md`](publishing/apple/sign-in-with-apple.md) (Apple's developer site and
       the Firebase console).
-    - **The contract** (it came on 2026-11-04; `docs/DECISIONS.md` §33): every family signs again, one contract per
-      child. Send the manager the e-version (the sample PDF from Settings → Enrollment contract) to review. Once he
-      approves it, **Publish** it there, at the launch: from then on each parent signs it in the app before using it.
+    - **The contract** (approved 2026-11-05; `docs/DECISIONS.md` §33 and §34): once the sending flow is merged, Claude
+      Code sets it up in the live academy and the demo one (`scripts/contract.ts`, from `docs/internal/contract/`).
+      Then, in Settings → Enrollment contract: check the prices, and add the academy's signature (the manager's SVG,
+      or drawn there). From then on the office sends each family's contract from the student's page or the list there
+      (every family signs again, one contract per child).
     - **The domain** once he invites you to Squarespace (`DM1`–`DM3`).
 
 ## Product questions waiting for the owner

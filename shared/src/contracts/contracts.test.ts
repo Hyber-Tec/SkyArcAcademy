@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { contractEmail } from '../email/contract'
 import type { WithId } from '../types'
-import { contractFileName, isContractToken, linkState, signUrl, signatureFacts, signedOnText, studentContract } from './signing'
+import { contractFileName, isContractToken, signUrl, signatureFacts, signedOnText, studentContract } from './signing'
 import { contractFilePlace, contractFoldersToMake } from './filing'
 import type { ContractLink } from './types'
 
@@ -16,12 +16,11 @@ function link(id: string, extra: Partial<ContractLink> = {}): WithId<ContractLin
     studentId: 's1',
     studentName: 'Mia Larkin',
     templateId: 't1',
-    templateName: 'Enrollment contract.pdf',
-    token: 'x'.repeat(43),
+    templateName: 'Enrollment contract (version 1)',
+    preset: {},
     status: 'sent',
     createdAt: at(NOW - DAY),
     createdBy: by,
-    expiresAt: at(NOW + 29 * DAY),
     emailedTo: [],
     emailedAt: null,
     signedAt: null,
@@ -44,21 +43,15 @@ describe('signing links', () => {
     expect(contractFileName('Mia  Larkin', '2026-10-28')).toBe('Mia Larkin enrollment contract 2026-10-28.pdf')
   })
 
-  it('says whether a link waits, expired, was signed or canceled', () => {
-    expect(linkState(link('a'), NOW)).toBe('sent')
-    expect(linkState(link('a', { expiresAt: at(NOW - 1) }), NOW)).toBe('expired')
-    expect(linkState(link('a', { status: 'signed', expiresAt: at(NOW - 1) }), NOW)).toBe('signed')
-    expect(linkState(link('a', { status: 'canceled' }), NOW)).toBe('canceled')
-  })
-
-  it('shows a student’s newest link that wasn’t canceled, and the last one signed', () => {
-    expect(studentContract([], NOW)).toEqual({ state: 'none', link: null, lastSigned: null })
-    expect(studentContract([link('a', { status: 'canceled' })], NOW).state).toBe('none')
-    const signed = link('old', { status: 'signed', createdAt: at(NOW - 40 * DAY), expiresAt: at(NOW - 10 * DAY) })
+  it('shows the contract waiting, the last one signed, and one the office withdrew', () => {
+    expect(studentContract([])).toEqual({ waiting: null, lastSigned: null, withdrawn: null })
+    const signed = link('old', { status: 'signed', createdAt: at(NOW - 40 * DAY) })
     const fresh = link('new', { createdAt: at(NOW - DAY) })
-    const c = studentContract([signed, fresh, link('x', { status: 'canceled', createdAt: at(NOW) })], NOW)
-    expect([c.state, c.link?.id, c.lastSigned?.id]).toEqual(['sent', 'new', 'old'])
-    expect(studentContract([signed], NOW).state).toBe('signed')
+    const c = studentContract([signed, fresh, link('x', { status: 'canceled', createdAt: at(NOW - 2 * DAY) })])
+    expect([c.waiting?.id, c.lastSigned?.id, c.withdrawn]).toEqual(['new', 'old', null])
+    // Withdrawn, and nothing sent since: the office sees it was withdrawn.
+    const gone = studentContract([signed, link('x', { status: 'canceled', createdAt: at(NOW) })])
+    expect([gone.waiting, gone.lastSigned?.id, gone.withdrawn?.id]).toEqual([null, 'old', 'x'])
   })
 })
 
@@ -82,6 +75,8 @@ describe('the signature page', () => {
       how: { link: 'tok' },
       templateName: 'Rental Agreement (version 1)',
       templateSha256: 'ab'.repeat(32),
+      sentBy: { name: 'Office Person', atMs: NOW - DAY },
+      academySigner: { name: 'Sam Director', title: 'Director' },
     })
     expect(Object.fromEntries(facts.map((f) => [f.label, f.value]))).toEqual({
       Academy: 'Sky Arc Sports Academy',
@@ -91,8 +86,10 @@ describe('the signature page', () => {
       'IP address': '203.0.113.7',
       Browser: 'Mozilla/5.0 (iPhone)',
       'Signing link': 'tok',
+      'Sent by': 'Office Person, October 27, 2026',
       'Contract signed': 'Rental Agreement (version 1)',
       'Its text’s SHA-256': 'ab'.repeat(32),
+      'The academy’s signature': 'Sam Director, Director: the signature on file with the academy, put on every contract it sends',
     })
   })
 
@@ -107,13 +104,13 @@ describe('the signature page', () => {
 })
 
 describe('the signing email', () => {
-  it('names the student, leads to the page, says until when, and escapes names', () => {
-    const e = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc Sports Academy', studentFirstName: 'Mia', url: signUrl('tok'), expiresOn: 'November 27, 2026' })
+  it('names the student, leads to the page and the app, and escapes names', () => {
+    const e = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc Sports Academy', studentFirstName: 'Mia', url: signUrl('tok') })
     expect(e.subject).toBe('Please sign Mia’s enrollment contract')
     expect(e.text).toContain('Read and sign: https://skyarcacademy.web.app/sign/tok')
-    expect(e.text).toContain('The link works until November 27, 2026, for one signature.')
+    expect(e.text).toContain('It’s also waiting in Sky Arc Sports Academy’s app, if you sign in with this email.')
     expect(e.html).toContain('href="https://skyarcacademy.web.app/sign/tok"')
-    const odd = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc', studentFirstName: '<Mia>', url: signUrl('tok'), expiresOn: 'x' })
+    const odd = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc', studentFirstName: '<Mia>', url: signUrl('tok') })
     expect(odd.html).toContain('&lt;Mia&gt;')
     expect(odd.html).not.toContain('<Mia>')
   })

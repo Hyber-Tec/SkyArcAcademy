@@ -6,6 +6,10 @@ export const COMPANY_NAME = 'HyberTec LLC'
 /** The website: the only address in links and emails, until the academy's own domain points at it. */
 export const APP_DOMAIN = 'skyarcacademy.web.app'
 export const APP_URL = `https://${APP_DOMAIN}`
+
+/** The phone app in the stores (the owner's listings), for a family who signed with a link: their contract is in it too. */
+export const APP_STORE_URL = 'https://apps.apple.com/us/app/sky-arc-sports-academy/id6825479602'
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.skyarcacademy.app'
 /** HyberTec's Gmail sends for now; whether the academy gets an address of its own is an open question (docs/DECISIONS.md). */
 export const SENDER_EMAIL = 'hybertecofficial@gmail.com'
 

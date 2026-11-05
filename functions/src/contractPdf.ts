@@ -1,14 +1,15 @@
 import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, StandardFonts, degrees, rgb } from 'pdf-lib'
-import type { ContractBlock, ContractDocument, Run } from '@shared/contracts/document'
-import { type ContractValues, shownValue } from '@shared/contracts/fill'
+import { type ContractBlock, type ContractDocument, type Run, pricedChoice } from '@shared/contracts/document'
+import { type ContractValues, shownValue, tuitionOf, tuitionText } from '@shared/contracts/fill'
 import logoPng from '../../web/public/brand/skyarc-logo-email.png'
 
 /**
- * The signed enrollment contract as a PDF (docs/DECISIONS.md §33): the academy's contract laid out page by page, as
- * the family filled it in (the option chosen, the boxes checked, their initials, the student's and their own details,
- * their signature and the date), the academy's parts left for the academy, then a page recording the signing (who,
- * when, from where, which version: shared/src/contracts/signing.ts writes its words). Settings' preview builds the same
- * PDF marked as a sample. The words are the contract's own; only the layout is the app's.
+ * The signed enrollment contract as a PDF (docs/DECISIONS.md §33 and §34): the academy's contract laid out page by
+ * page, as the family filled it in (the option chosen and its price after the discounts the office checked, the boxes
+ * checked, their initials, the student's and their own details, their signature and the date), the academy's signature
+ * as on file, the academy's other parts left for the academy, then a page recording the signing (who, when, from where,
+ * which version: shared/src/contracts/signing.ts writes its words). Settings' preview builds the same PDF marked as a
+ * sample. The words are the contract's own; only the layout is the app's.
  */
 
 export interface ContractPdfInput {
@@ -21,6 +22,8 @@ export interface ContractPdfInput {
   relation: string
   /** Beside the signature: "11/04/2026", in the academy's time zone. */
   signedOn: string
+  /** The academy's signature on file (a PNG) and who signs for it, put on its line with the same date; none: left blank. */
+  academySigner: { name: string; title: string; image: Uint8Array | null } | null
   /** The page recording the signing; none on a sample. */
   record: { statement: string; facts: { label: string; value: string }[]; footnote: string } | null
   /** A preview (Settings, or More → Enrollment contract on the phone): every page says it's a sample. */
@@ -122,6 +125,8 @@ class Layout {
   y = TOP
   /** The drawn signature, embedded once for the contract and the record page. */
   signature: PDFImage | null = null
+  /** The academy's signature on file. */
+  academySignature: PDFImage | null = null
 
   constructor(
     readonly pdf: PDFDocument,
@@ -296,9 +301,11 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
         L.y -= h + 4
       }
       const picked = b.options.find((o) => o.id === chosen)
+      // The price after the discounts the office checked, with what it was before them.
+      const tuition = b === pricedChoice(input.doc) ? tuitionOf(input.doc, input.values) : null
       L.y -= 4
       valueRow(L, `${b.label}:`, picked?.title ?? '')
-      if (b.priceLabel) valueRow(L, `${b.priceLabel}:`, picked?.price ?? '')
+      if (b.priceLabel) valueRow(L, `${b.priceLabel}:`, tuition ? tuitionText(tuition) : (picked?.price ?? ''))
       L.y -= 8
       return
     }
@@ -307,6 +314,7 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
       L.gap(2)
       L.need(30)
       L.flow(wrapRuns(plainRuns(`${b.label}:`, true), 9.5, WIDTH, f), M, 9.5, 14)
+      if (b.by === 'academy') L.flow(wrapRuns(plainRuns('Checked by the academy.'), 7.5, WIDTH, f), M, 7.5, 11, MUTED)
       for (const o of b.options) {
         const lines = wrapRuns(plainRuns(o.text), 9.5, WIDTH - 22, f)
         L.need(lines.length * 12.6 + 2)
@@ -359,17 +367,27 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
         const scale = Math.min((sigW - 12) / png.width, 56 / png.height)
         L.page.drawImage(png, { x: M + 6, y: lineY + 2, width: png.width * scale, height: png.height * scale })
       }
-      if (family && input.signedOn) L.page.drawText(pdfText(input.signedOn), { x: M + sigW + 32, y: lineY + 5, size: 10.5, font: f.regular, color: INK })
+      const academy = !family && input.academySigner ? input.academySigner : null
+      if (academy && L.academySignature) {
+        // The academy's signature on file, fitted above its line as the family's is.
+        const png = L.academySignature
+        const scale = Math.min((sigW - 12) / png.width, 30 / png.height)
+        L.page.drawImage(png, { x: M + 6, y: lineY + 2, width: png.width * scale, height: png.height * scale })
+      }
+      if ((family || academy) && input.signedOn) L.page.drawText(pdfText(input.signedOn), { x: M + sigW + 32, y: lineY + 5, size: 10.5, font: f.regular, color: INK })
       const labels = wrapRuns(plainRuns(b.label), 8, sigW, f)
       labels.forEach((l, i) => L.text(l, M, lineY - 11 - i * 10, 8, MUTED))
       L.page.drawText('Date', { x: M + sigW + 26, y: lineY - 11, size: 8, font: f.regular, color: MUTED })
       let y = lineY - 11 - labels.length * 10
-      if (family && input.signerName) {
-        const who = wrapRuns(plainRuns(`Signed electronically by ${input.signerName} (${input.relation})`), 7.5, sigW, f)
-        for (const l of who) {
-          L.text(l, M, y - 1, 7.5, MUTED)
-          y -= 9.5
-        }
+      const by =
+        family && input.signerName
+          ? `Signed electronically by ${input.signerName} (${input.relation})`
+          : academy
+            ? `Signed for the academy by ${[academy.name, academy.title].filter(Boolean).join(', ')}`
+            : ''
+      for (const l of by ? wrapRuns(plainRuns(by), 7.5, sigW, f) : []) {
+        L.text(l, M, y - 1, 7.5, MUTED)
+        y -= 9.5
       }
       L.y = y - 14
       return
@@ -418,6 +436,7 @@ export async function buildContractPdf(input: ContractPdfInput): Promise<Uint8Ar
   const title = input.doc.title || 'Enrollment contract'
   const L = new Layout(pdf, f, logo, title)
   if (input.signature) L.signature = await pdf.embedPng(input.signature)
+  if (input.academySigner?.image) L.academySignature = await pdf.embedPng(input.academySigner.image)
   L.newPage()
   for (const b of input.doc.blocks) drawBlock(L, b, input)
   if (input.record) drawRecord(L, input.record)

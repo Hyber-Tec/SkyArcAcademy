@@ -3,18 +3,20 @@ import type { TimestampLike } from '../types'
 import type { ContractValues } from './fill'
 
 /**
- * The enrollment contract (docs/DECISIONS.md §23, F4 and F5, §31 and §33): the academy's own contract, written once in
- * Settings → Enrollment contract as text with its fields marked (shared/src/contracts/document.ts), and published. A
- * parent fills it in and signs it in the app or on the website, signed in, before using it, one contract per child; or
- * the office sends a link (from the student's page), which anyone signs on a phone with no account. The server builds
- * the signed PDF (the contract as filled in, the signature, then a page recording the signing) and files it in the
- * student's Contracts folder, which only owners and admins see. The published contract and each student's
- * `SignedContract` are the family's to read too; the rest is owners' and admins' only (firestore.rules).
+ * The enrollment contract (docs/DECISIONS.md §23, F4 and F5, §31, §33 and §34): the academy's own contract, as text
+ * with its fields marked (shared/src/contracts/document.ts), put in the database by scripts/contract.ts; the office
+ * changes only its prices (`setContractPrices`). The office sends it to a student's family (`sendContract`, from the
+ * student's page on the website or the phone): the program it suggests and the discounts, which only the office
+ * checks. A parent then fills it in and signs it, signed in to the app or the website, or with the contract's link (a
+ * QR code at the front desk, or an email), on any phone with no account. The server builds the signed PDF (the contract
+ * as filled in, the family's signature and the academy's, then a page recording the signing) and files it in the
+ * student's Contracts folder, which only owners and admins see. The contracts sent to a family, the versions and each
+ * student's `SignedContract` are the family's to read too; the rest is owners' and admins' only (firestore.rules).
  */
 
 /**
- * `branches/{b}/contractTemplates/{id}`: one published version of the academy's contract (the server publishes the
- * draft, `publishContract`). The newest is `current`; earlier ones stay, as each link and signature names its own.
+ * `branches/{b}/contractTemplates/{id}`: one version of the academy's contract (scripts/contract.ts adds one, and so
+ * does each change of prices). The newest is `current`; earlier ones stay, as each contract sent and signed names its own.
  */
 export interface ContractTemplate {
   /** Its title, from its text. */
@@ -32,21 +34,34 @@ export interface ContractTemplate {
   replacedBy?: DriveActor | null
 }
 
-/** `branches/{b}/contractTemplates/draft`: the contract as the office is writing it (owners and admins only). */
-export interface ContractDraft {
-  text: string
+/** "Enrollment Agreement (version 2)": a published contract, as links and signatures name it. */
+export const templateLabel = (t: Pick<ContractTemplate, 'title' | 'version'>): string => `${t.title || 'Enrollment contract'} (version ${t.version})`
+
+/** The longest contract text the app keeps (it's sent to every family's phone). */
+export const CONTRACT_TEXT_MAX = 200_000
+
+/** The highest price the office can give a program. */
+export const CONTRACT_PRICE_MAX = 100_000
+
+/**
+ * `branches/{b}/contractSigner/academy`: the academy's signature, which the server puts on every contract a family signs
+ * from then on (the owner, 2026-11-05: "autofill"): who signs for the academy and the signature, a PNG (an SVG the
+ * office uploads is drawn as one first). Owners and admins set it in Settings; the family sees it on the contract.
+ */
+export interface AcademySigner {
+  name: string
+  /** Their title ("Director"), or ''. */
+  title: string
+  /** A PNG data URL, dark ink on transparent. */
+  image: string
   updatedAt: TimestampLike | null
   updatedBy: DriveActor
 }
 
-/** The draft's document ID, beside the published versions. */
-export const CONTRACT_DRAFT_ID = 'draft'
+export const ACADEMY_SIGNER_ID = 'academy'
 
-/** "Enrollment Agreement (version 2)": a published contract, as links and signatures name it. */
-export const templateLabel = (t: Pick<ContractTemplate, 'title' | 'version'>): string => `${t.title || 'Enrollment contract'} (version ${t.version})`
-
-/** The longest contract text the office can keep (it's sent to every family's phone). */
-export const CONTRACT_TEXT_MAX = 200_000
+/** The signature image's longest data URL (about 300 KB). */
+export const ACADEMY_SIGNATURE_MAX_CHARS = 400_000
 
 export type ContractLinkStatus = 'sent' | 'signed' | 'canceled'
 
@@ -72,21 +87,22 @@ export interface ContractSigner {
 }
 
 /**
- * `branches/{b}/contractLinks/{id}`: a signing link for one student, made on the server (`sendContractLink`), its ID the
- * SHA-256 of its token. It works for `CONTRACT_LINK_DAYS`, for one signature; admins can cancel it while it waits.
+ * `branches/{b}/contractLinks/{id}`: a contract the office sent a student's family (`sendContract`), its ID the SHA-256
+ * of its link's token. It waits until a parent signs it (in the app, on the website or with the link, once) or the
+ * office withdraws it, as sending another for the student does. The family reads theirs; the token itself is in
+ * `contractLinks/{id}/private/token` (`ContractLinkToken`), owners' and admins' only.
  */
 export interface ContractLink {
   studentId: string
   studentName: string
-  /** The contract it was sent with (a newer upload doesn't change a link already sent). */
+  /** The version it was sent with: a later change of prices doesn't change a contract already sent. */
   templateId: string
   templateName: string
-  /** The secret in the address (`/sign/{token}`): owners and admins copy it again from here. */
-  token: string
+  /** What the office set (shared/src/contracts/fill.ts, `checkPreset`): the option it suggests, and the discounts. */
+  preset: ContractValues
   status: ContractLinkStatus
   createdAt: TimestampLike | null
   createdBy: DriveActor
-  expiresAt: TimestampLike
   /** The addresses it was emailed to, and when last. */
   emailedTo: string[]
   emailedAt: TimestampLike | null
@@ -129,8 +145,13 @@ export interface SignedContract {
   note: string
 }
 
-/** How long a signing link works. */
-export const CONTRACT_LINK_DAYS = 30
+/** `contractLinks/{id}/private/token`: the secret in a contract's link (`/sign/{token}`), for the QR code and to copy again. */
+export interface ContractLinkToken {
+  token: string
+}
+
+export const CONTRACT_TOKEN_DOC = 'token'
+
 /** How long after signing the link still downloads the signed copy. */
 export const SIGNED_COPY_DAYS = 7
 
@@ -157,16 +178,39 @@ export interface ContractPrefillResult {
  * The functions (functions/src/contracts.ts), as the phone app and the website call them. A field problem comes back
  * as an `invalid-argument` error whose details are `{ errors }`, keyed as `checkContractSigning`'s are.
  *
- * - `signContractSignedIn` (a parent signed in, one child at a time): `{ branchId, studentId, where, device? }` and a
- *   `ContractSignRequest` → `ContractSignedResult`.
+ * - `sendContract` (owners and admins): `ContractSendRequest` → `ContractSendResult`.
+ * - `emailContract` (owners and admins): `{ branchId, linkId }` → `{ emailed, emailedTo }`: a contract still waiting,
+ *   emailed to the family again.
+ * - `setContractPrices` (owners and admins): `{ branchId, prices }` (dollars by option ID) → `{ version }`.
+ * - `signContractSignedIn` (a parent signed in, one child at a time): `{ branchId, studentId, linkId, where, device? }`
+ *   and a `ContractSignRequest` → `ContractSignedResult`.
  * - `contractPrefill` (a parent signed in): `{ branchId }` → `ContractPrefillResult`.
  * - `getContractForSigning` (anyone with a link): `{ token, copy? }` → its state; when it's ready to sign, the contract
- *   (`{ title, text, version }`) and the student's name.
+ *   (`{ title, text, version }`), what the office set, the academy's signature and the student's name.
  * - `signContract` (anyone with a link): `{ token }` and a `ContractSignRequest` → `{ ok, fileName, copyUntil }`.
- * - `previewContract` (owners and admins): `{ branchId, use, text?, studentName? }` and any of a `ContractSignRequest`
- *   → `ContractPdf`, a sample marked so (nothing is filed): the draft, the published one, or `text` as typed.
- * - `publishContract` (owners and admins): `{ branchId }` → `{ id, version }`: the draft becomes the current contract.
+ * - `previewContract` (owners and admins): `{ branchId, studentName?, preset? }` and any of a `ContractSignRequest` →
+ *   `ContractPdf`, a sample of the current contract marked so (nothing is filed).
  */
+export interface ContractSendRequest {
+  branchId: string
+  studentId: string
+  preset: ContractValues
+  /** Email the family the link too (the office's switch, off at first). */
+  email: boolean
+}
+
+export interface ContractSendResult {
+  linkId: string
+  /** The link to sign it (`/sign/{token}`), for the QR code. */
+  url: string
+  /** The parents told in the app (by name). */
+  told: string[]
+  /** Whether the email went: sent, not asked, the sending isn't set up, it failed, the demo academy (it never emails), test addresses only, or no address. */
+  emailed: 'sent' | 'off' | 'not_configured' | 'failed' | 'demo' | 'test_address' | 'no_address'
+  /** The addresses it went to. */
+  emailedTo: string[]
+}
+
 export interface ContractSignedResult {
   /** False when the other parent signed it meanwhile: nothing more was filed. */
   signed: boolean
@@ -178,6 +222,3 @@ export interface ContractPdf {
   name: string
   data: string
 }
-
-/** Which contract a preview shows: the draft being written, or the one families sign now. */
-export type ContractPreviewUse = 'draft' | 'current'

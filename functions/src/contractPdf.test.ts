@@ -12,9 +12,9 @@ The Parent enrolls the Student in the level selected below.
 [[choose: Selected Level | Monthly Fee ($)]]
 - STARTER · FUN | $100 / Month | Basics and safety.
 - TEAM | $200 / Month | Matches.
-[[check: Discount(s) Applied]]
-- Siblings: $10 off
-- Own rifle: $5 off
+[[academy check: Discount(s) Applied]]
+- Siblings: $10 off | $10
+- Own rifle: $5 off | $5
 ## 2. WAIVER
 ${'The Parent waives claims arising from the program, as long as the law allows, and agrees to the club’s rules. '.repeat(30)}
 [[initials: Parent Initials]]
@@ -65,6 +65,7 @@ const signed = {
   signerName: 'Jane Larkin',
   relation: 'parent',
   signedOn: '10/28/2026',
+  academySigner: { name: 'Sam Director', title: 'Director', image: PNG },
   record: {
     statement: 'Jane Larkin read this enrollment contract for Mia Larkin with Maple Range Club, filled it in, typed their name, checked “I agree to sign this contract electronically” and drew the signature on it.',
     facts: [
@@ -84,7 +85,25 @@ describe('the signed contract', () => {
     const pages = await pagesText(await buildContractPdf(signed))
     expect(pages.length).toBeGreaterThanOrEqual(3)
     const all = pages.join(' ')
-    for (const words of ['MAPLE RANGE ENROLLMENT AGREEMENT', '1. PROGRAM', 'Selected Level: TEAM', 'Monthly Fee ($): $200 / Month', 'Discount(s) Applied:', 'Parent Initials: JL', 'Student Name: Mia Larkin', 'Date of Birth: 03/09/2015', 'Name: Jane Larkin', 'Parent Signature', '10/28/2026', 'Signed electronically by Jane Larkin (parent)', 'Club Representative', 'Filled in by the academy.']) {
+    for (const words of [
+      'MAPLE RANGE ENROLLMENT AGREEMENT',
+      '1. PROGRAM',
+      'Selected Level: TEAM',
+      // The price after the discount the office checked.
+      'Monthly Fee ($): $190 / Month ($200, less $10 in discount)',
+      'Discount(s) Applied:',
+      'Checked by the academy.',
+      'Parent Initials: JL',
+      'Student Name: Mia Larkin',
+      'Date of Birth: 03/09/2015',
+      'Name: Jane Larkin',
+      'Parent Signature',
+      '10/28/2026',
+      'Signed electronically by Jane Larkin (parent)',
+      'Club Representative',
+      'Signed for the academy by Sam Director, Director',
+      'Filled in by the academy.',
+    ]) {
       expect(all).toContain(words)
     }
     // Every page has its number and the contract's footer; the last one records the signing.
@@ -101,6 +120,12 @@ describe('the signed contract', () => {
     const pages = await pagesText(await buildContractPdf({ ...signed, values: {}, signature: null, signerName: '', record: null, sample: true }))
     pages.forEach((p) => expect(p).toContain('Sample: not signed, and not filed.'))
     expect(pages.join(' ')).not.toContain('Signature record')
+  })
+
+  it('leaves the academy’s line blank until it has a signature on file', async () => {
+    const all = (await pagesText(await buildContractPdf({ ...signed, academySigner: null }))).join(' ')
+    expect(all).toContain('Club Representative')
+    expect(all).not.toContain('Signed for the academy')
   })
 
   it('prints what its font has', () => {

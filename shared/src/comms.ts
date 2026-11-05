@@ -141,6 +141,8 @@ export type NotificationType =
   | 'request_asked_again'
   // A new score for a student, to their family.
   | 'score_added'
+  // The enrollment contract (docs/DECISIONS.md §34): sent to a student's parents, signed (to the office).
+  | 'contract_sent'
   | 'contract_signed'
   // Sign-ups (docs/DECISIONS.md §31), to the office: someone linked by the email on file, or asking to join.
   | 'family_linked'
@@ -189,6 +191,7 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   request_accepted: { label: 'Suggestion Accepted', color: '#16A34A' },
   request_asked_again: { label: 'Asked Again', color: '#D97706' },
   score_added: { label: 'New Score', color: '#2563EB' },
+  contract_sent: { label: 'Contract to Sign', color: '#D97706' },
   contract_signed: { label: 'Contract Signed', color: '#16A34A' },
   family_linked: { label: 'Signed Up', color: '#16A34A' },
   signup_request: { label: 'Asks to Join', color: '#D97706' },

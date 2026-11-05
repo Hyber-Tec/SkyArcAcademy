@@ -1,14 +1,32 @@
 import { describe, expect, it } from 'vitest'
 import { parseContract } from './document'
-import { carriedValues, checkContractSigning, contractSummary, missingParts, prefillValues, readDate, shownValue, typingDate, usDate } from './fill'
+import {
+  carriedValues,
+  checkContractSigning,
+  checkPreset,
+  contractSummary,
+  missingParts,
+  prefillValues,
+  presetValues,
+  readDate,
+  shownValue,
+  optionHeading,
+  optionPrices,
+  suggestedOption,
+  tuitionOf,
+  tuitionText,
+  typingDate,
+  usDate,
+  withPreset,
+} from './fill'
 
 const { doc } = parseContract(`# AGREEMENT
 [[choose: Selected Level | Monthly Fee ($)]]
 - STARTER | $100 / Month
 - TEAM | $200 / Month
-[[check: Discount(s) Applied]]
-- Siblings: $10 off
-- Own rifle: $5 off
+[[academy check: Discount(s) Applied]]
+- Siblings: $10 off | $10
+- Own rifle: $5 off | $5 | except: STARTER
 [[initials: Parent Initials]]
 [[family: STUDENT]]
 - Student Name = student
@@ -36,9 +54,9 @@ describe('checkContractSigning', () => {
     expect(checkContractSigning(doc, { values: filled, relation: 'parent', signature: PNG, agree: true })).toEqual({
       ok: true,
       value: {
+        // The discounts are the office's: what the family sends for them is dropped.
         values: {
           'selected-level': 'team',
-          'discount-s-applied': ['own-rifle-5-off'],
           'parent-initials': 'JL',
           'student-name': 'Mia Larkin',
           'date-of-birth': '2015-03-09',
@@ -118,10 +136,60 @@ describe('the form’s values', () => {
     expect(shownValue(doc, 'date-of-birth', values)).toBe('03/09/2015')
     expect(contractSummary(doc, values)).toEqual([
       { label: 'Selected Level', value: 'TEAM' },
-      { label: 'Monthly Fee ($)', value: '$200 / Month' },
+      { label: 'Monthly Fee ($)', value: '$190 / Month ($200, less $10 in discount)' },
       { label: 'Discount(s) Applied', value: 'Siblings: $10 off' },
     ])
     expect(contractSummary(doc, {})[2]).toEqual({ label: 'Discount(s) Applied', value: 'None' })
+  })
+})
+
+describe('what the office sets, and the price', () => {
+  it('checks the office’s suggestion and discounts', () => {
+    expect(checkPreset(doc, { 'selected-level': 'team', 'discount-s-applied': ['own-rifle-5-off', 'siblings-10-off', 'siblings-10-off'] })).toEqual({
+      ok: true,
+      value: { 'selected-level': 'team', 'discount-s-applied': ['siblings-10-off', 'own-rifle-5-off'] },
+    })
+    expect(checkPreset(doc, { 'selected-level': '' })).toEqual({ ok: true, value: {} })
+    expect(checkPreset(doc, { 'selected-level': 'gold' })).toEqual({ ok: false, error: 'Choose one of the contract’s options.' })
+    expect(checkPreset(doc, { 'discount-s-applied': ['free'] })).toEqual({ ok: false, error: 'Choose from the contract’s discount(s) applied.' })
+    expect(checkPreset(doc, { 'parent-initials': 'JL' })).toEqual({ ok: false, error: 'That isn’t part of the contract.' })
+  })
+
+  it('starts the family’s form with the office’s choices, and keeps the office’s discounts whatever the family sends', () => {
+    const preset = { 'selected-level': 'starter', 'discount-s-applied': ['siblings-10-off'] }
+    expect(presetValues(doc, preset)).toEqual(preset)
+    expect(presetValues(doc, {})).toEqual({ 'discount-s-applied': [] })
+    expect(withPreset(doc, { 'selected-level': 'team', 'discount-s-applied': ['own-rifle-5-off', 'siblings-10-off'] }, preset)).toEqual({ 'selected-level': 'team', 'discount-s-applied': ['siblings-10-off'] })
+  })
+
+  it('takes the discounts off the price chosen, except where one doesn’t apply', () => {
+    const both = { 'discount-s-applied': ['siblings-10-off', 'own-rifle-5-off'] }
+    expect(tuitionOf(doc, { 'selected-level': 'team', ...both })).toMatchObject({ base: 200, net: 185, shown: '$185 / Month', discounts: [{ amount: 10 }, { amount: 5 }] })
+    // The rifle discount leaves STARTER out.
+    const starter = tuitionOf(doc, { 'selected-level': 'starter', ...both })
+    expect(starter && [starter.net, starter.shown, tuitionText(starter)]).toEqual([90, '$90 / Month', '$90 / Month ($100, less $10 in discount)'])
+    const plain = tuitionOf(doc, { 'selected-level': 'team' })
+    expect(plain && [plain.net, tuitionText(plain)]).toEqual([200, '$200 / Month'])
+    expect(tuitionOf(doc, {})).toBeNull()
+  })
+
+  it('shows each option as a card: its name over the rest, its price after its own discounts', () => {
+    expect(optionHeading('BEGINNER · FOUNDATION · 1 HR')).toEqual({ name: 'BEGINNER', sub: 'FOUNDATION · 1 HR' })
+    expect(optionHeading('TEAM')).toEqual({ name: 'TEAM', sub: '' })
+    const prices = optionPrices(doc, { 'discount-s-applied': ['siblings-10-off', 'own-rifle-5-off'] })
+    expect(prices.get('team')).toEqual({ now: '$185', was: '$200', per: '/ Month' })
+    expect(prices.get('starter')).toEqual({ now: '$90', was: '$100', per: '/ Month' })
+    expect(optionPrices(doc, {}).get('team')).toEqual({ now: '$200', was: null, per: '/ Month' })
+  })
+
+  it('suggests the last contract’s program, or the one the student’s level names, by its name or its details', () => {
+    expect(suggestedOption(doc, ['team', 'Starter'])).toBe('team')
+    expect(suggestedOption(doc, [null, 'starter'])).toBe('starter')
+    expect(suggestedOption(doc, ['', 'Gold'])).toBe('')
+    const ranked = parseContract('# T\n[[choose: Level | Fee]]\n- NEW · FUN | $10 | 1 hr / week · New Entry\n- MIDDLE · SKILLS | $20 | 2 hrs / week · Sharpshooter / Expert\n- MIDDLE · SKILLS · 1 HR | $15 | 1 hr / week · Sharpshooter\n[[sign: S]]').doc
+    expect(suggestedOption(ranked, ['Sharp Shooter'])).toBe('middle-skills')
+    expect(suggestedOption(ranked, ['Expert+'])).toBe('middle-skills')
+    expect(suggestedOption(ranked, ['New'])).toBe('new-fun')
   })
 })
 

@@ -4,11 +4,11 @@ import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestE
 import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
-// The enrollment contract (docs/DECISIONS.md §23, F4, §31 and §33): owners and admins write the draft; the server
-// publishes each version, and members read the current one (a parent signs it before using the app); the signing links
-// are owners' and admins' only, made and signed on the server, and admins cancel one still waiting. Each student's
-// signed contract is the family's to read; the server writes it, and owners and admins mark one signed on paper or
-// remove it.
+// The enrollment contract (docs/DECISIONS.md §23, F4, §31, §33 and §34): the server writes each version, and members
+// read them; the contracts the office sends are made and signed on the server, the family reads theirs, owners and
+// admins every one and withdraw one still waiting, and only they read a link's token. The academy's signature is
+// owners' and admins' to set and every member's to read. Each student's signed contract is the family's to read; the
+// server writes it, and owners and admins mark one signed on paper or remove it.
 
 let env: RulesTestEnvironment
 const A = 'alpha-academy'
@@ -43,18 +43,18 @@ const template = (email: string, extra: Record<string, unknown> = {}) => ({
   ...extra,
 })
 
-const draft = (email: string, extra: Record<string, unknown> = {}) => ({ text: '# ENROLLMENT AGREEMENT\n[[sign: Parent Signature]]', updatedAt: serverTimestamp(), updatedBy: actor(email), ...extra })
+const PNG = `data:image/png;base64,${'iVBORw0KGgo'.padEnd(200, 'A')}`
+const signer = (email: string, extra: Record<string, unknown> = {}) => ({ name: 'Sam Director', title: 'Director', image: PNG, updatedAt: serverTimestamp(), updatedBy: actor(email), ...extra })
 
 const link = (extra: Record<string, unknown> = {}) => ({
   studentId: 's1',
   studentName: 'Student One',
   templateId: TEMPLATE_ID,
   templateName: 'ENROLLMENT AGREEMENT (version 2)',
-  token: 't'.repeat(43),
+  preset: { 'selected-level': 'team', discounts: ['siblings'] },
   status: 'sent',
   createdAt: Timestamp.now(),
   createdBy: actor(ADMIN),
-  expiresAt: Timestamp.fromMillis(Date.now() + 30 * 86_400_000),
   emailedTo: [],
   emailedAt: null,
   signedAt: null,
@@ -132,67 +132,91 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/students/s2`), { name: 'Student Two', status: 'enrolled' })
     await setDoc(doc(d, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), template(ADMIN))
     await setDoc(doc(d, `branches/${A}/contractTemplates/OLD4567890abcdefghij`), template(ADMIN, { version: 1, current: false }))
-    await setDoc(doc(d, `branches/${A}/contractTemplates/draft`), { ...draft(ADMIN), updatedAt: Timestamp.now() })
     await setDoc(doc(d, `branches/${A}/signedContracts/s2`), signedByServer('s2'))
     await setDoc(doc(d, `branches/${A}/contractLinks/waiting`), link())
+    await setDoc(doc(d, `branches/${A}/contractLinks/waiting/private/token`), { token: 't'.repeat(43) })
     await setDoc(doc(d, `branches/${A}/contractLinks/done`), link({ status: 'signed', signedAt: Timestamp.now() }))
+    await setDoc(doc(d, `branches/${A}/contractLinks/other`), link({ studentId: 's2', studentName: 'Student Two' }))
   })
 })
 
 describe('the contract', () => {
-  it('owners and admins read every version and the draft; members read the current one, nobody else', async () => {
+  it('every member reads each version, nobody else', async () => {
     await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
-    await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
-    await assertSucceeds(getDoc(doc(db('owner@a.test'), `branches/${A}/contractTemplates/draft`)))
     await assertSucceeds(getDocs(query(collection(db('owner@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
     await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractTemplates`), where('current', '==', true))))
+    // A contract sent before the prices changed names its own version.
+    await assertSucceeds(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
     await assertSucceeds(getDoc(doc(db('kid@a.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
-    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/OLD4567890abcdefghij`)))
-    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractTemplates/draft`)))
-    await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/contractTemplates/draft`)))
-    await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/contractTemplates`)))
     await assertFails(getDoc(doc(db('stranger@b.test'), `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
   })
 
-  it('takes the draft from owners and admins, as themselves, and nothing else', async () => {
-    const a = db(ADMIN)
-    const at = `branches/${A}/contractTemplates/draft`
-    await assertSucceeds(setDoc(doc(a, at), draft(ADMIN)))
-    await assertSucceeds(setDoc(doc(db('owner@a.test'), at), draft('owner@a.test', { text: '' })))
-    await assertFails(setDoc(doc(a, at), draft('someone@a.test')))
-    await assertFails(setDoc(doc(a, at), draft(ADMIN, { current: true })))
-    await assertFails(setDoc(doc(a, at), draft(ADMIN, { text: 'x'.repeat(200_001) })))
-    await assertFails(setDoc(doc(db('coach@a.test'), at), draft('coach@a.test')))
-    await assertFails(setDoc(doc(db('parent@a.test'), at), draft('parent@a.test')))
-    await assertFails(deleteDoc(doc(a, at)))
-  })
-
-  it('is published on the server only: nobody writes a version from the app', async () => {
+  it('is written on the server only: nobody writes a version from the app', async () => {
     const a = db(ADMIN)
     await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/U1234567890abcdefghi`), template(ADMIN)))
+    await assertFails(setDoc(doc(a, `branches/${A}/contractTemplates/draft`), { text: '# T', updatedAt: serverTimestamp(), updatedBy: actor(ADMIN) }))
     await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { current: false, replacedAt: serverTimestamp(), replacedBy: actor(ADMIN) }))
     await assertFails(updateDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`), { text: 'Other words' }))
     await assertFails(deleteDoc(doc(a, `branches/${A}/contractTemplates/${TEMPLATE_ID}`)))
   })
 })
 
-describe('signing links', () => {
-  it('only owners and admins read them', async () => {
+describe('contracts sent', () => {
+  it('the family reads their own, owners and admins every one, coaches none', async () => {
     await assertSucceeds(getDocs(query(collection(db(ADMIN), `branches/${A}/contractLinks`), where('studentId', '==', 's1'))))
+    await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractLinks`), where('studentId', '==', 's1'))))
+    await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractLinks`), where('studentId', '==', 's1'), where('status', '==', 'sent'))))
+    await assertSucceeds(getDoc(doc(db('kid@a.test'), `branches/${A}/contractLinks/waiting`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractLinks/other`)))
+    await assertFails(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractLinks`), where('studentId', '==', 's2'))))
+    await assertFails(getDocs(collection(db('parent@a.test'), `branches/${A}/contractLinks`)))
     await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/contractLinks/waiting`)))
-    await assertFails(getDocs(query(collection(db('parent@a.test'), `branches/${A}/contractLinks`), where('studentId', '==', 's1'))))
   })
 
-  it('are made on the server; owners and admins cancel one still waiting, as themselves, and nothing else', async () => {
+  it('keeps the link’s token for owners and admins: the family never reads it', async () => {
+    await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractLinks/waiting/private/token`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractLinks/waiting/private/token`)))
+    await assertFails(getDoc(doc(db('kid@a.test'), `branches/${A}/contractLinks/waiting/private/token`)))
+    await assertFails(getDoc(doc(db('coach@a.test'), `branches/${A}/contractLinks/waiting/private/token`)))
+    await assertFails(setDoc(doc(db(ADMIN), `branches/${A}/contractLinks/waiting/private/token`), { token: 'x'.repeat(43) }))
+  })
+
+  it('are made on the server; owners and admins withdraw one still waiting, as themselves, and nothing else', async () => {
     const a = db(ADMIN)
     await assertFails(setDoc(doc(a, `branches/${A}/contractLinks/new`), link()))
-    await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), { ...cancel(ADMIN), token: 'x'.repeat(43) }))
+    await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), { ...cancel(ADMIN), preset: {} }))
     await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), { ...cancel('someone@a.test') }))
     await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), { status: 'signed' }))
     await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/contractLinks/waiting`), cancel('coach@a.test')))
+    await assertFails(updateDoc(doc(db('parent@a.test'), `branches/${A}/contractLinks/waiting`), cancel('parent@a.test')))
     await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/done`), cancel(ADMIN)))
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), cancel(ADMIN)))
     await assertFails(deleteDoc(doc(a, `branches/${A}/contractLinks/done`)))
+  })
+})
+
+describe('the academy’s signature', () => {
+  const at = `branches/${A}/contractSigner/academy`
+
+  it('owners and admins set it, as themselves; every member reads it', async () => {
+    await assertSucceeds(setDoc(doc(db(ADMIN), at), signer(ADMIN)))
+    await assertSucceeds(setDoc(doc(db('owner@a.test'), at), signer('owner@a.test', { title: '' })))
+    await assertSucceeds(getDoc(doc(db('parent@a.test'), at)))
+    await assertSucceeds(getDoc(doc(db('coach@a.test'), at)))
+    await assertFails(getDoc(doc(db('stranger@b.test'), at)))
+    await assertSucceeds(deleteDoc(doc(db(ADMIN), at)))
+  })
+
+  it('takes a name and a PNG only, from nobody else', async () => {
+    const a = db(ADMIN)
+    await assertFails(setDoc(doc(a, at), signer('someone@a.test')))
+    await assertFails(setDoc(doc(a, at), signer(ADMIN, { name: '' })))
+    await assertFails(setDoc(doc(a, at), signer(ADMIN, { image: 'data:image/svg+xml;base64,PHN2Zz4=' })))
+    await assertFails(setDoc(doc(a, at), signer(ADMIN, { image: `data:image/png;base64,${'A'.repeat(400_001)}` })))
+    await assertFails(setDoc(doc(a, at), signer(ADMIN, { extra: true })))
+    await assertFails(setDoc(doc(a, `branches/${A}/contractSigner/other`), signer(ADMIN)))
+    await assertFails(setDoc(doc(db('coach@a.test'), at), signer('coach@a.test')))
+    await assertFails(setDoc(doc(db('parent@a.test'), at), signer('parent@a.test')))
   })
 })
 
