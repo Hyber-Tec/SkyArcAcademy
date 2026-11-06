@@ -6,8 +6,9 @@ import { useLangChoice } from "@/lib/lang";
 import { space } from "@/theme";
 
 /**
- * English · 한국어: the screens' language, each name in its own language (docs/DECISIONS.md §36). On the sign-in
- * screen and the contracts to sign before the app opens; a parent also has More → Language. Remembered on this phone.
+ * English · 한국어: the screens' language, each name in its own language (docs/DECISIONS.md §36). At the top of the
+ * sign-in screen, and on the contracts to sign before the app opens; a parent also has More → Language. Remembered on
+ * this phone.
  */
 export function LangSwitch() {
   const { lang, setLang } = useLangChoice();
