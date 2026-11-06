@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import { T } from "@/components/Text";
 import { useLang, useT } from "@/lib/lang";
+import { keepWords, lineBreakProps } from "@/lib/lineBreaks";
 import { openUrl, reachable } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import { type Colors, radius, space, type, useColors } from "@/theme";
@@ -55,13 +56,13 @@ function Blocks({ blocks, depth, muted, onOpenPicture }: { blocks: Block[]; dept
     switch (block.kind) {
       case "paragraph":
         return (
-          <Text key={i} style={[styles.body, text]}>
+          <Text key={i} {...lineBreakProps()} style={[styles.body, text]}>
             {inlines(block.content, colors, lang)}
           </Text>
         );
       case "heading":
         return (
-          <Text key={i} accessibilityRole="header" style={[HEADINGS[block.level], text, i > 0 && styles.headingGap]}>
+          <Text key={i} accessibilityRole="header" {...lineBreakProps()} style={[HEADINGS[block.level], text, i > 0 && styles.headingGap]}>
             {inlines(block.content, colors, lang)}
           </Text>
         );
@@ -114,7 +115,7 @@ function Blocks({ blocks, depth, muted, onOpenPicture }: { blocks: Block[]; dept
 function inlines(content: Inline[], colors: Colors, lang: Lang): ReactNode[] {
   return content.map((piece, i) => {
     if (piece.kind === "break") return "\n";
-    if (!Object.keys(piece.marks).length) return piece.text;
+    if (!Object.keys(piece.marks).length) return keepWords(piece.text);
     const href = piece.marks.href;
     return (
       <Text
@@ -124,7 +125,7 @@ function inlines(content: Inline[], colors: Colors, lang: Lang): ReactNode[] {
         accessibilityRole={href ? "link" : undefined}
         accessibilityHint={href ? (/^https?:/i.test(href) ? (lang === "ko" ? "페이지를 열어요" : "Opens the page") : undefined) : undefined}
       >
-        {piece.text}
+        {keepWords(piece.text)}
       </Text>
     );
   });

@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { keepWordsIn, lineBreakProps } from "@/lib/lineBreaks";
 import { radius, useColors, useIsDark } from "@/theme";
 
 export type ButtonVariant = "default" | "outline" | "secondary" | "ghost" | "destructive" | "link";
@@ -79,13 +80,13 @@ export function Button({
       {children !== undefined && children !== null && (
         <Text
           numberOfLines={wrap ? undefined : 1}
-          lineBreakStrategyIOS="hangul-word"
+          {...lineBreakProps(wrap ? undefined : 1)}
           style={[
             { color: fg, fontSize: size === "sm" ? 14 : 16, fontWeight: variant === "link" ? "500" : "600", textDecorationLine: variant === "link" ? "underline" : "none" },
             wrap && styles.wrapLabel,
           ]}
         >
-          {children}
+          {keepWordsIn(children)}
         </Text>
       )}
     </Pressable>

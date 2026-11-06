@@ -3,6 +3,7 @@ import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { keepWords, lineBreakProps } from "@/lib/lineBreaks";
 import { toast, type Toast } from "@/lib/toast";
 import { radius, space, useColors } from "@/theme";
 
@@ -73,8 +74,8 @@ function ToastCard({ item }: { item: Toast }) {
       >
         <Icon size={20} color={tint} style={styles.icon} />
         <View style={styles.body}>
-          <Text lineBreakStrategyIOS="hangul-word" style={[styles.title, { color: colors.foreground }]}>{item.title}</Text>
-          {item.description ? <Text lineBreakStrategyIOS="hangul-word" style={[styles.description, { color: colors.mutedForeground }]}>{item.description}</Text> : null}
+          <Text {...lineBreakProps()} style={[styles.title, { color: colors.foreground }]}>{keepWords(item.title)}</Text>
+          {item.description ? <Text {...lineBreakProps()} style={[styles.description, { color: colors.mutedForeground }]}>{keepWords(item.description)}</Text> : null}
         </View>
         {item.action && (
           <Pressable

@@ -9,7 +9,8 @@ import { type ShotPoint, offsetWords } from "@shared/shooting/target";
 
 export const positionLabel = (p: Position, lang: Lang) => pick(lang, POSITION_LABELS[p], POSITION_LABELS_KO[p]);
 
-const SOURCE_KO: Record<EvaluationSource, string> = { sius: "SIUS", paper: "종이 표적지", sheet: "결과지" };
+// One term: "종이 표적지" moves to a next line whole (a no-break space), never "종이" at a line's end.
+const SOURCE_KO: Record<EvaluationSource, string> = { sius: "SIUS", paper: "종이\u00a0표적지", sheet: "결과지" };
 
 /** "SIUS", "Paper", "Results sheet"; "SIUS", "종이 표적지", "결과지". */
 export const sourceLabel = (s: EvaluationSource, lang: Lang) => pick(lang, SOURCE_LABELS[s], SOURCE_KO[s]);
