@@ -14,6 +14,21 @@ html:lang(ko) {
   overflow-wrap: break-word;
 }
 
+/* Headings wrap into even lines, and a paragraph doesn't end on a lone word (a phone's narrow page). */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  label {
+    text-wrap: pretty;
+  }
+}
+
 /* Rich text (announcements): editor and rendered posts share these styles. */
 @layer components {
   .rich-content {
