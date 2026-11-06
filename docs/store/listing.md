@@ -61,26 +61,41 @@ email and phone from the website's Settings → Academy; guideline 1.5).
 moves there, `docs/DEPLOY.md`).
 **Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app).
 **Category:** Sports; secondary Education.
-**What's New:** App Store Connect doesn't ask for it on the first version. For the update with classes taught together
-(4000; Apple refuses vague notes, guideline 2.3.12):
+**What's New:** App Store Connect doesn't ask for it on the first version. 1.1.0's, as submitted on 2026-11-06 (4000;
+Apple refuses vague notes, guideline 2.3.12):
 
 ```
-Classes now work as they do at the academy: every coach in at a class's time teaches it together.
-• Schedule: each class laid out like the academy's sheets, with its seats, every student in their level's colour with their rifle, make-ups, practice and trials in their own colours, and the coaches in.
-• Coaches see every class, with theirs marked, and who's in with them.
-• The office marks students here, a no-show or canceled from a class.
-• Home: today's classes with the coaches in; for a coach, the classes in their hours.
-• The week runs Monday to Sunday; calendars start on Sunday.
-• Schedule by Day or by Week, with the academy's events and who's in each day.
+A big update for families, coaches and the office.
+
+Families
+• Create an account in the app with the email the academy has for you, or continue with Apple or Google.
+• Sign a student's enrollment contract when the academy sends it, on the academy's website, and keep your copy under More.
+• Classes: what's coming and what's past, the months at a glance, and asking for a class, a make-up or another time. The academy answers in the app.
+• Every score with its shots played back and compared with the last one, and the progress reports the academy shares.
+• Notifications when a class changes, a request is answered, or a new score or report arrives. You choose which.
+• Korean for parents: Language · 언어 on the sign-in screen and under More.
+
+Coaches
+• Every class with everyone in at its time, your availability (you can add time inside the lock), and your hours.
+• Scan draws each hole at its measured size, takes the score written on the card, and adds competitions from a photo of the results sheet, series by series.
+
+The office
+• Classes taught together, and the schedule laid out like the academy's sheets, by Day or by Week.
+• Answer families' requests, suggest another class, and change any day.
+• Send each family its enrollment contract and see who has signed.
+
+And many smaller fixes, like lines that wrap between words.
 ```
 
-**Google Play's release notes** for 1.1.0 (500 characters; Android's 1.0.0 already had classes taught together):
+**Google Play's release notes** for 1.1.0, as saved on 2026-11-06 (500 characters):
 
 ```
-• Schedule by Day or by Week, with the academy's events and who's in each day.
-• Attendance reads Here and No-show, as on the website.
-• Sky Arc asks for the camera only: three permissions it never used are gone.
-• Smaller fixes.
+• Families: create an account, sign the enrollment contract the academy sends, ask for classes and make-ups, get notifications.
+• Every score with its shots played back, and the academy's progress reports.
+• Korean for parents (Language · 언어).
+• Coaches: availability and hours; Scan sizes each hole and adds competitions from a photo.
+• The office: answer requests, suggest another class, send contracts.
+• Many smaller fixes.
 ```
 
 The words "for kids" or "for children" stay out of every text: Apple keeps them for its Kids category (guideline
