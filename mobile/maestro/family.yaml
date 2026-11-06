@@ -315,7 +315,7 @@ appId: com.skyarcacademy.app
       - extendedWaitUntil:
           visible:
             id: "replay-readout"
-            text: "(Series 1 · )?Shot [1-9] of.*"
+            text: "(Series 1.· )?Shot [1-9] of.*"
           timeout: 10000
 - scrollUntilVisible:
     element:

@@ -58,7 +58,7 @@ appId: com.skyarcacademy.app
             - extendedWaitUntil:
                 visible:
                   id: "replay-readout"
-                  text: "(Series 1 · )?Shot [2-9].*"
+                  text: "(Series 1.· )?Shot [2-9].*"
                 timeout: 10000
             - tapOn:
                 id: "replay-play"

@@ -184,6 +184,7 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.grouped }} contentContainerStyle={[styles.page, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]} testID="contract-sign">
+      <LangSwitch />
       <View style={styles.head}>
         <SkyArcLogo height={56} />
         <T variant="title" style={styles.center} testID="contract-child-title">
@@ -228,7 +229,6 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
       </Button>
       <DeleteAccountLink academyName={academy} />
       <HelpLinks />
-      <LangSwitch />
     </ScrollView>
   );
 }

@@ -178,6 +178,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   case, plain words. Parents read Korean too (`docs/DECISIONS.md` §36): every text a parent can see goes through
   `useT()` (`src/lib/lang.ts`: `t("Home", "홈")`), written as `.claude/skills/korean-ux-writing` says; the staff's
   tabs and a student's stay English (`EnglishOnly`).
+- **Lines wrap between words** (Goo, 2026-11-05): text goes through `T` (`src/components/Text.tsx`) or `Button`, which
+  keep a Korean word whole ("주세요", "10월 29일"), dates and times together, a "·" at the end of a line, and a
+  paragraph's last word with the one before it (`src/lib/lineBreaks.ts`). A plain React Native `Text` with words in it
+  skips all that: use `T`, or `keepWords()` and `lineBreakProps()` on it.
 - **Classes are taught together** (`docs/DECISIONS.md` §21): a class is `classes/{id}`, and `/class/[id]` opens it by
   that ID; its students are the sessions with its `classId`; its coaches are everyone in at its time (who's in: each
   person's availability that day). The shared `classViews` and `coachesIn` (`@shared/schedule/classes`) put them

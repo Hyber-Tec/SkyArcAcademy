@@ -74,6 +74,8 @@ export default function SignInScreen() {
 
   return (
     <CenteredCard testID="sign-in">
+      {/* At the top, in sight before anything else (at the end it was below the fold). */}
+      <LangSwitch />
       <AuthHeader title={t(`Sign in to ${ACADEMY_NAME}`, `${ACADEMY_NAME} 로그인`)} subtitle={t("Use the email the academy has for you.", "아카데미에 등록된 이메일로 로그인해 주세요.")} />
       {googleSignInConfigured && (
         <Button variant="outline" size="lg" icon={<GoogleMark />} onPress={() => void google()} busy={busy === "google"} disabled={busy !== null} testID="google-sign-in">
@@ -129,7 +131,6 @@ export default function SignInScreen() {
         </T>
       </View>
       <HelpLinks />
-      <LangSwitch />
     </CenteredCard>
   );
 }
