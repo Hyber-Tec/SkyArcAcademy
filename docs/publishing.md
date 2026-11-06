@@ -7,18 +7,18 @@ a step says "ask Claude Code".
 **The plan (the owner, 2026-10-20):** the iPhone app goes to the App Store as soon as possible and improves through
 updates. Android follows once it has been tried on Android phones.
 
-## Where things stand (2026-10-27)
+## Where things stand (2026-11-06)
 
 | | iPhone (App Store) | Android (Google Play) |
 | --- | --- | --- |
-| In review | **1.0.0 (build 2)**, waiting for Apple's review since 2026-10-21 (checked on 2026-10-27) | **1.0.0 (build 3)**, in Google's review since 2026-10-26 (production) |
-| Classes taught together (§21) | No: built before them. It opens a class through each seat's lead coach (`scripts/lead-coach.ts`), kept until its update | Yes |
-| The demo academy on the phone (§22) | In 1.1.0 (#41) | In the next build, 1.1.0 |
-| TestFlight | **1.1.0 (build 5)**, uploaded 2026-10-28 from the MacBook Pro for testing on phones ([phone-testing.md](phone-testing.md); not submitted); the App Store's 1.1.0 can be this build | — |
+| Live | **1.0.0 (build 2)**, sent 2026-10-21, approved after Goo wrote to Apple (still waiting on 2026-11-03) | **1.0.0 (build 3)**, sent 2026-10-26, live by 2026-11-03 |
+| The update | **1.1.0 (build 12)**, sent for Apple's review on 2026-11-06; it releases itself once approved | **1.1.0 (build 12)**, a draft production release with its notes (2026-11-06): **Goo rolls it out** after the Data safety update ([updates.md](publishing/updates.md)) |
+| Classes taught together (§21) | From 1.1.0. 1.0.0 opens a class through each seat's lead coach (`scripts/lead-coach.ts`), kept until phones have 1.1.0 | Yes |
+| TestFlight / internal testing | **1.1.0 (build 12)**, the build sent for review | **1.1.0 (build 12)** |
 | Review login | One admin with the academy's real data (`docs/store/review-notes.md`) | The same login, in Sign-in details |
 
 **No second submission while either is in review** (the owner, 2026-10-26). Changes to the phone app wait on `main`
-and go up together as the next update, **1.1.0**, once each store has answered ([updates.md](publishing/updates.md)).
+and go up together as the next update once each store has answered on 1.1.0 ([updates.md](publishing/updates.md)).
 Changes to the website and the server don't wait: they're live as soon as they're merged.
 
 ## When a store answers
@@ -28,9 +28,9 @@ part and says what's left. What each answer means:
 
 **Apple** (an email, and the status in App Store Connect → Sky Arc → App Store):
 
-- **Pending Developer Release** (approved): 1.0 → **Release This Version**
-  ([apple/app-store.md](publishing/apple/app-store.md), step 26). Then the update, 1.1.0, as
-  [updates.md](publishing/updates.md) says: it brings classes taught together and the demo academy to the iPhone.
+- **Ready for Distribution** (approved): 1.1.0 was sent to release itself once approved, so it's in the App Store
+  within a day and phones update by themselves. (A version sent with a manual release shows **Pending Developer
+  Release** instead: **Release This Version**, [apple/app-store.md](publishing/apple/app-store.md), step 26.)
 - **Rejected:** the message names a guideline. Replies to the likeliest ones are ready in
   [store/review-notes.md](store/review-notes.md); for anything else, give the message to Claude Code
   ([apple/app-store.md](publishing/apple/app-store.md), step 25). A fix in the app needs a new build (Claude Code makes
@@ -40,9 +40,7 @@ part and says what's left. What each answer means:
 
 **Google** (an email, and the Play Console's Publishing overview and Inbox):
 
-- **Approved:** the first release goes live by itself, within hours (you can't hold it). Tell Claude Code the Google
-  Play link ([google-play/production.md](publishing/google-play/production.md), step 13). Then 1.1.0, as
-  [updates.md](publishing/updates.md) says.
+- **Approved:** the release goes live by itself, within hours (you can't hold it), and phones update by themselves.
 - **Rejected or a policy issue:** the Inbox names the policy. Give it to Claude Code; most need a form fixed in **App
   content** (Part 1 of [production.md](publishing/google-play/production.md)), not a new build.
 

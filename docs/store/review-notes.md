@@ -6,11 +6,10 @@ steps 15–17), the replies to send if Apple answers with guideline 4.8 (sign-in
 the notes say. Checked on 2026-10-20 against Apple's list of what a complete review needs (who the app is for, the
 devices tested, the outside services, a login for each kind of account, regional differences).
 
-> **For 1.1.0 (not 1.0.0, which Apple is reviewing now):** the sign-in paragraph and the reply to 4.8 below describe
-> 1.0.0, which has no sign-up. 1.1.0 makes accounts in the app and has Sign in with Apple beside Google
-> ([`DECISIONS.md`](../DECISIONS.md) §31): before submitting it, the notes say that instead (Create an account; an email
-> on a student's record opens the family's part, anyone else asks the academy; a parent signs the enrollment contract
-> first) and drop the exception. The review login itself doesn't change.
+> **1.1.0** (submitted 2026-11-06) makes accounts in the app and has Sign in with Apple beside Google
+> ([`DECISIONS.md`](../DECISIONS.md) §31): its notes below say so (the "Accounts" paragraph) instead of 1.0.0's
+> exception to guideline 4.8. The review login itself didn't change. 1.0.0's notes, in App Store Connect until then,
+> still described the sample data and four sample logins from before 2026-10-26.
 
 ## The review login
 
@@ -28,23 +27,17 @@ with the same password.
 Until 2026-10-26 there were four sample people (an office, a coach, a parent and a student, made by
 `npx tsx scripts/review-logins.ts`); their passwords stay in the same file, for if they're made again.
 
-**Before the next submission (1.1.0), two changes to the notes below** (2026-10-29), keeping them under 4,000
-characters:
-- The last line says "No payment, advertising or AI services". The website can now draft a progress report's words with
-  an AI service, on Sky Arc's server, for the academy's staff to check before sharing (`docs/DECISIONS.md` §26): say
-  "No payment or advertising services. Progress reports' text can be drafted on our server by an AI service, then
-  checked by the academy's staff before families see it."
-- "View the app as" is only for HyberTec's super admins (`docs/DECISIONS.md` §27); the review login isn't one, so it
-  doesn't see it. No line is needed, but say so if Apple asks about features the reviewer can't see.
+"View the app as" is only for HyberTec's super admins (`docs/DECISIONS.md` §27); the review login isn't one, so it
+doesn't see it. No line is needed, but say so if Apple asks about features the reviewer can't see.
 
 ## Apple: App Review Information
 
 - **Sign-in required:** Yes. **User name:** the office email. **Password:** the office password.
 - **Contact:** your name, phone (`+1 …`) and email.
 - **Attachment:** the academy's written permission ([apple/app-store.md](../publishing/apple/app-store.md), step 1).
-- **Notes** (the box takes 4,000 characters; this text is about 3,850 with the passwords in, so keep additions short).
-  Paste it, then put the password in place of the capitals, and the phones you tried the app on in place of the last
-  capitals:
+- **Notes** (the box takes 4,000 characters; this text is about 3,700 with the password in, so keep additions short).
+  Paste it, then put the password in place of the capitals. 1.1.0's went in on 2026-11-06, tested on an iPhone 15 with
+  iOS 27.0.1:
 
 ```
 Sky Arc is the app of Sky Arc Sports Academy, an air rifle academy, for its families and staff. The academy runs its classes, coaches, students and results on our website; the app brings them to phones. Parents and students see their classes, every score and the progress reports the academy shares. Coaches see every class and who's in, set their availability and score paper targets from a photo. The office (owners and admins) sees the day, the schedule and every student.
@@ -58,8 +51,8 @@ On "Sign in to Sky Arc Sports Academy", sign in with the email and password in t
 WHAT TO TRY
 Home (today's classes; tap one), Schedule (another day; tap a class), Scan (photograph a paper target or choose a photo; check the shots, choose a student; you can leave without saving), Students (open one: classes, scores, files), More (coaches, News, Drive, Reports).
 
-SIGN-IN (guideline 4.8)
-Sky Arc requires an account the academy has created: the academy adds a person's email address on its website, and only that address can open the app. There is no sign-up in the app. Google sign-in and email-and-password sign-in are two ways of proving it is that address; an account the academy hasn't added sees "No access yet" and nothing else. We believe the app falls under 4.8's exception for "an education, enterprise, or business app that requires the user to sign in with an existing education or enterprise account".
+ACCOUNTS (guideline 4.8)
+People sign in with Apple, with Google, or with an email and password, and can create an account in the app. Access follows the email address the academy holds: an email on a student's record opens that family's part; any other account sees "No access yet", can ask the academy for access, and can delete itself there. When the academy sends a family its enrollment contract, a parent signs it on the academy's website (opened from the app) before using the app; the demo account above is the office's and is never asked.
 
 ACCOUNT DELETION (guideline 5.1.1(v))
 More → Delete my account, for every account (also on the "No access yet" screen). It removes the sign-in and the person's profile at once; the academy's own records stay with the academy, as the screen and the privacy policy explain: https://skyarcacademy.web.app/privacy. If you try it with the demo account, we will restore the account for the next review.
@@ -71,17 +64,17 @@ PERMISSIONS AND DATA
 The camera and the photo picker are used only in Scan (staff), to photograph or choose a paper target or a match's results sheet; nothing is saved to the phone's photos. A target is read on the phone itself; a results sheet's text is read on Sky Arc's server, and the sheet is filed in the student's folder. No ads, analytics or tracking.
 
 SERVICES THE APP USES
-Google Firebase (sign-in, database, file storage, server functions) and Google Sign-In. No payment, advertising or AI services.
+Google Firebase (sign-in, database, file storage, server functions) and Google Sign-In. No payment or advertising services. Progress reports' text can be drafted on our server by an AI service, then checked by the academy's staff before families see it.
 
 TESTED ON
-DEVICES AND iOS VERSIONS TESTED (for example: iPhone 16 Pro with iOS 27.0). The app is offered in the United States only and works the same for everyone.
+iPhone 15 with iOS 27.0.1. The app is offered in the United States only and works the same for everyone. Parents can read it in Korean (Language · 언어); staff screens are in English.
 ```
 
 ## If Apple answers with guideline 4.8
 
-Reply once, from the same message in App Store Connect. If Apple still asks for another sign-in after this,
-[apple/rules.md](../publishing/apple/rules.md#sign-in-with-apple-48) has the two ways out (the quickest: email and
-password only in the iPhone app).
+From 1.1.0 this doesn't apply: the app offers Sign in with Apple beside Google. The reply below was for 1.0.0, which had
+no sign-up; keep it for the record. If Apple still asks about sign-in, give the message to Claude Code
+([apple/rules.md](../publishing/apple/rules.md#sign-in-with-apple-48)).
 
 ```
 Thank you for the review. Nobody can use Sky Arc without an account Sky Arc Sports Academy has already created: the academy adds the person's email address on its website, and only that address can open the app. The app has no sign-up. Google sign-in and email-and-password sign-in are two ways for that person to prove they own the address the academy added; any other account sees "No access yet" and nothing else (signing in with your own Google account shows this). We believe this falls under guideline 4.8's exception for "an education, enterprise, or business app that requires the user to sign in with an existing education or enterprise account". A sign-in that hides the email address could not open the app either, because access follows the address the academy holds. If you still find another sign-in option necessary, please tell us and we will change the app.

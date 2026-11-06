@@ -6,15 +6,14 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
 
 ## The owner's to-do (left for later on purpose)
 
-1. **The App Store:** Sky Arc 1.0.0 (build 2) has been waiting for Apple's review since 2026-10-21 (still on
-   2026-10-27). When Apple answers, tell Claude Code: `docs/publishing.md`, "When a store answers", says what each answer
-   means (release it, or the reply to a rejection). If Apple asks for the academy's permission (guideline 5.2.1),
-   attach the academy's email. Since 2026-10-26 the reviewers' login is an admin with the academy's real data: paste
-   the new notes (`docs/store/review-notes.md`) into App Review Information if App Store Connect lets you while it
-   waits. No second submission while it's in review (Goo, 2026-10-26). Still waiting on 2026-11-03; Goo has written
-   to Apple's support.
-2. **Google Play:** Sky Arc 1.0.0 (build 3, with classes taught together) is **published and live** (by 2026-11-03).
-   Nothing to do until the next update (1.1.0 is on the internal testing track for trying, below).
+1. **The stores: 1.1.0 is sent** (2026-11-06, `docs/publishing/updates.md`, "1.1.0, sent on 2026-11-06"). 1.0.0 is
+   live in both. The App Store has 1.1.0 (build 12) in review; it releases itself once approved. Google Play has 1.1.0
+   (build 12) as a draft production release. **Left for Goo, about 10 minutes:** Apple's App Privacy (add Device ID:
+   the notification token), Google's Data safety (account creation in the app), then roll out the draft 1.1.0 (12) on
+   Google Play's Production page. When a store answers, tell Claude Code (`docs/publishing.md`, "When a store
+   answers").
+2. **Google Play:** Sky Arc 1.0.0 (build 3) is **published and live** (by 2026-11-03); 1.1.0 waits for Goo's send,
+   above.
 3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
    (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
 4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
@@ -22,12 +21,8 @@ done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
    below), sign in with one of the demo's own logins to show it ("Demo" shows at the top), and with your own account
    for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
    moves its classes around the day).
-5. **The next update, 1.1.0, for both stores**, once everything is ready (Goo, 2026-11-03: no update before then;
-   Google Play has answered, the App Store hasn't yet). **To try it now:** 1.1.0 (build 11, 2026-11-05) is on TestFlight
-   and on Google Play's internal testing, with everything built so far (Scan, the families' part, Create an account,
-   Sign in with Apple, the contract the office sends, opened on the website, and Korean for parents). The steps of the release, the forms to update first and
-   which Mac uploads which store: `docs/publishing/updates.md`, "The next update: 1.1.0". Then clear the lead coach
-   (below).
+5. **The update, 1.1.0, for both stores:** sent on 2026-11-06 (item 1). TestFlight and Google Play's internal testing
+   have the same build 12. Then clear the lead coach (below), once the iPhones have 1.1.0.
 6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
    each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
    - **The schedule (`V2`) and the hole sizes (`P1`)** are merged (#67, #68, and the phone's part in #71). The manager

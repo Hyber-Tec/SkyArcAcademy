@@ -24,9 +24,10 @@ How a change reaches people once Sky Arc is in the stores. Most changes need no 
    Claude Code to "commit the release number" and merge its pull request.
 4. **App Store Connect** → Sky Arc → **+** next to **iOS App** → the same version number → **What's New in This
    Version**: what changed, specifically (Apple refuses vague notes, guideline 2.3.12; Claude Code can draft them) →
-   **Build**: the new one → **Add for Review** → **Submit for Review**. Apple puts updates of existing apps first: about
-   a day and a half on average. When approved: **Release This Version** (or choose **Phased release** to reach everyone
-   over seven days).
+   **Build**: the new one → **Add for Review** → **Submit for Review**. Or ask Claude Code to do all of it from the
+   MacBook Pro. Apple says 90% of submissions are reviewed within a day; updates of an app it has approved are usually
+   quick. **Version Release** decides what happens then: released at once ("Automatically release this version", as
+   1.1.0 was), or **Release This Version** by hand, or **Phased release** over seven days.
 5. **Android:** `npm run publish:android -- --track production`, on the Mac that holds Google Play's upload key (below),
    then "commit the release number". Release notes go in the Play Console's release; Google reviews it within hours to
    a few days.
@@ -36,8 +37,9 @@ How a change reaches people once Sky Arc is in the stores. Most changes need no 
 
 The keys live in `mobile/.publish/` (never in git), and each store needs its own:
 
-- **The App Store:** the App Store Connect key (`AuthKey_….p8`, `appstore.json`) is on the **Mac mini**. Upload the
-  iPhone app there, or copy those two files to the other Mac.
+- **The App Store:** the App Store Connect key (`AuthKey_….p8`, `appstore.json`) is on the **Mac mini** and on the
+  **MacBook Pro** (which uploaded the 1.1.0 builds). With it, Claude Code can also make the version, fill in What's New
+  and the review notes, choose the build and submit it, through App Store Connect's API (as for 1.1.0).
 - **Google Play:** the upload key (`upload.keystore`, `keystore.json`) is on the Mac that built build 3 (the
   **MacBook Pro**), with `play-service-account.json` if uploads by command are set up there
   ([testing.md](google-play/testing.md), Part 4). **Never run `npm run publish:android` on a Mac without that
@@ -45,34 +47,41 @@ The keys live in `mobile/.publish/` (never in git), and each store needs its own
   knows. Copy the folder (AirDrop or a USB stick, never git or email) if another Mac must upload.
 - Commit the release number after each upload ("commit the release number"), so the other Mac counts on from it.
 
-## The next update: 1.1.0 (both stores)
+## 1.1.0, sent on 2026-11-06 (both stores)
 
-**For trying now:** 1.1.0 (build 11) went to **TestFlight** and to Google Play's **internal testing** from the MacBook
-Pro on 2026-11-05, so Goo tries everything on both phones (Scan, the families' part, Create an account, Sign in with
-Apple, the enrollment contract the office sends, opened on the website, and Korean for parents: `docs/DECISIONS.md`
-§34 to §36). Builds 10 (the same day) and 9 (2026-11-03) came before it. Neither reaches anyone else: the App Store keeps 1.0.0 in review, and Google Play's store listing keeps 1.0.0.
+**What went out** (Claude Code, the night of 2026-11-05, from the MacBook Pro, `main` at #117): build **12** on
+TestFlight and on Google Play's internal testing, with everything since 1.0.0 (the families' part, Create an account,
+Sign in with Apple, notifications, the enrollment contract on the website, Korean for parents, lines that wrap between
+words). Then:
 
-**The release waits until everything is ready** (Goo, 2026-11-03), and on the iPhone until Apple has answered on 1.0.0
-(no second submission during a review: the owner, 2026-10-26). Release 1.0.0 first when it's approved. Then:
+- **App Store:** version **1.1.0** made in App Store Connect with its What's New ([listing.md](../store/listing.md)),
+  build 12, the review notes for 1.1.0 ([review-notes.md](../store/review-notes.md): the same office login, its
+  password unchanged) and **Automatically release this version**, and **submitted for review**.
+- **Google Play:** **1.1.0 (12)** as a **draft release on the production track**, with its release notes
+  ([listing.md](../store/listing.md)). Google reviews nothing until it's rolled out: the Data safety answers change
+  with 1.1.0 and go first. (This app sends every change for review as soon as it's saved, so the API can't hold a
+  finished release back; a draft waits.)
 
-1. **The forms first:** Apple's App Privacy and Google's Data safety for 1.1.0, and the review notes
-   ([privacy-answers.md](../store/privacy-answers.md), "When the app changes"; [review-notes.md](../store/review-notes.md)).
-   Sign in with Apple's setup is done (Goo, 2026-11-03: [apple/sign-in-with-apple.md](apple/sign-in-with-apple.md)).
-2. **iPhone:** if the phone app hasn't changed since build 11, submit it: App Store Connect → Sky Arc → **+** next to
-   **iOS App** → `1.1.0` → **What's New** (Claude Code drafts it from the pull requests since 1.0.0, with
-   [listing.md](../store/listing.md)) → **Build**: 10 → **Add for Review** → **Submit for Review**. If it has, upload a
-   new one first (`npm run publish:iphone`: the build goes up, still 1.1.0) and commit the release number. When
-   approved: **Release This Version**.
-3. **Android:** Play Console → **Test and release** → **Testing** → **Internal testing** → the 1.1.0 (11) release →
-   **Promote release** → **Production** → notes from [listing.md](../store/listing.md) → **Send changes for review**. Or,
-   if the app has changed since, `npm run publish:android -- --track production` on the MacBook Pro.
-4. **Commit the release number** after any new upload.
-5. When the iPhone's 1.1.0 is out, take the lead coach off the seats: `npx tsx scripts/lead-coach.ts --clear`
-   (`docs/TODO.md`).
+**What's left (Goo, about 10 minutes):**
 
-**The review notes:** the reviewers keep the admin login (the academy's real data). From 1.1.0 the phone also opens
-the demo academy for the demo logins (made-up people; their password is on the Mac mini, `docs/internal/`), so the
-reviewers could use those instead; that's the owner's call before submitting.
+1. **Apple's App Privacy** (App Store Connect → Sky Arc → **App Privacy**): add **Identifiers → Device ID** (linked to
+   the user, App Functionality, not tracking): the phone's notification token; 1.0.0 had no notifications. The other
+   types 1.1.0 needs (Phone Number, Other User Content, Other Data Types) are ticked already. **Publish.** It changes at
+   any time, without a new review ([privacy-answers.md](../store/privacy-answers.md), "When the app changes").
+2. **Google's Data safety** (Play Console → Sky Arc → **Policy and programs** → **App content** → **Data safety**): **account
+   creation methods**: username and password, and OAuth (Google), now made in the app. The data types stay as they are
+   (Phone number, Other info and Other user-generated content are declared already). **Save.**
+3. **Roll out 1.1.0 on Google Play** (Play Console → Sky Arc → **Test and release** → **Production** → the draft
+   **1.1.0 (12)** → **Edit release** → **Next** → **Save and publish**, or **Start rollout to Production**): Google
+   reviews it (and the Data safety change, if it hasn't yet), then it goes live by itself. If the Publishing overview
+   lists changes waiting, **Send changes for review** there.
+4. **When both are out:** nothing to do on phones (they update by themselves). Later, once the iPhones have 1.1.0:
+   `npx tsx scripts/lead-coach.ts --clear` (`docs/TODO.md`).
+
+**How long:** Apple's first review took about two weeks (sent 2026-10-21, still waiting on 2026-11-03 until Goo wrote
+to Apple); Google's first took up to eight days (2026-10-26 to live by 2026-11-03). An update is usually much quicker:
+Apple reviews 90% of submissions within a day, and Google an update within hours to a few days (up to a week for a
+new developer account). Both review at weekends too, sometimes more slowly.
 
 ## Keep in mind
 
