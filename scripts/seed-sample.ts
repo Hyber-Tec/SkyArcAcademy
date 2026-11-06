@@ -347,7 +347,7 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
         for (const email of parentLogins(c.studentId)) {
           out.push({
             path: `${base}/${COL.notifications}/${SAMPLE_PREFIX}contract-sent-${key}-${email}`,
-            data: { recipientKey: email, type: 'contract_sent', title: `Please sign ${first}’s enrollment contract`, body: `${academyName} sent ${first}’s contract. Open the app to read it and sign it.`, link: 'parent', refs: {}, createdAt: s.at, readAt: null },
+            data: { recipientKey: email, type: 'contract_sent', title: `Please sign ${first}’s enrollment contract`, body: `${academyName} sent ${first}’s contract. Open the app to read it and sign it.`, ko: { title: `${first} 학생 등록 계약서에 서명해 주세요`, body: `${academyName}에서 ${first} 학생 계약서를 보냈어요. 앱에서 읽고 서명해 주세요.` }, link: 'parent', refs: {}, createdAt: s.at, readAt: null },
           })
         }
       }
