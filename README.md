@@ -14,9 +14,9 @@ Sky Arc features (class slots, makeups, trials) come next, in the order of
 - **Start here:** [`CLAUDE.md`](CLAUDE.md) (the rules, layout and commands) →
   [`SKYARC_PROJECT_BRIEF.md`](SKYARC_PROJECT_BRIEF.md) (what we're building) →
   [`docs/DECISIONS.md`](docs/DECISIONS.md) → [`docs/HYBERCRM_REVIEW.md`](docs/HYBERCRM_REVIEW.md).
-- **Production:** https://skyarcacademy.web.app, deployed by GitHub from `main` ([`docs/DEPLOY.md`](docs/DEPLOY.md)).
-  Until the academy's real data arrives it holds fictional sample data (`npm run seed:sample`; remove it with
-  `npm run seed:sample -- --remove`).
+- **Production:** https://skyarcacademy.com (also at https://skyarcacademy.web.app), deployed by GitHub from `main`
+  ([`docs/DEPLOY.md`](docs/DEPLOY.md)). It holds the academy's real data; the fictional sample data lives in the demo
+  academy and the local emulators (`npm run seed:sample`).
 - **Phone app:** [`mobile/`](mobile/README.md), the app of the academy's families, coaches and office (iPhone first,
   Android too): on a simulator or your iPhone with one command ([`docs/running-the-apps.md`](docs/running-the-apps.md));
   the App Store first, then Google Play ([`docs/publishing.md`](docs/publishing.md)).

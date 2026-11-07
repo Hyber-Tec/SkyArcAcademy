@@ -24,6 +24,9 @@ function appPages(): Plugin {
   }
 }
 
+/** The address written in index.html and app.html (links, the preview picture, the structured data). */
+const SOURCE_URL = 'https://skyarcacademy.web.app'
+
 const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
 /** The website's address for a page in a language ("/ko/programs"). */
@@ -41,9 +44,12 @@ function sitePages(): Plugin {
     // After Vite has written index.html into the bundle.
     enforce: 'post',
     generateBundle(_options, bundle) {
+      // index.html and app.html are written with Firebase's own address; the build puts the site's (APP_URL) in its place.
+      const app = bundle['app.html']
+      if (app?.type === 'asset') app.source = String(app.source).replaceAll(SOURCE_URL, APP_URL)
       const index = bundle['index.html']
       if (!index || index.type !== 'asset') return
-      const template = String(index.source).replaceAll('https://skyarcacademy.web.app', APP_URL)
+      const template = String(index.source).replaceAll(SOURCE_URL, APP_URL)
       const render = (page: Page | 'news-post', lang: 'en' | 'ko') => {
         const meta = PAGE_META[page][lang]
         const own = page === 'news-post' ? pagePath('news', lang) : pagePath(page, lang)

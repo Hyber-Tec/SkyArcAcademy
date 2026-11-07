@@ -21,7 +21,7 @@ parts 4 and 5.
   - the screenshots: `open mobile/.publish/screenshots`;
   - the reviewers' logins and passwords: `open -e mobile/.publish/review-logins.json`.
 - **The website** shows the privacy policy without a "Draft" banner and the Help page with the academy's email and
-  phone: https://skyarcacademy.web.app/privacy and https://skyarcacademy.web.app/help (both live once this round's
+  phone: https://skyarcacademy.com/privacy and https://skyarcacademy.com/help (both live once this round's
   pull request is merged).
 - **The texts to paste**, in [docs/store/](../../store/): [listing.md](../../store/listing.md) (the store page),
   [review-notes.md](../../store/review-notes.md) (for the reviewer), [privacy-answers.md](../../store/privacy-answers.md)
@@ -149,7 +149,7 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
       rating". Apple works out **9+**.
     - **Save.**
 21. **App Privacy** (left sidebar):
-    - **Privacy Policy:** **Edit** → `https://skyarcacademy.web.app/privacy` → **Save**.
+    - **Privacy Policy:** **Edit** → `https://skyarcacademy.com/privacy` → **Save**.
     - **Data Collection:** **Get Started** → the answers in [privacy-answers.md](../../store/privacy-answers.md),
       "Apple" → **Publish**.
 22. **Pricing and Availability** (left sidebar):

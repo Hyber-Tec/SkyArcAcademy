@@ -2,7 +2,7 @@
 
 What the phone app collects, as Apple's **App Privacy** section ([apple/app-store.md](../publishing/apple/app-store.md),
 step 21) and Google's **Data safety** form ([google-play/production.md](../publishing/google-play/production.md), step
-6) ask for it. Both must agree with the privacy policy (https://skyarcacademy.web.app/privacy). If the app starts
+6) ask for it. Both must agree with the privacy policy (https://skyarcacademy.com/privacy). If the app starts
 collecting something new, change these, the policy and the stores' forms together.
 
 Both stores ask about what **the app** sends off the phone, including what the outside code inside it collects. Records
@@ -76,7 +76,7 @@ Play Console → **App content** → **Data safety**.
 - **Which account creation methods does your app support?** None in the app (the academy creates accounts on its
   website); people sign in with an email and password, or with Google (OAuth).
 - **Account deletion:** in the app (More → Delete my account), and on the web for people without the app:
-  `https://skyarcacademy.web.app/help#delete` (ask the academy; it says what the academy keeps).
+  `https://skyarcacademy.com/help#delete` (ask the academy; it says what the academy keeps).
 - **Data types** (none shared: Google's form doesn't count a service provider working for us, Firebase, as sharing):
 
 | Category → type | Collected | Processed ephemerally | Required or optional | Purposes |

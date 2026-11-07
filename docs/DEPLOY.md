@@ -1,7 +1,8 @@
 # Deploys
 
-Production is the Firebase project **`skyarcacademy`**, served at **https://skyarcacademy.web.app** (and
-`skyarcacademy.firebaseapp.com`; `skyarcacademy.com` moves here at launch). Production runs reviewed code only:
+Production is the Firebase project **`skyarcacademy`**, served at **https://skyarcacademy.com** (the academy's domain,
+"Moving to skyarcacademy.com" below), and at Firebase's own `skyarcacademy.web.app` and `skyarcacademy.firebaseapp.com`,
+which keep working. Production runs reviewed code only:
 GitHub deploys `main` after every merge, once CI passes on `main`. Nobody deploys from a branch.
 
 ## How a merge reaches production
