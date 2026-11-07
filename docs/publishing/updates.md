@@ -79,7 +79,12 @@ words). Then:
    `npx tsx scripts/lead-coach.ts --clear` (`docs/TODO.md`).
 
 **What came back:** Apple approved 1.1.0 within a day, and it was in the App Store by the evening of 2026-11-06.
-Google's draft waits for Goo's steps 2 and 3.
+Google: Goo updated the Data safety form and sent it for review from the Publishing overview, then Claude Code rolled
+out 1.1.0 (12) through the API (2026-11-06, in the evening). It's in Google's review; once approved it goes live by
+itself. Apple's App Privacy has Device ID (Goo, the same evening).
+
+(The API sends every change for review at once. A change saved in the Play Console with "Not now" waits in the
+Publishing overview, so send it first there, then commit through the API.)
 
 **How long:** Apple's first review took about two weeks (sent 2026-10-21, still waiting on 2026-11-03 until Goo wrote
 to Apple); Google's first took up to eight days (2026-10-26 to live by 2026-11-03). An update is usually much quicker:

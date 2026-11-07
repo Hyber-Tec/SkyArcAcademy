@@ -24,24 +24,20 @@ Waiting for the manager to hand Goo the Squarespace login (2026-11-06). The step
   phone apps 1.0 and 1.1 open it, and so does every email already sent. The next phone build opens skyarcacademy.com by
   itself.
 
-### Google Play 1.1.0
+### Google Play 1.1.0 is in Google's review
 
-The steps are in [publishing/updates.md](publishing/updates.md), "1.1.0, sent on 2026-11-06", steps 2 and 3:
+Sent on 2026-11-06, in the evening:
 
-1. **Data safety (Goo):** under account creation methods, tick **Username and password** and **OAuth**, and untick
-   "My app does not allow users to create an account" if it's ticked. Keep the delete account link. Nothing else
-   changes.
-2. **Roll out:** Claude Code, through Google Play's API from the MacBook Pro, once Goo says the form is saved. Or in
-   the Play Console: Production → the draft 1.1.0 (12) → Edit release → Next → Save
-   and publish. The form must come first, or Google may review the new version against the old answers.
+- **Goo:** updated the Data safety form (account creation methods: Username and password, and OAuth; the delete
+  account link `https://skyarcacademy.web.app/help#delete`) and sent it for review from the Publishing overview.
+- **Claude Code:** right after, rolled out 1.1.0 (12) to all of production through Google Play's API. That sends it for
+  review by itself.
+- **Order:** the form went first, so Google reviews the new version against the new answers.
 
-Google reviews it, usually in hours to a few days, and then it goes live by itself.
-
-### App Store privacy
-
-App Store Connect → Sky Arc → App Privacy: add **Identifiers → Device ID** (linked to the user, App Functionality, not
-tracking), the phone's notification token, then **Publish**. No review. The answers are in
-[store/privacy-answers.md](store/privacy-answers.md).
+Google reviews an update in a few hours to a few days, and "up to a week, and in rare cases even longer". Our first
+review, a new app on a new account, took up to eight days. Once approved, it goes live by itself, and Android phones
+update on their own. If Google rejects it or asks something, it says so in the Play Console's inbox and by email: send
+it to Claude Code.
 
 ## Soon
 
