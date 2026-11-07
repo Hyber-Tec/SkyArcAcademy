@@ -66,7 +66,6 @@ export const UI = {
   back: l('Back', '이전'),
   next: l('Next', '다음'),
   previous: l('Previous', '이전'),
-  sample: l('Sample', '샘플'),
   placeholder: l('Placeholder', '임시'),
   photoNeeded: l('Photo needed', '사진 준비 중'),
   email: l('Email', '이메일'),

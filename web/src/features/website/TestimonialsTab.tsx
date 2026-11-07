@@ -56,7 +56,7 @@ export function TestimonialsTab({ content }: { content: WebsiteContent }) {
   async function remove(t: WebsiteTestimonial) {
     const ok = await confirm({
       title: 'Delete this quote?',
-      description: `${opening(t)} comes off the website.${list.length === 1 ? ' With no quotes left, the website shows its sample quotes, marked Sample.' : ''}`,
+      description: `${opening(t)} comes off the website.${list.length === 1 ? ' With no quotes left, the website leaves out its section of families’ words.' : ''}`,
       confirmLabel: 'Delete quote',
       destructive: true,
     })
@@ -72,7 +72,7 @@ export function TestimonialsTab({ content }: { content: WebsiteContent }) {
     <div className="max-w-4xl space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          Families’ words about the academy, shown on the website in this order. Until you add one, the website shows sample quotes marked Sample.
+          Families’ words about the academy, shown on the website in this order. Until you add one, the website leaves this section out.
         </p>
         <Button className="shrink-0" onClick={() => setEditing('new')}>
           <LuPlus /> Add a quote
@@ -90,7 +90,7 @@ export function TestimonialsTab({ content }: { content: WebsiteContent }) {
               <LuQuote />
             </EmptyMedia>
             <EmptyTitle>No quotes yet</EmptyTitle>
-            <EmptyDescription>The website shows sample quotes, marked Sample, until the first one is added here.</EmptyDescription>
+            <EmptyDescription>The website shows its section of families’ words once the first one is added here.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

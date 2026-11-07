@@ -97,30 +97,6 @@ export const T = {
 
   testimonialsKicker: l('From Sky Arc families', 'Sky Arc 학부모님들의 이야기'),
   testimonialsText: l('Parents on safety, coaching and progress at Sky Arc.', '학부모님들이 들려준 안전과 코칭, 성장 이야기.'),
-  /**
-   * Sample quotes, shown only until the academy adds real ones on the CRM's Website page: none of these were said by a
-   * real family, and each card says "Sample" (the FTC's rule on fake reviews: never present them as real).
-   */
-  reviews: [
-    { quote: l('The first thing we noticed was how seriously safety is taken. Every rule is explained, and the coaches make sure the kids understand why.', '제일 먼저 느낀 건 안전을 정말 철저히 챙긴다는 거였어요. 규칙 하나하나를 설명해 주고, 왜 지켜야 하는지 아이들이 이해할 때까지 확인해 주세요.'), who: l('Parent of a Launchpad athlete', 'Launchpad 선수 학부모') },
-    { quote: l('Our daughter was shy when she started. A few months in, she walks onto the range like she belongs there.', '처음 시작할 땐 수줍음이 많던 딸이, 몇 달 만에 사대를 제집처럼 드나들어요.'), who: l('Parent of a Foundations athlete', 'Foundations 선수 학부모') },
-    { quote: l('The coaches know every athlete by name and remember what each one is working on.', '코치님들이 아이들 이름은 물론이고, 각자 무엇을 연습하고 있는지까지 다 기억하세요.'), who: l('Sky Arc parent', 'Sky Arc 학부모') },
-    { quote: l('The progress reports are the best part for us. We can see the scores, the shots and what the coach wants him to work on next.', '저희는 성장 리포트가 제일 좋아요. 점수랑 탄착, 코치님이 다음에 무엇을 연습했으면 하는지까지 다 볼 수 있거든요.'), who: l('Parent of a Development athlete', 'Development 선수 학부모') },
-    { quote: l('The first trial was all safety and no shooting, and that is exactly what made us trust them.', '첫 체험 때는 사격 없이 안전 교육만 했는데, 오히려 그래서 믿음이 갔어요.'), who: l('Parent, new to Sky Arc', 'Sky Arc를 처음 시작한 학부모') },
-    { quote: l('He has learned to slow down, breathe and focus. We see it in his homework too.', '서두르지 않고 호흡하며 집중하는 법을 배웠어요. 숙제할 때도 그게 보여요.'), who: l('Parent of a Foundations athlete', 'Foundations 선수 학부모') },
-    { quote: l('The flexible Launchpad schedule makes it easy to fit training around school and everything else.', 'Launchpad는 일정이 유연해서 학교나 다른 활동 사이에 훈련을 넣기 좋아요.'), who: l('Parent of a Launchpad athlete', 'Launchpad 선수 학부모') },
-    { quote: l('The coaches prepared her for her first match step by step, so she knew exactly what to expect.', '첫 대회 전에 코치님들이 차근차근 준비시켜 주셔서, 아이가 무슨 일이 있을지 다 알고 갔어요.'), who: l('Parent of a Development athlete', 'Development 선수 학부모') },
-    { quote: l('Questions get answered quickly, and schedule changes always come with plenty of notice.', '문의하면 답이 빨리 오고, 일정이 바뀔 땐 항상 넉넉히 미리 알려 줘요.'), who: l('Sky Arc parent', 'Sky Arc 학부모') },
-    { quote: l('Seeing every shot on the screen right away keeps my son motivated to beat his last score.', '한 발 쏠 때마다 화면에 바로 나오니까, 아들이 지난번 점수를 넘으려고 의욕이 넘쳐요.'), who: l('Parent of a Foundations athlete', 'Foundations 선수 학부모') },
-    { quote: l('It is a calm, disciplined place. The kids are focused, and the coaches are patient with every one of them.', '차분하고 규율이 잡힌 곳이에요. 아이들은 집중하고, 코치님들은 아이 하나하나를 참을성 있게 대해 주세요.'), who: l('Sky Arc parent', 'Sky Arc 학부모') },
-    { quote: l('My coach plans each practice around what I need to fix. I can actually see myself getting better.', '코치님이 제가 고쳐야 할 부분에 맞춰 매번 연습을 짜 주세요. 실력이 느는 게 직접 보여요.'), who: l('Athlete, Performance level', 'Performance 단계 선수') },
-    { quote: l('They teach the kids to let go of a bad shot and focus on the next one. That lesson goes far beyond the range.', '안 좋은 한 발은 잊고 다음 한 발에 집중하라고 가르쳐요. 사대 밖에서도 통하는 배움이에요.'), who: l('Parent of a Performance athlete', 'Performance 선수 학부모') },
-    { quote: l('We knew nothing about air rifle. The staff walked us through everything, from the equipment to what each level means.', '공기소총은 하나도 몰랐는데, 장비부터 단계별 의미까지 하나하나 설명해 주셨어요.'), who: l('Parent, new to Sky Arc', 'Sky Arc를 처음 시작한 학부모') },
-    { quote: l('We always know where our son stands and what it takes to reach the next level.', '아들이 지금 어느 정도인지, 다음 단계로 가려면 무엇이 필요한지 늘 알 수 있어요.'), who: l('Parent of a Development athlete', 'Development 선수 학부모') },
-    { quote: l('Both of our kids train here, at different levels, and each one gets the attention they need.', '두 아이가 서로 다른 단계에서 훈련하는데, 둘 다 필요한 만큼 충분히 신경 써 주세요.'), who: l('Sky Arc parent', 'Sky Arc 학부모') },
-    { quote: l('The respect for the rules, and for each other, is something we now see at home as well.', '규칙을 지키고 서로를 존중하는 모습이 이제 집에서도 보여요.'), who: l('Parent of a Launchpad athlete', 'Launchpad 선수 학부모') },
-    { quote: l('With a high schooler, I appreciate how openly the coaches talk about the path to collegiate rifle.', '고등학생 아이를 둔 입장에서, 대학 사격팀으로 가는 길을 코치님들이 솔직하게 이야기해 주셔서 고마워요.'), who: l('Parent of a Performance athlete', 'Performance 선수 학부모') },
-  ],
 
   newsKicker: l('News & results', '소식과 대회 결과'),
   galleryKicker: l('Inside the academy', '아카데미 풍경'),
