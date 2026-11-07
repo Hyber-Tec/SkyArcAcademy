@@ -8,7 +8,8 @@ unless they say how something works from then on.
 
 ### Connect skyarcacademy.com
 
-The steps are in [DEPLOY.md](DEPLOY.md), "Moving to skyarcacademy.com". In short:
+Waiting for the manager to hand Goo the Squarespace login (2026-11-06). The steps are in [DEPLOY.md](DEPLOY.md),
+"Moving to skyarcacademy.com". In short:
 
 - **Firebase:** Hosting → Add custom domain, `skyarcacademy.com`, **Advanced setup**, so the old website stays up until
   the new one's certificate is ready.
@@ -27,8 +28,12 @@ The steps are in [DEPLOY.md](DEPLOY.md), "Moving to skyarcacademy.com". In short
 
 The steps are in [publishing/updates.md](publishing/updates.md), "1.1.0, sent on 2026-11-06", steps 2 and 3:
 
-1. **Data safety:** add the account creation methods, username and password and OAuth.
-2. **Roll out:** Production → the draft 1.1.0 (12) → Edit release → Next → Save and publish.
+1. **Data safety (Goo):** under account creation methods, tick **Username and password** and **OAuth**, and untick
+   "My app does not allow users to create an account" if it's ticked. Keep the delete account link. Nothing else
+   changes.
+2. **Roll out:** Claude Code, through Google Play's API from the MacBook Pro, once Goo says the form is saved. Or in
+   the Play Console: Production → the draft 1.1.0 (12) → Edit release → Next → Save
+   and publish. The form must come first, or Google may review the new version against the old answers.
 
 Google reviews it, usually in hours to a few days, and then it goes live by itself.
 
@@ -37,17 +42,6 @@ Google reviews it, usually in hours to a few days, and then it goes live by itse
 App Store Connect → Sky Arc → App Privacy: add **Identifiers → Device ID** (linked to the user, App Functionality, not
 tracking), the phone's notification token, then **Publish**. No review. The answers are in
 [store/privacy-answers.md](store/privacy-answers.md).
-
-### Notifications on iPhones
-
-[mobile-push.md](mobile-push.md), "What Goo does":
-
-- Upload one of the team's Team Scoped APNs keys (`.p8`) in Firebase → Project settings → Cloud Messaging → the iOS
-  app.
-- Then a test push to Goo's iPhone.
-
-Without the key, iPhones get no notifications. Android needs nothing. Whether it was done isn't recorded anywhere:
-check the Cloud Messaging page.
 
 ## Soon
 
@@ -328,6 +322,10 @@ Kept so they aren't brought up again. Each was decided:
 ## Good to know
 
 These are notes, not tasks.
+
+- **Notifications on iPhones work:** Apple's push key is in Firebase. Claude Code sent a test push to Goo's iPhone on
+  2026-11-06, and it arrived. If iPhones ever stop getting them, check Firebase → Project settings → Cloud Messaging
+  → the iOS app's APNs key ([mobile-push.md](mobile-push.md)).
 
 - **Showing the app** ([DECISIONS.md](DECISIONS.md) §22):
   - **On the website:** turn on **Demo data** in the account menu to show the made-up academy, and turn it off for

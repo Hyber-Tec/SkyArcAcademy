@@ -5,11 +5,11 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Now
 
-- [ ] **Connect skyarcacademy.com** in Firebase and Squarespace (Goo, about 15 minutes), then merge
-  [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119), which moves every link to it
-- [ ] **Google Play 1.1.0:** update the Data safety form, then roll out the draft release (Goo, about 10 minutes)
+- [ ] **Connect skyarcacademy.com** in Firebase and Squarespace (Goo, about 15 minutes, once the manager hands over the
+  Squarespace login), then merge [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119), which moves every link
+  to it
+- [ ] **Google Play 1.1.0:** update the Data safety form (Goo, 5 minutes), then Claude Code rolls out the draft release
 - [ ] **App Store privacy:** add "Device ID" under App Privacy (Goo, 2 minutes, no review)
-- [ ] **Notifications on iPhones:** check that Apple's push key is in Firebase, then send a test push (Goo)
 
 ## Soon
 
@@ -74,7 +74,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 - [x] ✅ 2026-11-06 · iPhone app 1.1.0 approved and live in the App Store, within a day of sending it
 - [x] ✅ 2026-11-06 · Sign-in and file access accept skyarcacademy.com (Firebase settings)
-- [x] ✅ 2026-11-06 · Access to the domain's Squarespace account
+- [x] ✅ 2026-11-06 · Notifications on iPhones: Apple's push key is in Firebase, and a test push reached Goo's iPhone
 - [x] ✅ 2026-11-06 · 1.1.0 (build 12) sent to Apple, and staged on Google Play (#118)
 - [x] ✅ 2026-11-06 · Phone app: lines wrap between words, in Korean and English (#117)
 - [x] ✅ 2026-11-05 · Korean for parents: the portal, the phone app, the website and the contract (#115)
