@@ -1,124 +1,127 @@
-# To do: the owner's list, and what we agreed to do later
+# To-do
 
-Two lists kept between rounds, so nothing is forgotten (the owner, 2026-10-17: "keep that in your mind so that you can
-bring that up later"). Claude Code reads this file at the start of a round and brings up what's due. When something is
-done, take it off; when it becomes a decision, record it in `docs/DECISIONS.md`.
+Goo's list, short on purpose. The details for each line are in [TODO-notes.md](TODO-notes.md), under the same title.
+When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-06.
 
-## The owner's to-do (left for later on purpose)
+## Now
 
-1. **The stores: 1.1.0 is sent** (2026-11-06, `docs/publishing/updates.md`, "1.1.0, sent on 2026-11-06"). 1.0.0 is
-   live in both. The App Store has 1.1.0 (build 12) in review; it releases itself once approved. Google Play has 1.1.0
-   (build 12) as a draft production release. **Left for Goo, about 10 minutes:** Apple's App Privacy (add Device ID:
-   the notification token), Google's Data safety (account creation in the app), then roll out the draft 1.1.0 (12) on
-   Google Play's Production page. When a store answers, tell Claude Code (`docs/publishing.md`, "When a store
-   answers").
-2. **Google Play:** Sky Arc 1.0.0 (build 3) is **published and live** (by 2026-11-03); 1.1.0 waits for Goo's send,
-   above.
-3. **The academy:** the academy's owner reviews the grades on the spreadsheet; later A10 and A12–A15
-   (`docs/QUESTIONS.md`). A17–A18 aren't asked (§21).
-4. **Showing the app** (`docs/DECISIONS.md` §22): turn on **Demo data** in the account menu (your name at the
-   bottom of the sidebar) to show the made-up academy, and turn it off for the real one. On a phone (from the update
-   below), sign in with one of the demo's own logins to show it ("Demo" shows at the top), and with your own account
-   for the real academy. Before a showing, ask Claude Code to refresh the demo (`npm run seed:sample` on production
-   moves its classes around the day).
-5. **The update, 1.1.0, for both stores:** sent on 2026-11-06 (item 1). TestFlight and Google Play's internal testing
-   have the same build 12. Then clear the lead coach (below), once the iPhones have 1.1.0.
-6. **The second meeting's tasks** (2026-10-27): [`docs/MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase, ticked as
-   each is merged. Phase 1 is merged (contracts with #53); Phase 3 runs on the MacBook Pro. Yours:
-   - **The schedule (`V2`) and the hole sizes (`P1`)** are merged (#67, #68, and the phone's part in #71). The manager
-     isn't asked about the scoring rule.
-   - **The manager's files:** all in: the past results (the third meeting) and the contract (2026-11-04, `CT2`).
-7. **Push notifications:** Apple's push key into Firebase, once (`docs/mobile-push.md`, "What Goo does", and #45), then
-   a test push to your iPhone from the MacBook Pro when you say.
-8. **AI for report text** (`docs/DECISIONS.md` §26): you're a super admin (HyberTec's other developer too, §29). On
-   the website, **Settings → AI**:
-   - **Models:** Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month); Gemini 3.5 Flash-Lite is
-     about $1 (fine to choose: only adults use AI, §26).
-   - **Keys:** add the chosen provider's API key (the page links where to make one), then **Test**, turn Report text
-     **on** and **Save**. Then a draft report → **Write with AI**.
-9. **Your round of 2026-11-02** (`docs/DECISIONS.md` §29): your three picks are built. The Students list (#100) and
-   the Scores tab (#101) are merged; **review the Scores page (#102)**. What they left for you to decide is the first
-   three questions below.
-10. **The third meeting's tasks** (2026-11-02): [`docs/MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md), ticked as each is
-    merged, all on the MacBook Pro this round (Goo, 2026-11-03). The sign-up and the contract in the app are built
-    (`CT1`, `CT2`; `docs/DECISIONS.md` §31). Yours:
-    - **Sign in with Apple, once, before the next store update:** the steps in
-      [`docs/publishing/apple/sign-in-with-apple.md`](publishing/apple/sign-in-with-apple.md) (Apple's developer site and
-      the Firebase console).
-    - **The contract** (approved 2026-11-05; `docs/DECISIONS.md` §33 to §35) is live in the academy and the demo one,
-      with the manager's name typed as the academy's signature. Yours: in Settings → Enrollment contract, check the
-      prices, add his title if you like, and upload his SVG when it comes (it replaces the typed name). From then on
-      the office sends each family's contract from the student's page or the list there (every family signs again, one
-      contract per child), and each signer gets their copy by email.
-    - **The Korean** (`docs/DECISIONS.md` §36): read the contract's Korean translation with the manager (in the demo
-      academy: a parent's contract with the phone or browser in Korean, and its signed PDF), then say so and Claude Code
-      puts it in the live academy (`scripts/contract.ts --ko-file`). Tell Claude Code wherever the app's Korean reads
-      oddly.
-    - **The domain** once he invites you to Squarespace (`DM1`–`DM3`).
+- [ ] **Connect skyarcacademy.com** in Firebase and Squarespace (Goo, about 15 minutes), then merge
+  [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119), which moves every link to it
+- [ ] **Google Play 1.1.0:** update the Data safety form, then roll out the draft release (Goo, about 10 minutes)
+- [ ] **App Store privacy:** add "Device ID" under App Privacy (Goo, 2 minutes, no review)
+- [ ] **Notifications on iPhones:** check that Apple's push key is in Firebase, then send a test push (Goo)
 
-## Product questions waiting for the owner
+## Soon
 
-- **Card photos picked from the Drive** (#101): the photo becomes the score's file, so nothing is copied, and the
-  website shows it with the bulls' scores. The phone app and a family's view show it as a plain photo. Either save a
-  straightened copy of the card beside it, as the phone's scanner does (the folder gets a second file for that card;
-  Claude Code's suggestion, no phone work), or keep one file and have the phone app (on the MacBook Pro) and the
-  family view draw the scores on the photo.
-- **Families' Scores page:** the staff's new Scores tab design (§29) for families too, or as it is?
-- **"To check" on the Scores page** (#102): results the reader marked Check show there for 30 days, since nothing
-  clears the mark yet. A button to say a result is right would clear it.
-- **The demo academy on the phone:** a demo login opens the demo there too, from 1.1.0, and a super admin switches to it
-  with View the app as (§27). Other owners in both academies could get a switch too, if wanted.
-- **AI and families:** should a shared report say its words were drafted with AI and checked by the academy? Today it
-  doesn't (only staff see it). Anthropic's guidance for apps that serve minors asks to tell users when AI is involved.
-- **From the meeting notes, still to build** (checked on 2026-10-18; the rest is built, or waits on a decision already
-  recorded: languages, push, the stores; the public website is live since 2026-10-20, `docs/DECISIONS.md` §18):
-  - **Families cancel, and request a class or a makeup in an open seat:** the second meeting's `S1`–`S3`
-    (`docs/MEETING2_FEEDBACK.md`).
-  - **A student's class that repeats every week.** Today the office copies whole weeks (Duplicate week).
-  - **Coaches' notes on a class** (a session log, "if they want"). Today only the office writes a class's note.
-  - **The kiosk as a registered device** with a setup PIN (§6 Q9); until then it opens for a signed-in admin.
-  - **Trial booking online** can be built now: the privacy policy it waited on is approved (2026-10-20, §6 Q15). Today
-    the website's "Book a trial" sends a request (the days that suit the family) to the Website page and the office's
-    email. Booking proper: open times from the coaches' availability, a class labeled Trial 1, the family's
-    confirmation email, Trial 2 by an emailed link (`docs/DECISIONS.md` §18).
-- **The website's missing content** (the list for the academy's manager, 2026-10-20): coach portraits, real families'
-  quotes (with permission), trial length and price, the youngest starting age, the range's safety rules, whether
-  coaching happens in Korean, tuition rates or a tuition guide, more photos (the range, the equipment, a first trial,
-  the team, results day) and a larger copy of the match-day photo (630 px wide now). The phone number is set
-  (2026-10-20). Until each is confirmed the site leaves it out (photos go in on the Website page; text in
-  `web/src/site/kit/content.ts`).
-- **Before skyarcacademy.com points to the website**: real testimonials, or the samples come off (`docs/DEPLOY.md`,
-  "Moving to skyarcacademy.com").
+- [ ] **Kiosk app** on the Samsung tablet: its own Android app, installed from a file, always on, and working without
+  the internet (go over it with Claude Code when the tablet arrives)
+- [ ] **Email from info@skyarcacademy.com**, so mail stops landing in spam (after the domain; the manager makes an app
+  password)
+- [ ] **Invite the coaches** from the website (after the domain and the email)
+- [ ] **The contract's Korean:** read it with the manager, then Claude Code puts it in the live academy
+- [ ] **The contract's settings:** check the prices, add the manager's title, upload his signature when it comes
+- [ ] **Clear the lead coach** from the seats, once every iPhone has 1.1.0 (from about 2026-11-13; say when)
+- [ ] **Website: Korean lines wrap between words**, as on the phone (ready on a branch; a pull request when you say)
+- [ ] **AI for report text:** Settings → AI, add the key and turn it on (if not done yet)
+- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap (after the domain)
+- [ ] **The stores' links to skyarcacademy.com:** Google Play any time after the domain, the App Store with the next
+  version
 
-## Later: agreed, not now
+## Waiting on the academy
 
-- **The website, faster on phones**: the pages show once their scripts have loaded (Lighthouse on a simulated slow
-  phone, 2026-10-20: performance 82, accessibility 96, SEO 100). Building each page's first screen into its HTML
-  would make it show sooner; worth doing before skyarcacademy.com points here.
-- **A web app for phones (PWA).** People on phones use the phone app; the website is used from laptops. Once everything
-  works, make the website installable and comfortable on a phone. Until then the website's phone layout only has to not
-  break (the schedule's coach column was narrowed on 2026-10-17).
-- **Sign in with Apple:** only if Apple insists at review (guideline 4.8). The quicker fallback is email and password
-  only in the iPhone app (`docs/publishing/apple/rules.md`, "Sign in with Apple").
-- **SIUS PDFs from the phone**, if coaches get them there: the phone can pick files already, but reading a SIUS result
-  is the website's (a server-side reader would do it).
-- **Other languages:** not now. Korean for parents is done (`docs/DECISIONS.md` §36); another language only if it's
-  really needed.
-- **The real data moved in on 2026-10-26** (Goo's call, during Apple's review: `docs/DECISIONS.md` §21). The sample
-  data, the owner's test coach and the coach, parent and student review logins are gone; pay is Hourly from the start
-  and Sunday is open 1–7:30 PM; the import brought in the staff, the students and their parents' contacts, and the
-  classes from August 31 to November 30 with who's in each day (from the sheets and the spreadsheet of 2026-10-25).
-  Nobody got access or email. Still to do:
-  1. **The manager's later changes:** none by import: since the third meeting (2026-11-02) the academy uses the app,
-     and the manager marks the past weeks' attendance himself on the website.
-  2. **Who's in on Sundays:** the coach in turn isn't on the sheets, so Sundays show the every-Sunday coach and the
-     manager only; the office adds that week's coach in "Who's in". The make-up Friday of October 23 has nobody in,
-     and one student was in two classes at once that day.
-  3. **Access**, from the website, when the office is ready: each sends that person's sign-in email (the academy's
-     owner as an owner, A18).
-  4. **The phone's lead coach:** `scripts/lead-coach.ts` gives each seat its class's lead coach so the phone app 1.0 can
-     open a class. Android's build 3 already reads classes; once the iPhone's 1.1.0 is out, run
-     `npx tsx scripts/lead-coach.ts --clear`. Until then, run `--apply` again after the office adds students.
-  5. **Coaches' usual days run through February 28, 2027** (carried on from November's on 2026-10-28, `C4`). In late
-     February, ask Claude Code to carry them on again, or the office uses Repeat weekly.
-- **Moving to skyarcacademy.com** at launch: `docs/DEPLOY.md`, "Moving to skyarcacademy.com".
+- [ ] **Website content:** coach photos, real families' quotes, trial length and price, the youngest age, the range's
+  safety rules, coaching in Korean, tuition, more photos
+- [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)
+- [ ] **The grades on the spreadsheet:** the academy's owner reviews them
+
+## Questions for Goo
+
+- [ ] **Card photos from the Drive:** save a straightened copy beside each photo, or draw the scores on the photo?
+- [ ] **Families' Scores page:** the staff's new design, or as it is?
+- [ ] **"To check" on the Scores page:** add a button that says a result is right?
+- [ ] **The demo on the phone:** a switch for other owners too?
+- [ ] **AI in shared reports:** tell families the words were drafted with AI and checked by the academy?
+- [ ] **Terms of service:** the old website had a page; the new one sends /terms to the privacy policy. Want terms?
+- [ ] **skyarcsports.com** (a second domain, at GoDaddy): send it to the website too?
+
+## Later
+
+- [ ] Trial booking online (open times from the coaches' availability, Trial 1 and Trial 2)
+- [ ] A student's class that repeats every week (today the office copies weeks)
+- [ ] Coaches' notes on a class
+- [ ] Competition results from a PDF, not only a photo
+- [ ] SIUS PDFs read on the phone
+- [ ] The website faster on phones
+- [ ] The website installable on a phone (PWA)
+- [ ] A how-to video for parents, once the website and the app are final
+- [ ] Tuition on the website, if the manager asks
+- [ ] Coaches' usual days carried on past February 28, 2027 (ask in late February)
+- [ ] Google's sign-in window says skyarcacademy.com instead of skyarcacademy.firebaseapp.com
+
+## Not doing
+
+- ~~Clocking in from a phone or by location~~: the kiosk only (third meeting)
+- ~~Events on the schedule and the website~~: removed at Goo's request
+- ~~Other languages~~: Korean for parents only
+- ~~A merch shop~~: not asked for
+- ~~Automatic travel-hour pay~~: added by hand, unless the manager asks
+- ~~Several academies or branches~~: one academy, plus the demo
+- ~~Automatic level changes, and rules for make-ups and trials~~: labels, and levels changed by hand
+- ~~Importing past schedules~~: the manager marks the past weeks' attendance himself
+- ~~Asking the manager about the paper scoring rule~~: Goo decided it
+
+## Done ✅
+
+- [x] ✅ 2026-11-06 · iPhone app 1.1.0 approved and live in the App Store, within a day of sending it
+- [x] ✅ 2026-11-06 · Sign-in and file access accept skyarcacademy.com (Firebase settings)
+- [x] ✅ 2026-11-06 · Access to the domain's Squarespace account
+- [x] ✅ 2026-11-06 · 1.1.0 (build 12) sent to Apple, and staged on Google Play (#118)
+- [x] ✅ 2026-11-06 · Phone app: lines wrap between words, in Korean and English (#117)
+- [x] ✅ 2026-11-05 · Korean for parents: the portal, the phone app, the website and the contract (#115)
+- [x] ✅ 2026-11-05 · The enrollment contract approved, and live in the academy and the demo
+- [x] ✅ 2026-11-05 · Contracts filled in and signed in the app, one per child, sent by the office, a copy by email
+  (#111–#113)
+- [x] ✅ 2026-11-05 · iPhone app 1.0.0 live in the App Store (sent 2026-10-21; approved after Goo wrote to Apple)
+- [x] ✅ 2026-11-04 · The manager's blank contract
+- [x] ✅ 2026-11-03 · Google Play: Sky Arc 1.0.0 live (sent 2026-10-26)
+- [x] ✅ 2026-11-03 · Sign in with Apple, and Create an account in the app by the email on file (#108)
+- [x] ✅ 2026-11-03 · The Scores page, with every student's latest results (#102)
+- [x] ✅ 2026-11-03 · Mark the rest of a class or a day, and see what's not marked (#105)
+- [x] ✅ 2026-11-03 · Results sheets: the student found by name, and no result added twice (#106, #107)
+- [x] ✅ 2026-11-02 · Third meeting with the manager: notes and tracker (#104)
+- [x] ✅ 2026-11-02 · The Students list and the Scores tab, as Goo picked them (#100, #101)
+- [x] ✅ 2026-11-02 · The schedule's panel floats over it, opened from its corner (#97)
+- [x] ✅ 2026-10-30 · AI for report text, and Settings → AI (#90–#95)
+- [x] ✅ 2026-10-30 · Competitions shown match by match, series by series (#89, #93)
+- [x] ✅ 2026-10-30 · Super admins view the phone app as anyone (#85)
+- [x] ✅ 2026-10-30 · The family's Classes remade, with the months as a page (#87)
+- [x] ✅ 2026-10-30 · Each student's own Contracts folder (#88)
+- [x] ✅ 2026-10-30 · The timeline: equal slots, right-click menus, no events (#86)
+- [x] ✅ 2026-10-29 · The office suggests another class, and the family accepts it (#81)
+- [x] ✅ 2026-10-29 · Owners and admins change any day, a past one too (#79)
+- [x] ✅ 2026-10-29 · The card reader finds holes in uneven light, at a slant and beside other cards (#80, #83)
+- [x] ✅ 2026-10-28 · Push notifications on the phone (#45)
+- [x] ✅ 2026-10-28 · Families cancel and ask for classes, and the office answers (#46, #58)
+- [x] ✅ 2026-10-28 · Contracts signed from a link (#53)
+- [x] ✅ 2026-10-28 · The schedule as a timeline of who's in (#67)
+- [x] ✅ 2026-10-28 · Each hole measured and scored at its real size (#68, #71)
+- [x] ✅ 2026-10-28 · Pay at one hourly rate from the kiosk; coaches add time inside the lock (#44, #54, #57)
+- [x] ✅ 2026-10-28 · Result kinds, the written score, and competitions from their sheet (#48, #66)
+- [x] ✅ 2026-10-28 · Simpler Settings, with a search and a home page (#49, #72)
+- [x] ✅ 2026-10-28 · Deploys send only what changed (#59)
+- [x] ✅ 2026-10-27 · Second meeting with the manager: tasks and tracker (#43)
+- [x] ✅ 2026-10-27 · A demo academy, for showing the app (#38, #41)
+- [x] ✅ 2026-10-26 · The academy's real data in production: staff, students, parents' contacts, classes (#30, #32)
+- [x] ✅ 2026-10-26 · Classes taught together, and the schedule as the academy's sheets (#31, #34)
+- [x] ✅ 2026-10-26 · Google Play: 1.0.0 sent for review (#35–#37)
+- [x] ✅ 2026-10-21 · App Store: 1.0.0 sent for review (#26)
+- [x] ✅ 2026-10-20 · The academy's public website, live, and the privacy policy in effect (#24, #25)
+- [x] ✅ 2026-10-18 · Every score for parents and students, and the academy's news (#21, #22)
+- [x] ✅ 2026-10-18 · Coaches on the phone, "not available" days, and the coach's payroll (#23)
+- [x] ✅ 2026-10-17 · Parents and students on the website and the phone (#20)
+- [x] ✅ 2026-10-17 · The shot replay, and coaches in the app (#15, #17, #18)
+- [x] ✅ 2026-10-16 · The office's phone app, with paper targets scored from a photo (#14)
+- [x] ✅ 2026-10-16 · The Drive and progress reports (#11)
+- [x] ✅ 2026-10-16 · The academy's official logos everywhere (#12, #13)
+- [x] ✅ 2026-10-15 · Pay for classes taught, student levels and sample data (#8, #9)
+- [x] ✅ 2026-10-15 · Sky Arc set up from HyberCRM: the repository, checks and deploys (#1–#7)
