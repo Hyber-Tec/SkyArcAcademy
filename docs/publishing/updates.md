@@ -78,6 +78,9 @@ words). Then:
 4. **When both are out:** nothing to do on phones (they update by themselves). Later, once the iPhones have 1.1.0:
    `npx tsx scripts/lead-coach.ts --clear` (`docs/TODO.md`).
 
+**What came back:** Apple approved 1.1.0 within a day, and it was in the App Store by the evening of 2026-11-06.
+Google's draft waits for Goo's steps 2 and 3.
+
 **How long:** Apple's first review took about two weeks (sent 2026-10-21, still waiting on 2026-11-03 until Goo wrote
 to Apple); Google's first took up to eight days (2026-10-26 to live by 2026-11-03). An update is usually much quicker:
 Apple reviews 90% of submissions within a day, and Google an update within hours to a few days (up to a week for a

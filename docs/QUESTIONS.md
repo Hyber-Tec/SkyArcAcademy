@@ -26,11 +26,11 @@ asked: the office fills them in from the website ([`DECISIONS.md`](DECISIONS.md)
 | | Question | Needed for | Until answered |
 |---|---|---|---|
 | **A10** | **The academy's legal name and mailing address**, if it wants them in the privacy policy's contact section (Settings → Academy). The policy itself is approved and in effect (2026-10-20), with the academy's email and phone. | The privacy policy's contact details | Its name, email and phone |
-| **A12** | **The kiosk:** a tablet or computer at the front desk where coaches clock in? Any device with a web browser works. | The kiosk | The kiosk page, opened by an admin on any computer |
 | **A13** | **Website content:** coach portraits, real families' quotes (with their permission), trial length and price, the youngest starting age, the range's safety rules, whether coaching happens in Korean, tuition rates or a guide, more photos and a larger match-day photo (`docs/TODO.md`). The phone number is set (2026-10-20). | The public website | Left out until confirmed (photos marked); sample quotes marked "Sample" |
-| **A14** | **The domain:** access to skyarcacademy.com, and an email address on it for the app to send from (the academy already uses an address on it, 2026-10-24). | Launch ([`DEPLOY.md`](DEPLOY.md)) | HyberTec's Gmail sends |
+| **A14** | **The email address the app sends from:** `info@skyarcacademy.com` (the second meeting's `E1`), and its app password from the manager. Access to the domain is in (Squarespace, 2026-11-06). | The email sender ([`TODO-notes.md`](TODO-notes.md)) | HyberTec's Gmail sends |
 
-A15 (how coaches score a hole on a line) was answered at the second meeting: by where most of the hole sits
+A12 (the kiosk's device) was answered at the third meeting: an Android tablet HyberTec provides, at the front desk
+([`TODO-notes.md`](TODO-notes.md), "Kiosk app"). A15 (how coaches score a hole on a line) was answered at the second meeting: by where most of the hole sits
 ([`DECISIONS.md`](DECISIONS.md) §23). A19 (one contract per child or per family) was answered on 2026-11-04: one per
 child, each signed on its own ([`DECISIONS.md`](DECISIONS.md) §33). What the academy still has to send is listed in
 [`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), Section 7.

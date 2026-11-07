@@ -115,8 +115,8 @@ The web config (API key, app ID, …) is never committed (CLAUDE.md, "Secrets").
 ## Sign-in settings (Firebase Authentication)
 
 - Providers: **Email/Password** and **Google**.
-- Authorized domains: `localhost`, `skyarcacademy.firebaseapp.com`, `skyarcacademy.web.app`. Add `skyarcacademy.com`
-  when the domain moves here.
+- Authorized domains: `localhost`, `skyarcacademy.firebaseapp.com`, `skyarcacademy.web.app`, and since 2026-11-06
+  `skyarcacademy.com` and `www.skyarcacademy.com`.
 
 ## Storage
 
@@ -129,7 +129,8 @@ The web config (API key, app ID, …) is never committed (CLAUDE.md, "Secrets").
   and the news covers, resized in the browser) is readable by anyone, and the site shows them by plain address
   (`https://firebasestorage.googleapis.com/v0/b/…/o/…?alt=media`), with no token. Only admins write there.
 - `getBlob` in the browser needs CORS on the bucket: `storage.cors.json` allows GET from the app's addresses and the
-  local dev servers. Applied on 2026-10-15; apply it again after changing the file:
+  local dev servers. Applied on 2026-10-15, and again on 2026-11-06 with the academy's domain; apply it again after
+  changing the file:
   `gcloud storage buckets update gs://skyarcacademy.firebasestorage.app --cors-file=storage.cors.json`.
 - Storage rules that call `firestore.get()` need the Storage service agent
   (`service-1025403274020@gcp-sa-firebasestorage.iam.gserviceaccount.com`) to hold
@@ -257,30 +258,62 @@ bytes go with their records. Running `npm run seed:sample` again refreshes the c
 replaces the sample's earlier schedule. Production's sample data was removed this way on 2026-10-26, before the
 academy's real data came in; the App Store's review account stayed, as an admin (`docs/store/review-notes.md`).
 
-## Moving to skyarcacademy.com (launch)
+## Moving to skyarcacademy.com
 
-The academy owns skyarcacademy.com, and moving the app there is the last step before launch. When it happens, also:
+The academy's domain, **skyarcacademy.com**, is registered at Squarespace, and its DNS is there too (Squarespace's
+nameservers). Goo has access to the account since 2026-11-06. Until the move it shows the academy's earlier website,
+through two A records for `@`.
 
-1. **Hosting:** add the domain in the Firebase console (Hosting → Add custom domain) and the DNS records it asks for
-   at the academy's registrar.
-2. **Sign-in:** add `skyarcacademy.com` to Authentication → Settings → Authorized domains. Keep `authDomain` on
-   `skyarcacademy.firebaseapp.com` unless the domain's `/__/auth/handler` is registered on the Google OAuth client.
-3. **The app's own address:** `APP_DOMAIN` in `shared/src/brand.ts` (links in emails), the origins in
-   `storage.cors.json` (apply it again, see "Storage"), `og:image` in `web/app.html` and `web/index.html`, and the
-   address in `CLAUDE.md` and `README.md`.
-4. **The email sender (decided 2026-10-15):** emails go from HyberTec's Gmail until now. Ask the owner for an address on the
-   academy's domain (e.g. a Google Workspace mailbox) so mail stops landing in spam; publish SPF, DKIM and DMARC for
-   it, then change `SENDER_EMAIL` in `shared/src/brand.ts` and set its app password with
-   `firebase functions:secrets:set GMAIL_APP_PASSWORD`.
-5. **Sample data:** removed (see above).
-6. **The public website:** real testimonials on the Website page, or the section shows samples marked "Sample"
-   (`docs/DECISIONS.md` §18); `APP_URL` in `shared/src/brand.ts` also sets the site's canonical addresses, sitemap and
-   robots.txt (built from it) and the `https://skyarcacademy.web.app` addresses in `web/index.html`; submit the
-   sitemap in Google Search Console.
-7. **Privacy policy:** in effect since 2026-10-20 (`web/src/site/pages/Legal.tsx`). It names the website by
-   `APP_DOMAIN` (`shared/src/brand.ts`), so it follows the move; check the academy's contact details in Settings →
-   Academy (the policy and Help show them), and update the stores' privacy policy and support addresses if they still
-   point at skyarcacademy.web.app (both keep working there).
+The domain's email is Google Workspace (`info@`). Its records stay exactly as they are:
+
+- the MX record (`smtp.google.com`);
+- the SPF TXT record (`v=spf1 include:_spf.google.com ~all`);
+- DKIM (`google._domainkey`) and DMARC (`_dmarc`).
+
+Firebase's own addresses keep serving the same site after the move, so nothing that links to `skyarcacademy.web.app`
+breaks: the phone app 1.0 and 1.1, and emails already sent.
+
+1. **Claude Code, done on 2026-11-06:**
+   - Sign-in's authorized domains include `skyarcacademy.com` and `www.skyarcacademy.com` (see "Sign-in settings").
+   - The bucket's CORS allows both (see "Storage").
+2. **Goo, Firebase** (console → Hosting → **Add custom domain**):
+   - Enter `skyarcacademy.com`, leave the redirect box unticked, and **Continue**.
+   - Choose **Advanced setup**, so the old website stays up until Firebase's certificate is ready.
+   - It shows a **TXT** record (`hosting-site=skyarcacademy`, for ownership) and a second **TXT** record for the
+     certificate (host `_acme-challenge`).
+3. **Goo, Squarespace** (https://account.squarespace.com/domains → `skyarcacademy.com` → **DNS**):
+   - Under **Custom records**, add both TXT records as Firebase shows them: Host `@` for the first, `_acme-challenge`
+     for the second (without `.skyarcacademy.com`).
+   - Squarespace may ask for the account's password or a 2-step code first.
+   - Then **Verify** in Firebase.
+4. **When Firebase says the certificate is ready** (usually within hours), switch the website:
+   - In Squarespace, delete the two **A** records for `@`: `172.66.3.26` and `162.159.143.30`, the old website. Delete
+     any **AAAA** for `@` too.
+   - Add the **A** record Firebase shows: Host `@`, `199.36.158.100`.
+   - The status goes to **Connected**. Squarespace's records are kept up to 4 hours by some networks, so a few people
+     see the old site that long.
+5. **`www`:**
+   - In Firebase, **Add custom domain** `www.skyarcacademy.com`, and tick the box that redirects it to
+     `skyarcacademy.com`.
+   - Add the record it shows in Squarespace (the domain has no `www` record before this).
+6. **Claude Code checks the domain:** DNS, the certificate, the pages, sign-in. Then
+   [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119) is merged, which moves these to skyarcacademy.com:
+   - `APP_DOMAIN` (every link in emails and notifications, the privacy policy's wording, the phone app's next build);
+   - the website's canonical addresses, sitemap and robots.txt;
+   - redirects from the old site's `/tuition`, `/schedule` and `/terms`;
+   - the docs.
+   It also drops the home page's sample quotes, which had to be real or gone before the domain points here
+   (`docs/DECISIONS.md` §18).
+7. **The email sender** (decided 2026-10-15 to wait for the domain): the academy's `info@` address sends, once its app
+   password is in the `GMAIL_APP_PASSWORD` secret and `SENDER_EMAIL` changes (`docs/TODO-notes.md`, "Email from
+   info@skyarcacademy.com"). The domain already publishes SPF, DKIM and DMARC for Google Workspace.
+8. **After the move:**
+   - Google Search Console: add the domain and send the sitemap.
+   - The stores' addresses (`docs/store/listing.md`): Google Play's any time; the App Store's Support and Marketing URLs
+     with the next version.
+
+Keep `authDomain` on `skyarcacademy.firebaseapp.com` unless the domain's `/__/auth/handler` is registered on the Google
+OAuth client and Apple's Services ID first (`docs/TODO-notes.md`, "Google's sign-in window").
 
 ## Manual deploy (only when GitHub Actions is down)
 

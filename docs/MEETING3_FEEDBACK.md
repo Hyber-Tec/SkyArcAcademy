@@ -236,7 +236,8 @@ started: *already works*, *small change* or *new work*.
 
 ### DM: The domain and access
 - [ ] **DM1. Connect the .com** (on Squarespace) once the manager invites Goo to the account. *(Goo)*
-  - *Plan:* Goo, with `docs/DEPLOY.md`, "Moving to skyarcacademy.com".
+  - *Plan:* Goo, with `docs/DEPLOY.md`, "Moving to skyarcacademy.com" (the steps for Firebase and Squarespace,
+    2026-11-06); sign-in and Storage accept the domain already; then #119 moves the links to it.
 - [ ] **DM2. Invite the coaches** once the domain is connected.
 - [ ] **DM3. Send email from the academy's domain** (the second meeting's `E1`), with `DM1`, so it stops landing in
   spam.
@@ -246,7 +247,8 @@ started: *already works*, *small change* or *new work*.
   photos, on the website and in the app, once match directors give them.
 - [ ] **L-KI. The kiosk on an Android tablet.** HyberTec provides the tablet and a wall mount, at the front desk near an
   outlet. When Goo asks, make the kiosk **installable on the tablet from a file** (no store) and keep it running there.
-  Clocking in from a phone or by location was turned down: the kiosk only.
+  Clocking in from a phone or by location was turned down: the kiosk only. Goo, 2026-11-06: a Samsung tablet is on
+  its way; the kiosk is its own app that keeps working without the internet (`docs/TODO-notes.md`, "Kiosk app").
 - ✅ **L-LG. Korean** for parents (the second meeting's `L1`), 2026-11-05 (#115): what parents see, in Korean (the
   parent portal, the phone app's family part, the public website, the contract and what families hear), as Goo decided
   that day; students and staff stay English (`docs/DECISIONS.md` §36). Next: the manager reads the contract's Korean
@@ -282,7 +284,7 @@ started: *already works*, *small change* or *new work*.
 
 - ✅ **The blank contract** (digital), 2026-11-04, with his answer: one contract per child (`CT2`). Next: he reviews the
   e-version, then it's published in Settings → Enrollment contract.
-- [ ] **An invitation to the domain's Squarespace account**, to connect the .com → `DM1`
+- ✅ **An invitation to the domain's Squarespace account**, 2026-11-06 → `DM1`
 
 Everything else is in hand, or the manager's own work in the app.
 
