@@ -99,9 +99,9 @@ emails, account ids and what they opened; the camera and the photos are the staf
 
 ## When the app changes
 
-**Due now (1.1.0, sent 2026-11-06):** Apple's App Privacy gets **Identifiers → Device ID** (1.1.0 is the first build
-with notifications); Google's Data safety gets the **account creation methods** below. Everything else 1.1.0 needs is
-declared already. Goo makes both changes, then rolls out Google's draft 1.1.0 release (`docs/publishing/updates.md`).
+**Done for 1.1.0 (2026-11-06, Goo):** Apple's App Privacy has **Identifiers → Device ID** (1.1.0 is the first build
+with notifications). Google's Data safety has the **account creation methods** below (username and password, and
+OAuth), with the delete account link. Everything else 1.1.0 needs was declared already.
 
 - **Push notifications** (built 2026-10-28, `docs/mobile-push.md`): in the answers above. Update Apple's App Privacy
   (Identifiers → **Device ID**) when submitting the first build that has them; Google's **Device or other IDs** already

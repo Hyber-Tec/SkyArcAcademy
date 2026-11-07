@@ -12,7 +12,7 @@ updates. Android follows once it has been tried on Android phones.
 | | iPhone (App Store) | Android (Google Play) |
 | --- | --- | --- |
 | Live | **1.1.0 (build 12)**, approved and released on 2026-11-06, within a day of sending it. 1.0.0 (build 2) was sent 2026-10-21 and approved after Goo wrote to Apple | **1.0.0 (build 3)**, sent 2026-10-26, live by 2026-11-03 |
-| The update | Out: phones update to 1.1.0 by themselves | **1.1.0 (build 12)**, a draft production release with its notes (2026-11-06): **Goo rolls it out** after the Data safety update ([updates.md](publishing/updates.md)) |
+| The update | Out: phones update to 1.1.0 by themselves | **1.1.0 (build 12)**, in Google's review since 2026-11-06 with the updated Data safety form; it goes live by itself once approved ([updates.md](publishing/updates.md)) |
 | Classes taught together (§21) | From 1.1.0. 1.0.0 opens a class through each seat's lead coach (`scripts/lead-coach.ts`), kept until phones have 1.1.0 (about a week from 2026-11-06) | Yes |
 | TestFlight / internal testing | **1.1.0 (build 12)**, the build in the App Store | **1.1.0 (build 12)** |
 | Review login | One admin with the academy's real data (`docs/store/review-notes.md`) | The same login, in Sign-in details |

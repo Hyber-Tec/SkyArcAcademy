@@ -8,8 +8,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Connect skyarcacademy.com** in Firebase and Squarespace (Goo, about 15 minutes, once the manager hands over the
   Squarespace login), then merge [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119), which moves every link
   to it
-- [ ] **Google Play 1.1.0:** update the Data safety form (Goo, 5 minutes), then Claude Code rolls out the draft release
-- [ ] **App Store privacy:** add "Device ID" under App Privacy (Goo, 2 minutes, no review)
+- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06): it goes live by itself. If Google writes, send the
+  message to Claude Code
 
 ## Soon
 
@@ -72,6 +72,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-06 · Google Play: the Data safety form updated (Goo), and 1.1.0 sent to Google's review
+- [x] ✅ 2026-11-06 · App Store privacy: Device ID added (Goo)
 - [x] ✅ 2026-11-06 · iPhone app 1.1.0 approved and live in the App Store, within a day of sending it
 - [x] ✅ 2026-11-06 · Sign-in and file access accept skyarcacademy.com (Firebase settings)
 - [x] ✅ 2026-11-06 · Notifications on iPhones: Apple's push key is in Firebase, and a test push reached Goo's iPhone
