@@ -18,12 +18,12 @@ again.
   on ("No access yet", paused access, Confirm your email, and from 1.1.0 the contract to sign). It says what the academy
   keeps, as Apple's help now asks. From 1.1.0, an account made with Apple confirms with Apple and its Apple tokens are
   revoked before it's deleted, as Apple asks of apps with Sign in with Apple.
-- **The privacy policy** (5.1.1(i)): in effect since 2026-10-20 at https://skyarcacademy.web.app/privacy, linked in More
+- **The privacy policy** (5.1.1(i)): in effect since 2026-10-20 at https://skyarcacademy.com/privacy, linked in More
   and under the sign-in form. It says what the app collects and how (signing in; the camera and the photo picker in
   Scan), that the companies running it protect the data as the policy does, how long things are kept, and how to delete
   the account or turn off camera and photo access.
 - **Help and contact** (1.5, "particularly important for apps that may be used in the classroom"): the Support URL,
-  https://skyarcacademy.web.app/help, linked in More and under the sign-in form, with the academy's email and phone from
+  https://skyarcacademy.com/help, linked in More and under the sign-in form, with the academy's email and phone from
   Settings → Academy. Families also have "Contact Sky Arc" in More.
 - **A demo account on the live server** (2.1): [the review logins](#the-review-logins).
 - **The camera and the photo picker, for Scan only** (5.1.1), with their reasons on screen; nothing saved to the phone's

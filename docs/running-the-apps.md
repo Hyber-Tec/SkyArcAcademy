@@ -6,11 +6,11 @@ Written for someone who has never done mobile development and remembers nothing 
 written out, and every step that only a person can do (unlock a phone, tap Trust) says so.
 
 The website needs none of this: GitHub deploys it from `main` (docs/DEPLOY.md), and you open it at
-https://skyarcacademy.web.app. Nothing here goes to TestFlight or the App Store; that's [docs/publishing.md](publishing.md).
+https://skyarcacademy.com. Nothing here goes to TestFlight or the App Store; that's [docs/publishing.md](publishing.md).
 
 ## Before anything else: the three things to know
 
-1. **There are two copies of Sky Arc.** The **real one** is skyarcacademy.web.app and its data. The **practice copy**
+1. **There are two copies of Sky Arc.** The **real one** is skyarcacademy.com and its data. The **practice copy**
    is a whole Sky Arc running only on this Mac (Firebase's emulators, as the project `demo-skyarc`) with the academy and
    its **sample data**: made-up coaches, students, families and classes around the day it starts. Nothing you do there
    reaches anyone, and it forgets everything when it stops. Real phones only ever use the real one (they can't reach a

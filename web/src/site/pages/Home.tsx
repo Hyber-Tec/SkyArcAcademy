@@ -343,14 +343,10 @@ function Trials() {
   )
 }
 
-function Quote({ quote, who, sample, lang }: { quote: string; who: string; sample: boolean; lang?: string }) {
-  const { t } = useSite()
+function Quote({ quote, who, lang }: { quote: string; who: string; lang?: string }) {
   return (
     <figure className="rounded-[24px] border border-line bg-white p-6 shadow-soft" lang={lang}>
-      <div className="flex items-center justify-between gap-3">
-        <LuQuote className="size-5 text-red" aria-hidden="true" />
-        {sample ? <span className="rounded-full bg-warm-2 px-2 py-0.5 text-[10.5px] font-semibold tracking-[0.12em] text-stone uppercase">{t(UI.sample)}</span> : null}
-      </div>
+      <LuQuote className="size-5 text-red" aria-hidden="true" />
       <blockquote className="accent mt-4 text-[20px] leading-snug text-ink">“{quote}”</blockquote>
       <figcaption className="mt-5 flex items-center gap-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-warm-2" aria-hidden="true">
@@ -362,15 +358,16 @@ function Quote({ quote, who, sample, lang }: { quote: string; who: string; sampl
   )
 }
 
-/** Families' words from the Website page; until there are any, sample quotes marked "Sample". */
+/**
+ * Families' words from the Website page. Until the academy adds one the section is left out: the site never shows a
+ * quote nobody said (docs/DECISIONS.md §18).
+ */
 function Testimonials() {
   const { t } = useSite()
   const { ready, content } = useSiteData()
-  if (!ready) return null
-  const real = content.testimonials.filter((q) => q.quote.trim())
-  const cards = real.length
-    ? real.map((q) => <Quote key={q.id} quote={q.quote} who={q.who} sample={false} lang={crmLang} />)
-    : T.reviews.map((q) => <Quote key={q.quote.en} quote={t(q.quote)} who={t(q.who)} sample />)
+  const quotes = content.testimonials.filter((q) => q.quote.trim())
+  if (!ready || quotes.length === 0) return null
+  const cards = quotes.map((q) => <Quote key={q.id} quote={q.quote} who={q.who} lang={crmLang} />)
   return (
     <section className="py-20 sm:py-28" aria-labelledby="testimonials-title">
       <Container>

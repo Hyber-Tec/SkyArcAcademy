@@ -53,14 +53,14 @@ describe('account emails', () => {
   const link = 'https://skyarcacademy.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=ABC123&apiKey=key&continueUrl=x&lang=en'
 
   it('sends the one-time code to the app’s own page, keeping a safe next path only', () => {
-    const out = accountActionUrl(link, 'https://skyarcacademy.web.app', '/admin/schedule')
-    expect(out.split('?')[0]).toBe('https://skyarcacademy.web.app/auth/action')
+    const out = accountActionUrl(link, 'https://skyarcacademy.com', '/admin/schedule')
+    expect(out.split('?')[0]).toBe('https://skyarcacademy.com/auth/action')
     const q = queryParams(out)
     expect(q.get('mode')).toBe('resetPassword')
     expect(q.get('oobCode')).toBe('ABC123')
     expect(q.get('apiKey')).toBeUndefined()
     expect(q.get('next')).toBe('/admin/schedule')
-    expect(queryParams(accountActionUrl(link, 'https://skyarcacademy.web.app', '//evil.example')).get('next')).toBeUndefined()
+    expect(queryParams(accountActionUrl(link, 'https://skyarcacademy.com', '//evil.example')).get('next')).toBeUndefined()
   })
 
   it('reads queries without the URL object', () => {
@@ -71,11 +71,11 @@ describe('account emails', () => {
   })
 
   it('writes the confirm and reset emails in the invite emails’ voice', () => {
-    const v = accountEmail({ kind: 'verify', to: 'maya@school.org', name: 'Maya Thompson', url: 'https://skyarcacademy.web.app/auth/action?mode=verifyEmail&oobCode=X' })
+    const v = accountEmail({ kind: 'verify', to: 'maya@school.org', name: 'Maya Thompson', url: 'https://skyarcacademy.com/auth/action?mode=verifyEmail&oobCode=X' })
     expect(v.subject).toBe('Confirm your email for Sky Arc')
     expect(v.text).toContain('Hi Maya,')
     expect(v.html).toContain('Confirm my email')
-    const r = accountEmail({ kind: 'reset', to: 'maya@school.org', name: '', url: 'https://skyarcacademy.web.app/auth/action?mode=resetPassword&oobCode=Y' })
+    const r = accountEmail({ kind: 'reset', to: 'maya@school.org', name: '', url: 'https://skyarcacademy.com/auth/action?mode=resetPassword&oobCode=Y' })
     expect(r.subject).toBe('Reset your Sky Arc password')
     expect(r.text).toContain('your password stays as it is')
   })
