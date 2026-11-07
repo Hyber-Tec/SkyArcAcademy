@@ -284,7 +284,7 @@ started: *already works*, *small change* or *new work*.
 
 - ✅ **The blank contract** (digital), 2026-11-04, with his answer: one contract per child (`CT2`). Next: he reviews the
   e-version, then it's published in Settings → Enrollment contract.
-- ✅ **An invitation to the domain's Squarespace account**, 2026-11-06 → `DM1`
+- [ ] **An invitation to the domain's Squarespace account**, to connect the .com → `DM1` (awaited, 2026-11-06)
 
 Everything else is in hand, or the manager's own work in the app.
 

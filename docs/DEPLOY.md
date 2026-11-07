@@ -261,7 +261,7 @@ academy's real data came in; the App Store's review account stayed, as an admin 
 ## Moving to skyarcacademy.com
 
 The academy's domain, **skyarcacademy.com**, is registered at Squarespace, and its DNS is there too (Squarespace's
-nameservers). Goo has access to the account since 2026-11-06. Until the move it shows the academy's earlier website,
+nameservers). The manager hands Goo the account (awaited on 2026-11-06). Until the move it shows the academy's earlier website,
 through two A records for `@`.
 
 The domain's email is Google Workspace (`info@`). Its records stay exactly as they are:

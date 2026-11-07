@@ -8,8 +8,8 @@ packages on 2026-10-28: a new build, and **nothing uploaded to the stores** unti
 **Built on 2026-10-28** (`feat/mobile-push`), as HyberCRM's phone app does it with the same versions:
 `@react-native-firebase/messaging` for the token and the pushes, and `expo-notifications` for the phone's
 permission, Android's channels and the badge (`mobile/AGENTS.md`, "Push notifications"). Everything in "What the
-phone needs" below is in. Still to do: Goo's one-time steps ("What Goo does"), then a real push to an iPhone (the
-Simulator never gets a token; `docs/running-the-apps.md`, "Trying notifications"). New kinds of notices from Phase 1
+phone needs" below is in, and so is Goo's one-time step ("What Goo does"): on 2026-11-06 a real push reached Goo's
+iPhone (the Simulator never gets a token; `docs/running-the-apps.md`, "Trying notifications"). New kinds of notices from Phase 1
 reach phones by themselves; a tap opens what `appTargetOf` says, so their targets go there, and the app's one-line
 reasons (`pushReason` in `mobile/src/features/notifications/PhoneNotifications.tsx`) get their words.
 
