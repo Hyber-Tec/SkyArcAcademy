@@ -5,13 +5,11 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Now
 
-- [ ] **Kiosk fix:** merge [#125](https://github.com/Hyber-Tec/SkyArcAcademy/pull/125), found while checking the logic
-  (a forgotten clock-out while the tablet was offline at midnight). The tablet already has the app 1.0.1
 - [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
   tablet until then
-- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap (Goo, 5 minutes)
-- [ ] **Review [#126](https://github.com/Hyber-Tec/SkyArcAcademy/pull/126):** the website's lines wrap between words, as
-  on the phone
+- [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
+- [ ] **Review [#128](https://github.com/Hyber-Tec/SkyArcAcademy/pull/128):** on the families' Scores page, each result
+  opens under its own row
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06): it goes live by itself. If Google writes, send the
   message to Claude Code
 
@@ -24,6 +22,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Website content:** coach photos, real families' quotes (with their permission), trial length and price, the
   youngest age, the range's safety rules, coaching in Korean, tuition, more photos
 - [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)
+- [ ] **Cancel the old website's ChatGPT subscription:** fine to do. Keep the domain on Squarespace and the Google
+  Workspace email
 
 ## Soon
 
@@ -36,8 +36,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Questions for Goo
 
-- [ ] **Families' Scores page:** A, as it is, or B, the staff's newer design? (screenshots sent 2026-11-07)
-- [ ] **Card photos from the Drive:** also save a straightened copy, as the scanner does, or draw the scores in the app?
+- [ ] **Card photos from the Drive:** families see the photo without its scores; save a scored copy, as the scanner does?
+  (screenshots sent 2026-11-07)
 - [ ] **"To check" on the Scores page:** add a "Looks right" button that clears the mark?
 
 ## Later
@@ -72,6 +72,11 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-07 · The kiosk fix for a forgotten clock-out while the tablet was offline (#125), live
+- [x] ✅ 2026-11-07 · The website's lines wrap between words, as on the phone (#126), live
+- [x] ✅ 2026-11-07 · Families' Scores page: kept as it is, with results opening under their row (Goo; #128)
+- [x] ✅ 2026-11-07 · Google Search Console: skyarcacademy.com verified (Goo)
+- [x] ✅ 2026-11-07 · A private copy of the old website's pages and photos (docs/internal, before it's cancelled)
 - [x] ✅ 2026-11-07 · The contract in Korean, live in the academy: parents read it in Korean, the English counts
 - [x] ✅ 2026-11-07 · The contract's prices checked (Goo)
 - [x] ✅ 2026-11-07 · The kiosk tablet: the app (#123), on the academy's Samsung tablet as its home screen, registered

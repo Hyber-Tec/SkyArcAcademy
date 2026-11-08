@@ -6,18 +6,6 @@ unless they say how something works from then on.
 
 ## Now
 
-### Kiosk fix
-
-[#125](https://github.com/Hyber-Tec/SkyArcAcademy/pull/125), from checking the kiosk's logic against the schedule
-and the payroll on 2026-11-07. A coach who forgot to clock out, with the tablet offline at midnight, still showed as
-clocked in on it the next day. They'd tap Clock out, and their new day could be merged into the old shift, or lost
-with its pay. The fix follows the automatic clock-out on both sides:
-
-- **The server:** closes the forgotten shift at midnight before it applies a later clock-in or clock-out.
-- **The tablet:** shows the coach clocked out after midnight, so they clock in.
-
-The tablet runs 1.0.1 already. Merging deploys the server's part.
-
 ### Coaches' kiosk PINs
 
 None was set on 2026-11-07. On the website: Employees → Directory → the coach → **Kiosk PIN** → 4 digits → Set PIN.
@@ -33,17 +21,16 @@ Tells Google the website lives at skyarcacademy.com, and lets it find every page
 3. Squarespace → Domains → skyarcacademy.com → **DNS** → **ADD RECORD**: Type **TXT**, Name `@`, Data the copied text
    → Save. Keep every other record.
 4. Back in Search Console: **Verify**. If it fails, try again in a few minutes.
-5. **Sitemaps** (left menu) → type `sitemap.xml` → **Submit**.
+5. **Sitemaps** (left menu) → type the full address, `https://skyarcacademy.com/sitemap.xml` → **Submit**. A Domain
+   property refuses `sitemap.xml` alone ("Invalid sitemap address").
 
 The site's pages already name skyarcacademy.com as their address (#119).
 
-### Review #126
+### Review #128
 
-[#126](https://github.com/Hyber-Tec/SkyArcAcademy/pull/126): the phone app's line-break fix (#117), for the website.
-
-- Headings balance their lines.
-- Paragraphs don't leave one word alone on the last line, in Korean and English.
-- The contract's signature date stays on one line.
+[#128](https://github.com/Hyber-Tec/SkyArcAcademy/pull/128), Goo's pick of 2026-11-07. The families' Scores page
+stays as it is (A), but its results work like the staff's list. Each opens under its own row instead of one result
+shown large above "All results". The newest is open to start.
 
 ### Google Play 1.1.0 is in Google's review
 
@@ -101,6 +88,20 @@ The manager's list of 2026-10-20 (the academy's question A13). The site leaves o
 Photos go in on the Website page (Settings → Website); the text goes to Goo or Claude Code for
 `web/src/site/kit/content.ts`.
 
+### Cancel the old website's ChatGPT subscription
+
+The manager asked on 2026-11-07. The academy's earlier website was made and hosted with ChatGPT's site builder (its
+pages loaded from a `chatgpt.site` address). Since 2026-11-07, skyarcacademy.com points to this website, so the old
+one serves nobody, and canceling changes nothing for the website, the app, email or contracts.
+
+- **What to keep:** the **domain on Squarespace** (renews in August 2027; everything uses it) and **Google Workspace**
+  (info@'s email).
+- **Saved first:** a private copy of its ten pages' text (the Terms of Service among them) and nine photos, in
+  `docs/internal/old-website/` (git-ignored), on 2026-11-07.
+- **Afterwards, optional:** delete the old site's leftover DNS records in Squarespace: `_cf-custom-hostname`,
+  `_openai-site-verification`, and the `send`, `rsend` and `resend._domainkey` mail records. They do no harm if they
+  stay.
+
 ### Legal name and mailing address
 
 The academy's question A10 ([QUESTIONS.md](QUESTIONS.md)): only if the academy wants them in the privacy policy's
@@ -132,8 +133,8 @@ Goo, 2026-11-07: the website should have terms of service beside its privacy pol
 had a page (effective August 27, 2026: who may use it, trial and scheduling requests, safety, communications,
 acceptable use, liability, and so on).
 
-1. **Claude Code:** drafts the website's page from it, for the website and the app as they are now, in English as the
-   privacy policy is.
+1. **Claude Code:** drafts the website's page from it (saved in `docs/internal/old-website/terms.txt`), for the
+   website and the app as they are now, in English as the privacy policy is.
 2. **Goo and the manager:** read it.
 3. **Then:** it goes live at `/terms`, which #119 sends to the privacy policy until then, linked beside the privacy
    policy.
@@ -175,15 +176,6 @@ sign-in (`authDomain`). It can say skyarcacademy.com. It's optional, and the pho
 
 ## Questions for Goo
 
-### Families' Scores page
-
-Screenshots sent 2026-11-07, of the same made-up student (Jiwoo, the practice copy):
-
-- **A, as it is:** one long page with everything open at once (the latest result, all results, the chart, the target,
-  the comparison).
-- **B, the staff's newer design** (§29): summary cards, then a results list where each result opens in place, with
-  the chart, the comparison and the reports folded below until opened.
-
 ### Card photos from the Drive
 
 A coach can score a paper card two ways: with the phone's scanner, or by adding the card's photo from the Drive
@@ -193,7 +185,8 @@ A coach can score a paper card two ways: with the phone's scanner, or by adding 
 - **A photo from the Drive** becomes the score's file as it is. The website's staff pages show it with the scores; the
   phone app and families see the plain photo.
 
-Two ways to make them match:
+Screenshots sent 2026-11-07: the same practice card as its family sees it, scanned (with each bull's score) and from a
+Drive photo (the photo alone). Two ways to make them match:
 
 - **Claude Code's suggestion, no phone work:** also save a straightened copy beside the photo, as the scanner does.
   The student's folder gets a second file for that card.
