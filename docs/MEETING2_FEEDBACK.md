@@ -9,8 +9,9 @@ pretty much everything I asked for and more"), then gave feedback, asked for som
 academy and the sport work, and gave us a stack of real paper targets and competition result sheets.
 
 This file is **both the meeting's notes and the task tracker.** Every task has a checkbox; Goo reviewed the list and
-their decisions are included. The full notes, with names and pay, stay on Goo's Mac mini (`SkyArc_Meeting2_Feedback.md`
-in the project folder, git-ignored): this repository is public, so here people are named by role (CLAUDE.md, "Secrets").
+their decisions are included. The full notes, with names and pay, are in the private notes
+(`docs/internal/meetings/SkyArc_Meeting2_Feedback.md`, git-ignored here): this repository is public, so here people are
+named by role (CLAUDE.md, "Secrets").
 
 **How it's ticked:** an item is marked done with ✅ in place of its box (`- ✅ **…**`, never `- [x]`, which is hard to
 see) when its pull request is merged, with the pull request's number. Each item also says what the code had when the
@@ -23,12 +24,13 @@ work started: *already done*, *small change* or *new work*.
 1. **Pull the latest `main`** before anything else, at the start of **every** session, on either computer.
 2. **Read the context files:** `CLAUDE.md`, `SKYARC_PROJECT_BRIEF.md`, this file, `docs/DECISIONS.md` (§23 records
    this meeting's decisions), and the docs and runbooks in the repository (the phone's publishing docs too). The first
-   meeting's notes (`SkyArc_Meeting_Notes.md`) and the full version of this file are on the Mac mini only.
+   meeting's notes (`SkyArc_Meeting_Notes.md`) and the full version of this file are in the private notes
+   (`docs/internal/meetings/`).
 3. **Know the codebase** (public website, web portal, phone app, Firebase rules and functions, settings) before
    changing it: many items were partly built. Change only what's needed.
 4. **Find your phase** in Section 4 and do only that phase's items.
 5. **Keep this tracker up to date:** mark an item ✅ (in place of its box) when its pull request is merged, with the
-   number, in this file and in the full copy on the Mac mini.
+   number, in this file and in the full copy in the private notes.
 6. **Follow every rule in `CLAUDE.md`:** a branch and a pull request, Conventional Commits, few commits, no
    attribution lines, no secrets and no real student data.
 7. **Don't break what the manager liked** (Section 2).

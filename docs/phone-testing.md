@@ -35,7 +35,8 @@ nothing you do there reaches a real family.
 | A parent of two (Jiyeon Hwang: Jiwoo and Minjun) | `jiyeon.hwang@skyarc-sample.test` | Home · Classes · Scores · Reports · More |
 | A student (Seoyeon Lim) | `seoyeon.lim@skyarc-sample.test` | The same tabs, for the student's own classes |
 
-- **The password** is the demo logins' one password, in `docs/internal/` on the Mac mini. It's never written in git.
+- **The password** is the demo logins' one password, on the Mac mini in `docs/internal/local/` (the private notes'
+  folder that never leaves the computer). It's never written in git.
 - **To change who you are:** More → **Sign out**, then sign in with another email. Or, signed in with your own account
   (a super admin): More → **View the app as…** → the academy or **Demo** → anyone in it. The app shows their tabs with
   "As Jiyeon" beside each title; tap that, then **Yourself**, to go back. Only the view changes: what you do is done

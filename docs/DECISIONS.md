@@ -28,8 +28,15 @@ end of the matching section, with the date.
   the meeting notes stay local.
 - **Public since 2026-10-15** (Goo: GitHub Actions minutes are unlimited for public repositories). Everything
   committed is world-readable, so client-internal details (people's names, contacts, timeline, money) and findings
-  about other HyberTec products stay in the git-ignored `docs/internal/` on Goo's Mac mini, and the public brief and
-  review name the academy's people by role.
+  about other HyberTec products stay in the git-ignored `docs/internal/`, and the public brief and review name the
+  academy's people by role.
+- **The private notes in their own repository (2026-11-08):** Goo kept this repository public and chose a second,
+  private one for the private notes: [Hyber-Tec/SkyArcAcademy-internal](https://github.com/Hyber-Tec/SkyArcAcademy-internal),
+  copied into `docs/internal/` on each computer, so both Macs' sessions read the same notes (they were on the Mac mini
+  only until then). Making this repository private instead was weighed and set aside: on GitHub's free plan for
+  organizations a private repository has a monthly cap on Actions minutes (this one used about 1,600 in 30 days) and
+  loses the ruleset that guards `main`. The private notes never hold passwords, keys or students' records (their
+  README); a session's start brings them up to date (CLAUDE.md, "Local files").
 - **Accounts:** each developer commits and pushes with their own personal GitHub account. Personal setup
   (accounts, credential helpers, local paths) lives in each developer's git-ignored `CLAUDE.local.md`, never in the
   shared files (Goo, 2026-10-15).
@@ -675,7 +682,7 @@ first presentation.
 
 The manager saw the website, the portal, the kiosk and the phone app, and asked for changes; the academy will start
 using the app once the stores approve it. Every task is in [`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase,
-ticked as its pull request is merged (the full notes, with names and pay, are on Goo's Mac mini only). The phone app is
+ticked as its pull request is merged (the full notes, with names and pay, are in the private notes' `meetings/`). The phone app is
 the main product: families do everything they need there, without calling or texting the academy.
 
 - **Families cancel and request** (`S1`–`S3`): parents and students cancel up to 24 hours before a class (editable; the
