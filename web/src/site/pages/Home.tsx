@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { LuActivity, LuArrowRight, LuAward, LuClock, LuLayers, LuLogIn, LuMedal, LuQuote, LuRoute, LuShieldCheck, LuShirt, LuTarget, LuUserRound, LuUserRoundCheck, LuWrench } from 'react-icons/lu'
 import { cn } from '@/lib/utils'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, HOME, TRIAL, UI, l } from '@/site/kit/content'
+import { ACADEMY, APP, HOME, TRIAL, UI, l } from '@/site/kit/content'
 import { Lightbox } from '@/site/kit/Lightbox'
 import { EASE_OUT, Reveal, useReduced } from '@/site/kit/motion'
 import { Photo, PlacePhoto } from '@/site/kit/Photo'
@@ -14,7 +14,9 @@ import { useBooking } from '../booking-context'
 import { BookButton, Container, SectionHead, btnInk, btnOutline, linkArrow, mins } from '../components/bits'
 import { CoachCard, FaqList, FinalCta, NewsCard, VisitUs, crmLang } from '../components/blocks'
 import { LevelPath } from '../components/LevelPath'
+import { PhoneShots } from '../components/PhoneShots'
 import { ReportShowcase } from '../components/ReportShowcase'
+import { StoreBadges } from '../components/StoreBadges'
 import siusLogo from '../assets/sius.webp'
 import { T } from '../i18n'
 
@@ -241,6 +243,30 @@ function Portal() {
         </Container>
       }
     />
+  )
+}
+
+/** The phone app, after the portal: the two stores and two of its screens (the owner, 2026-11-08). */
+function AppBand() {
+  const { t } = useSite()
+  return (
+    <section className="pb-20 sm:pb-28" aria-labelledby="app-title">
+      <Container>
+        <Reveal className="grid items-center gap-10 overflow-hidden rounded-[30px] border border-line bg-white p-8 shadow-soft sm:p-12 lg:grid-cols-[1.1fr_1fr]">
+          <div className="min-w-0">
+            <h2 id="app-title" className="text-[30px] leading-tight font-semibold tracking-tight text-ink sm:text-[38px]">
+              {t(APP.band.title)}
+            </h2>
+            <p className="mt-3 max-w-lg text-[16.5px] leading-relaxed text-stone">{t(APP.band.text)}</p>
+            <StoreBadges height={48} className="mt-7" />
+            <A to="get-app" className={cn(linkArrow, 'mt-5')}>
+              {t(APP.band.more)} <LuArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
+            </A>
+          </div>
+          <PhoneShots compact className="-mb-16 sm:-mb-20" />
+        </Reveal>
+      </Container>
+    </section>
   )
 }
 
@@ -483,6 +509,7 @@ export function Home() {
       <Pillars />
       <Programs />
       <Portal />
+      <AppBand />
       <Coaches />
       <Trials />
       <Testimonials />

@@ -844,6 +844,43 @@ export const PORTAL = {
   invite: l('Families get their login from the academy. Coaches and staff sign in here too.', '로그인 정보는 아카데미에서 안내해 드려요. 코치와 스태프도 여기서 로그인해요.'),
 }
 
+/**
+ * The phone app (`/get-app`, the band on the homepage, the footer): what it does for families, in the stores' own words for
+ * the stores. The credit line is the stores' required wording, in English on both pages.
+ */
+export const APP = {
+  kicker: l('The Sky Arc app', 'Sky Arc 앱'),
+  title: l('Sky Arc on your phone.', '휴대폰으로 보는 Sky Arc'),
+  text: l(
+    'Classes, scores, progress reports and academy news on your iPhone or Android phone, with a notification when something changes.',
+    '수업, 점수, 성장 리포트, 아카데미 소식을 iPhone과 Android 휴대폰에서 확인해요. 바뀐 일정은 알림으로 바로 알려 드려요.',
+  ),
+  free: l(
+    'Free for Sky Arc families, students and coaches. Sign in with the email you gave the academy.',
+    'Sky Arc 학부모님과 학생, 코치는 무료로 쓸 수 있어요. 아카데미에 알려 주신 이메일로 로그인해요.',
+  ),
+  scan: l('Scan with your phone’s camera', '휴대폰 카메라로 스캔해 보세요'),
+  features: [
+    { title: l('Classes', '수업'), text: l('Today’s class and the week ahead. Cancel one, or ask for a makeup.', '오늘 수업과 이번 주 일정을 보고, 취소하거나 보강을 신청해요.') },
+    { title: l('Scores', '점수'), text: l('Every result and where the shots went, with the trend over time.', '모든 기록과 탄착 위치, 점수 흐름을 한눈에 봐요.') },
+    { title: l('Progress reports', '성장 리포트'), text: l('The coaches’ reports, shared after evaluations.', '평가가 끝나면 코치가 리포트를 공유해요.') },
+    { title: l('Notifications', '알림'), text: l('Class changes, makeups and academy news as they happen.', '수업 변경, 보강, 아카데미 소식을 바로 받아요.') },
+  ],
+  band: {
+    title: l('Get the Sky Arc app.', 'Sky Arc 앱을 받아 보세요'),
+    text: l('Classes, scores and progress reports on your phone, with a notification when something changes.', '수업과 점수, 성장 리포트를 휴대폰에서 보고, 바뀐 일정은 알림으로 받아요.'),
+    more: l('About the app', '앱 소개'),
+  },
+  footer: l('Get the app', '앱 다운로드'),
+  appStore: l('Download on the App Store', 'App Store에서 다운로드하기'),
+  googlePlay: l('Get it on Google Play', 'Google Play에서 다운로드하기'),
+  shots: [l('Home: the next class', '홈: 다음 수업'), l('Scores', '점수'), l('A progress report', '성장 리포트')],
+  credit: l(
+    'Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries. App Store is a service mark of Apple Inc. Google Play and the Google Play logo are trademarks of Google LLC.',
+    'Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries. App Store is a service mark of Apple Inc. Google Play and the Google Play logo are trademarks of Google LLC.',
+  ),
+}
+
 export const FOOTER = {
   tagline: l('Focused athletes. Confident people.', '집중하는 선수, 자신감 있는 사람'),
   text: l(

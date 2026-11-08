@@ -1,12 +1,13 @@
 import { LuInstagram, LuMail, LuMapPin, LuPhone } from 'react-icons/lu'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, FOOTER, UI, keepWhole } from '@/site/kit/content'
+import { ACADEMY, APP, FOOTER, UI, keepWhole } from '@/site/kit/content'
 import { A, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
 import { Container } from './bits'
 import { DIRECTIONS_URL, crmLang, instagramHandle } from './blocks'
+import { StoreBadges } from './StoreBadges'
 
 const link = 'inline-flex min-h-9 items-center gap-1.5 text-[14.5px] text-ink/75 transition hover:text-ink focus-visible:underline focus-visible:outline-none'
 
@@ -27,6 +28,7 @@ export function Footer() {
                 <LuInstagram className="size-4" aria-hidden="true" /> {instagramHandle(content.instagram)}
               </a>
             ) : null}
+            <StoreBadges height={40} className="mt-6" />
           </div>
           <div className="grid gap-10 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:gap-x-12">
             <nav aria-label={t(FOOTER.sections.explore)}>
@@ -70,6 +72,11 @@ export function Footer() {
                   <a href={ACADEMY.loginUrl} className={link}>
                     {t(UI.login)}
                   </a>
+                </li>
+                <li>
+                  <A to="get-app" className={link}>
+                    {t(APP.footer)}
+                  </A>
                 </li>
                 <li>
                   <A to="contact" className={link}>
