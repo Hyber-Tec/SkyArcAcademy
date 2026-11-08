@@ -13,15 +13,16 @@ functions/lib/
 *.local
 service-account*.json
 
-# Client material from Sky Arc (real students' names, SIUS reports, target photos, schedules, meeting notes):
-# never committed. It stays in this folder on the owner's machine only; see CLAUDE.md, "Local files".
+# Client material from Sky Arc (real students' names, SIUS reports, target photos, schedules): never committed. It
+# stays in this folder on the owner's machine only; see CLAUDE.md, "Local files". Meeting notes go in the private
+# notes (docs/internal/meetings/); a copy left at the top level stays ignored.
 /Google Sheets for Scheduling/
 /Sample SIUS PDFs/
 /Sample paper target photos/
 /logo/
 /SkyArc_Meeting*.md
-# Client-internal notes (people's names, contacts, timeline, money) and findings about other HyberTec products: this
-# repository is public, so they stay on the owner's machine (see docs/internal/README.md there).
+# The private notes: a copy of the private repository Hyber-Tec/SkyArcAcademy-internal (people's names, contacts,
+# money, meeting notes, findings about other HyberTec products). This repository is public; see CLAUDE.md, "Local files".
 /docs/internal/
 # anything else the academy sends that lands at the top level
 /*.pdf

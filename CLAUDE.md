@@ -38,7 +38,8 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 - Never copy secrets or `.env` values from HyberCRM. Sky Arc has its own Firebase project.
 - Never commit real student data, real SIUS reports, or real target photos. Use anonymized fixtures.
 - **This repository is public.** Never commit client-internal details (people's names, contacts, schedules, money) or
-  findings about other HyberTec products (e.g. HyberCRM's weaknesses). They go in `docs/internal/` (git-ignored).
+  findings about other HyberTec products (e.g. HyberCRM's weaknesses). They go in the private notes, `docs/internal/`
+  (git-ignored here: "Local files" below).
   In committed docs, name the academy's people by role (the owner, the manager, coaches).
 
 ### Commits: no attribution
@@ -247,5 +248,16 @@ don't redraw, recolor, stretch, crop or rebuild them from other images.
 ## Local files
 
 - **HyberCRM (reference, read-only):** never edit, commit, or push there from a Sky Arc session. Its path on your machine goes in `CLAUDE.local.md`.
-- **Client material** (schedule sheets, logos, paper target photos, SIUS PDFs, meeting notes) can sit in the repository folder on the owner's machine, but it's git-ignored and never committed: the asset folders, `logo/`, `SkyArc_Meeting_Notes.md`, `docs/internal/`, and any PDF, spreadsheet or photo at the top level. Folder names contain spaces; always quote paths. The brief is committed without students' or staff names, and the app's copies of the logos live in `web/public/brand/`.
-- **`docs/internal/`** (local only): the full brief with the academy's people, the full HyberCRM review including findings about HyberCRM's code, and anything else that can't be public.
+- **Client material** (schedule sheets, logos, paper target photos, SIUS PDFs) can sit in the repository folder on the owner's machine, but it's git-ignored and never committed: the asset folders, `logo/`, and any PDF, spreadsheet or photo at the top level. Folder names contain spaces; always quote paths. The brief is committed without students' or staff names, and the app's copies of the logos live in `web/public/brand/`.
+- **`docs/internal/` is the private notes**: a copy of the private repository
+  [Hyber-Tec/SkyArcAcademy-internal](https://github.com/Hyber-Tec/SkyArcAcademy-internal), git-ignored here (the
+  owner's choice, 2026-11-08: `docs/DECISIONS.md` §2). It holds each meeting's own notes (`meetings/`), the full brief
+  with the academy's people, the full HyberCRM review, the contract's texts, the old website, and anything else that
+  can't be public. Its README says what never goes there: passwords, keys and tokens, and students' records (what
+  must stay on one computer goes in its git-ignored `local/`).
+  - A session's start brings the copy up to date and says when it holds changes not pushed (`scripts/internal-docs.sh`,
+    run from `.claude/settings.json`). With no copy yet, it makes one, when your GitHub login can read the repository.
+  - After changing it, commit and push straight to its `main` (it has no pull requests), so sessions on other
+    computers see it. Pull before changing it.
+  - A folder of notes from before it was a copy: move it out of the repository, clone the private repository into
+    `docs/internal/`, then copy the notes back in and push them.

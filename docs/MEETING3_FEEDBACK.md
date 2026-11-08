@@ -10,9 +10,9 @@ explained how competition sheets work, and they talked about contracts, past att
 was very happy: "This is exactly how I envisioned it."
 
 This file is **both the meeting's notes and the task tracker**, and it continues
-[`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md). The full notes, with names, stay on Goo's machines
-(`SkyArc_Meeting3_Notes.md` in the project folder, git-ignored): this repository is public, so here people are named by
-role (CLAUDE.md, "Secrets").
+[`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md). The full notes, with names, are in the private notes
+(`docs/internal/meetings/SkyArc_Meeting3_Notes.md`, git-ignored here): this repository is public, so here people are
+named by role (CLAUDE.md, "Secrets").
 
 **How it's ticked:** as in the second meeting's tracker, an item is marked done with ✅ in place of its box (`- ✅ **…**`)
 when its pull request is merged, with the pull request's number. Each item's *Plan* says what the code had when the work

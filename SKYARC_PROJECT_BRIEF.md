@@ -28,8 +28,8 @@
 | **Coaches** | 4 part-time coaches (+ the manager = 5 staff). |
 | **Students** | About 40, mostly middle school to early high school. Many families are **Korean**. |
 
-This repository is public: the client's people are named by role here. Names and contacts stay in the local
-`docs/internal/` (git-ignored).
+This repository is public: the client's people are named by role here. Names and contacts stay in the private notes,
+`docs/internal/` (git-ignored here; CLAUDE.md, "Local files").
 
 **HyberTec** builds websites, custom platforms, CRMs, and iOS/Android apps.
 
@@ -226,7 +226,7 @@ Location: the **`SkyArcAcademy/`** folder on Goo's Mac mini. It's the folder thi
 
 ```
 SkyArcAcademy
-├── SkyArc_Meeting_Notes.md             → notes from the kickoff meeting (local only)
+├── SkyArc_Meeting_Notes.md             → notes from the kickoff meeting (now in the private notes' meetings/)
 ├── Google Sheets for Scheduling        → real weekly schedules (exported to PDF)
 │   ├── 9_21-9_27, 2026.xlsx - Sheet1.pdf
 │   ├── 9_28-10_4, 2026.xlsx - Sheet1.pdf
@@ -288,7 +288,7 @@ Each of these is its own branch → PR (see `CLAUDE.md` rules).
 
 - The web app is what matters for the first launch. Building can go fast, but **going live (especially App Store
   publishing) takes longer**.
-- Weekly check-ins with the academy. Dates live in the local `docs/internal/`.
+- Weekly check-ins with the academy. Dates live in the private notes (`docs/internal/`).
 
 ---
 
