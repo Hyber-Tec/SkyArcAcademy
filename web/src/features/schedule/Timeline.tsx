@@ -1,19 +1,22 @@
 import { useEffect, useRef } from 'react'
 import { LuArrowRight, LuCheck, LuCheckCheck, LuInbox, LuPencil, LuPlus, LuRotateCcw, LuSend, LuSquareArrowOutUpRight, LuTriangleAlert, LuUserX, LuUsers } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
-import { peopleIn, seatKind } from '@shared/schedule/classes'
+import { peopleIn, seatKind, stretched } from '@shared/schedule/classes'
 import { type ClassRequest, REQUEST_KIND_LABELS } from '@shared/schedule/requests'
 import { KIND_COLORS, levelColor } from '@shared/schedule/seatColors'
-import { NO_COACH_ROW, type Span, type TimelineClass, type TimelinePerson, classPieces, classSlots, clockSpan, rowHeights, stackHeight, timelineRange, timelineRows } from '@shared/schedule/timeline'
+import { NO_COACH_ROW, type Slot, type Span, type TimelineClass, type TimelinePerson, classPieces, classSlots, clockSpan, rowHeights, stackHeight, timelineRange, timelineRows } from '@shared/schedule/timeline'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutes, formatMinutesShort, weekdayOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { ContextMenuFor, MenuOnTap, menu } from '@/components/app/ItemMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { type Board, REFUSAL, cellsOf, useBoard, useDragSource, useDropTarget } from './board'
-import { classActions, dayActions, openSeatActions, requestActions, seatContextActions } from './menus'
+import { classActions, dayActions, guestActions, openSeatActions, requestActions, seatContextActions } from './menus'
 import { SeatMenu } from './SeatMenu'
 import { CoachBadge, NowPill, SEAT_FILL, SeatCount, StatusDot, abbreviate, classRange, gradeLabel, seatVars } from './seatParts'
+import { CanceledLine } from './seatExtras'
+import { guestWords, stretchLabel } from './seatHours'
+import { StretchHandles } from './stretch'
 import type { ClassView } from './useClassData'
 
 /**
@@ -40,7 +43,8 @@ const PAD = 8
 const HEAD_H = 28
 const CARD_H = 56
 const GAP = 6
-const OVERFLOW_H = 22
+/** The line under a class's seats naming who canceled, with the gap above it. */
+const CANCELED_H = 26
 /** Pixels a minute: at least enough for a one-hour class to hold a student's card; wider fills the page. */
 const MIN_PPM = 3.4
 const MAX_PPM = 6.5
@@ -85,6 +89,8 @@ interface Piece {
   height: number
 }
 
+type SeatSlot = Slot<WithId<Session>, WithId<ClassRequest>>
+
 interface DayModel extends Frame {
   ppm: number
   nameW: number
@@ -92,6 +98,8 @@ interface DayModel extends Frame {
   heights: number[]
   tops: number[]
   pieces: Piece[]
+  /** Each class's slots, top to bottom (`classSlots`). */
+  slots: Map<string, SeatSlot[]>
 }
 
 function frameOf(b: Board, d: DateKey): Frame {
@@ -121,17 +129,42 @@ function frameOf(b: Board, d: DateKey): Frame {
   return { dateKey: d, classes, people, spans, rows, lo: range.startMin, hi: range.endMin }
 }
 
-/** A class's slots: its students, families' requests (each in an open seat's place), then the seats still open. */
-function slotsOf(b: Board, v: ClassView) {
-  const { cells, open, overflow } = cellsOf(v.seats, v.c.seats)
-  return { ...classSlots(cells, open, b.requestsFor(v.c.id)), overflow }
+/**
+ * How many slots a class's block holds: its students coming, students of other classes in during it (docs/DECISIONS.md
+ * §38), families' requests (each in an open seat's place), then the seats still open. The canceled go under them.
+ */
+function slotCount(b: Board, v: ClassView): number {
+  const { cells, open } = cellsOf(v.seats, v.c.seats, v.guests.length)
+  const requests = b.requestsFor(v.c.id).length
+  return cells.length + v.guests.length + requests + Math.max(0, open - requests)
 }
 
-/** How tall a class's block needs to be: its header, then its slots one under the other. */
+/** How tall a class's block needs to be: its header, then its slots one under the other, then who canceled. */
 function blockNeed(b: Board, v: ClassView): number {
-  const s = slotsOf(b, v)
-  const n = s.cells.length + s.requests.length + s.open
-  return PAD + HEAD_H + (n ? GAP + stackHeight(n, CARD_H, GAP) : 0) + (s.overflow.length ? OVERFLOW_H : 0) + PAD
+  const n = slotCount(b, v)
+  const canceled = v.seats.some((s) => s.status === 'canceled')
+  return PAD + HEAD_H + (n ? GAP + stackHeight(n, CARD_H, GAP) : 0) + (canceled ? CANCELED_H : 0) + PAD
+}
+
+/**
+ * Each class's slots, earliest class first: a student staying on from a class goes in the row their own card has there
+ * when both blocks start at the same height, so the stretch reads as one line across them.
+ */
+function slotsOfDay(b: Board, classes: readonly ClassView[], pieces: readonly Piece[]): Map<string, SeatSlot[]> {
+  const top = new Map(pieces.filter((p) => p.index === 0).map((p) => [p.v.c.id, p.top]))
+  const rowOf = new Map<string, number>()
+  const out = new Map<string, SeatSlot[]>()
+  for (const v of [...classes].sort((a, z) => a.c.startMin - z.c.startMin)) {
+    const { cells, open } = cellsOf(v.seats, v.c.seats, v.guests.length)
+    const here = top.get(v.c.id)
+    const guests = v.guests.map((g) => ({ seat: g, row: here !== undefined && top.get(g.classId) === here ? (rowOf.get(g.id) ?? null) : null }))
+    const list = classSlots(cells, open, b.requestsFor(v.c.id), guests)
+    list.forEach((slot, i) => {
+      if (slot.kind === 'seat') rowOf.set(slot.seat.id, i)
+    })
+    out.set(v.c.id, list)
+  }
+  return out
 }
 
 function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
@@ -160,7 +193,7 @@ function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
     const [a, z] = p.rows
     return { ...p, top: tops[a] + INSET, height: tops[z] + heights[z] - tops[a] - 2 * INSET }
   })
-  return { ...f, ppm, nameW, width, heights, tops, pieces: placed }
+  return { ...f, ppm, nameW, width, heights, tops, pieces: placed, slots: slotsOfDay(b, f.classes, placed) }
 }
 
 // ---------------------------------------------------------------------------------------------------------- the views
@@ -369,7 +402,7 @@ function DayTimeline({ m, stickyAxis, week }: { m: DayModel; stickyAxis?: boolea
           ))}
           {nowX !== null ? <div className="pointer-events-none absolute top-0 bottom-0 z-[5] w-0.5 bg-brand-solid/80" style={{ left: m.nameW + nowX - 1 }} /> : null}
           {m.pieces.map((p) => (
-            <ClassBlock key={`${p.v.c.id}-${p.index}`} p={p} nameW={m.nameW} />
+            <ClassBlock key={`${p.v.c.id}-${p.index}`} p={p} m={m} />
           ))}
         </div>
       </div>
@@ -510,17 +543,20 @@ function WhoCell({ m, id }: { m: DayModel; id: string }) {
  * size: its students, families' requests, the seats still open. Drop a student here to move them; right-click it for
  * the class's actions.
  */
-function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
+function ClassBlock({ p, m }: { p: Piece; m: DayModel }) {
   const b = useBoard()
   const { v } = p
   const { c } = v
+  const nameW = m.nameW
   const drop = useDropTarget(v)
   const now = c.dateKey === b.today && b.nowMin >= c.startMin && b.nowMin < c.endMin
   const notMine = !!b.me && !v.coaches.some((k) => k.staffId === b.me)
   const editable = b.mode === 'admin' && b.canEdit(c.dateKey)
-  const slots = slotsOf(b, v)
+  const slots = m.slots.get(c.id) ?? []
+  const canceled = v.seats.filter((s) => s.status === 'canceled')
+  const firstOpen = slots.findIndex((s) => s.kind === 'open')
   // Those waiting on the office (a class suggested to a family shows too, but waits on them).
-  const waiting = slots.requests.filter((r) => r.status === 'pending').length
+  const waiting = b.requestsFor(c.id).filter((r) => r.status === 'pending').length
   return (
     <ContextMenuFor entries={editable ? classActions(b, v) : []}>
       <div
@@ -556,20 +592,18 @@ function ClassBlock({ p, nameW }: { p: Piece; nameW: number }) {
         </button>
         {p.index === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-2 pt-1.5 pb-2" data-testid="class-slots">
-            {slots.cells.map((s) => (
-              <StudentCard key={s.id} seat={s} v={v} />
-            ))}
-            {slots.requests.map((r) => (
-              <RequestCard key={r.id} r={r} v={v} />
-            ))}
-            {Array.from({ length: slots.open }, (_, i) => (
-              <OpenSeatCard key={`open-${i}`} v={v} target={drop.ok} landing={drop.ok && drop.hovered && i === 0} />
-            ))}
-            {slots.overflow.length ? (
-              <div className="shrink-0 truncate px-1 text-xs text-muted-foreground">
-                Also canceled: <span className="line-through">{slots.overflow.map((s) => s.studentName).join(', ')}</span>
-              </div>
-            ) : null}
+            {slots.map((slot, i) =>
+              slot.kind === 'seat' ? (
+                <StudentCard key={slot.seat.id} seat={slot.seat} v={v} ppm={m.ppm} />
+              ) : slot.kind === 'guest' ? (
+                <GuestCard key={`guest-${slot.seat.id}`} seat={slot.seat} v={v} ppm={m.ppm} />
+              ) : slot.kind === 'request' ? (
+                <RequestCard key={slot.request.id} r={slot.request} v={v} />
+              ) : (
+                <OpenSeatCard key={`open-${i}`} v={v} target={drop.ok} landing={drop.ok && drop.hovered && i === firstOpen} />
+              ),
+            )}
+            {canceled.length ? <CanceledLine seats={canceled} v={v} /> : null}
           </div>
         ) : (
           <p className="px-2.5 pt-1 text-xs text-muted-foreground">The same class: the people in at its time aren’t next to each other, so it shows in {p.of} parts. Its students are in the first.</p>
@@ -590,11 +624,12 @@ const SLOT = 'h-[56px] w-full min-w-0 shrink-0 rounded-lg'
 /**
  * A student in a class, as a card: their name, their level in its colour (or the label's colour for a make-up, practice
  * or trial), their rifle and grade, how they're marked, and their actions (⋯, or a right-click). A no-show turns the
- * card grey (the owner, 2026-10-29: "no-show must be obvious"); a canceled seat is grey and struck through. Drag it to
- * another class to move them.
+ * card grey (the owner, 2026-10-29: "no-show must be obvious"). Drag it to another class to move them; drag its left or
+ * right edge to change their hours (docs/DECISIONS.md §38): staying on past the class says until when.
  */
-function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
+function StudentCard({ seat, v, ppm }: { seat: WithId<Session>; v: ClassView; ppm: number }) {
   const b = useBoard()
+  const ref = useRef<HTMLDivElement>(null)
   const source = useDragSource(seat)
   const st = b.student(seat.studentId)
   const level = st?.level ?? null
@@ -604,9 +639,12 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   const present = seat.status === 'present'
   const noShow = seat.status === 'no_show'
   const grey = canceled || noShow
-  const own = seat.startMin !== v.c.startMin || seat.endMin !== v.c.endMin ? classRange(seat.startMin, seat.endMin) : null
+  // Part of the class (a half-hour trial) says its time; past the class, "until 5:30" or "from 3:30" on top.
+  const past = stretchLabel(seat, v.c)
+  const own = !stretched(seat, v.c) && (seat.startMin !== v.c.startMin || seat.endMin !== v.c.endMin) ? classRange(seat.startMin, seat.endMin) : null
   const label = (seat.note ?? '').trim()
   const editable = b.mode === 'admin' && b.canEdit(seat.dateKey)
+  const stretchable = editable && !canceled
   // Here and no-show belong to the class's day: a class next week has nothing to mark yet.
   const markable = editable && seat.dateKey <= b.today && !canceled
   const grade = gradeLabel(st?.grade ?? seat.studentGrade)
@@ -615,12 +653,14 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
   return (
     <ContextMenuFor entries={editable ? seatContextActions(b, seat, v) : []}>
       <div
+        ref={ref}
         data-seat-id={seat.id}
         data-status={seat.status}
         {...source}
         className={cn(
           SLOT,
-          '@container flex flex-col justify-center gap-1 overflow-hidden pr-1 ring-1 ring-black/[0.07] ring-inset dark:ring-white/[0.07]',
+          'group/card @container relative flex flex-col justify-center gap-1 overflow-hidden ring-1 ring-black/[0.07] ring-inset dark:ring-white/[0.07]',
+          stretchable ? 'pr-2.5' : 'pr-1',
           canceled ? 'bg-muted/70 text-muted-foreground' : noShow ? 'bg-zinc-200/70 text-zinc-700 ring-zinc-300 dark:bg-zinc-700/70 dark:text-zinc-200 dark:ring-zinc-600' : SEAT_FILL,
           special && level && !grey ? 'pl-3' : 'pl-2.5',
           source.draggable && 'cursor-grab active:cursor-grabbing',
@@ -640,6 +680,11 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
           </button>
           {!markable ? <StatusDot status={seat.status} /> : null}
           <span className="min-w-0 flex-1" />
+          {past ? (
+            <span className="shrink-0 text-[11px] leading-4 font-semibold whitespace-nowrap tabular-nums" title={`${seat.studentName}: ${classRange(seat.startMin, seat.endMin)}`} data-testid="seat-stretch">
+              {past}
+            </span>
+          ) : null}
           {editable ? <SeatMenu seat={seat} v={v} compact /> : null}
         </div>
         <div className="flex h-6 min-w-0 items-center gap-1">
@@ -688,6 +733,58 @@ function StudentCard({ seat, v }: { seat: WithId<Session>; v: ClassView }) {
             </Button>
           ) : null}
         </div>
+        {stretchable ? <StretchHandles b={b} seat={seat} span={v.c} ppm={ppm} cardRef={ref} /> : null}
+      </div>
+    </ContextMenuFor>
+  )
+}
+
+/**
+ * A student of another class in during this one (docs/DECISIONS.md §38): staying on from the class before, or in early
+ * for the one after, in a seat of this class while they're here. Their level's colour fills the part of the class
+ * they're in for, the rest hatched (that seat is free from then); its edge there drags to change their hours, its menu
+ * changes them too or opens their class. They're marked in their own class.
+ */
+function GuestCard({ seat, v, ppm }: { seat: WithId<Session>; v: ClassView; ppm: number }) {
+  const b = useBoard()
+  const ref = useRef<HTMLDivElement>(null)
+  const home = b.classById(seat.classId)
+  const st = b.student(seat.studentId)
+  const kind = seatKind(seat.note)
+  const color = kind !== 'regular' ? KIND_COLORS[kind] : levelColor(st?.level ?? null, b.levels)
+  const { c } = v
+  const length = c.endMin - c.startMin
+  const from = ((Math.max(seat.startMin, c.startMin) - c.startMin) / length) * 100
+  const until = ((Math.min(seat.endMin, c.endMin) - c.startMin) / length) * 100
+  // Staying on from the class before (its end is here), or in early for the one after (its start is here).
+  const { late, when, what } = guestWords(seat, v, home)
+  const editable = b.mode === 'admin' && b.canEdit(seat.dateKey)
+  const entries = editable ? guestActions(b, seat, home) : []
+  return (
+    <ContextMenuFor entries={entries}>
+      <div
+        ref={ref}
+        className={cn(SLOT, 'group/card hatch-empty relative overflow-hidden border border-dashed border-foreground/20')}
+        style={seatVars(color)}
+        data-seat-id={seat.id}
+        data-testid="guest-card"
+      >
+        <span className={cn('absolute inset-y-0', SEAT_FILL, late ? 'rounded-r-md' : 'rounded-l-md')} style={{ left: `${from}%`, width: `${until - from}%` }} />
+        <MenuOnTap entries={entries}>
+          <button
+            type="button"
+            onClick={entries.length ? undefined : () => home && b.openClass(home.c.id)}
+            className="relative flex size-full min-w-0 flex-col justify-center gap-1 px-2.5 text-left text-(--seat-ink) dark:text-(--seat-ink-dark)"
+            title={`${seat.studentName}: ${classRange(seat.startMin, seat.endMin)}, in a seat of this class ${when}`}
+          >
+            <span className="flex h-5 min-w-0 items-center gap-1.5">
+              <span className="min-w-0 truncate text-[14px] leading-5 font-semibold">{seat.studentName}</span>
+              <span className="ml-auto shrink-0 text-[11px] leading-4 font-semibold whitespace-nowrap tabular-nums">{when}</span>
+            </span>
+            <span className="truncate text-[12px] leading-4 opacity-85">{what}</span>
+          </button>
+        </MenuOnTap>
+        {editable ? <StretchHandles b={b} seat={seat} span={c} ppm={ppm} cardRef={ref} edges={late ? { end: `${until}%` } : { start: `${from}%` }} /> : null}
       </div>
     </ContextMenuFor>
   )

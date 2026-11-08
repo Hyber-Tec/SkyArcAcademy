@@ -1,7 +1,7 @@
 import { type WriteBatch, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { availabilityRecord, describeRanges } from '@shared/availabilityWrites'
 import { COL, availabilityDocId } from '@shared/paths'
-import { seatKind } from '@shared/schedule/classes'
+import { seatKind, seatTimeFor, stretched } from '@shared/schedule/classes'
 import { SESSION_STATUS_LABELS } from '@shared/schedule/status'
 import type { SessionStatus } from '@shared/settings/defaults'
 import { type DateKey, formatDateKey, formatTimeRange, todayKey, weekdayOf } from '@shared/time'
@@ -82,7 +82,8 @@ export async function createClass(ctx: ScheduleCtx, d: ClassDraft): Promise<stri
 
 /**
  * Changes a class's time, seats or note. A new time moves its students with it: a seat for the whole class keeps the
- * whole class, a seat for part of it keeps its length inside the new time.
+ * whole class, a seat stretched past it keeps coming as early or staying as late, and a seat for part of it keeps its
+ * length inside the new time (`seatTimeFor`).
  */
 export async function updateClass(ctx: ScheduleCtx, before: WithId<AcademyClass>, patch: Partial<Pick<ClassDraft, 'startMin' | 'endMin' | 'seats' | 'note'>>, seats: readonly WithId<Session>[]) {
   const next = { ...before, ...patch, note: (patch.note ?? before.note).trim() }
@@ -102,11 +103,8 @@ export async function updateClass(ctx: ScheduleCtx, before: WithId<AcademyClass>
   if (timeChanged) {
     for (const s of seats) {
       if (s.isDeleted) continue
-      const whole = s.startMin === before.startMin && s.endMin === before.endMin
-      const length = Math.min(s.endMin - s.startMin, next.endMin - next.startMin)
-      const start = whole ? next.startMin : Math.min(Math.max(next.startMin, s.startMin + next.startMin - before.startMin), next.endMin - length)
-      const end = whole ? next.endMin : start + length
-      batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { ...timeFields(s.dateKey, start, end, ctx.timezone), ...stamps(ctx) })
+      const t = seatTimeFor(s, before, next)
+      batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { ...timeFields(s.dateKey, t.startMin, t.endMin, ctx.timezone), ...stamps(ctx) })
     }
   }
   const what = changes.map((c) => c.label.toLowerCase()).join(' and ')
@@ -270,6 +268,23 @@ export async function setSeatLabel(ctx: ScheduleCtx, s: WithId<Session>, label: 
   await batch.commit()
 }
 
+/**
+ * Changes a student's own hours in their class (docs/DECISIONS.md §38): staying on past it or in before it, holding a
+ * seat in the class next to it, or part of it only. The schedule checks the hours first (`seatTimeProblem`).
+ */
+export async function setSeatTime(ctx: ScheduleCtx, s: WithId<Session>, next: { startMin: number; endMin: number }) {
+  if (next.startMin === s.startMin && next.endMin === s.endMin) return
+  const batch = writeBatch(db)
+  batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { ...timeFields(s.dateKey, next.startMin, next.endMin, ctx.timezone), ...stamps(ctx) })
+  auditSeat(batch, ctx, s, {
+    action: 'session.time',
+    entityId: s.id,
+    summary: `Changed ${s.studentName}’s hours to ${formatTimeRange(next.startMin, next.endMin)}`,
+    changes: [{ field: 'time', label: 'Time', from: formatTimeRange(s.startMin, s.endMin), to: formatTimeRange(next.startMin, next.endMin) }],
+  })
+  await batch.commit()
+}
+
 /** Moves a student to another class: they take its time (the whole class) and go after its students. */
 export async function moveSeat(ctx: ScheduleCtx, s: WithId<Session>, to: WithId<AcademyClass>, order: number) {
   const batch = writeBatch(db)
@@ -333,8 +348,9 @@ export async function saveWhosIn(ctx: ScheduleCtx, dateKey: DateKey, rows: reado
 
 /**
  * Copies classes into another week, on the same weekdays: each class with its regular students (make-ups, practice and
- * trials are one-offs and stay behind; someone absent that week comes back), as the paste status. Closed and past days
- * are skipped; when the academy's setting says so, the target days' classes go to the Trash first.
+ * trials are one-offs and stay behind; someone absent that week comes back), as the paste status. A student who stayed
+ * longer that week comes for the class's own hours (a one-off too). Closed and past days are skipped; when the
+ * academy's setting says so, the target days' classes go to the Trash first.
  */
 export async function duplicateClasses(
   ctx: ScheduleCtx,
@@ -372,7 +388,12 @@ export async function duplicateClasses(
       const seat = newSeatData(
         ctx,
         copy,
-        { student: { id: s.studentId, name: s.studentName, grade: opts.liveGrade(s.studentId) ?? s.studentGrade }, label: s.note ?? '', startMin: s.startMin, endMin: s.endMin, status: ctx.settings.schedule.pasteStatus },
+        {
+          student: { id: s.studentId, name: s.studentName, grade: opts.liveGrade(s.studentId) ?? s.studentGrade },
+          label: s.note ?? '',
+          ...(stretched(s, src.c) ? {} : { startMin: s.startMin, endMin: s.endMin }),
+          status: ctx.settings.schedule.pasteStatus,
+        },
         'duplicate_week',
         i,
       )

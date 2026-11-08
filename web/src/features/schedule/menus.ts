@@ -1,8 +1,9 @@
-import { LuArrowRight, LuArrowRightLeft, LuBan, LuCheck, LuCheckCheck, LuInbox, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTrash2, LuUserPlus, LuUserX, LuUsers } from 'react-icons/lu'
+import { LuArrowRight, LuArrowRightLeft, LuBan, LuCalendarPlus, LuCheck, LuCheckCheck, LuClock, LuInbox, LuPlus, LuRotateCcw, LuSquareArrowOutUpRight, LuTrash2, LuUndo2, LuUserPlus, LuUserX, LuUsers } from 'react-icons/lu'
+import { earnsMakeup, makeupLabel, takesSeat } from '@shared/schedule/classes'
 import { type DateKey, addDays, formatDateKey } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { type MenuEntry, menu } from '@/components/app/ItemMenu'
-import { type Board, freeSeats } from './board'
+import { type Board, freeSeats, isIn } from './board'
 import { classRange } from './seatParts'
 import type { ClassView } from './useClassData'
 
@@ -18,9 +19,13 @@ function after(first: MenuEntry[], rest: MenuEntry[]): MenuEntry[] {
   return [...first, ...rest.map((e, i) => (i === 0 && e.kind !== 'label' ? { ...e, separatorBefore: true } : e))]
 }
 
-/** A seat's actions (its ⋯ menu): open the class, cancel or restore, move to another class this week, take out. */
+/**
+ * A seat's actions (its ⋯ menu): open the class, change the student's hours (docs/DECISIONS.md §38), cancel or
+ * restore, book a make-up for a canceled class, move to another class this week, take out.
+ */
 export function seatActions(b: Board, seat: WithId<Session>, v: ClassView, inSheet = false): MenuEntry[] {
   const canceled = seat.status === 'canceled'
+  const own = seat.startMin !== v.c.startMin || seat.endMin !== v.c.endMin
   // The rest of the week, from the seat's day: the classes the office can move it to.
   const days: DateKey[] = []
   for (let i = 0; i < 7; i++) {
@@ -29,9 +34,12 @@ export function seatActions(b: Board, seat: WithId<Session>, v: ClassView, inShe
   }
   return menu(
     !inSheet && { label: 'Open the class', icon: LuSquareArrowOutUpRight, onSelect: () => b.openClass(v.c.id) },
+    !canceled && { label: 'Change hours…', icon: LuClock, hint: own ? classRange(seat.startMin, seat.endMin) : undefined, onSelect: () => b.changeHours(seat) },
+    !canceled && own && { label: `Back to ${classRange(v.c.startMin, v.c.endMin)}`, icon: LuUndo2, onSelect: () => b.setSeatTime(seat, { startMin: v.c.startMin, endMin: v.c.endMin }) },
     canceled
       ? { label: 'Restore the seat', icon: LuRotateCcw, onSelect: () => b.setStatus(seat, 'confirmed') }
       : { label: 'Mark canceled (absent)', icon: LuBan, onSelect: () => b.setStatus(seat, 'canceled') },
+    canceled && earnsMakeup(seat) && makeupEntry(b, seat),
     !canceled &&
       days.length > 0 && {
         kind: 'sub',
@@ -40,9 +48,9 @@ export function seatActions(b: Board, seat: WithId<Session>, v: ClassView, inShe
         entries: days.flatMap((d): MenuEntry[] => [
           { kind: 'label', label: dayName(d) },
           ...(b.byDate.get(d) ?? []).map((x): MenuEntry => {
-            const left = freeSeats(x)
+            const left = freeSeats(x) + (x.guests.some((s) => s.id === seat.id) ? 1 : 0)
             const here = x.c.id === v.c.id
-            const already = !here && x.seats.some((s) => s.studentId === seat.studentId && s.status !== 'canceled')
+            const already = !here && isIn(x, seat.studentId, seat.id)
             return {
               label: classRange(x.c.startMin, x.c.endMin),
               hint: here ? 'This class' : already ? 'In it' : left > 0 ? `${left} open` : 'Full',
@@ -53,6 +61,54 @@ export function seatActions(b: Board, seat: WithId<Session>, v: ClassView, inShe
         ]),
       },
     { label: 'Take out of this class', icon: LuTrash2, destructive: true, separatorBefore: true, onSelect: () => b.removeSeat(seat) },
+  )
+}
+
+/**
+ * "Book a makeup this week": the week's classes from today on with a seat open (the schedule's data is the week shown),
+ * or where it's booked already. Booked, it's a seat labelled "MU for 11/8", as Add a student books one.
+ */
+function makeupEntry(b: Board, seat: WithId<Session>): MenuEntry {
+  const label = makeupLabel(seat.dateKey).toLowerCase()
+  for (const list of b.byDate.values()) {
+    for (const x of list) {
+      const booked = x.seats.find((s) => s.studentId === seat.studentId && takesSeat(s) && (s.note ?? '').trim().toLowerCase() === label)
+      if (booked) return { kind: 'label', label: `Makeup booked: ${formatDateKey(x.c.dateKey, 'weekdayMedium')}, ${classRange(x.c.startMin, x.c.endMin)}`, tone: 'muted' }
+    }
+  }
+  const days = [...b.byDate.keys()].filter((d) => d >= b.today && b.canEdit(d) && (b.byDate.get(d) ?? []).length).sort()
+  return {
+    kind: 'sub',
+    label: 'Book a makeup this week',
+    icon: LuCalendarPlus,
+    entries: days.flatMap((d): MenuEntry[] => [
+      { kind: 'label', label: dayName(d) },
+      ...(b.byDate.get(d) ?? []).map((x): MenuEntry => {
+        const left = freeSeats(x)
+        const missed = x.c.id === seat.classId
+        const already = isIn(x, seat.studentId)
+        const started = x.c.dateKey === b.today && x.c.startMin <= b.nowMin
+        return {
+          label: classRange(x.c.startMin, x.c.endMin),
+          hint: missed ? 'Missed' : already ? 'In it' : started ? 'Started' : left > 0 ? `${left} open` : 'Full',
+          disabled: missed || already || started || left <= 0,
+          onSelect: () => b.bookMakeup(seat, x),
+        }
+      }),
+    ]),
+  }
+}
+
+/**
+ * A student of another class in during this one (staying on, or in early, docs/DECISIONS.md §38), as its card's menu:
+ * their hours, back to their own class's hours, or their class.
+ */
+export function guestActions(b: Board, seat: WithId<Session>, home: ClassView | undefined): MenuEntry[] {
+  return menu(
+    { kind: 'label', label: home ? `${seat.studentName} · ${classRange(home.c.startMin, home.c.endMin)} class` : seat.studentName },
+    { label: 'Change hours…', icon: LuClock, hint: classRange(seat.startMin, seat.endMin), onSelect: () => b.changeHours(seat) },
+    !!home && { label: `Back to ${classRange(home.c.startMin, home.c.endMin)}`, icon: LuUndo2, onSelect: () => b.setSeatTime(seat, { startMin: home.c.startMin, endMin: home.c.endMin }) },
+    !!home && { label: 'Open their class', icon: LuSquareArrowOutUpRight, separatorBefore: true, onSelect: () => b.openClass(home.c.id) },
   )
 }
 

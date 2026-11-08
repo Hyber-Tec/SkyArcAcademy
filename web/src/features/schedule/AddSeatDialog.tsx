@@ -51,7 +51,8 @@ export function AddSeatDialog({
   const [allOwed, setAllOwed] = useState(false)
   if (!v) return null
   const { c } = v
-  const here = new Set(v.seats.filter((s) => s.status !== 'canceled').map((s) => s.studentId))
+  // Already in it: its students coming, and those of other classes in during it (docs/DECISIONS.md §38).
+  const here = new Set([...v.seats.filter((s) => s.status !== 'canceled'), ...v.guests].map((s) => s.studentId))
   const classLevels = new Set(v.seats.map((s) => students.find((x) => x.id === s.studentId)?.level).filter(Boolean))
   const needle = q.trim().toLowerCase()
   const list = students

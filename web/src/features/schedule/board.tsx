@@ -58,6 +58,15 @@ export interface Board {
   /** Marks them here: a class's at once, a whole day's after asking (the third meeting, `AT1`). */
   markHere: (classes: readonly ClassView[], scope: 'class' | 'day') => void
   setLabel: (s: WithId<Session>, label: string) => void
+  /**
+   * A student's own hours in their class (docs/DECISIONS.md §38): staying on past it or in before it (a seat held in
+   * the class next to it), or part of it. Checked first (`seatTimeProblem`).
+   */
+  setSeatTime: (s: WithId<Session>, next: { startMin: number; endMin: number }) => void
+  /** Opens the dialog that sets a student's hours. */
+  changeHours: (s: WithId<Session>) => void
+  /** Books a make-up for a canceled class in another class ("MU for 11/8"). */
+  bookMakeup: (s: WithId<Session>, to: ClassView) => void
   move: (s: WithId<Session>, to: WithId<AcademyClass>) => void
   removeSeat: (s: WithId<Session>) => void
   saveClass: (v: ClassView, patch: { startMin?: number; endMin?: number; seats?: number; note?: string }) => void
@@ -86,13 +95,19 @@ export function useBoard(): Board {
 /** Seats still free in a class. */
 export const freeSeats = (v: ClassView) => Math.max(0, v.c.seats - v.taken)
 
+/** The student is in this class: one of its students coming, or in during it from another class (not `except`). */
+export const isIn = (v: ClassView, studentId: string, except?: string) =>
+  v.seats.some((s) => s.studentId === studentId && s.status !== 'canceled') || v.guests.some((s) => s.studentId === studentId && s.id !== except)
+
 /** Whether a dragged seat can land in a class: not its own, not a full one, not one the student is already in. */
 export type DropCheck = { ok: true } | { ok: false; reason: 'same' | 'full' | 'already' | 'past' }
 export function canDrop(b: Board, seat: WithId<Session> | undefined, v: ClassView): DropCheck {
   if (!seat || seat.classId === v.c.id) return { ok: false, reason: 'same' }
   if (!b.canEdit(v.c.dateKey)) return { ok: false, reason: 'past' }
-  if (v.seats.some((s) => s.studentId === seat.studentId && s.status !== 'canceled')) return { ok: false, reason: 'already' }
-  if (freeSeats(v) <= 0) return { ok: false, reason: 'full' }
+  if (isIn(v, seat.studentId, seat.id)) return { ok: false, reason: 'already' }
+  // The seat staying on in this class already holds one of its seats: moving it in needs no other.
+  const holds = v.guests.some((s) => s.id === seat.id) ? 1 : 0
+  if (freeSeats(v) + holds <= 0) return { ok: false, reason: 'full' }
   return { ok: true }
 }
 

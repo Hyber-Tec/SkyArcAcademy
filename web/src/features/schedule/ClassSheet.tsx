@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useBoard } from './board'
 import { SeatMenu } from './SeatMenu'
+import { GuestTile } from './seatExtras'
 import { CoachBadge, KindTag, LevelChip, SeatCount, classRange, gradeLabel } from './seatParts'
 import type { ClassView } from './useClassData'
 
@@ -154,6 +155,11 @@ function ClassBody({ v, onClose }: { v: ClassView; onClose: () => void }) {
               </li>
             )
           })}
+          {v.guests.map((s) => (
+            <li key={`guest-${s.id}`}>
+              <GuestTile seat={s} v={v} className="h-14" />
+            </li>
+          ))}
           {Array.from({ length: Math.max(0, c.seats - v.taken) }, (_, i) => (
             <li key={`open-${i}`}>
               <button

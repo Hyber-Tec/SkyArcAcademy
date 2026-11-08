@@ -179,24 +179,43 @@ export function rowHeights(base: readonly number[], pieces: readonly PieceNeed[]
   return h
 }
 
-/** A class block's slots, top to bottom, every one the size of a student's card. */
-export interface ClassSlots<S, R> {
-  /** Its students (a canceled one too, in its place). */
-  cells: S[]
-  /** Families' requests for it: those waiting on the office first, then those suggested to a family. */
-  requests: R[]
-  /** The seats still open once each request has taken one's place. */
-  open: number
+/**
+ * One slot of a class block, every one the size of a student's card: a student coming, a student of another class in
+ * during this one (`guest`), a family's request, or an open seat.
+ */
+export type Slot<S, R> = { kind: 'seat'; seat: S } | { kind: 'guest'; seat: S } | { kind: 'request'; request: R } | { kind: 'open' }
+
+/** A student of another class in during this one, and the row their card has in their own class (null: unknown). */
+export interface GuestSlot<S> {
+  seat: S
+  row: number | null
 }
 
 /**
- * A class block's slots, in one column (the owner, 2026-10-29): its students, then families' requests, each in an open
- * seat's place (six seats, four taken, one request: the four, the request, one open seat; more requests than open seats
- * go on under them), then the seats still open.
+ * A class block's slots, top to bottom, in one column (the owner, 2026-10-29): its students, then families' requests,
+ * each in an open seat's place (six seats, four taken, one request: the four, the request, one open seat; more requests
+ * than open seats go on under them), then the seats still open. `open` already leaves out the guests' seats. A guest
+ * (staying on from the class before, or in early for the one after, docs/DECISIONS.md §38) goes in the row their card
+ * has in their own class when that row is free, so a stretch reads as one line across both blocks; otherwise after
+ * the students.
  */
-export function classSlots<S, R extends { status: string }>(cells: readonly S[], open: number, requests: readonly R[]): ClassSlots<S, R> {
+export function classSlots<S, R extends { status: string }>(cells: readonly S[], open: number, requests: readonly R[], guests: readonly GuestSlot<S>[] = []): Slot<S, R>[] {
   const waiting = [...requests].sort((a, b) => Number(a.status !== 'pending') - Number(b.status !== 'pending'))
-  return { cells: [...cells], requests: waiting, open: Math.max(0, open - waiting.length) }
+  const total = cells.length + guests.length + waiting.length + Math.max(0, open - waiting.length)
+  const out: (Slot<S, R> | null)[] = Array.from({ length: total }, () => null)
+  const later: Slot<S, R>[] = []
+  for (const g of guests) {
+    if (g.row !== null && g.row >= 0 && g.row < total && !out[g.row]) out[g.row] = { kind: 'guest', seat: g.seat }
+    else later.push({ kind: 'guest', seat: g.seat })
+  }
+  const rest: Slot<S, R>[] = [
+    ...cells.map((seat): Slot<S, R> => ({ kind: 'seat', seat })),
+    ...later,
+    ...waiting.map((request): Slot<S, R> => ({ kind: 'request', request })),
+    ...Array.from({ length: Math.max(0, open - waiting.length) }, (): Slot<S, R> => ({ kind: 'open' })),
+  ]
+  let next = 0
+  return out.map((slot) => slot ?? rest[next++])
 }
 
 /** How tall `n` slots of `size` are, one under the other with `gap` between them. */

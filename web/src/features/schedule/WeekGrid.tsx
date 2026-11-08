@@ -11,6 +11,7 @@ import { useElementWidth } from '@/hooks/use-element-width'
 import { cn } from '@/lib/utils'
 import { REFUSAL, cellsOf, freeSeats, useBoard, useDragSource, useDropTarget } from './board'
 import { seatContextActions } from './menus'
+import { CanceledLine, GuestTile } from './seatExtras'
 import { CoachBadge, NowPill, SEAT_FILL, StatusDot, abbreviate, gradeLabel, seatVars, shortName } from './seatParts'
 import type { ClassView } from './useClassData'
 
@@ -189,7 +190,7 @@ function WeekClass({ v, side, roomy }: { v: ClassView; side: boolean; roomy: boo
   const b = useBoard()
   const drop = useDropTarget(v)
   const { c } = v
-  const { cells, open, overflow } = cellsOf(v.seats, c.seats)
+  const { cells, open, canceled } = cellsOf(v.seats, c.seats, v.guests.length)
   const now = c.dateKey === b.today && b.nowMin >= c.startMin && b.nowMin < c.endMin
   const full = v.taken >= c.seats
   const notMine = !!b.me && !v.coaches.some((k) => k.staffId === b.me)
@@ -242,15 +243,14 @@ function WeekClass({ v, side, roomy }: { v: ClassView; side: boolean; roomy: boo
           {cells.map((s) => (
             <WeekSeat key={s.id} seat={s} v={v} roomy={roomy} />
           ))}
+          {v.guests.map((s) => (
+            <GuestTile key={`guest-${s.id}`} seat={s} v={v} small className={roomy ? 'h-[44px]' : 'h-[38px]'} />
+          ))}
           {Array.from({ length: open }, (_, i) => (
             <OpenSeat key={`open-${i}`} v={v} roomy={roomy} target={drop.ok} landing={drop.ok && drop.hovered && i === 0} />
           ))}
         </div>
-        {overflow.length ? (
-          <div className="truncate px-1 pt-1 text-[10px] text-muted-foreground">
-            Canceled: <span className="line-through">{overflow.map((s) => shortName(s.studentName)).join(', ')}</span>
-          </div>
-        ) : null}
+        <CanceledLine seats={canceled} v={v} className="h-4 pt-1 text-[10px]" />
       </div>
       {drop.hovered && drop.refused ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60">

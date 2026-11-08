@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { REFUSAL, cellsOf, useBoard, useDragSource, useDropTarget } from './board'
 import { seatContextActions } from './menus'
+import { CanceledLine, GuestTile } from './seatExtras'
 import { SeatMenu } from './SeatMenu'
-import { CoachBadge, KindTag, NowPill, SEAT_FILL, SeatCount, abbreviate, classRange, gradeLabel, seatVars, shortName } from './seatParts'
+import { CoachBadge, KindTag, NowPill, SEAT_FILL, SeatCount, abbreviate, classRange, gradeLabel, seatVars } from './seatParts'
 import type { ClassView } from './useClassData'
 
 /** The sheets' label colours as a light wash behind a make-up, a practice or a trial. */
@@ -46,7 +47,7 @@ function DayClass({ v }: { v: ClassView }) {
   const b = useBoard()
   const drop = useDropTarget(v)
   const { c } = v
-  const { cells, open, overflow } = cellsOf(v.seats, c.seats)
+  const { cells, open, canceled } = cellsOf(v.seats, c.seats, v.guests.length)
   const now = c.dateKey === b.today && b.nowMin >= c.startMin && b.nowMin < c.endMin
   const editable = b.mode === 'admin' && b.canEdit(c.dateKey)
   const notMine = !!b.me && !v.coaches.some((k) => k.staffId === b.me)
@@ -103,6 +104,9 @@ function DayClass({ v }: { v: ClassView }) {
           {cells.map((s) => (
             <DaySeat key={s.id} seat={s} v={v} />
           ))}
+          {v.guests.map((s) => (
+            <GuestTile key={`guest-${s.id}`} seat={s} v={v} className="h-[60px]" />
+          ))}
           {Array.from({ length: open }, (_, i) => (
             <button
               key={`open-${i}`}
@@ -131,11 +135,7 @@ function DayClass({ v }: { v: ClassView }) {
             </button>
           ))}
         </div>
-        {overflow.length ? (
-          <div className="px-1.5 pt-2 text-xs text-muted-foreground">
-            Also canceled: <span className="line-through">{overflow.map((s) => shortName(s.studentName)).join(', ')}</span>
-          </div>
-        ) : null}
+        <CanceledLine seats={canceled} v={v} className="mt-1.5" />
       </div>
       {drop.hovered && drop.refused ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60">

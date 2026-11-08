@@ -21,7 +21,7 @@ import { ToastHost } from "@/components/ToastHost";
 import { type SessionDoc, type StudentDoc, useAcademyClass, useAcademyNow, useClassesBetween, useStudentList } from "@/features/data/hooks";
 import { removeSeat, setSeatStatus } from "@/features/schedule/api";
 import { type ClassView, isOnNow, isOver, levelsOf, ownTime } from "@/features/schedule/classes";
-import { duration, longDay, plural, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
+import { clock, duration, longDay, plural, startsIn, timeLeft, timeRange } from "@/features/schedule/format";
 import { KindTag, LevelChip, SeatCount, plainNote, useStaffLook } from "@/features/schedule/parts";
 import { openWebsite } from "@/lib/links";
 import { toast } from "@/lib/toast";
@@ -210,6 +210,15 @@ export default function ClassSheet() {
                 marks={editable ? marks : null}
                 onMark={(status) => setSeatStatus(branchId, actor, s, status)}
                 onMore={editable ? () => seatActions(s) : undefined}
+              />
+            )),
+            // Students of other classes in during this one (staying on, or in early, docs/DECISIONS.md §38).
+            ...v.guests.map((s) => (
+              <ListRow
+                key={`guest-${s.id}`}
+                title={s.studentName}
+                subtitle={s.startMin < c.startMin ? `Staying on from another class, until ${clock(s.endMin, hour12)}` : `In early for another class, from ${clock(s.startMin, hour12)}`}
+                testID={`class-guest-${s.id}`}
               />
             )),
             ...(open ? [<OpenSeats key="open" count={open} onAdd={editable ? () => router.push({ pathname: "/add-seat", params: { classId: c.id } }) : undefined} />] : []),
