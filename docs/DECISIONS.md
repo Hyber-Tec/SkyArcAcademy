@@ -1238,3 +1238,37 @@ unnatural … research things like a Claude skill that actually help … other l
   reference codes and the translation service, which today's website doesn't have.
 - **In English, which is the text in force,** as the privacy policy's is: the Korean page shows the English under a
   note. A later change takes a new date at the top, and families and staff hear of one that matters to them.
+
+## 38. A student's own hours, and canceled students under the seats (Goo, 2026-11-08)
+
+The manager asked to change one student's hours in a class: "coming in from 4–5:30, staying for 30 minutes longer
+because we have space in the next class". Goo noticed that a canceled student still took up a seat's space on the
+schedule. Claude Code drew three options for each, and Goo picked A and 1
+([proposals/longer-stays-2026-11-08.html](proposals/longer-stays-2026-11-08.html)).
+
+- **A student's card stretches (A).** A seat keeps its class and can have hours of its own past it: in before the class
+  starts, or staying after it ends.
+  - **The rules:** 15-minute steps, at least 15 minutes of its own class, inside the day's opening hours.
+  - **How the office changes it:** on the timeline, drag either edge of the card. On any screen: ⋯ → Change hours;
+    "Back to" the class's hours undoes it.
+  - **The class next to it:** the student holds one of its seats until they leave. That class counts them: its seat
+    count, the open seats families see (the server's `classSeats`), and the checks when families ask for a class.
+  - **How it shows:** the class next to it shows the student in a dashed card in their level's colour ("until 5:30 ·
+    From the 4–5 PM class"). The card sits in the same row as their own card when both blocks start level.
+  - **Limits:** a stretch stops where a class it would reach has no seat free then ("The 5–6 PM class has no seat free
+    then"), or where the student has another seat.
+  - **One seat for one visit:** marked once and canceled once. Families see the class with its own hours
+    (4:00–5:30 PM), and hear of a new time for a class still ahead.
+  - **Just for that day:** copying a week books the class's own hours. When a class's time changes, a student staying
+    on keeps the same minutes before or after it.
+  - **Not chosen:** booking the next class for part of it (B: two seats for one visit), and no fixed classes (C: weeks
+    of work, and a new phone build).
+- **Canceled students go under the seats (1).** A class's seats show the students coming and every seat still open.
+  Who canceled is one line under them ("Canceled: name"). Each name opens its actions:
+  - restore the seat;
+  - book a makeup this week: a seat labeled "MU for 11/8", in a class that has room;
+  - take them out of the class.
+
+  Not chosen: the name inside the freed seat (2), and a count in the class's header (3).
+- **The phone app** shows both in its next build (the class card and the class page). Until then, the installed apps
+  show a stretched student's hours on their seat, and a canceled student in their place, as before.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DayHours } from '../settings/defaults'
 import type { AcademyClass, Session, WithId } from '../types'
-import { cellsOf, classViews, coachesIn, makeupLabel, makeupsLost, makeupsOwed, openSeats, peopleIn, seatKind, uncovered } from './classes'
+import { cellsOf, classViews, coachesIn, guestsOf, makeupLabel, makeupsLost, makeupsOwed, openSeats, peopleIn, seatKind, seatTimeFor, seatTimeProblem, spillOf, stretched, takenByClass, uncovered } from './classes'
 import { type ConflictSeat, seatConflicts } from './conflicts'
 
 const open: DayHours = { isOpen: true, openMin: 16 * 60, closeMin: 21 * 60 }
@@ -81,17 +81,103 @@ describe('classes taught together', () => {
     expect(day[1]).toMatchObject({ seats: [], taken: 0, coaches: [] })
   })
 
-  it('keeps each seat in its place, a canceled one too, until the class is refilled past it', () => {
+  it('draws the students coming, then every seat still open, and lists the canceled ones under them', () => {
     const seat = (id: string, status: 'confirmed' | 'canceled' = 'confirmed') => ({ id, status })
-    const four = [seat('a'), seat('b', 'canceled'), seat('c'), seat('d')]
-    expect(cellsOf(four, 6)).toEqual({ cells: four, open: 2, overflow: [] })
-    // Refilled: six coming and two canceled in six seats, so both canceled ones go below the grid.
+    // Six seats, four coming and one canceled: the canceled one frees its seat, so two show open.
+    const five = [seat('a'), seat('x', 'canceled'), seat('b'), seat('c'), seat('d')]
+    expect(cellsOf(five, 6)).toEqual({ cells: [seat('a'), seat('b'), seat('c'), seat('d')], open: 2, canceled: [seat('x', 'canceled')] })
+    // Refilled past it: still listed under the seats, none open.
     const full = [seat('a'), seat('x', 'canceled'), seat('b'), seat('c'), seat('y', 'canceled'), seat('d'), seat('e'), seat('f')]
-    const { cells, open, overflow } = cellsOf(full, 6)
-    expect(overflow.map((s) => s.id)).toEqual(['x', 'y'])
+    const { cells, open, canceled } = cellsOf(full, 6)
     expect(cells.map((s) => s.id)).toEqual(['a', 'b', 'c', 'd', 'e', 'f'])
+    expect(canceled.map((s) => s.id)).toEqual(['x', 'y'])
     expect(open).toBe(0)
-    expect(cellsOf([seat('a'), seat('x', 'canceled'), seat('b')], 2).overflow.map((s) => s.id)).toEqual(['x'])
+    // A student of another class staying on into this one takes a seat too.
+    expect(cellsOf([seat('a'), seat('b')], 6, 1).open).toBe(3)
+    expect(cellsOf([seat('a')], 1, 1).open).toBe(0)
+  })
+
+  describe('a student staying longer, or in early (docs/DECISIONS.md §38)', () => {
+    const four = { startMin: t(16), endMin: t(17) }
+    const c = (id: string, startMin: number, endMin: number, p: Partial<AcademyClass> = {}) => ({ id, dateKey: cls.dateKey, startMin, endMin, seats: 6, isDeleted: false, ...p }) as WithId<AcademyClass>
+    const s = (id: string, classId: string, startMin: number, endMin: number, p: Partial<Session> = {}) =>
+      ({ id, classId, studentId: id, studentName: id, dateKey: cls.dateKey, startMin, endMin, status: 'confirmed', isDeleted: false, visualOrder: 0, ...p }) as WithId<Session>
+
+    it('finds the time a seat spends outside its class', () => {
+      expect(spillOf({ startMin: t(16), endMin: t(17, 30) }, four)).toEqual([{ startMin: t(17), endMin: t(17, 30) }])
+      expect(spillOf({ startMin: t(15, 30), endMin: t(17) }, four)).toEqual([{ startMin: t(15, 30), endMin: t(16) }])
+      expect(spillOf({ startMin: t(15, 30), endMin: t(17, 15) }, four)).toEqual([
+        { startMin: t(15, 30), endMin: t(16) },
+        { startMin: t(17), endMin: t(17, 15) },
+      ])
+      // A half-hour trial stays inside its class.
+      expect(spillOf({ startMin: t(16), endMin: t(16, 30) }, four)).toEqual([])
+      expect(stretched({ startMin: t(16), endMin: t(16, 30) }, four)).toBe(false)
+      expect(stretched({ startMin: t(16), endMin: t(17, 30) }, four)).toBe(true)
+    })
+
+    it('counts a student staying on in the next class, and one in early in the class before', () => {
+      const classes = [c('four', t(16), t(17)), c('five', t(17), t(18)), c('six', t(18), t(19))]
+      const classOf = (id: string) => classes.find((x) => x.id === id)
+      const seats = [
+        s('stays', 'four', t(16), t(17, 30)),
+        s('early', 'six', t(17, 45), t(19)),
+        s('trial', 'four', t(16), t(16, 30)),
+        s('gone', 'four', t(16), t(18), { status: 'canceled' }),
+        s('trash', 'four', t(16), t(18), { isDeleted: true }),
+        s('own', 'five', t(17), t(18)),
+      ]
+      expect(guestsOf(classes[1], seats, classOf).map((x) => x.id)).toEqual(['stays', 'early'])
+      expect(guestsOf(classes[0], seats, classOf)).toEqual([])
+      expect(guestsOf(classes[2], seats, classOf)).toEqual([])
+      // Classes that overlap don't count each other's students: only time outside a student's own class does.
+      const overlapping = [c('a', t(16), t(17, 30)), c('b', t(17), t(18))]
+      expect(guestsOf(overlapping[1], [s('x', 'a', t(16), t(17, 30))], (id) => overlapping.find((x) => x.id === id))).toEqual([])
+
+      // The server's count for families: the same, and nothing for a class in the Trash.
+      expect([...takenByClass([...classes, c('gone', t(17), t(18), { isDeleted: true })], seats)]).toEqual([
+        ['four', 2],
+        ['five', 3],
+        ['six', 1],
+      ])
+      const views = classViews(classes, seats, [], () => open)
+      const day = views.get(cls.dateKey) ?? []
+      expect(day.map((v) => [v.c.id, v.taken, v.guests.map((g) => g.id)])).toEqual([
+        ['four', 2, []],
+        ['five', 3, ['stays', 'early']],
+        ['six', 1, []],
+      ])
+    })
+
+    it('checks new hours: 15 minutes in the class, opening hours, the student’s other seats, a seat free where it reaches', () => {
+      const classes = [c('four', t(16), t(17)), c('five', t(17), t(18), { seats: 2 })]
+      const seats = [s('ana', 'four', t(16), t(17)), s('ben', 'five', t(17), t(18)), s('cal', 'five', t(17), t(18), { status: 'canceled' })]
+      const day = { classes, seats, openMin: t(15), closeMin: t(20) }
+      const ana = seats[0]
+      expect(seatTimeProblem(ana, { startMin: t(16), endMin: t(17, 30) }, day)).toBeNull()
+      expect(seatTimeProblem(ana, { startMin: t(16), endMin: t(16, 10) }, day)).toEqual({ kind: 'short' })
+      expect(seatTimeProblem(ana, { startMin: t(16, 50), endMin: t(17, 30) }, day)).toEqual({ kind: 'class' })
+      expect(seatTimeProblem(ana, { startMin: t(14, 30), endMin: t(17) }, day)).toEqual({ kind: 'hours' })
+      // The five o'clock class has two seats: one student coming (the canceled one freed theirs), so there's room...
+      const full = { ...day, seats: [...seats, s('dee', 'five', t(17), t(18))] }
+      // ...until another student takes it.
+      expect(seatTimeProblem(ana, { startMin: t(16), endMin: t(17, 30) }, full)).toEqual({ kind: 'full', at: classes[1] })
+      // In the five o'clock class too: already there then.
+      const twice = { ...day, seats: [...seats, s('ana2', 'five', t(17), t(18), { studentId: 'ana' })] }
+      expect(seatTimeProblem(ana, { startMin: t(16), endMin: t(17, 30) }, twice)?.kind).toBe('busy')
+    })
+
+    it('moves a seat with its class’s new time', () => {
+      const before = { startMin: t(16), endMin: t(17) }
+      const later = { startMin: t(16, 30), endMin: t(17, 30) }
+      expect(seatTimeFor(before, before, later)).toEqual(later)
+      // Staying 30 minutes after the class: still 30 minutes after it.
+      expect(seatTimeFor({ startMin: t(16), endMin: t(17, 30) }, before, later)).toEqual({ startMin: t(16, 30), endMin: t(18) })
+      // A half-hour trial keeps its length inside the class.
+      expect(seatTimeFor({ startMin: t(16), endMin: t(16, 30) }, before, later)).toEqual({ startMin: t(16, 30), endMin: t(17) })
+      // A stretch that would leave under 15 minutes in the class takes the whole class.
+      expect(seatTimeFor({ startMin: t(16, 45), endMin: t(17, 30) }, before, { startMin: t(16), endMin: t(16, 30) })).toEqual({ startMin: t(16), endMin: t(16, 30) })
+    })
   })
 
   it('lists make-ups still owed: a canceled seat without a later "MU for" its date', () => {

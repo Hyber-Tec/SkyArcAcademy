@@ -150,20 +150,30 @@ describe('a class block’s slots', () => {
   const students = ['ana', 'ben', 'cal', 'dee']
   const pending = (id: string) => ({ id, status: 'pending' })
   const offered = (id: string) => ({ id, status: 'offered' })
+  const kinds = (slots: { kind: string; seat?: string; request?: { id: string } }[]) => slots.map((x) => (x.kind === 'seat' || x.kind === 'guest' ? `${x.kind}:${x.seat}` : x.kind === 'request' ? `request:${x.request?.id}` : 'open'))
 
   it('puts a request in an open seat’s place: six seats, four taken, one request', () => {
-    expect(classSlots(students, 2, [pending('r1')])).toEqual({ cells: students, requests: [pending('r1')], open: 1 })
+    expect(kinds(classSlots(students, 2, [pending('r1')]))).toEqual(['seat:ana', 'seat:ben', 'seat:cal', 'seat:dee', 'request:r1', 'open'])
   })
 
   it('lists requests waiting on the office first, then those suggested to a family', () => {
     const slots = classSlots(students, 2, [offered('s1'), pending('r1'), offered('s2'), pending('r2')])
-    expect(slots.requests.map((r) => r.id)).toEqual(['r1', 'r2', 's1', 's2'])
     // More requests than open seats: they all show, and no open seat is left.
-    expect(slots.open).toBe(0)
+    expect(kinds(slots)).toEqual(['seat:ana', 'seat:ben', 'seat:cal', 'seat:dee', 'request:r1', 'request:r2', 'request:s1', 'request:s2'])
   })
 
   it('keeps every seat open when nobody asks', () => {
-    expect(classSlots([], 6, [])).toEqual({ cells: [], requests: [], open: 6 })
+    expect(kinds(classSlots([], 6, []))).toEqual(['open', 'open', 'open', 'open', 'open', 'open'])
+  })
+
+  it('puts a student staying on from the class before in their own card’s row, so the stretch reads as one line', () => {
+    // Five o'clock: four students and one open seat, plus one staying on from the four o'clock class, fifth there.
+    expect(kinds(classSlots(students, 1, [], [{ seat: 'eve', row: 4 }]))).toEqual(['seat:ana', 'seat:ben', 'seat:cal', 'seat:dee', 'guest:eve', 'open'])
+    expect(kinds(classSlots(students, 1, [], [{ seat: 'eve', row: 1 }]))).toEqual(['seat:ana', 'guest:eve', 'seat:ben', 'seat:cal', 'seat:dee', 'open'])
+    // Their row unknown, taken by another guest, or past the end: after the students.
+    expect(kinds(classSlots(['ana'], 1, [], [{ seat: 'eve', row: null }]))).toEqual(['seat:ana', 'guest:eve', 'open'])
+    expect(kinds(classSlots(['ana'], 0, [], [{ seat: 'eve', row: 0 }, { seat: 'fay', row: 0 }]))).toEqual(['guest:eve', 'seat:ana', 'guest:fay'])
+    expect(kinds(classSlots(['ana'], 0, [], [{ seat: 'eve', row: 9 }]))).toEqual(['seat:ana', 'guest:eve'])
   })
 })
 

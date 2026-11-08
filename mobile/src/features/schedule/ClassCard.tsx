@@ -8,15 +8,17 @@ import { T } from "@/components/Text";
 import type { SessionDoc, StudentDoc } from "@/features/data/hooks";
 import { radius, space, useColors } from "@/theme";
 import { type ClassView, firstName, isOnNow, ownTime, teaches } from "./classes";
-import { listWords, shortRange, timeRange } from "./format";
+import { clock, listWords, shortRange, timeRange } from "./format";
 import { CoachesIn, NowPill, SeatCount, type StaffLook, StatusMark, useLevelFill, useSeatFill } from "./parts";
 
 /**
  * A class on the schedule as the academy's sheets lay it out (docs/DECISIONS.md §21): its time (NOW while it's on) and
  * the seats taken ("4/6"), the coaches in, then its seats two across, each student in their level's colour with their
  * rifle code (a make-up, extra practice or a trial in its label's colour, with the level as a bar at its edge) and a mark
- * once they're here, a no-show or canceled; open seats hatched; and the class's note for the coaches. For a coach, the
- * classes in their hours stand out and the others are a little faded, as on the website. Tapping it opens the class.
+ * once they're here or a no-show; a student of another class staying on into it (or in early) dashed, with until when;
+ * open seats hatched; who canceled under the seats (docs/DECISIONS.md §38); and the class's note for the coaches. For a
+ * coach, the classes in their hours stand out and the others are a little faded, as on the website. Tapping it opens
+ * the class.
  */
 export function ClassCard({
   v,
@@ -42,11 +44,11 @@ export function ClassCard({
 }) {
   const colors = useColors();
   const { c } = v;
-  const { cells, open, overflow } = cellsOf(v.seats, c.seats);
+  const { cells, open, canceled } = cellsOf(v.seats, c.seats, v.guests.length);
   const live = isOnNow(v, today, nowMin);
   const faded = !!me && !teaches(v, me);
-  const boxes: (SessionDoc | null)[] = [...cells, ...Array.from({ length: open }, () => null)];
-  const rows: (SessionDoc | null)[][] = [];
+  const boxes: Box[] = [...cells.map((seat) => ({ seat, guest: false })), ...v.guests.map((seat) => ({ seat, guest: true })), ...Array.from({ length: open }, () => null)];
+  const rows: Box[][] = [];
   for (let i = 0; i < boxes.length; i += 2) rows.push(boxes.slice(i, i + 2));
   const coaches = v.coaches.map((k) => (k.staffId === me ? "you" : firstName(look.nameOf(k.staffId, k.name))));
   const label = [
@@ -82,16 +84,24 @@ export function ClassCard({
       <View style={styles.grid}>
         {rows.map((row, i) => (
           <View key={i} style={styles.row}>
-            {row.map((s, j) => (s ? <Seat key={s.id} seat={s} v={v} student={studentOf(s.studentId)} hour12={hour12} /> : <OpenSeat key={`open-${i}-${j}`} />))}
+            {row.map((box, j) =>
+              !box ? (
+                <OpenSeat key={`open-${i}-${j}`} />
+              ) : box.guest ? (
+                <Guest key={`guest-${box.seat.id}`} seat={box.seat} v={v} student={studentOf(box.seat.studentId)} hour12={hour12} />
+              ) : (
+                <Seat key={box.seat.id} seat={box.seat} v={v} student={studentOf(box.seat.studentId)} hour12={hour12} />
+              ),
+            )}
             {row.length === 1 ? <View style={styles.cell} /> : null}
           </View>
         ))}
       </View>
-      {overflow.length ? (
-        <T variant="tiny" tone="muted" numberOfLines={2}>
-          {"Also canceled: "}
+      {canceled.length ? (
+        <T variant="tiny" tone="muted" numberOfLines={2} testID={testID ? `${testID}-canceled` : undefined}>
+          {"Canceled: "}
           <T variant="tiny" tone="muted" style={styles.struck}>
-            {listWords(overflow.map((s) => s.studentName))}
+            {listWords(canceled.map((s) => s.studentName))}
           </T>
         </T>
       ) : null}
@@ -142,6 +152,37 @@ function Seat({ seat, v, student, hour12 }: { seat: SessionDoc; v: ClassView; st
   );
 }
 
+/** A seat in the grid: one of the class's students, or one of another class in during it. */
+type Box = { seat: SessionDoc; guest: boolean } | null;
+
+/**
+ * A student of another class in during this one (docs/DECISIONS.md §38): staying on from the class before, or in early
+ * for the one after. Dashed, in their level's colour, with until when (or from when); they're marked in their own class.
+ */
+function Guest({ seat, v, student, hour12 }: { seat: SessionDoc; v: ClassView; student: StudentDoc | undefined; hour12: boolean }) {
+  const colors = useColors();
+  const levelFill = useLevelFill();
+  const seatFill = useSeatFill();
+  const kind = seatKind(seat.note);
+  const fill = kind !== "regular" ? seatFill(KIND_COLORS[kind]) : levelFill(student?.level ?? null);
+  const late = seat.startMin < v.c.startMin;
+  const when = late ? `until ${clock(seat.endMin, hour12)}` : `from ${clock(seat.startMin, hour12)}`;
+  return (
+    <View style={[styles.cell, styles.seat, styles.guest, { backgroundColor: fill.bg, borderColor: colors.border }]} accessibilityLabel={`${seat.studentName}, from another class, ${when}`}>
+      <View style={styles.seatTop}>
+        <T style={[styles.seatLabel, { color: fill.ink }]} numberOfLines={1}>
+          {late ? "Staying on" : "In early"}
+        </T>
+        <View style={styles.grow} />
+        <T style={[styles.own, { color: fill.ink }]}>{when}</T>
+      </View>
+      <T style={[styles.seatName, { color: fill.ink }]} numberOfLines={1}>
+        {seat.studentName}
+      </T>
+    </View>
+  );
+}
+
 /** An unused seat, hatched as the sheets blacken them. */
 function OpenSeat() {
   const colors = useColors();
@@ -172,5 +213,6 @@ const styles = StyleSheet.create({
   seatName: { fontSize: 13, fontWeight: "600", marginTop: 1 },
   struck: { textDecorationLine: "line-through" },
   open: { borderWidth: 1, borderStyle: "dashed" },
+  guest: { borderWidth: 1, borderStyle: "dashed", opacity: 0.85 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: 2 },
 });

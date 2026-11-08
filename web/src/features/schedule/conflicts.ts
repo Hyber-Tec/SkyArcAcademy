@@ -54,7 +54,8 @@ export function classConflicts(
           hours,
           class: v.c,
           coaches: v.coaches,
-          classSeats: v.seats,
+          // Students of other classes in during it take its seats too (docs/DECISIONS.md §38).
+          classSeats: [...v.seats, ...v.guests],
           studentStatus: opts.studentsById?.get(s.studentId)?.status ?? null,
           studentSeats: theirs.get(s.studentId) ?? [],
         })

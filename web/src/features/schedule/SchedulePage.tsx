@@ -4,11 +4,11 @@ import { LuCalendarCog, LuCalendarDays, LuCheckCheck, LuChevronLeft, LuChevronRi
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { COL } from '@shared/paths'
-import { MAKEUP_LOOKBACK_DAYS, makeupsOwed } from '@shared/schedule/classes'
+import { MAKEUP_LOOKBACK_DAYS, makeupLabel, makeupsOwed } from '@shared/schedule/classes'
 import type { ClassRequest } from '@shared/schedule/requests'
 import { seatsToMark } from '@shared/schedule/status'
 import type { SessionStatus } from '@shared/settings/defaults'
-import { type DateKey, addDays, formatDateKey, formatMinutesShort, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
+import { type DateKey, addDays, formatDateKey, formatMinutesShort, formatTimeRange, isDateKey, nowMinutes, todayKey, weekDays } from '@shared/time'
 import type { Availability, ClockShift, Session, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useConfirm } from '@/components/app/useConfirm'
@@ -27,11 +27,12 @@ import { AddClassDialog } from './AddClassDialog'
 import { AddSeatDialog } from './AddSeatDialog'
 import type { ScheduleCtx } from './api'
 import { type Board, BoardContext } from './board'
-import { addSeat, createClass, markSeatsHere, moveSeat, removeClass, removeSeat, saveWhosIn, setSeatLabel, setSeatStatus, updateClass } from './classApi'
+import { addSeat, createClass, markSeatsHere, moveSeat, removeClass, removeSeat, saveWhosIn, setSeatLabel, setSeatStatus, setSeatTime, updateClass } from './classApi'
 import { ClassSheet } from './ClassSheet'
 import { DayList } from './DayList'
 import { DayHoursDialog } from './dialogs/DayHoursDialog'
 import { DuplicateDialog } from './dialogs/DuplicateDialog'
+import { SeatHoursDialog } from './dialogs/SeatHoursDialog'
 import { TrashDialog } from './dialogs/TrashDialog'
 import { type ClassViewMode, SchedulePanel, ViewSwitch } from './SchedulePanel'
 import { coachColor } from './seatParts'
@@ -117,6 +118,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   // ---------------------------------------------------------------- dialogs
   const [classId, setClassId] = useState<string | null>(() => params.get('class'))
   const [seatFor, setSeatFor] = useState<string | null>(null)
+  /** The seat whose hours are being changed (its ID). */
+  const [hoursFor, setHoursFor] = useState<string | null>(null)
   const [whosIn, setWhosIn] = useState<DateKey | null>(null)
   const [newClass, setNewClass] = useState<{ dateKey: DateKey; key: number } | null>(null)
   const [hoursDay, setHoursDay] = useState<DateKey | null>(null)
@@ -213,6 +216,13 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
       void run(() => markSeatsHere(ctx, seats), `${n} marked here`)
     },
     setLabel: (s, l) => void run(() => setSeatLabel(ctx, s, l)),
+    setSeatTime: (s, next) => void run(() => setSeatTime(ctx, s, next), `${s.studentName}: ${formatTimeRange(next.startMin, next.endMin)}`),
+    changeHours: (s) => setHoursFor(s.id),
+    bookMakeup: (s, to) =>
+      void run(
+        () => addSeat(ctx, to.c, { student: { id: s.studentId, name: s.studentName, grade: studentById.get(s.studentId)?.grade ?? s.studentGrade }, label: makeupLabel(s.dateKey) }, nextOrder(to)),
+        `${s.studentName}’s makeup booked: ${formatDateKey(to.c.dateKey, 'weekdayMedium')}, ${formatMinutesShort(to.c.startMin)}`,
+      ),
     move: (s, to) => void run(() => moveSeat(ctx, s, to, nextOrder(classById(to.id))), `${s.studentName} moved to ${formatDateKey(to.dateKey, 'weekdayMedium')}, ${formatMinutesShort(to.startMin)}`),
     removeSeat: async (s) => {
       const ok = await confirm({ title: `Take ${s.studentName} out of this class?`, description: 'It goes to the Trash, from where it can come back. To mark an absence, use Canceled instead.', confirmLabel: 'Take out', destructive: true })
@@ -333,6 +343,8 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
   const title = view === 'day' ? formatDateKey(date, 'weekdayLong').replace(/, \d{4}$/, '') : `${formatDateKey(week[0], 'monthDay')} – ${formatDateKey(week[6], 'medium')}`
   const phoneTitle = view === 'day' ? formatDateKey(date, 'weekdayMedium') : `${formatDateKey(week[0], 'monthDay')} – ${week[0].slice(0, 7) === week[6].slice(0, 7) ? Number(week[6].slice(8)) : formatDateKey(week[6], 'monthDay')}`
   const seatClass = seatFor ? classById(seatFor) ?? null : null
+  // The seat whose hours are open, and its class.
+  const hoursSeat = hoursFor ? [...data.byDate.values()].flat().flatMap((v) => v.seats.filter((s) => s.id === hoursFor).map((seat) => ({ seat, v })))[0] ?? null : null
   const dayClasses = (d: DateKey) => data.byDate.get(d) ?? []
   const savedOn = (d: DateKey) => new Map<string, Availability>(data.availability.filter((a) => a.dateKey === d).map((a) => [a.staffId, a]))
   const people = staff.filter((s) => s.status === 'active')
@@ -544,6 +556,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
             classesOutside={(d, h) => dayClasses(d).filter((v) => !h.isOpen || v.c.startMin < h.openMin || v.c.endMin > h.closeMin).length}
             seatsOn={(d) => dayClasses(d).flatMap((v) => v.seats.map((s) => s.id))}
           />
+          <SeatHoursDialog seat={hoursSeat?.seat ?? null} v={hoursSeat?.v ?? null} onClose={() => setHoursFor(null)} />
           <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} ctx={ctx} />
           <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} ctx={ctx} anchor={date} />
         </>

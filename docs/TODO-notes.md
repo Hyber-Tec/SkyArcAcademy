@@ -252,6 +252,9 @@ These are notes, not tasks.
   students' records: the demo logins' password stays on the Mac mini. The Mac mini's folder from before is kept at
   `~/SkyArc-internal-backup-2026-11-08` there, until Goo says to delete it.
 - **The docs** are in folders since 2026-11-08: [README.md](README.md) maps them.
+- **A student staying longer** (2026-11-08, [DECISIONS.md](DECISIONS.md) §38): on the website's schedule, drag the
+  right edge of the student's card (or ⋯ → Change hours). It holds a seat in the next class until they leave, and
+  refuses when that class is full then. The phone app shows it in its next build; nothing needs one now.
 - **The terms of service** are live at `/terms` since 2026-11-08 ([DECISIONS.md](DECISIONS.md) §37). Worth a lawyer's
   read some day, the liability and dispute parts above all; "Governing law" names no state, and the academy's legal
   name isn't on them (A10).

@@ -7,7 +7,7 @@ import { sendNotifications } from './notify'
 import { familyClassesLink, familyOf, noticesFor, officeOf } from './recipients'
 import { snapshotOf } from './sessionNotify'
 import { COL, ROOT } from '@shared/paths'
-import { MAKEUP_LOOKBACK_DAYS, takesSeat } from '@shared/schedule/classes'
+import { MAKEUP_LOOKBACK_DAYS, guestsOf, takenByClass, takesSeat } from '@shared/schedule/classes'
 import { acceptedNotice, askedAgainNotice, decidedNotice, familyCanceledNotice, familyClassNotice, offeredNotice, requestedNotice } from '@shared/schedule/familyNotices'
 import {
   type ClassOffer,
@@ -195,10 +195,29 @@ function seatLite(d: Snap): RequestSeat {
 /** The student's other requests still open (waiting on the office or on them). */
 const openOthers = (docs: Snap[], exceptId: string | null) => docs.filter((d) => d.id !== exceptId).map((d) => d.data() as ClassRequest).filter(isOpenRequest)
 
-/** A class as the checks read it, its seats taken counted from its seats as they are now. */
-function classLite(id: string, c: AcademyClass | undefined, inClass: FirebaseFirestore.QuerySnapshot): RequestClass | null {
+/**
+ * A class as the checks read it, its seats taken counted from its seats as they are now, and from the students of its
+ * day's other classes in during it (`guests`, docs/DECISIONS.md §38).
+ */
+function classLite(id: string, c: AcademyClass | undefined, inClass: FirebaseFirestore.QuerySnapshot, guests = 0): RequestClass | null {
   if (!c) return null
-  return { id, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, seats: c.seats, isDeleted: c.isDeleted, startMs: ms(c.startAt), taken: inClass.docs.filter((d) => takesSeat(d.data() as Session)).length }
+  return { id, dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, seats: c.seats, isDeleted: c.isDeleted, startMs: ms(c.startAt), taken: inClass.docs.filter((d) => takesSeat(d.data() as Session)).length + guests }
+}
+
+type Read = (q: FirebaseFirestore.Query) => Promise<FirebaseFirestore.QuerySnapshot>
+
+/**
+ * How many students of a class's day's other classes are in during its time (staying on, or in early,
+ * docs/DECISIONS.md §38): each takes one of its seats. `read` runs the queries, in a transaction or not.
+ */
+async function guestsIn(read: Read, b: string, classId: string, c: AcademyClass | undefined): Promise<number> {
+  if (!c) return 0
+  const [classes, seats] = await Promise.all([
+    read(db.collection(`${b}/${COL.classes}`).where('dateKey', '==', c.dateKey)),
+    read(db.collection(`${b}/${COL.sessions}`).where('dateKey', '==', c.dateKey)),
+  ])
+  const live = new Map(classes.docs.filter((d) => d.data().isDeleted !== true).map((d) => [d.id, d.data() as AcademyClass]))
+  return guestsOf({ id: classId, ...c }, seats.docs.map((d) => d.data() as Session), (id) => live.get(id)).length
 }
 
 /**
@@ -213,7 +232,8 @@ async function readForCheck(tx: Transaction, b: string, r: ClassRequest, request
     tx.get(studentRequestsQuery(b, r.studentId)),
   ])
   const c = classSnap.data() as AcademyClass | undefined
-  return { c, inClass, target: classLite(classId, c, inClass), seats: seatSnap.docs.map(seatLite), sessions: seatSnap.docs, pending: openOthers(reqSnap.docs, requestId) }
+  const guests = await guestsIn((q) => tx.get(q), b, classId, c)
+  return { c, inClass, guests, target: classLite(classId, c, inClass, guests), seats: seatSnap.docs.map(seatLite), sessions: seatSnap.docs, pending: openOthers(reqSnap.docs, requestId) }
 }
 
 // ----------------------------------------------------------------- booking
@@ -224,6 +244,8 @@ interface SeatPlan {
   c: AcademyClass
   /** The class's seats, read in the same transaction. */
   inClass: FirebaseFirestore.QuerySnapshot
+  /** Students of other classes in during it, counted in the same transaction (`guestsIn`). */
+  guests: number
   /** The class a move replaces, read in the same transaction. */
   moved: Session | undefined
   student: Student | undefined
@@ -303,7 +325,7 @@ function bookSeat(tx: Transaction, b: string, who: Caller, via: Via, tz: string,
       }),
     )
   }
-  const taken = p.inClass.docs.filter((d) => takesSeat(d.data() as Session)).length + 1
+  const taken = p.inClass.docs.filter((d) => takesSeat(d.data() as Session)).length + p.guests + 1
   const seats: ClassSeats = { dateKey: c.dateKey, startMin: c.startMin, endMin: c.endMin, startAt: c.startAt, seats: c.seats, taken, isDeleted: false, updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp }
   tx.set(db.doc(`${b}/${COL.classSeats}/${r.classId}`), seats)
   return { seatId: seatRef.id, label }
@@ -338,7 +360,7 @@ export const requestClass = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req)
   const c = classSnap.data() as AcademyClass | undefined
   const check = requestCheck({
     draft: { kind, classId, forSessionId },
-    target: classLite(classId, c, taken),
+    target: classLite(classId, c, taken, await guestsIn((q) => q.get(), b, classId, c)),
     seats: seatSnap.docs.map(seatLite),
     pending: openOthers(requestSnap.docs, null),
     nowMs: now,
@@ -465,12 +487,13 @@ async function decide(x: DecideCtx, approve: boolean, seen: string | null) {
     if (!c || c.isDeleted || ms(c.startAt) <= Date.now()) throw refuse('That class is no longer ahead on the schedule. Suggest another class, decline the request, or book another time on the schedule.')
     const live = inClass.docs.map((d) => d.data() as Session).filter(takesSeat)
     if (live.some((s) => s.studentId === r.studentId)) throw refuse(`${r.studentName} is already in that class.`)
-    if (live.length >= c.seats) throw refuse('That class is full now. Suggest another class, make room on the schedule first, or decline the request.')
+    const guests = await guestsIn((q) => tx.get(q), b, r.classId, c)
+    if (live.length + guests >= c.seats) throw refuse('That class is full now. Suggest another class, make room on the schedule first, or decline the request.')
     const moved = forSnap?.data() as Session | undefined
     if (r.kind === 'reschedule' && (!moved || moved.isDeleted || (moved.status !== 'pending' && moved.status !== 'confirmed'))) {
       throw refuse('The class to move is no longer on the schedule. Decline the request, or book it on the schedule.')
     }
-    const { seatId } = bookSeat(tx, b, who, via, x.tz, { r, c, inClass, moved, student: studentSnap.data() as Student | undefined }, 'as the family asked')
+    const { seatId } = bookSeat(tx, b, who, via, x.tz, { r, c, inClass, guests, moved, student: studentSnap.data() as Student | undefined }, 'as the family asked')
     tx.update(ref, { status: 'approved', sessionId: seatId, decisionNote: note, history: withStep(r.history, requestStep('approved', at, actorOf(who), r, note)), ...stamp })
     return { ...r, decisionNote: note, sessionId: seatId }
   })
@@ -569,7 +592,7 @@ export const answerClassOffer = onCall({ timeoutSeconds: 30, ...LIGHT }, async (
     }
     const booked: ClassRequest = { ...r, ...now }
     const moved = r.forSessionId ? (data.sessions.find((d) => d.id === r.forSessionId)?.data() as Session | undefined) : undefined
-    const { seatId, label } = bookSeat(tx, b, who, via, tz, { r: booked, c, inClass: data.inClass, moved, student: studentSnap?.data() as Student | undefined }, 'accepting the time the academy suggested')
+    const { seatId, label } = bookSeat(tx, b, who, via, tz, { r: booked, c, inClass: data.inClass, guests: data.guests, moved, student: studentSnap?.data() as Student | undefined }, 'accepting the time the academy suggested')
     tx.update(ref, {
       ...now,
       status: 'approved',
@@ -599,42 +622,56 @@ export const answerClassOffer = onCall({ timeoutSeconds: 30, ...LIGHT }, async (
 
 // -------------------------------------------------------------- seats taken
 
-/** Writes a class's `classSeats`: its time and seats, and how many are taken now. */
-async function syncSeats(branchId: string, classId: string) {
-  const b = base(branchId)
-  const [classSnap, seats] = await Promise.all([db.doc(`${b}/${COL.classes}/${classId}`).get(), db.collection(`${b}/${COL.sessions}`).where('classId', '==', classId).get()])
-  const ref = db.doc(`${b}/${COL.classSeats}/${classId}`)
-  const c = classSnap.data() as AcademyClass | undefined
-  if (!c) {
-    await ref.delete().catch(() => undefined)
-    return
-  }
-  const doc: ClassSeats = {
+/** A class's `classSeats`: its time and seats, and how many are taken. */
+function seatsDoc(c: AcademyClass, taken: number): ClassSeats {
+  return {
     dateKey: c.dateKey,
     startMin: c.startMin,
     endMin: c.endMin,
     startAt: c.startAt,
     seats: c.seats,
-    taken: seats.docs.filter((d) => takesSeat(d.data() as Session)).length,
+    taken,
     isDeleted: c.isDeleted === true,
     updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
   }
-  await ref.set(doc)
 }
 
-/** A class added, changed or removed. */
+/**
+ * Writes the `classSeats` of a day's classes: each one's time and seats, and how many are taken now (`takenByClass`:
+ * its students coming, and those of its other classes in during it, docs/DECISIONS.md §38).
+ */
+async function syncDay(branchId: string, dateKey: string) {
+  const b = base(branchId)
+  const [classes, seats] = await Promise.all([
+    db.collection(`${b}/${COL.classes}`).where('dateKey', '==', dateKey).get(),
+    db.collection(`${b}/${COL.sessions}`).where('dateKey', '==', dateKey).get(),
+  ])
+  const taken = takenByClass(
+    classes.docs.map((d) => ({ id: d.id, ...(d.data() as AcademyClass) })),
+    seats.docs.map((d) => d.data() as Session),
+  )
+  const batch = db.batch()
+  for (const d of classes.docs) batch.set(db.doc(`${b}/${COL.classSeats}/${d.id}`), seatsDoc(d.data() as AcademyClass, taken.get(d.id) ?? 0))
+  await batch.commit()
+}
+
+/** A class added, changed or removed: its day's classes (a new time changes who's in during the classes next to it). */
 export const onClassWritten = onDocumentWritten({ document: `${ROOT.branches}/{branchId}/${COL.classes}/{classId}`, ...LIGHT }, async (event) => {
-  await syncSeats(event.params.branchId, event.params.classId)
+  const before = event.data?.before.data() as AcademyClass | undefined
+  const after = event.data?.after.data() as AcademyClass | undefined
+  if (!after) await db.doc(`${base(event.params.branchId)}/${COL.classSeats}/${event.params.classId}`).delete().catch(() => undefined)
+  const days = new Set([before?.dateKey, after?.dateKey].filter((d): d is string => !!d))
+  await Promise.all([...days].map((d) => syncDay(event.params.branchId, d)))
 })
 
-/** A seat taken, freed or moved: the classes it left and joined. */
+/** A seat taken, freed, moved or given other hours: its day's classes. */
 export const onSeatWritten = onDocumentWritten({ document: `${ROOT.branches}/{branchId}/${COL.sessions}/{sessionId}`, ...LIGHT }, async (event) => {
   const before = event.data?.before.data() as Session | undefined
   const after = event.data?.after.data() as Session | undefined
-  const counted = (s: Session | undefined) => (s && s.classId ? (takesSeat(s) ? `${s.classId}+` : `${s.classId}-`) : '')
+  const counted = (s: Session | undefined) => (s && s.classId ? `${s.classId}${takesSeat(s) ? '+' : '-'}${s.dateKey}@${s.startMin}-${s.endMin}` : '')
   if (counted(before) === counted(after)) return
-  const classes = new Set([before?.classId, after?.classId].filter((id): id is string => !!id))
-  await Promise.all([...classes].map((id) => syncSeats(event.params.branchId, id)))
+  const days = new Set([before?.dateKey, after?.dateKey].filter((d): d is string => !!d))
+  await Promise.all([...days].map((d) => syncDay(event.params.branchId, d)))
 })
 
 /**
@@ -648,26 +685,12 @@ export async function syncUpcomingSeats(branchId: string, today: string) {
     db.collection(`${b}/${COL.classes}`).where('dateKey', '>=', today).where('dateKey', '<=', to).get(),
     db.collection(`${b}/${COL.sessions}`).where('dateKey', '>=', today).where('dateKey', '<=', to).get(),
   ])
-  const taken = new Map<string, number>()
-  for (const d of seats.docs) {
-    const s = d.data() as Session
-    if (s.classId && takesSeat(s)) taken.set(s.classId, (taken.get(s.classId) ?? 0) + 1)
-  }
+  const taken = takenByClass(
+    classes.docs.map((d) => ({ id: d.id, ...(d.data() as AcademyClass) })),
+    seats.docs.map((d) => d.data() as Session),
+  )
   const writer = db.bulkWriter()
-  for (const d of classes.docs) {
-    const c = d.data() as AcademyClass
-    const doc: ClassSeats = {
-      dateKey: c.dateKey,
-      startMin: c.startMin,
-      endMin: c.endMin,
-      startAt: c.startAt,
-      seats: c.seats,
-      taken: taken.get(d.id) ?? 0,
-      isDeleted: c.isDeleted === true,
-      updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
-    }
-    void writer.set(db.doc(`${b}/${COL.classSeats}/${d.id}`), doc)
-  }
+  for (const d of classes.docs) void writer.set(db.doc(`${b}/${COL.classSeats}/${d.id}`), seatsDoc(d.data() as AcademyClass, taken.get(d.id) ?? 0))
   await writer.close()
 }
 

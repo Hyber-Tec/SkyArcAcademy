@@ -69,6 +69,9 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-08 · A student's own hours: drag their card past the class (it holds a seat in the next one), and
+  canceled students on a line under the seats (Goo's picks, A and 1; [DECISIONS.md](DECISIONS.md) §38). The phone
+  app shows them in its next build
 - [x] ✅ 2026-11-08 · The terms of service, live at skyarcacademy.com/terms beside the privacy policy (Goo; #134)
 - [x] ✅ 2026-11-08 · The private notes in a private repository of their own, on both Macs, brought up to date when a
   session starts (#131); the Mac mini's notes are in it
