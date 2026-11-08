@@ -31,7 +31,7 @@ export function ResultListHead({ className }: { className?: string }) {
 }
 
 /** Grows open under its row and folds away again; nothing above it moves. Its content leaves once it's folded. */
-function Unfold({ open, id, children }: { open: boolean; id: string; children: ReactNode }) {
+export function Unfold({ open, id, children }: { open: boolean; id: string; children: ReactNode }) {
   const [mounted, setMounted] = useState(open)
   const [grown, setGrown] = useState(false)
   if (open && !mounted) setMounted(true)
