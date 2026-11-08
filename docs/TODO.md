@@ -1,43 +1,44 @@
 # To-do
 
 Goo's list, short on purpose. The details for each line are in [TODO-notes.md](TODO-notes.md), under the same title.
-When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-06.
+When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-07.
 
 ## Now
 
-- [ ] **Kiosk tablet:** merge [#123](https://github.com/Hyber-Tec/SkyArcAcademy/pull/123), set the setup PIN, give each
-  coach a kiosk PIN, then install it on the tablet with Claude Code ([kiosk.md](kiosk.md))
+- [ ] **Kiosk fix:** merge [#125](https://github.com/Hyber-Tec/SkyArcAcademy/pull/125), found while checking the logic
+  (a forgotten clock-out while the tablet was offline at midnight). The tablet already has the app 1.0.1
+- [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
+  tablet until then
+- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap (Goo, 5 minutes)
+- [ ] **Review [#126](https://github.com/Hyber-Tec/SkyArcAcademy/pull/126):** the website's lines wrap between words, as
+  on the phone
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06): it goes live by itself. If Google writes, send the
   message to Claude Code
 
+## The manager
+
+- [ ] **An app password for info@skyarcacademy.com** (5 minutes), for Goo: the app's email then comes from the
+  academy and stops landing in spam
+- [ ] **His signature for the contract:** draw it in Settings → Enrollment contract, or sign on paper and Goo sends a
+  photo. His title is optional
+- [ ] **Website content:** coach photos, real families' quotes (with their permission), trial length and price, the
+  youngest age, the range's safety rules, coaching in Korean, tuition, more photos
+- [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)
+
 ## Soon
 
-- [ ] **Email from info@skyarcacademy.com**, so mail stops landing in spam (the manager makes an app password)
+- [ ] **Email from info@:** Goo puts the manager's app password in, then Claude Code switches the sender
 - [ ] **Invite the coaches** from the website (after the email)
-- [ ] **The contract's Korean:** read it with the manager, then Claude Code puts it in the live academy
-- [ ] **The contract's settings:** check the prices, add the manager's title, upload his signature when it comes
-- [ ] **Clear the lead coach** from the seats, once every iPhone has 1.1.0 (from about 2026-11-13; say when)
-- [ ] **Website: Korean lines wrap between words**, as on the phone (ready on a branch; a pull request when you say)
-- [ ] **AI for report text:** Settings → AI, add the key and turn it on (if not done yet)
-- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap
+- [ ] **Terms of service:** Claude Code drafts the website's page from the academy's old one; Goo and the manager read it
+- [ ] **Clear the lead coach** from the seats (Claude Code, from 2026-11-13)
 - [ ] **The stores' links to skyarcacademy.com:** Google Play once 1.1.0 is approved, the App Store with the next version
-
-## Waiting on the academy
-
-- [ ] **Website content:** coach photos, real families' quotes, trial length and price, the youngest age, the range's
-  safety rules, coaching in Korean, tuition, more photos
-- [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)
-- [ ] **The grades on the spreadsheet:** the academy's owner reviews them
+- [ ] **Google's sign-in window says skyarcacademy.com** (optional: one setting for Goo, then Claude Code)
 
 ## Questions for Goo
 
-- [ ] **Card photos from the Drive:** save a straightened copy beside each photo, or draw the scores on the photo?
-- [ ] **Families' Scores page:** the staff's new design, or as it is?
-- [ ] **"To check" on the Scores page:** add a button that says a result is right?
-- [ ] **The demo on the phone:** a switch for other owners too?
-- [ ] **AI in shared reports:** tell families the words were drafted with AI and checked by the academy?
-- [ ] **Terms of service:** the old website had a page; the new one sends /terms to the privacy policy. Want terms?
-- [ ] **skyarcsports.com** (a second domain, at GoDaddy): send it to the website too?
+- [ ] **Families' Scores page:** A, as it is, or B, the staff's newer design? (screenshots sent 2026-11-07)
+- [ ] **Card photos from the Drive:** also save a straightened copy, as the scanner does, or draw the scores in the app?
+- [ ] **"To check" on the Scores page:** add a "Looks right" button that clears the mark?
 
 ## Later
 
@@ -47,11 +48,9 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] Competition results from a PDF, not only a photo
 - [ ] SIUS PDFs read on the phone
 - [ ] The website faster on phones
-- [ ] The website installable on a phone (PWA)
 - [ ] A how-to video for parents, once the website and the app are final
 - [ ] Tuition on the website, if the manager asks
 - [ ] Coaches' usual days carried on past February 28, 2027 (ask in late February)
-- [ ] Google's sign-in window says skyarcacademy.com instead of skyarcacademy.firebaseapp.com
 
 ## Not doing
 
@@ -64,9 +63,20 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - ~~Automatic level changes, and rules for make-ups and trials~~: labels, and levels changed by hand
 - ~~Importing past schedules~~: the manager marks the past weeks' attendance himself
 - ~~Asking the manager about the paper scoring rule~~: Goo decided it
+- ~~The website as an installable phone app (PWA)~~: the phone apps do that (Goo, 2026-11-07)
+- ~~A demo switch for other owners on the phone~~: not needed (Goo, 2026-11-07)
+- ~~Telling families a report was drafted with AI~~: the academy checks every report (Goo, 2026-11-07)
+- ~~skyarcsports.com~~: not a domain the academy uses (Goo, 2026-11-07)
+- ~~The owner reviewing students' school grades from the spreadsheet~~: the import is done; the office edits students in
+  the app
 
 ## Done ✅
 
+- [x] ✅ 2026-11-07 · The contract in Korean, live in the academy: parents read it in Korean, the English counts
+- [x] ✅ 2026-11-07 · The contract's prices checked (Goo)
+- [x] ✅ 2026-11-07 · The kiosk tablet: the app (#123), on the academy's Samsung tablet as its home screen, registered
+- [x] ✅ 2026-11-07 · The kiosk's logic checked against the schedule and the payroll (one fix: #125)
+- [x] ✅ 2026-11-07 · AI for report text: the keys are in and report text is on (checked)
 - [x] ✅ 2026-11-07 · skyarcacademy.com connected, and every link and email moved there (#119)
 - [x] ✅ 2026-11-07 · Access to the domain's Squarespace account
 - [x] ✅ 2026-11-06 · Google Play: the Data safety form updated (Goo), and 1.1.0 sent to Google's review

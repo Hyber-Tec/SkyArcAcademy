@@ -251,8 +251,8 @@ started: *already works*, *small change* or *new work*.
   its way; the kiosk is its own app that keeps working without the internet (`docs/TODO-notes.md`, "Kiosk app").
 - ✅ **L-LG. Korean** for parents (the second meeting's `L1`), 2026-11-05 (#115): what parents see, in Korean (the
   parent portal, the phone app's family part, the public website, the contract and what families hear), as Goo decided
-  that day; students and staff stay English (`docs/DECISIONS.md` §36). Next: the manager reads the contract's Korean
-  before it goes to the live academy (`docs/TODO.md`).
+  that day; students and staff stay English (`docs/DECISIONS.md` §36). The contract's Korean, read with the manager, is
+  in the live academy since 2026-11-07.
 
 ---
 
