@@ -13,14 +13,14 @@ const practice = !api.startsWith("https://");
 const config: ExpoConfig = {
   name: practice ? "Kiosk (practice)" : "Sky Arc Kiosk",
   slug: "skyarc-kiosk",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "light",
   backgroundColor: "#0A0A0A",
   android: {
     package: practice ? "com.skyarcacademy.kiosk.practice" : "com.skyarcacademy.kiosk",
-    versionCode: 1,
+    versionCode: 2,
     adaptiveIcon: {
       backgroundColor: "#0A0A0A",
       foregroundImage: "./assets/android-icon-foreground.png",
