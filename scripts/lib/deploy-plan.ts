@@ -120,3 +120,10 @@ export function splitEntry(source: string): { reExports: ReExport[]; own: string
 
 /** The functions' build options (functions/package.json's `build`), without where it writes. The logo goes in as bytes. */
 export const FUNCTIONS_BUILD = { bundle: true, platform: 'node', target: 'node22', format: 'esm', packages: 'external', loader: { '.png': 'binary' } } as const
+
+/**
+ * What the functions' bundles are built from, to compare two commits' (scripts/deploy-plan.ts): their code, the shared
+ * code, and the website's brand files, for the emails' logo (functions/src/contracts.ts imports it). A file they import
+ * from anywhere else fails that build, and then every function deploys.
+ */
+export const FUNCTIONS_SOURCES = ['functions/src', 'functions/tsconfig.json', 'shared/src', 'web/public/brand'] as const

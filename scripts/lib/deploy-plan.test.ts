@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEPLOY_JOB, FUNCTIONS_BUILD, TARGETS, functionsToDeploy, planFor, splitEntry } from './deploy-plan'
+import { DEPLOY_JOB, FUNCTIONS_BUILD, FUNCTIONS_SOURCES, TARGETS, functionsToDeploy, planFor, splitEntry } from './deploy-plan'
 
 const code = (entries: Record<string, string>) => new Map(Object.entries(entries))
 
@@ -80,6 +81,23 @@ describe('the deploy’s settings match the repository', () => {
     delete flags.outfile
     delete flags.tsconfig
     expect(flags).toEqual(FUNCTIONS_BUILD)
+  })
+
+  it('compares the functions with every file they import', () => {
+    // A file imported from outside FUNCTIONS_SOURCES isn't unpacked, the comparison's build fails, and every function
+    // deploys: as the emails' logo did, from web/public/brand, until it was added.
+    const outside: string[] = []
+    for (const dir of ['functions/src', 'shared/src']) {
+      for (const file of readdirSync(dir, { recursive: true, encoding: 'utf8' })) {
+        if (!/\.tsx?$/.test(file) || /\.test\.tsx?$/.test(file)) continue
+        const at = path.join(dir, file)
+        for (const [, spec] of readFileSync(at, 'utf8').matchAll(/(?:from|import)\s*\(?\s*'(\.{1,2}\/[^']+)'/g)) {
+          const target = path.normalize(path.join(path.dirname(at), spec))
+          if (!FUNCTIONS_SOURCES.some((s) => target === s || target.startsWith(`${s}/`))) outside.push(`${at} imports ${target}`)
+        }
+      }
+    }
+    expect(outside).toEqual([])
   })
 
   it('reads the deploy job by the name CI gives it', () => {
