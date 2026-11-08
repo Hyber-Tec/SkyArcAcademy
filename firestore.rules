@@ -790,6 +790,18 @@ service cloud.firestore {
         }
       }
 
+      // A family's request for a child's contract from the academy's sign (docs/DECISIONS.md §39): the server writes it
+      // (`requestContract`, `sendContract`, `closeContractRequest`); owners and admins read it. Its private part (the
+      // contract's link token, for the family's page) is the server's alone.
+      match /contractRequests/{requestId} {
+        allow read: if isAdmin(b);
+        allow write: if false;
+
+        match /private/{docId} {
+          allow read, write: if false;
+        }
+      }
+
       // The academy's signature (`AcademySigner`, docs/DECISIONS.md §34): the server puts it on every contract signed, or
       // the signer's name typed until there's an image (§35). Owners and admins set it in Settings; every member reads it
       // (the family sees it on the contract).

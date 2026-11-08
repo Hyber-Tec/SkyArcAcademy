@@ -4,14 +4,11 @@ import { LuCircleCheck, LuDownload, LuMail, LuPhone, LuRotateCw, LuSmartphone } 
 import { useParams, useSearchParams } from 'react-router'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@shared/brand'
 import { pricedChoice } from '@shared/contracts/document'
-import { type ContractValues, prefillValues, presetValues } from '@shared/contracts/fill'
+import { type ContractValues, type Prefill, emailFieldIds, prefillValues, presetValues } from '@shared/contracts/fill'
 import type { ContractLinkSignedResult, ContractSignRequest, ShownSigner } from '@shared/contracts/types'
 import { type Lang, dateText } from '@shared/i18n'
 import { formatPhone } from '@shared/people'
 import { dateKeyOf, formatInstant } from '@shared/time'
-import { CompanyFooter } from '@/components/app/CompanyFooter'
-import { LangSwitch } from '@/components/app/LangSwitch'
-import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useContractRead } from '@/features/contracts/contractLang'
@@ -21,7 +18,7 @@ import { pdfBytes, savePdf } from '@/features/contracts/pdf'
 import { functions } from '@/lib/firebase'
 import { useLang, useT } from '@/lib/lang'
 import { useNow } from '@/lib/useNow'
-import { cn } from '@/lib/utils'
+import { Card, Shell } from './ContractFrame'
 
 /**
  * /sign/{token}: where a parent or guardian fills in and signs the academy's enrollment contract (docs/DECISIONS.md
@@ -53,6 +50,9 @@ type Loaded =
       academySigner: ShownSigner | null
       /** Whether signing emails the signer their copy (every academy but the demo one). */
       emailsCopy?: boolean
+      /** Sent for a request from the academy's sign (docs/DECISIONS.md §39): what they typed there, and their email, kept. */
+      prefill?: Prefill | null
+      lockedEmail?: string | null
     }
   | { state: 'signed'; academy: Academy; firstName: string; signedAt: number; signerName: string; copyUntil: number; copy?: { name: string; data: string } }
   | { state: 'canceled'; academy: Academy; firstName: string }
@@ -66,30 +66,6 @@ const longDate = (ms: number, academy: Academy, lang: Lang = 'en') =>
   lang === 'ko'
     ? dateText(dateKeyOf(ms, academy.timezone || 'America/New_York'), 'long', 'ko')
     : formatInstant(ms, academy.timezone || 'America/New_York', { month: 'long', day: 'numeric', year: 'numeric' })
-
-function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
-  return (
-    <div className="min-h-svh bg-muted/40 px-4 py-8 sm:py-12">
-      <div className={cn('mx-auto w-full space-y-5', wide ? 'max-w-3xl' : 'max-w-md')}>{children}</div>
-      <div className="mt-8 flex justify-center">
-        <LangSwitch />
-      </div>
-      <CompanyFooter className="mt-3 text-center" />
-    </div>
-  )
-}
-
-/** The logo, centered over a card's content (CLAUDE.md, "Brand and logos"). */
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={cn('rounded-2xl border bg-card p-6 shadow-sm sm:p-8', className)}>
-      <div className="mb-6 flex justify-center">
-        <SkyArcLogo className="h-16" />
-      </div>
-      {children}
-    </div>
-  )
-}
 
 function Contact({ academy, lead }: { academy: Academy; lead: string }) {
   if (!academy.phone && !academy.email) return null
@@ -189,6 +165,16 @@ function GetTheApp() {
   )
 }
 
+/** Opened from the request page of the academy's sign (`?from=request`): back to it, for a brother's or sister's. */
+function BackToRequests() {
+  const t = useT()
+  return (
+    <Button variant="outline" className="mt-5 w-full" asChild data-testid="back-to-requests">
+      <a href="/contract">{t('Back to your request', '요청 화면으로 돌아가기')}</a>
+    </Button>
+  )
+}
+
 /** Opened from the phone app (`?from=app`, its in-app browser): once signed, back to the app rather than to the stores. */
 function BackToApp() {
   const t = useT()
@@ -204,6 +190,7 @@ export function SignContractPage() {
   const { token = '' } = useParams()
   const [searchParams] = useSearchParams()
   const fromApp = searchParams.get('from') === 'app'
+  const fromRequest = searchParams.get('from') === 'request'
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [failure, setFailure] = useState<'busy' | 'network' | null>(null)
   const [signed, setSigned] = useState<Signed | null>(null)
@@ -261,6 +248,7 @@ export function SignContractPage() {
           <div className="mt-6">
             <CopyButton token={token} until={signed.copyUntil} academy={loaded.academy} />
           </div>
+          {fromRequest ? <BackToRequests /> : null}
           {fromApp ? <BackToApp /> : <GetTheApp />}
           <Contact academy={loaded.academy} lead={t('Questions? Contact the academy:', '궁금한 점은 아카데미에 문의해 주세요.')} />
         </Card>
@@ -340,7 +328,12 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
   // The family reads `read.doc` (Korean when translated); the values follow the English, which has the same IDs.
   const read = useContractRead(lang, loaded.contract.text, loaded.contract.ko)
   const doc = read.en
-  const initial = useMemo(() => ({ ...prefillValues(doc, { studentName: loaded.studentName }), ...presetValues(doc, loaded.preset ?? {}) }), [doc, loaded.studentName, loaded.preset])
+  // What the family typed on the academy's sign fills it in (they can change it, all but the email: §39).
+  const initial = useMemo(
+    () => ({ ...prefillValues(doc, loaded.prefill ?? { studentName: loaded.studentName }), ...presetValues(doc, loaded.preset ?? {}) }),
+    [doc, loaded.prefill, loaded.studentName, loaded.preset],
+  )
+  const locked = useMemo(() => (loaded.lockedEmail ? new Set(emailFieldIds(doc)) : undefined), [doc, loaded.lockedEmail])
   const choice = pricedChoice(doc)
   const suggested = choice && typeof loaded.preset?.[choice.id] === 'string' ? (loaded.preset[choice.id] as string) : null
 
@@ -381,6 +374,7 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
         onSign={onSign}
         suggested={suggested}
         academySigner={loaded.academySigner}
+        locked={locked}
         note={
           lang === 'ko' ? (
             <>

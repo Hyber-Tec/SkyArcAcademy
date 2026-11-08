@@ -25,6 +25,8 @@ export async function createStudent(
   branchId: string,
   actor: Actor,
   input: { firstName: string; lastName: string; grade: string; level: string | null; program: string | null; signUpDate: string },
+  /** Their private details to start with (a family's request from the academy's sign: the parent, the birth date). */
+  details?: Partial<StudentPrivateProfile>,
 ): Promise<string> {
   const ref = doc(branchCol(branchId, COL.students))
   const name = `${input.firstName} ${input.lastName}`.trim()
@@ -38,7 +40,7 @@ export async function createStudent(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
-  batch.set(studentPrivateRef(branchId, ref.id), EMPTY_PRIVATE)
+  batch.set(studentPrivateRef(branchId, ref.id), { ...EMPTY_PRIVATE, ...details })
   addAudit(batch, branchId, actor, {
     action: 'student.create',
     category: 'people',

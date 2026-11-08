@@ -55,6 +55,8 @@ export const COL = {
    */
   contractTemplates: 'contractTemplates',
   contractLinks: 'contractLinks',
+  /** A family's request for a child's contract, from the academy's sign (docs/DECISIONS.md §39): the server writes it. */
+  contractRequests: 'contractRequests',
   signedContracts: 'signedContracts',
   contractSigner: 'contractSigner',
   /**

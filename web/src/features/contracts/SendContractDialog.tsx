@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { LuCheck, LuMail, LuSend, LuSmartphone } from 'react-icons/lu'
 import { academyChecks, dollarsText, parseContract, pricedChoice } from '@shared/contracts/document'
 import { type ContractValues, optionHeading, optionPrices, suggestedOption, tuitionOf, tuitionText } from '@shared/contracts/fill'
-import type { ContractSendResult } from '@shared/contracts/types'
+import type { ContractRequest, ContractSendResult } from '@shared/contracts/types'
 import { COL, DOC, ROOT, emailKey } from '@shared/paths'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -53,7 +53,18 @@ function useRecipients(student: WithId<Student>) {
  * in the app are told there). Sending withdraws a contract still waiting. Then its QR code, for a parent at the front
  * desk to scan.
  */
-export function SendContractDialog({ student, start = null, onClose }: { student: WithId<Student>; start?: ContractValues | null; onClose: () => void }) {
+export function SendContractDialog({
+  student,
+  start = null,
+  request = null,
+  onClose,
+}: {
+  student: WithId<Student>
+  start?: ContractValues | null
+  /** A family's request from the academy's sign (docs/DECISIONS.md §39): it opens on their phone, filled in from it. */
+  request?: WithId<ContractRequest> | null
+  onClose: () => void
+}) {
   const { branchId, isDemo } = useBranch()
   const { current, loading } = useContractTemplates()
   const signed = useSignedContract(student.id)
@@ -84,7 +95,7 @@ export function SendContractDialog({ student, start = null, onClose }: { student
     setBusy(true)
     setError(null)
     try {
-      setResult(await sendContract({ branchId, studentId: student.id, preset, email }))
+      setResult(await sendContract({ branchId, studentId: student.id, preset, email, ...(request ? { requestId: request.id } : {}) }))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -102,6 +113,12 @@ export function SendContractDialog({ student, start = null, onClose }: { student
             <DialogDescription>It waits for a parent’s signature in the app, on the website, or with this QR code.</DialogDescription>
           </DialogHeader>
           <ul className="space-y-1.5 text-sm">
+            {request ? (
+              <li className="flex items-start gap-2" data-testid="sent-to-request">
+                <LuCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                {`It opens on ${request.parentName.split(' ')[0]}’s phone now, filled in from their request.`}
+              </li>
+            ) : null}
             <li className="flex items-start gap-2">
               <LuSmartphone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               {result.told.length ? `In the app: ${result.told.join(', ')} ${result.told.length > 1 ? 'were' : 'was'} told.` : 'No parent has the app yet: show them the QR code, or send the email.'}
@@ -201,6 +218,11 @@ export function SendContractDialog({ student, start = null, onClose }: { student
 
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Goes to</h3>
+              {request ? (
+                <p className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" data-testid="send-request">
+                  <span className="font-medium">{request.parentName}</span> asked from the academy’s sign. Their phone opens the contract as you send it, filled in from what they typed, and it’s emailed to {request.email}.
+                </p>
+              ) : null}
               {recipients.rows.length ? (
                 <ul className="divide-y rounded-lg border text-sm">
                   {recipients.rows.map((r) => (

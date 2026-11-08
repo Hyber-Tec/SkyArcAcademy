@@ -144,6 +144,8 @@ export type NotificationType =
   // The enrollment contract (docs/DECISIONS.md §34): sent to a student's parents, signed (to the office).
   | 'contract_sent'
   | 'contract_signed'
+  // A family asking for a child's contract from the academy's sign (docs/DECISIONS.md §39), to the office.
+  | 'contract_requested'
   // Sign-ups (docs/DECISIONS.md §31), to the office: someone linked by the email on file, or asking to join.
   | 'family_linked'
   | 'signup_request'
@@ -198,6 +200,7 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; color
   score_added: { label: 'New Score', color: '#2563EB' },
   contract_sent: { label: 'Contract to Sign', color: '#D97706' },
   contract_signed: { label: 'Contract Signed', color: '#16A34A' },
+  contract_requested: { label: 'Contract Request', color: '#D97706' },
   family_linked: { label: 'Signed Up', color: '#16A34A' },
   signup_request: { label: 'Asks to Join', color: '#D97706' },
 }

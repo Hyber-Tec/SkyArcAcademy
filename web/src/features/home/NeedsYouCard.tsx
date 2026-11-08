@@ -9,6 +9,7 @@ import {
   LuCircleCheck,
   LuClockAlert,
   LuGraduationCap,
+  LuSignature,
   LuSparkles,
   LuUserPlus,
 } from 'react-icons/lu'
@@ -106,6 +107,24 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
         title: names[i],
         detail: `${r.email} · wants to join as ${ROLE_LABELS[r.requestedRole] ?? r.requestedRole}`,
         onOpen: () => navigate(`${admin}/account?tab=requests`),
+      })),
+    })
+  }
+  if (attention.waitingContracts.length) {
+    const names = attention.waitingContracts.map((r) => `${r.studentFirstName} ${r.studentLastName}`.trim())
+    const page = `${admin}/settings/contract`
+    groups.push({
+      id: 'contracts',
+      icon: LuSignature,
+      tone: 'amber',
+      title: plural(attention.waitingContracts.length, 'family waiting for a contract', 'families waiting for a contract'),
+      subtitle: nameList(names),
+      seeAll: { label: 'Open the requests', to: page },
+      items: attention.waitingContracts.map((r, i) => ({
+        key: r.id,
+        title: names[i],
+        detail: `Asked by ${r.parentName} from the academy’s sign`,
+        onOpen: () => navigate(`${page}?request=${r.id}`),
       })),
     })
   }

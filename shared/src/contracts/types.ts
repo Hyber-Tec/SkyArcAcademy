@@ -1,7 +1,7 @@
 import type { DriveActor } from '../drive/types'
 import type { Lang } from '../i18n'
 import type { TimestampLike } from '../types'
-import type { ContractValues } from './fill'
+import type { ContractValues, Prefill } from './fill'
 
 /**
  * The enrollment contract (docs/DECISIONS.md §23, F4 and F5, §31, §33 and §34): the academy's own contract, as text
@@ -132,6 +132,13 @@ export interface ContractLink {
   fileName: string | null
   /** Where the signer's copy was emailed as it was signed (§35), and when: none from the demo academy or for test addresses. */
   copyEmailedTo?: string[]
+  /**
+   * Sent for a family's request from the academy's sign (§39): its ID, what the family typed there, which fills in the
+   * form (they can change it), and their email, which stays as they typed it (the copy goes there).
+   */
+  requestId?: string | null
+  prefill?: Prefill | null
+  lockedEmail?: string | null
   copyEmailedAt?: TimestampLike | null
   canceledAt: TimestampLike | null
   canceledBy: DriveActor | null
@@ -223,7 +230,59 @@ export interface ContractSendRequest {
   preset: ContractValues
   /** Email the family the link too (the office's switch, off at first). */
   email: boolean
+  /** A family's request from the academy's sign (§39): they get it on their phone and by email, filled in from it. */
+  requestId?: string
 }
+
+/**
+ * `branches/{b}/contractRequests/{id}`: a family asking for a child's enrollment contract from the academy's sign (its
+ * QR code opens `/contract`, docs/DECISIONS.md §39), one per child: what they typed, which the office checks before
+ * sending the contract from it (`sendContract` with `requestId`: the program, the discounts, as always), and which
+ * fills in the contract. Their page waits on it by a token only they have (`tokenHash`, its SHA-256); once it's sent,
+ * `private/link` holds the contract's link token, for their page. Owners and admins read it; only the server writes.
+ */
+export interface ContractRequest {
+  studentFirstName: string
+  studentLastName: string
+  /** YYYY-MM-DD, or null when they left it out. */
+  studentDob: string | null
+  parentName: string
+  email: string
+  phone: string
+  /** The language they asked in: the contract's email and page in it. */
+  lang: Lang
+  status: ContractRequestStatus
+  createdAt: TimestampLike | null
+  /** The student the academy's records suggest: their parent's email and their name (null: a new family, or no match). */
+  matchedStudentId: string | null
+  matchedStudentName: string | null
+  tokenHash: string
+  /** Once sent: the student it was sent for, the contract, and who sent it. */
+  studentId: string | null
+  linkId: string | null
+  sentAt: TimestampLike | null
+  sentBy: DriveActor | null
+  closedAt: TimestampLike | null
+  closedBy: DriveActor | null
+}
+
+export type ContractRequestStatus = 'waiting' | 'sent' | 'closed'
+
+/** `contractRequests/{id}/private/link`: the contract's link token, once sent (server only). */
+export const CONTRACT_REQUEST_LINK_DOC = 'link'
+
+/** What `requestContract` answers: each child's request and the token their page waits with. */
+export interface ContractRequestResult {
+  requests: { id: string; token: string; firstName: string }[]
+}
+
+/** A request as the family's page sees it (`contractRequestStatus`). */
+export type ContractRequestState =
+  | { state: 'waiting'; firstName: string }
+  | { state: 'ready'; firstName: string; path: string }
+  | { state: 'signed'; firstName: string }
+  | { state: 'closed'; firstName: string }
+  | { state: 'unknown' }
 
 export interface ContractSendResult {
   linkId: string

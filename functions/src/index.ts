@@ -445,6 +445,7 @@ export {
   signContract,
   signContractSignedIn,
 } from './contracts'
+export { closeContractRequest, contractRequestStatus, requestContract } from './contractRequests'
 export { linkMyAccount, onSignupRequestWritten } from './signup'
 export { onProgressReportWritten, onReportViewed } from './reports'
 export { websiteMessage } from './website'
