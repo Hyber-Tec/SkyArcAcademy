@@ -170,7 +170,8 @@ export function TimeEntriesPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline">{SOURCE_LABEL[s.source] ?? s.source}</Badge>
+                        <Badge variant="outline">{s.kioskDeviceId ? 'Kiosk tablet' : (SOURCE_LABEL[s.source] ?? s.source)}</Badge>
+                        {s.recordedOffline ? <Badge variant="secondary" title="The tablet had no internet then; it sent this later with its own clock's time">Recorded offline</Badge> : null}
                         {s.autoClosed && s.autoClosedBy === 'last_class' ? <Badge variant="secondary">Out at class end</Badge> : null}
                       </div>
                     </TableCell>

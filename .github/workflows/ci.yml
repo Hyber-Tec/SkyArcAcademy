@@ -115,9 +115,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # It checks the phone app and the shared code it compiles, so a change to neither can't break it. A pull
+      # It checks the phone app, the kiosk tablet's app and the shared code they compile, so a change to none can't break them. A pull
       # request's checkout is its merge into main (the first parent); a push to main compares with main before it.
-      - name: Did the phone app or the shared code change?
+      - name: Did the phone app, the kiosk app or the shared code change?
         id: changed
         env:
           EVENT: ${{ github.event_name }}
@@ -128,10 +128,10 @@ jobs:
             push) files=$(git diff --name-only --no-renames "$BEFORE" HEAD) || files=all ;;
             *) files=all ;;
           esac
-          if [ "$files" = all ] || grep -qE '^(mobile/|shared/|\.github/workflows/ci\.yml$)' <<<"$files"; then
+          if [ "$files" = all ] || grep -qE '^(mobile/|kiosk/|shared/|\.github/workflows/ci\.yml$)' <<<"$files"; then
             echo "run=true" >>"$GITHUB_OUTPUT"
           else
-            echo "Nothing the phone app compiles changed."
+            echo "Nothing the phone or kiosk apps compile changed."
             echo "run=false" >>"$GITHUB_OUTPUT"
           fi
 
@@ -145,18 +145,20 @@ jobs:
         id: modules
         uses: actions/cache@v6
         with:
-          path: mobile/node_modules
-          key: modules-mobile-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('mobile/package-lock.json') }}
+          path: |
+            mobile/node_modules
+            kiosk/node_modules
+          key: modules-mobile-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('mobile/package-lock.json', 'kiosk/package-lock.json') }}
 
-      # The phone app is only typechecked and linted here, so none of its packages' install scripts are needed.
+      # The apps are only typechecked (and the phone app linted) here, so none of their packages' install scripts are needed.
       - name: Install
         if: steps.changed.outputs.run == 'true' && steps.modules.outputs.cache-hit != 'true'
-        run: npm ci --prefix mobile --ignore-scripts
+        run: npm ci --prefix mobile --ignore-scripts && npm ci --prefix kiosk --ignore-scripts
 
       # It compiles shared/ too, so a change there that breaks the phone app is caught here.
       - name: Typecheck and lint
         if: steps.changed.outputs.run == 'true'
-        run: npm --prefix mobile run typecheck && npm --prefix mobile run lint
+        run: npm --prefix mobile run typecheck && npm --prefix mobile run lint && npm --prefix kiosk run typecheck
 
   # Main only: what changed since the last successful deploy, and the website's production build when it changed,
   # while the checks run. The deploy then deploys only that.

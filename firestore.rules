@@ -497,6 +497,23 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // The kiosk tablets (functions/src/kiosk.ts): admins see which are registered; only the server writes them.
+      match /kioskDevices/{id} {
+        allow read: if isAdmin(b);
+        allow write: if false;
+      }
+
+      // The setup PIN that registers a tablet: its salted hash is server-only; admins see when it was set.
+      match /kioskSetup/{id} {
+        allow read: if isAdmin(b) && id == 'status';
+        allow write: if false;
+      }
+
+      // Each clock-in and clock-out a tablet sent, so one is applied once: server-only.
+      match /kioskOps/{id} {
+        allow read, write: if false;
+      }
+
       // ------------------------------------------------------ communication
 
       // Coaches see posts for everyone plus posts addressed to them; admins see all.
