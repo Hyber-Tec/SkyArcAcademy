@@ -245,10 +245,13 @@ started: *already works*, *small change* or *new work*.
 ### Later (not now)
 - [ ] **L-CP. Competition PDFs.** Accept a competition's results **PDF** (laid out like the paper sheet) as well as
   photos, on the website and in the app, once match directors give them.
-- [ ] **L-KI. The kiosk on an Android tablet.** HyberTec provides the tablet and a wall mount, at the front desk near an
-  outlet. When Goo asks, make the kiosk **installable on the tablet from a file** (no store) and keep it running there.
-  Clocking in from a phone or by location was turned down: the kiosk only. Goo, 2026-11-06: a Samsung tablet is on
-  its way; the kiosk is its own app that keeps working without the internet (`docs/TODO-notes.md`, "Kiosk app").
+- ✅ **L-KI. The kiosk on an Android tablet**, 2026-11-07 (#123, #125). HyberTec provides the tablet and a wall mount,
+  at the front desk near an outlet. When Goo asks, make the kiosk **installable on the tablet from a file** (no store)
+  and keep it running there. Clocking in from a phone or by location was turned down: the kiosk only. Goo, 2026-11-06:
+  a Samsung tablet is on its way; the kiosk is its own app that keeps working without the internet.
+  - *Done:* Sky Arc Kiosk, installed over USB on the academy's Samsung tablet as its home screen, awake and
+    registered; it records clock-ins and clock-outs without the internet and sends them later
+    ([`kiosk/README.md`](../kiosk/README.md)). Its logic was checked against the schedule and the payroll (#125).
 - ✅ **L-LG. Korean** for parents (the second meeting's `L1`), 2026-11-05 (#115): what parents see, in Korean (the
   parent portal, the phone app's family part, the public website, the contract and what families hear), as Goo decided
   that day; students and staff stay English (`docs/DECISIONS.md` §36). The contract's Korean, read with the manager, is
