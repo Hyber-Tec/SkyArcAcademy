@@ -6,7 +6,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { collectionGroup, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
 let env: RulesTestEnvironment
@@ -228,6 +228,37 @@ describe('time entries', () => {
     await assertFails(updateDoc(doc(admin, `branches/${A}/clockShifts/old`), { extraMin: 60, extraNote: 'Travel' }))
     await assertFails(setDoc(doc(admin, `branches/${A}/clockShifts/new`), shift('2026-10-09', { extraMin: 60, extraNote: 'Travel' })))
     await assertSucceeds(setDoc(doc(admin, `branches/${A}/clockShifts/new`), shift('2026-10-11', { extraMin: 60, extraNote: 'Travel' })))
+  })
+})
+
+describe('kiosk tablets', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, `branches/${A}/kioskDevices/t1`), { name: 'Front desk', tokenHash: 'h', revokedAt: null })
+      await setDoc(doc(db, `branches/${A}/kioskSetup/status`), { setBy: 'Owner' })
+      await setDoc(doc(db, `branches/${A}/kioskSetup/pin`), { salt: 's', hash: 'h' })
+      await setDoc(doc(db, `branches/${A}/kioskOps/t1_op1`), { status: 'applied' })
+    })
+  })
+
+  it('admins see the tablets and when the setup PIN was set; nobody writes them, or reads the PIN', async () => {
+    const admin = user('admin@a.test')
+    await assertSucceeds(getDoc(doc(admin, `branches/${A}/kioskDevices/t1`)))
+    await assertSucceeds(getDocs(collection(admin, `branches/${A}/kioskDevices`)))
+    await assertSucceeds(getDoc(doc(admin, `branches/${A}/kioskSetup/status`)))
+    await assertFails(getDoc(doc(admin, `branches/${A}/kioskSetup/pin`)))
+    await assertFails(updateDoc(doc(admin, `branches/${A}/kioskDevices/t1`), { revokedAt: 'now' }))
+    await assertFails(setDoc(doc(admin, `branches/${A}/kioskSetup/pin`), { salt: 'x', hash: 'y' }))
+    await assertFails(getDoc(doc(admin, `branches/${A}/kioskOps/t1_op1`)))
+  })
+
+  it('coaches, other academies and strangers see none of it', async () => {
+    for (const db of [user('coach@a.test'), user('admin@b.test'), env.unauthenticatedContext().firestore()]) {
+      await assertFails(getDoc(doc(db, `branches/${A}/kioskDevices/t1`)))
+      await assertFails(getDoc(doc(db, `branches/${A}/kioskSetup/status`)))
+      await assertFails(getDoc(doc(db, `branches/${A}/kioskOps/t1_op1`)))
+    }
   })
 })
 

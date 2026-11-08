@@ -23,6 +23,14 @@ export const COL = {
   clockShifts: 'clockShifts',
   openShifts: 'openShifts',
   kioskPins: 'kioskPins',
+  /**
+   * The kiosk tablet (shared/src/kiosk, functions/src/kiosk.ts): the tablets registered with the setup PIN
+   * (`kioskDevices`, admins read them), and the server-only setup PIN (`kioskSetup/pin`; `kioskSetup/status` says when
+   * it was set) and each clock-in or clock-out a tablet sent (`kioskOps`, so one is applied once).
+   */
+  kioskDevices: 'kioskDevices',
+  kioskSetup: 'kioskSetup',
+  kioskOps: 'kioskOps',
   payroll: 'payroll',
   payPeriods: 'payPeriods',
   announcements: 'announcements',

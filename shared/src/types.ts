@@ -381,6 +381,10 @@ export interface ClockShift {
   extraMin?: number
   /** Why the extra time was added (required with it). */
   extraNote?: string
+  /** Clocked on a kiosk tablet (functions/src/kiosk.ts): which one. Missing for the website's kiosk and admins' entries. */
+  kioskDeviceId?: string
+  /** The tablet recorded a clock-in or clock-out without the internet and sent it later: its own clock's time. */
+  recordedOffline?: boolean
 }
 
 // -------------------------------------------------------------------- audit

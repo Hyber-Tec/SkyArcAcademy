@@ -36,6 +36,7 @@ import { WebsiteSettings } from '@/features/website/WebsiteSettings'
 import { useNow } from '@/lib/useNow'
 import { cn } from '@/lib/utils'
 import { SeatsField } from './BusinessRulesFields'
+import { KioskTabletsCard } from '@/features/timeclock/KioskTabletsCard'
 import { DateHoursCard } from './DateHoursCard'
 import { type BlockKey, FIELDS, type PageItem, type SettingsPageDef, pageBlocks, pageFields } from './pages'
 import { ProfileFields } from './ProfileFields'
@@ -62,7 +63,7 @@ const EXAMPLES: Record<string, (s: BranchSettings, today: DateKey) => string> = 
 const AiSettings = lazy(() => import('@/features/ai/AiSettings').then((m) => ({ default: m.AiSettings })))
 
 /** Blocks that are cards of their own: they sit beside the page's card, and keep their own saving. */
-const CARD_BLOCKS: BlockKey[] = ['dateHours', 'signupShare', 'website', 'contract', 'activity', 'ai']
+const CARD_BLOCKS: BlockKey[] = ['dateHours', 'signupShare', 'website', 'contract', 'activity', 'ai', 'kioskTablets']
 /** Where the search's `?find=` marks a block. */
 const BLOCK_ANCHOR: Partial<Record<BlockKey, string>> = { dateHours: 'date-hours', seats: 'seats', payRule: 'pay-rule', profile: 'profile', signupShare: 'signup-share' }
 
@@ -236,6 +237,8 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
         )
       case 'activity':
         return wrap(<AuditLogSection />, true)
+      case 'kioskTablets':
+        return wrap(<KioskTabletsCard />, true)
       case 'ai':
         return wrap(
           <Suspense fallback={<Skeleton className="h-72 max-w-4xl rounded-xl" />}>

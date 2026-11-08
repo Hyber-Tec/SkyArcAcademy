@@ -8,7 +8,7 @@ import { OTHER_FINDS, SETTINGS_SECTIONS, type FieldDef } from './schema'
  */
 
 /** The parts of a page that aren't fields of the schema. */
-export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity' | 'ai'
+export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity' | 'ai' | 'kioskTablets'
 
 export type PageItem = { field: string } | { block: BlockKey }
 
@@ -79,10 +79,10 @@ export const PAGES: SettingsPageDef[] = [
     groups: [
       { title: 'Paid time', items: [b('payRule'), f('timeClock.arrivalMinutes'), f('timeClock.payEndsAtLastClass'), f('timeClock.autoClockOut.enabled'), f('timeClock.autoClockOut.localTime')] },
       { title: 'Pay periods', items: [f('payroll.payPeriod.type'), f('payroll.payPeriod.anchorDate')] },
-      { title: 'Kiosk', items: [f('timeClock.kiosk.pinLength')] },
+      { title: 'Kiosk', items: [f('timeClock.kiosk.pinLength'), b('kioskTablets')] },
     ],
     more: ['timeClock.autoClockOut.atLastClass', 'timeEntries.stepMinutes', 'home.clockLookbackDays'],
-    keywords: 'payroll wage rate hourly money clock',
+    keywords: 'payroll wage rate hourly money clock kiosk tablet setup pin',
   },
   {
     key: 'students',
