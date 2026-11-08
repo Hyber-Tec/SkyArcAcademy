@@ -17,6 +17,9 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 - **The app:** its QR code opens `skyarcacademy.com/get-app?go`, which sends an iPhone to the App Store and an Android
   phone to Google Play.
 
+To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
+sizes, with a picture of each.
+
 ### Coaches' kiosk PINs
 
 None was set on 2026-11-07. On the website: Employees → Directory → the coach → **Kiosk PIN** → 4 digits → Set PIN.
