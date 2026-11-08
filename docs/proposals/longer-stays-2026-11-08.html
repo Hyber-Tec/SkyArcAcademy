@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Longer Stays and Cancellations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; each option is a card holding a drawing in the schedule's own look (Geist, black and
+   white, Sky Arc red, the sheets' level colours), with what it means for the office, families and the phone below it. */
+:root {
+  --bg: #f6f6f5;
+  --surface: #ffffff;
+  --fg: #161616;
+  --muted: #6f6f6c;
+  --line: #e4e4e1;
+  --soft: #f1f1ef;
+  --hatch: rgba(22, 22, 22, 0.07);
+  --brand: #e00000;
+  --brand-text: #c40000;
+  --pick-bg: #161616;
+  --pick-fg: #ffffff;
+  --good: #1f7a3d;
+  --bad: #a3361f;
+  --warn-bg: #fff7e0;
+  --warn-fg: #6b4e00;
+  --ok-solid: #059669;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  /* The sheets' level colours (shared/src/schedule/seatColors.ts) */
+  --prec-bg: #f7d7d7; --prec-ink: #6e1d1d;
+  --scout-bg: #fff4d6; --scout-ink: #6b5312;
+  --exp-bg: #f7dabd; --exp-ink: #74390a;
+  --mark-bg: #f9e7b0; --mark-ink: #5c4500;
+  --trial-bg: #e1f5e5; --trial-ink: #1c7c3a;
+
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111111; --surface: #1c1c1c; --fg: #f2f2f0; --muted: #a3a3a0; --line: #2f2f2d; --soft: #262625;
+    --hatch: rgba(255, 255, 255, 0.07); --brand: #ff3b3b; --brand-text: #ff6b6b; --pick-bg: #f2f2f0; --pick-fg: #111111;
+    --good: #6fd08f; --bad: #f19a85; --warn-bg: #3a3220; --warn-fg: #f3d58a; --ok-solid: #10b981; --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --prec-bg: #4e3939; --prec-ink: #f4bcbc; --scout-bg: #3c3a34; --scout-ink: #fbecc2; --exp-bg: #513920; --exp-ink: #f2c08e;
+    --mark-bg: #50431e; --mark-ink: #f6dc8c; --trial-bg: #22372a; --trial-ink: #86efac;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111111; --surface: #1c1c1c; --fg: #f2f2f0; --muted: #a3a3a0; --line: #2f2f2d; --soft: #262625;
+  --hatch: rgba(255, 255, 255, 0.07); --brand: #ff3b3b; --brand-text: #ff6b6b; --pick-bg: #f2f2f0; --pick-fg: #111111;
+  --good: #6fd08f; --bad: #f19a85; --warn-bg: #3a3220; --warn-fg: #f3d58a; --ok-solid: #10b981; --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --prec-bg: #4e3939; --prec-ink: #f4bcbc; --scout-bg: #3c3a34; --scout-ink: #fbecc2; --exp-bg: #513920; --exp-ink: #f2c08e;
+  --mark-bg: #50431e; --mark-ink: #f6dc8c; --trial-bg: #22372a; --trial-ink: #86efac;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px; -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 4vw, 34px); line-height: 1.15; font-weight: 700; }
+h2 { font-size: 22px; line-height: 1.25; font-weight: 700; }
+h3 { font-size: 17px; line-height: 1.3; font-weight: 650; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 16.5px; color: var(--fg); }
+.muted { color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+header.top { display: flex; flex-direction: column; gap: 14px; }
+.ask {
+  border-left: 3px solid var(--fg); padding: 2px 0 2px 14px; font-size: 15.5px; max-width: 68ch;
+}
+.ask cite { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* Today, in short */
+.today { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fact b { font-weight: 650; }
+.fact p { font-size: 14px; color: var(--muted); }
+
+/* A part (1, 2) and its options */
+section.part { display: flex; flex-direction: column; gap: 18px; }
+.part-head { display: flex; flex-direction: column; gap: 6px; }
+.option { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+.option.recommended { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg), var(--shadow); }
+.option-head { padding: 18px 20px 6px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.letter { font-family: var(--mono); font-weight: 600; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; }
+.pick { background: var(--pick-bg); color: var(--pick-fg); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 999px; padding: 3px 9px; }
+.option-sub { padding: 0 20px 14px; color: var(--muted); font-size: 14.5px; }
+.drawing { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--soft); padding: 18px 20px; overflow-x: auto; }
+.drawing .hint { font-size: 13px; color: var(--muted); margin-top: 10px; max-width: none; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; }
+.facts > div { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 1px solid var(--line); }
+.facts h4 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.facts ul { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 5px; }
+.facts li::marker { color: var(--muted); }
+.plus { color: var(--good); font-weight: 600; }
+.minus { color: var(--bad); font-weight: 600; }
+
+/* ------------------------------------------------------------------ the schedule's look, for the drawings */
+.tl { position: relative; font-size: 14px; line-height: 1.25; }
+.axis { position: relative; height: 22px; }
+.axis span { position: absolute; top: 0; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.track { position: relative; }
+.gridline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.block {
+  position: absolute; top: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 6px;
+}
+.block-head { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 2px; }
+.block-head .time { font-size: 15px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.count { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bars { display: inline-flex; gap: 1px; }
+.bars i { width: 6px; height: 10px; border-radius: 2px; background: color-mix(in oklab, var(--fg) 15%, transparent); }
+.bars i.on { background: color-mix(in oklab, var(--fg) 60%, transparent); }
+.chip-canceled { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 0 6px; font-size: 11px; line-height: 20px; font-weight: 600; background: var(--soft); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.chip-canceled::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; background: linear-gradient(135deg, transparent 42%, currentColor 42% 58%, transparent 58%); }
+
+.seat {
+  height: 56px; border-radius: 8px; padding: 0 4px 0 10px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07); min-width: 0; position: relative; overflow: hidden;
+}
+.seat .l1, .seat .l2 { display: flex; align-items: center; gap: 4px; min-width: 0; height: 22px; }
+.seat .name { font-weight: 650; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seat .sub { font-size: 12px; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.seat .more { margin-left: auto; font-weight: 700; letter-spacing: 1px; opacity: 0.7; padding: 0 4px; font-size: 13px; }
+.seat .marks { margin-left: auto; display: inline-flex; border-radius: 6px; overflow: hidden; background: color-mix(in oklab, var(--surface) 85%, transparent); box-shadow: 0 0 0 1px rgba(0,0,0,0.05); flex: none; }
+.seat .marks i { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; color: var(--muted); }
+.prec { background: var(--prec-bg); color: var(--prec-ink); }
+.scout { background: var(--scout-bg); color: var(--scout-ink); }
+.exp { background: var(--exp-bg); color: var(--exp-ink); }
+.mark { background: var(--mark-bg); color: var(--mark-ink); }
+.trial { background: var(--trial-bg); color: var(--trial-ink); }
+.seat.canceled { background: var(--soft); color: var(--muted); }
+.seat.canceled .name { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.open {
+  height: 56px; border-radius: 8px; border: 1px dashed color-mix(in oklab, var(--fg) 18%, transparent);
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--hatch) 6px 7px);
+  display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: var(--muted); position: relative; min-width: 0;
+}
+.open .plus-ic { font-size: 16px; line-height: 1; }
+.freed { flex-direction: column; gap: 2px; align-items: stretch; justify-content: center; padding: 0 10px; }
+.freed .who { font-size: 12px; display: flex; gap: 6px; align-items: center; }
+.freed .who s { text-decoration-thickness: 1.5px; }
+.freed .add { display: flex; align-items: center; gap: 6px; justify-content: center; color: var(--fg); font-size: 13px; }
+.under { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 2px 0; }
+.under .name-chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 1px 6px; background: var(--soft); border: 1px solid var(--line); color: var(--fg); }
+.under .name-chip s { text-decoration-thickness: 1.5px; color: var(--muted); }
+.restore { font-size: 12px; color: var(--muted); }
+.pop {
+  position: absolute; z-index: 3; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; width: 200px;
+}
+.pop .row { display: flex; align-items: center; gap: 8px; }
+.pop .row s { text-decoration-thickness: 1.5px; }
+.pop .btn { margin-left: auto; border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px; font-size: 12px; }
+
+/* Option A: the card you can stretch */
+.stretch { position: absolute; z-index: 2; border-radius: 8px; touch-action: none; }
+.stretch.extended { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.handle {
+  position: absolute; top: 0; right: -6px; width: 16px; height: 100%; cursor: ew-resize; display: flex; align-items: center; justify-content: center;
+  outline: none; border-radius: 6px;
+}
+.handle::before {
+  content: ""; width: 6px; height: 26px; border-radius: 4px; background: var(--surface);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--fg) 35%, transparent), 0 1px 3px rgba(0,0,0,0.2);
+}
+.handle:focus-visible::before { box-shadow: 0 0 0 2px var(--brand); }
+.handle:hover::before, .dragging .handle::before { box-shadow: 0 0 0 1.5px var(--fg), 0 1px 3px rgba(0,0,0,0.25); }
+.tip {
+  position: absolute; top: -30px; right: -2px; transform: translateX(50%); background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 600;
+  padding: 3px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 0.12s;
+}
+.dragging .tip, .handle:focus-visible + .tip, .stretch:hover .tip { opacity: 1; }
+.stretch { padding-right: 16px; }
+.stretch .more { margin-left: 0; }
+.until { margin-left: auto; font-size: 11.5px; font-weight: 600; white-space: nowrap; opacity: 0.9; }
+.later { font-size: 11px; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.controls button {
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 12px; cursor: pointer;
+}
+.controls button:hover { border-color: color-mix(in oklab, var(--fg) 35%, transparent); }
+.controls button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.live { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Option C: lanes */
+.lanes { position: relative; }
+.lane { position: relative; height: 40px; border-bottom: 1px dashed var(--line); }
+.lane:last-child { border-bottom: 0; }
+.lane-label { position: absolute; left: 0; top: 0; height: 40px; display: flex; align-items: center; font-size: 11px; color: var(--muted); width: 52px; }
+.bar { position: absolute; top: 5px; height: 30px; border-radius: 7px; padding: 0 8px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.07); }
+.bar small { font-weight: 500; opacity: 0.8; font-size: 11.5px; }
+.band { position: absolute; top: 0; bottom: 0; border-radius: 8px; background: color-mix(in oklab, var(--fg) 3.5%, transparent); border: 1px dashed color-mix(in oklab, var(--fg) 14%, transparent); }
+.band span { position: absolute; top: -20px; left: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* Part 2's class drawings, side by side */
+.versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.version { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.version .label { font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; min-height: 26px; }
+.one { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Ships when */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--soft); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+.reply { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.reply code { font-family: var(--mono); font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+.note { font-size: 13.5px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 10px; padding: 10px 14px; max-width: none; }
+
+@media (max-width: 560px) {
+  body { font-size: 14.5px; }
+  .option-head, .option-sub, .drawing, .facts > div { padding-left: 16px; padding-right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="eyebrow">Schedule · decided Nov 8, 2026: A and 1</div>
+    <h1>A student who stays longer, and a canceled student who takes no space</h1>
+    <div class="ask">
+      “Is there any way you can make it so I can edit a student’s specific class hour. [A student] is coming in from 4–5:30, staying for 30 minutes longer because we have space in the next class as well.”
+      <cite>The manager’s message. The people below are made up.</cite>
+    </div>
+    <p class="lede">Two things to decide: how a student’s own hours work when they don’t match their class, and how a canceled student shows without filling a seat. Each part had three options; Goo picked A and 1 (docs/DECISIONS.md §38).</p>
+  </header>
+
+  <section class="stack" aria-labelledby="today-h">
+    <h2 id="today-h">How it works today</h2>
+    <div class="today">
+      <div class="fact"><b>A seat can already have its own time, but only inside its class.</b><p>That’s how a half-hour trial works (“Part of the class only” in Add a student). Families’ screens and the phone app already show a seat’s own time.</p></div>
+      <div class="fact"><b>Nothing lets a seat run past its class, or changes its time once booked.</b><p>So the workaround is booking the student into the next class as well, which the screenshot shows: two seats, two marks, two classes for the family.</p></div>
+      <div class="fact"><b>A canceled student keeps their place, struck through.</b><p>That copies the paper sheet. Their seat is free (the class says 4/6), but the card still fills a row, so only one open seat shows instead of two.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================================================== part 1 -->
+  <section class="part" aria-labelledby="p1">
+    <div class="part-head">
+      <div class="eyebrow">Part 1</div>
+      <h2 id="p1">A student stays longer, or comes earlier</h2>
+      <p class="muted">The manager’s case: a student in the 4–5 PM class stays until 5:30, in a seat the 5 PM class isn’t using.</p>
+    </div>
+
+    <!-- A -->
+    <article class="option recommended" aria-labelledby="oa">
+      <div class="option-head"><span class="letter">A</span><h3 id="oa">Stretch the student’s card</h3><span class="pick">Goo’s pick</span></div>
+      <p class="option-sub">Drag the right edge of a student’s card to stay later, or the left edge to come earlier, in 15-minute steps. Their card reaches into the next class and holds a seat there until they leave. On a phone-sized screen, the card’s ⋯ menu has “Change hours” with two time pickers.</p>
+      <div class="drawing">
+        <div class="tl" id="demo" style="width: 560px;">
+          <div class="axis" id="demo-axis"></div>
+          <div class="track" id="demo-track" style="height: 424px;"></div>
+        </div>
+        <div class="controls">
+          <button type="button" id="demo-reset">Put it back to 4–5</button>
+          <span class="live" id="demo-live" aria-live="polite">Try it: drag the handle on Ethan’s card to the right.</span>
+        </div>
+      </div>
+      <div class="facts">
+        <div><h4>The office</h4><ul>
+          <li><span class="plus">+</span> One visit stays one seat: marked once, canceled once.</li>
+          <li><span class="plus">+</span> The 5 PM class counts the seat he holds, and the app stops the stretch when the next class is full at that time.</li>
+          <li>Just for that day: copying the week to the next books him for the usual hour.</li>
+        </ul></div>
+        <div><h4>Families</h4><ul>
+          <li><span class="plus">+</span> They see one class, 4:00–5:30 PM, on the website and in the phone app they already have.</li>
+          <li>For a class still ahead, they get the usual “Class time changed” notice, in Korean too.</li>
+        </ul></div>
+        <div><h4>Phone app and work</h4><ul>
+          <li><span class="plus">+</span> No phone build needed: the website changes when merged, and the installed app already shows “4–5:30” on his seat.</li>
+          <li><span class="minus">−</span> Until the next phone build, the phone’s 5 PM class doesn’t count him.</li>
+          <li>One pull request.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <!-- B -->
+    <article class="option" aria-labelledby="ob">
+      <div class="option-head"><span class="letter">B</span><h3 id="ob">Book the next class too, for part of it</h3></div>
+      <p class="option-sub">Keep each seat inside its class. A “Stay longer” item in the card’s ⋯ menu books him into the 5 PM class from 5:00 to 5:30, and the two cards point to each other. This can already be done by hand today.</p>
+      <div class="drawing">
+        <div class="tl" style="width: 560px;">
+          <div class="axis" id="b-axis"></div>
+          <div class="track" id="b-track" style="height: 424px;"></div>
+        </div>
+      </div>
+      <div class="facts">
+        <div><h4>The office</h4><ul>
+          <li><span class="plus">+</span> The smallest change: “Part of the class only” already does it.</li>
+          <li><span class="minus">−</span> Two seats for one visit: marked twice, canceled twice, moved twice.</li>
+        </ul></div>
+        <div><h4>Families</h4><ul>
+          <li><span class="minus">−</span> They see two classes that day, 4:00–5:00 and 5:00–5:30, and get two notices.</li>
+        </ul></div>
+        <div><h4>Phone app and work</h4><ul>
+          <li><span class="plus">+</span> Counts are right on the installed phone app at once, since the seat really is in the 5 PM class.</li>
+          <li>A small pull request.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <!-- C -->
+    <article class="option" aria-labelledby="oc">
+      <div class="option-head"><span class="letter">C</span><h3 id="oc">No fixed classes</h3></div>
+      <p class="option-sub">Your first idea: drop the 2:30, 4 and 5 o’clock blocks. Each student becomes a bar from when they arrive to when they leave, on one of the six seats, and the usual class times are only faint guides behind them.</p>
+      <div class="drawing">
+        <div class="tl" style="width: 620px;">
+          <div class="axis" id="c-axis"></div>
+          <div class="track lanes" id="c-track" style="height: 260px; margin-top: 22px;"></div>
+        </div>
+      </div>
+      <div class="facts">
+        <div><h4>The office</h4><ul>
+          <li><span class="plus">+</span> The most freedom: anyone, any time, dragged anywhere.</li>
+          <li><span class="minus">−</span> Everything built on classes has to be rebuilt: families’ requests and makeups ask for a class, seat counts, “every coach in teaches the class”, Home and reports.</li>
+        </ul></div>
+        <div><h4>Families</h4><ul>
+          <li><span class="minus">−</span> Asking for a makeup or another time needs a new way to pick a time.</li>
+        </ul></div>
+        <div><h4>Phone app and work</h4><ul>
+          <li><span class="minus">−</span> Needs a new phone build for staff and families. Installed apps would show it wrong until people update.</li>
+          <li><span class="minus">−</span> Weeks of work, right after the academy started using the app. A gets the manager’s case without it.</li>
+        </ul></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============================================================== part 2 -->
+  <section class="part" aria-labelledby="p2">
+    <div class="part-head">
+      <div class="eyebrow">Part 2</div>
+      <h2 id="p2">A canceled student</h2>
+      <p class="muted">A 2:30–4 PM class with six seats: four students coming, one canceled. Two seats are free.</p>
+    </div>
+    <div class="versions" id="versions"></div>
+
+    <article class="option recommended" aria-labelledby="o1">
+      <div class="option-head"><span class="letter">1</span><h3 id="o1">Canceled names go under the seats</h3><span class="pick">Goo’s pick</span></div>
+      <p class="option-sub">The seats show who’s coming and every open seat, so this class shows two. Under them, one short line names who canceled. Each name opens its menu: Restore the seat, Book a makeup.</p>
+      <div class="facts">
+        <div><h4>Why</h4><ul>
+          <li><span class="plus">+</span> One rule everywhere: seats are for who’s coming; canceled is listed below.</li>
+          <li><span class="plus">+</span> It’s already where a refilled class lists its extra cancellations (“Also canceled”), so that becomes the only place.</li>
+        </ul></div>
+        <div><h4>Cost</h4><ul>
+          <li>A line of small text instead of a whole card.</li>
+          <li>Website at once; the phone’s class cards follow in the next phone build.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="option" aria-labelledby="o2">
+      <div class="option-head"><span class="letter">2</span><h3 id="o2">The freed seat says who canceled</h3></div>
+      <p class="option-sub">The canceled card turns into an open seat in the same place: hatched, “Add a student”, with the canceled name small on top.</p>
+      <div class="facts">
+        <div><h4>Why</h4><ul>
+          <li><span class="plus">+</span> No extra line, and you see which seat freed up.</li>
+        </ul></div>
+        <div><h4>Cost</h4><ul>
+          <li><span class="minus">−</span> Once someone takes that seat, the name has to move under the seats anyway, so canceled names end up in two places.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="option" aria-labelledby="o3">
+      <div class="option-head"><span class="letter">3</span><h3 id="o3">A count in the class’s header</h3></div>
+      <p class="option-sub">“1 canceled” sits next to the seat count. Click it to see who and restore them.</p>
+      <div class="facts">
+        <div><h4>Why</h4><ul>
+          <li><span class="plus">+</span> The most compact.</li>
+        </ul></div>
+        <div><h4>Cost</h4><ul>
+          <li><span class="minus">−</span> Who canceled is a click away. A coach glancing at the class won’t see the name.</li>
+        </ul></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============================================================== when -->
+  <section class="stack" aria-labelledby="when">
+    <h2 id="when">What changes where, for A and 1</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Website (the office)</th><th>Families</th><th>Staff phone app, installed</th><th>Next phone build</th></tr></thead>
+        <tbody>
+          <tr><td>A · stretch</td><td>When merged: drag the edges, or ⋯ → Change hours</td><td>Already see 4:00–5:30, website and app</td><td>Shows “4–5:30” on his seat; the 5 PM class doesn’t count him yet</td><td>Counts him in the 5 PM class and draws the stretch</td></tr>
+          <tr><td>1 · canceled line</td><td>When merged: two open seats, the name underneath</td><td>No change</td><td>Still shows the canceled card in its place</td><td>The same line under the seats</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="reply" aria-labelledby="reply-h">
+    <h3 id="reply-h">Decided</h3>
+    <p>Goo picked <code>A and 1</code> on Nov 8, 2026: a student’s card stretches past their class, holding a seat in the next one, and canceled students go on a line under the seats.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Minutes after midnight → "4", "4:30"; and "4:30 PM".
+  const hm = (m) => { const h = Math.floor(m / 60) % 12 || 12; const mm = m % 60; return mm ? h + ':' + String(mm).padStart(2, '0') : String(h); };
+  const pm = (m) => hm(m) + ' PM';
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // The schedule's sums, as the app draws a class: a header, then six slots of 56px with 6px between them.
+  const HEAD = 1 + 4 + 30 + 6, SLOT = 56, GAP = 6;
+  const slotTop = (i) => HEAD + i * (SLOT + GAP);
+  const BLOCK_H = slotTop(6) - GAP + 8 + 1;
+
+  function axis(node, lo, hi, width, marks) {
+    for (const t of marks) { const s = el('span', null, pm(t).replace(':00', '')); s.style.left = ((t - lo) / (hi - lo)) * width + 'px'; node.appendChild(s); }
+  }
+  function bars(used, of) { const b = el('span', 'bars'); for (let i = 0; i < of; i++) b.appendChild(el('i', i < used ? 'on' : '')); return b; }
+  function head(time, used, of, extra) {
+    const h = el('div', 'block-head');
+    h.appendChild(el('span', 'time', time));
+    if (extra) h.appendChild(extra);
+    const c = el('span', 'count'); c.appendChild(bars(used, of)); c.appendChild(document.createTextNode(used + '/' + of)); h.appendChild(c);
+    return h;
+  }
+  function seat(name, cls, sub, opts) {
+    opts = opts || {};
+    const s = el('div', 'seat ' + cls);
+    const l1 = el('div', 'l1'); l1.appendChild(el('span', 'name', name)); l1.appendChild(el('span', 'more', '···')); s.appendChild(l1);
+    const l2 = el('div', 'l2'); const subEl = el('span', 'sub', sub); l2.appendChild(subEl);
+    if (opts.restore) l2.appendChild(el('span', 'restore', '↺'));
+    else if (opts.marks !== false) { const m = el('span', 'marks'); m.appendChild(el('i', null, '✓')); m.appendChild(el('i', null, '⊘')); l2.appendChild(m); }
+    s.appendChild(l2);
+    s._sub = subEl;
+    return s;
+  }
+  function openSeat(text) { const o = el('div', 'open'); o.appendChild(el('span', 'plus-ic', '+')); o.appendChild(el('span', null, text || 'Add a student')); return o; }
+
+  // ------------------------------------------------------------------ A: the card you can stretch
+  const LO = 230, HI = 370, W = 560; // 3:50 to 6:10, 560px wide
+  const x = (m) => ((m - LO) / (HI - LO)) * W;
+  axis(document.getElementById('demo-axis'), LO, HI, W, [240, 300, 360]);
+  const track = document.getElementById('demo-track');
+  for (const t of [240, 300, 360]) { const g = el('div', 'gridline'); g.style.left = x(t) + 'px'; track.appendChild(g); }
+
+  const four = [['Mina Park', 'scout', 'Scout · C3 · Gr 9'], ['Leo Han', 'scout', 'Scout · C11 · Gr 9'], ['Ava Kim', 'scout', 'Scout · Gr 8'], ['Noah Baek', 'mark', 'Mark · C16 · Gr 10']];
+  const five = [['Grace Song', 'exp', 'Exp · P · Gr 9'], ['Owen Jung', 'exp', 'Exp · C10 · Gr 10'], ['Ella Shin', 'mark', 'Mark · Gr 10'], ['Ryan Oh', 'prec', 'Prec · Gr 11']];
+
+  function classBlock(start, end, rows, used, extraTop) {
+    const b = el('div', 'block');
+    b.style.left = x(start) + 2 + 'px'; b.style.width = x(end) - x(start) - 4 + 'px'; b.style.height = BLOCK_H + 'px';
+    const h = head(hm(start) + '–' + pm(end), used, 6); b.appendChild(h);
+    for (const r of rows) b.appendChild(r);
+    track.appendChild(b);
+    return { b, h };
+  }
+  const blockA = classBlock(240, 300, [...four.map((s) => seat(s[0], s[1], s[2])), el('div', 'seat-spacer'), openSeat()], 5);
+  blockA.b.children[5].style.height = SLOT + 'px'; // where Ethan's card sits (drawn on top, so it can reach past the class)
+  const spot = openSeat();
+  const blockB = classBlock(300, 360, [...five.map((s) => seat(s[0], s[1], s[2])), spot, openSeat()], 4);
+  const countB = blockB.h.querySelector('.count');
+
+  // Ethan's card: on top of the blocks, so it can run past the 5 PM line.
+  const ethan = seat('Ethan Cho', 'prec stretch', 'Prec · Gr 10');
+  ethan.style.top = slotTop(4) + 'px';
+  ethan.style.left = x(240) + 2 + 9 + 'px';
+  const until = el('span', 'until', '');
+  ethan.firstChild.insertBefore(until, ethan.firstChild.lastChild);
+  const handle = el('div', 'handle');
+  handle.tabIndex = 0;
+  handle.setAttribute('role', 'slider');
+  handle.setAttribute('aria-label', 'When Ethan leaves');
+  handle.setAttribute('aria-valuemin', '300'); handle.setAttribute('aria-valuemax', '360');
+  ethan.appendChild(handle);
+  const tip = el('span', 'tip', ''); ethan.appendChild(tip);
+  track.appendChild(ethan);
+
+  const live = document.getElementById('demo-live');
+  let end = 300;
+  function render() {
+    const left = x(240) + 2 + 9;
+    const right = end <= 300 ? x(300) - 11 : end >= 360 ? x(360) - 11 : x(end) - 2;
+    ethan.style.width = right - left + 'px';
+    ethan.classList.toggle('extended', end > 300);
+    ethan._sub.textContent = end > 300 ? 'Prec · Gr 10 · 4–' + hm(end) : 'Prec · Gr 10';
+    until.textContent = end > 300 ? 'until ' + hm(end) : '';
+    tip.textContent = 'until ' + pm(end);
+    handle.setAttribute('aria-valuenow', String(end)); handle.setAttribute('aria-valuetext', 'until ' + pm(end));
+    // The seat he holds in the 5 PM class: the rest of it stays open for a part-time booking.
+    spot.style.visibility = end >= 360 ? 'hidden' : 'visible';
+    spot.style.justifyContent = end > 300 ? 'flex-end' : 'center';
+    spot.style.paddingRight = end > 300 ? '10px' : '0';
+    spot.lastChild.textContent = end <= 300 ? 'Add a student' : 360 - end >= 30 ? 'open from ' + hm(end) : hm(end) + '–6';
+    spot.firstChild.style.display = end > 300 ? 'none' : '';
+    const used = end > 300 ? 5 : 4;
+    countB.replaceChildren(bars(used, 6), document.createTextNode(used + '/6'));
+    live.textContent = end > 300
+      ? 'Ethan: 4:00–' + pm(end) + '. He holds a seat in the 5 PM class until ' + pm(end) + ', so it shows 5/6.'
+      : 'Try it: drag the handle on Ethan’s card to the right.';
+  }
+  const snap = (m) => Math.min(360, Math.max(300, Math.round(m / 15) * 15));
+  let dragging = false;
+  handle.addEventListener('pointerdown', (e) => { dragging = true; handle.setPointerCapture(e.pointerId); ethan.classList.add('dragging'); e.preventDefault(); });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const r = track.getBoundingClientRect();
+    const m = LO + ((e.clientX - r.left) / W) * (HI - LO);
+    const next = snap(m);
+    if (next !== end) { end = next; render(); }
+  });
+  const stop = () => { dragging = false; ethan.classList.remove('dragging'); };
+  handle.addEventListener('pointerup', stop); handle.addEventListener('pointercancel', stop);
+  handle.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { end = snap(end + 15); render(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { end = snap(end - 15); render(); e.preventDefault(); }
+  });
+  document.getElementById('demo-reset').addEventListener('click', () => { end = 300; render(); });
+  render();
+
+  // ------------------------------------------------------------------ B: two seats
+  (function () {
+    const ax = document.getElementById('b-axis'), tr = document.getElementById('b-track');
+    axis(ax, LO, HI, W, [240, 300, 360]);
+    for (const t of [240, 300, 360]) { const g = el('div', 'gridline'); g.style.left = x(t) + 'px'; tr.appendChild(g); }
+    const mk = (start, end2, rows, used) => {
+      const b = el('div', 'block');
+      b.style.left = x(start) + 2 + 'px'; b.style.width = x(end2) - x(start) - 4 + 'px'; b.style.height = BLOCK_H + 'px';
+      b.appendChild(head(hm(start) + '–' + pm(end2), used, 6));
+      for (const r of rows) b.appendChild(r);
+      tr.appendChild(b);
+    };
+    const e1 = seat('Ethan Cho', 'prec', 'Prec · then 5–5:30');
+    const e2 = seat('Ethan Cho', 'prec', 'Prec · 5–5:30');
+    mk(240, 300, [...four.map((s) => seat(s[0], s[1], s[2])), e1, openSeat()], 5);
+    mk(300, 360, [...five.map((s) => seat(s[0], s[1], s[2])), e2, openSeat()], 5);
+  })();
+
+  // ------------------------------------------------------------------ C: lanes, no classes
+  (function () {
+    const lo = 230, hi = 370, w = 620, pad = 56;
+    const cx = (m) => pad + ((m - lo) / (hi - lo)) * (w - pad);
+    const ax = document.getElementById('c-axis'), tr = document.getElementById('c-track');
+    for (const t of [240, 300, 360]) { const s = el('span', null, pm(t).replace(':00', '')); s.style.left = cx(t) + 'px'; ax.appendChild(s); }
+    const band = (a, b, label) => { const d = el('div', 'band'); d.style.left = cx(a) + 'px'; d.style.width = cx(b) - cx(a) - 3 + 'px'; d.appendChild(el('span', null, label)); tr.appendChild(d); };
+    band(240, 300, 'usual 4 PM class'); band(300, 360, 'usual 5 PM class');
+    const lanes = [
+      [['Mina Park', 'scout', 240, 300], ['Grace Song', 'exp', 300, 360]],
+      [['Leo Han', 'scout', 240, 300], ['Owen Jung', 'exp', 300, 360]],
+      [['Ava Kim', 'scout', 240, 300], ['Ella Shin', 'mark', 300, 360]],
+      [['Noah Baek', 'mark', 240, 300], ['Ryan Oh', 'prec', 300, 360]],
+      [['Ethan Cho', 'prec', 240, 330]],
+      [['Kai Jang', 'trial', 270, 300, 'Trial']],
+    ];
+    lanes.forEach((row, i) => {
+      const l = el('div', 'lane'); l.appendChild(el('span', 'lane-label', 'Seat ' + (i + 1)));
+      for (const b of row) {
+        const bar = el('div', 'bar ' + b[1]); bar.style.left = cx(b[2]) + 2 + 'px'; bar.style.width = cx(b[3]) - cx(b[2]) - 4 + 'px';
+        bar.appendChild(document.createTextNode(b[0])); bar.appendChild(el('small', null, b[4] || hm(b[2]) + '–' + hm(b[3])));
+        l.appendChild(bar);
+      }
+      tr.appendChild(l);
+    });
+  })();
+
+  // ------------------------------------------------------------------ Part 2: one class, four ways
+  (function () {
+    const host = document.getElementById('versions');
+    const kids = [['Daniel Yoon', 'Prec · Gr 11'], ['Hannah Ryu', 'Prec · Gr 11'], ['Jun Seo', 'Prec · Gr 11'], ['Mia Kwon', 'Prec · Gr 11']];
+    const coming = () => kids.map((k) => seat(k[0], 'prec', k[1]));
+    const sora = () => seat('Sora Lim', 'canceled', 'Prec · Gr 10', { restore: true });
+    const make = (label, tag, build) => {
+      const v = el('div', 'version');
+      const l = el('div', 'label'); if (tag) l.appendChild(el('span', 'letter', tag)); l.appendChild(document.createTextNode(label)); v.appendChild(l);
+      const box = el('div', 'one'); build(box); v.appendChild(box); host.appendChild(v);
+    };
+    make('Today: one open seat shows', null, (box) => {
+      box.appendChild(head('2:30–4 PM', 4, 6));
+      const k = coming(); box.append(k[0], sora(), k[1], k[2], k[3], openSeat());
+    });
+    make('Canceled under the seats', '1', (box) => {
+      box.appendChild(head('2:30–4 PM', 4, 6));
+      box.append(...coming(), openSeat(), openSeat());
+      const u = el('div', 'under'); u.appendChild(document.createTextNode('Canceled:'));
+      const c = el('span', 'name-chip'); c.appendChild(el('s', null, 'Sora Lim')); c.appendChild(el('span', 'restore', '↺')); u.appendChild(c);
+      box.appendChild(u);
+    });
+    make('The freed seat says who', '2', (box) => {
+      box.appendChild(head('2:30–4 PM', 4, 6));
+      const k = coming();
+      const f = el('div', 'open freed');
+      const who = el('div', 'who'); who.appendChild(el('s', null, 'Sora Lim')); who.appendChild(document.createTextNode('canceled')); f.appendChild(who);
+      const add = el('div', 'add'); add.appendChild(el('span', 'plus-ic', '+')); add.appendChild(document.createTextNode('Add a student')); f.appendChild(add);
+      box.append(k[0], f, k[1], k[2], k[3], openSeat());
+    });
+    make('A count in the header', '3', (box) => {
+      box.appendChild(head('2:30–4 PM', 4, 6, el('span', 'chip-canceled', '1 canceled')));
+      box.append(...coming(), openSeat(), openSeat());
+      const p = el('div', 'pop'); p.style.top = '36px'; p.style.left = '70px';
+      p.appendChild(el('div', 'eyebrow', 'Canceled'));
+      const r = el('div', 'row'); r.appendChild(el('s', null, 'Sora Lim')); r.appendChild(el('span', 'btn', 'Restore')); p.appendChild(r);
+      box.appendChild(p);
+    });
+  })();
+})();
+</script>
+</body>
+</html>
