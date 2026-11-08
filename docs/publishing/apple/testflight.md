@@ -35,12 +35,12 @@ same app); the App Store's copy replaces TestFlight's later.
 ## The academy's staff (external testing)
 
 1. **Test Information** (once). **TestFlight** tab → **Test Information** (left sidebar): from
-   [testflight-notes.md](../../store/testflight-notes.md), the **Beta App Description** and the **Feedback Email**;
+   [testflight-notes.md](../store/testflight-notes.md), the **Beta App Description** and the **Feedback Email**;
    under **Beta App Review Information**, tick **Sign-in required** with the **office** login, your name, phone (`+1 …`)
-   and email, and the review notes ([review-notes.md](../../store/review-notes.md)). **Save.**
+   and email, and the review notes ([review-notes.md](../store/review-notes.md)). **Save.**
 2. **Make the group.** **+** next to **External Testing** → name `Sky Arc staff` → **Create**.
 3. **Add the build.** In the group: **Builds** → **+** → the build → **What to Test**: paste from
-   [testflight-notes.md](../../store/testflight-notes.md) → **Submit for Review**. Apple's Beta App Review answers
+   [testflight-notes.md](../store/testflight-notes.md) → **Submit for Review**. Apple's Beta App Review answers
    within about a day; later builds of the same version usually skip it.
 4. **Add testers.** **Testers** → **+** → **Add New Testers** → their names and emails (the emails the academy has for
    them, so the app lets them in). Or **Create Public Link** to share one link instead.

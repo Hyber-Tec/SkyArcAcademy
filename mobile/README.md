@@ -9,8 +9,8 @@ own) classes, every score as the staff see it, the progress reports the academy 
 families. It uses the same Firebase project (`skyarcacademy`), the same Cloud Functions and the same security rules as
 the website, and the business logic in `../shared`.
 
-How to run it, step by step, is in [docs/running-the-apps.md](../docs/running-the-apps.md); publishing to the stores is
-[docs/publishing.md](../docs/publishing.md). Rules for changing the code: [AGENTS.md](AGENTS.md).
+How to run it, step by step, is in [docs/phone/running-the-apps.md](../docs/phone/running-the-apps.md); publishing to the stores is
+[docs/publishing/README.md](../docs/publishing/README.md). Rules for changing the code: [AGENTS.md](AGENTS.md).
 
 ## What it does
 
@@ -112,7 +112,7 @@ The app needs a **development build**: a version of the app with its native part
 camera and the image tools) compiled in, installed once on each simulator or phone. Expo Go can't run it: opened there,
 it says so and which app to open instead.
 
-**The quickest way**, from the repository root (every step in [docs/running-the-apps.md](../docs/running-the-apps.md)):
+**The quickest way**, from the repository root (every step in [docs/phone/running-the-apps.md](../docs/phone/running-the-apps.md)):
 
 - `npm run iphone` or `npm run android` builds a Release build of the real app for the phone plugged into the Mac and
   installs it. An iPhone's is signed by **HyberTec LLC's Apple team**, always (the Apple ID on a Mac may also belong

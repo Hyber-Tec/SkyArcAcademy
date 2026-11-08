@@ -12,7 +12,7 @@ import type { Availability, Branch } from '@shared/types'
 import { db } from './app'
 
 /**
- * The kiosk tablet (`kiosk/`, docs/kiosk.md): a tablet at the front desk where coaches clock in and out with their PIN,
+ * The kiosk tablet (`kiosk/`, docs/kiosk/): a tablet at the front desk where coaches clock in and out with their PIN,
  * with nobody signed in (docs/DECISIONS.md §6, Q9). An admin sets a setup PIN on the website; typing it on a tablet
  * registers that tablet, which then syncs with `kioskSync`: it sends the clock-ins and clock-outs it recorded, with or
  * without the internet, and gets back who can clock in (their PINs as fingerprints only) and who's in now.

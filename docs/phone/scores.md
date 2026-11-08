@@ -1,6 +1,6 @@
 # The phone app: scores and the scanner (M6)
 
-What the phone app (`mobile/`) needs after the second meeting's `P` items (`docs/MEETING2_FEEDBACK.md`,
+What the phone app (`mobile/`) needs after the second meeting's `P` items (`docs/meetings/meeting-2-feedback.md`,
 `docs/DECISIONS.md` §23), for the Claude Code session on Goo's MacBook Pro. The website and the shared code are done.
 
 ## What every result has now (shared/src/shooting/evaluation.ts)

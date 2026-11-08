@@ -257,7 +257,7 @@ password made for it (Create an account, with that email). `--remove` takes thes
 classes, time entries, kiosk PINs, notifications and audit entries); it never touches anyone else, and the Drive files'
 bytes go with their records. Running `npm run seed:sample` again refreshes the classes around the new date and
 replaces the sample's earlier schedule. Production's sample data was removed this way on 2026-10-26, before the
-academy's real data came in; the App Store's review account stayed, as an admin (`docs/store/review-notes.md`).
+academy's real data came in; the App Store's review account stayed, as an admin (`docs/publishing/store/review-notes.md`).
 
 ## Moving to skyarcacademy.com
 
@@ -311,7 +311,7 @@ breaks: the phone app 1.0 and 1.1, and emails already sent.
    info@skyarcacademy.com"). The domain already publishes SPF, DKIM and DMARC for Google Workspace.
 8. **After the move:**
    - Google Search Console: add the domain and send the sitemap.
-   - The stores' addresses (`docs/store/listing.md`): Google Play's any time; the App Store's Support and Marketing URLs
+   - The stores' addresses (`docs/publishing/store/listing.md`): Google Play's any time; the App Store's Support and Marketing URLs
      with the next version.
 
 Keep `authDomain` on `skyarcacademy.firebaseapp.com` unless the domain's `/__/auth/handler` is registered on the Google

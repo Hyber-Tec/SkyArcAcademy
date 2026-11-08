@@ -1,7 +1,7 @@
 # The phone app's push notifications (M3)
 
 What the phone app (`mobile/`) needs for push notifications, for the Claude Code session that builds it on Goo's
-MacBook Pro. It's `M3` in [`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md): the manager wants families, students,
+MacBook Pro. It's `M3` in [`meetings/meeting-2-feedback.md`](../meetings/meeting-2-feedback.md): the manager wants families, students,
 coaches and the office told on their phones about everything that concerns them. Goo approved adding the push
 packages on 2026-10-28: a new build, and **nothing uploaded to the stores** until Goo asks.
 
@@ -9,7 +9,7 @@ packages on 2026-10-28: a new build, and **nothing uploaded to the stores** unti
 `@react-native-firebase/messaging` for the token and the pushes, and `expo-notifications` for the phone's
 permission, Android's channels and the badge (`mobile/AGENTS.md`, "Push notifications"). Everything in "What the
 phone needs" below is in, and so is Goo's one-time step ("What Goo does"): on 2026-11-06 a real push reached Goo's
-iPhone (the Simulator never gets a token; `docs/running-the-apps.md`, "Trying notifications"). New kinds of notices from Phase 1
+iPhone (the Simulator never gets a token; `docs/phone/running-the-apps.md`, "Trying notifications"). New kinds of notices from Phase 1
 reach phones by themselves; a tap opens what `appTargetOf` says, so their targets go there, and the app's one-line
 reasons (`pushReason` in `mobile/src/features/notifications/PhoneNotifications.tsx`) get their words.
 
@@ -80,7 +80,7 @@ Android needs nothing from Goo: Firebase sends to Android directly.
 
 ## When it's released
 
-- **The stores' privacy answers change** (`docs/store/privacy-answers.md`, "When the app changes"): Apple's App Privacy
+- **The stores' privacy answers change** (`docs/publishing/store/privacy-answers.md`, "When the app changes"): Apple's App Privacy
   gets **Identifiers → Device ID** (the notification token; linked to the person; App Functionality). Google's Data
   safety already covers it (Device or other IDs).
 - **What's New** names it ("Notifications for class changes and news"). The version is Goo's call at release time:

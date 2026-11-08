@@ -52,7 +52,7 @@ HyberCRM is our multi-branch CRM for tutoring centers. It was forked from and im
    - Every feature module and how it maps (or doesn't) to Sky Arc
    - Design system: shadcn/ui setup, theme tokens, layout, components
    - The mobile app: just understand how it shares code/data, since it comes later
-2. **Write a review + fork plan** (`docs/HYBERCRM_REVIEW.md` in the new repo) that covers:
+2. **Write a review + fork plan** (`docs/reference/hybercrm-review.md` in the new repo) that covers:
    - Feature-by-feature table: **Keep as-is / Adapt / Remove / New**
    - Terminology changes (see §4)
    - How you'll handle multi-branch (see below)
@@ -269,7 +269,7 @@ SkyArcAcademy
 
 ## 11. Suggested Order of Work
 
-1. Review HyberCRM → write `docs/HYBERCRM_REVIEW.md` (feature map, fork plan, branch strategy, data model, SIUS PDF format, questions) → **confirm with Goo**
+1. Review HyberCRM → write `docs/reference/hybercrm-review.md` (feature map, fork plan, branch strategy, data model, SIUS PDF format, questions) → **confirm with Goo**
 2. Set up the new repo + new Firebase project config (no secrets committed), CI, `CLAUDE.md`
 3. Fork/strip: rebrand, terminology, single-academy, remove unused modules
 4. **Scheduling** (hours, recurring slots, coach shifts + Sunday rotation, cancellations + notifications, makeups, trials)

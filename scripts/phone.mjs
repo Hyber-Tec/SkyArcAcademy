@@ -3,7 +3,7 @@
  * The Sky Arc phone app (mobile/) with one command. Everything it needs is checked first and, where a command can do
  * it, done: its packages, the skyarcacademy project's Firebase files, a new build only when something native changed,
  * and for the simulators the practice copy of Sky Arc. Then the app opens. Written for someone who has never done
- * mobile development: docs/running-the-apps.md explains every step and what to do when one stops.
+ * mobile development: docs/phone/running-the-apps.md explains every step and what to do when one stops.
  *
  *   npm run iphone             the iPhone plugged into this Mac: the real Sky Arc's app, built and installed over the cable
  *   npm run android            the Android phone plugged into this Mac, the same way
@@ -328,7 +328,7 @@ function ensureFirebaseFiles({ required, refresh = false }) {
   const how = [
     `The ${PROJECT} project's Firebase files are missing: ${still.map((f) => `mobile/firebase/${f}`).join(", ")}.`,
     signInToFirebase(),
-    `Or download them yourself: docs/running-the-apps.md, "A brand new Mac".`,
+    `Or download them yourself: docs/phone/running-the-apps.md, "A brand new Mac".`,
   ];
   if (required) stop(how);
   how.forEach(note);
@@ -449,7 +449,7 @@ function commandName() {
 
 const buildProblem = (p) => [
   `The ${PLATFORM[p]} app didn't build. The lines just above say why.`,
-  `docs/running-the-apps.md, "When a build fails", has what to try. Or ask Claude Code: "${commandName()} fails, please fix it".`,
+  `docs/phone/running-the-apps.md, "When a build fails", has what to try. Or ask Claude Code: "${commandName()} fails, please fix it".`,
 ];
 
 /** Makes the native project (mobile/ios or mobile/android: generated, git-ignored) again when what it is built from changed. */
@@ -1043,7 +1043,7 @@ function explainPhoneProblem(log) {
   const match = known.find(([pattern]) => pattern.test(text));
   return [
     ...(match ? [match[1]] : ["The lines above say what went wrong."]),
-    `The whole log: ${path.relative(root, log)}. docs/running-the-apps.md, "When a build fails", has more; or ask Claude Code: "npm run iphone fails".`,
+    `The whole log: ${path.relative(root, log)}. docs/phone/running-the-apps.md, "When a build fails", has more; or ask Claude Code: "npm run iphone fails".`,
   ];
 }
 
@@ -1484,7 +1484,7 @@ async function setup() {
     console.log("\n✓ This Mac is ready: npm run iphone (or npm run android) puts the app on the phone plugged in.\n");
     return;
   }
-  console.log(`\nLeft for you (docs/running-the-apps.md explains each):\n\n${left.map((l, i) => `  ${i + 1}. ${l}`).join("\n\n")}\n`);
+  console.log(`\nLeft for you (docs/phone/running-the-apps.md explains each):\n\n${left.map((l, i) => `  ${i + 1}. ${l}`).join("\n\n")}\n`);
   process.exitCode = 1;
 }
 
@@ -1511,7 +1511,7 @@ async function prepare() {
       stop([
         "The App Store needs the app signed by HyberTec LLC's Apple team, and Xcode on this Mac can't sign for it yet:",
         ...XCODE_ACCOUNT_STEPS,
-        `Then run this again (docs/running-the-apps.md, "Your real iPhone").`,
+        `Then run this again (docs/phone/running-the-apps.md, "Your real iPhone").`,
       ]);
     }
     const env = { ...xenv, ...appSettings("live") };

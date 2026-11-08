@@ -152,7 +152,7 @@ A leftover for the old iPhone app 1.0:
 
 ### The stores' links to skyarcacademy.com
 
-The old addresses keep working, so this can wait. [store/listing.md](store/listing.md) has the new ones:
+The old addresses keep working, so this can wait. [store/listing.md](publishing/store/listing.md) has the new ones:
 
 - **Google Play**, once 1.1.0 is approved:
   - Store settings: the website.
@@ -271,7 +271,7 @@ Kept so they aren't brought up again. Each was decided:
 
 These are notes, not tasks.
 
-- **The kiosk tablet** ([kiosk.md](kiosk.md)), 2026-11-07:
+- **The kiosk tablet** ([kiosk/README.md](kiosk/README.md)), 2026-11-07:
   - **The device:** a Samsung Galaxy Tab A9+ (SM-X218U), Android 16, on the academy's Wi-Fi, registered as "Front desk".
   - **Set over USB:** Sky Arc Kiosk is its home app, and its swipe lock screen is off, so a press of the power button
     or a restart comes straight back to the kiosk.
@@ -293,7 +293,7 @@ These are notes, not tasks.
 
 - **Notifications on iPhones work:** Apple's push key is in Firebase. Claude Code sent a test push to Goo's iPhone on
   2026-11-06, and it arrived. If iPhones ever stop getting them, check Firebase → Project settings → Cloud Messaging
-  → the iOS app's APNs key ([mobile-push.md](mobile-push.md)).
+  → the iOS app's APNs key ([phone/push.md](phone/push.md)).
 
 - **Showing the app** ([DECISIONS.md](DECISIONS.md) §22):
   - **On the website:** turn on **Demo data** in the account menu to show the made-up academy, and turn it off for

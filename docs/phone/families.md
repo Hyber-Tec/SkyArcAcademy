@@ -1,7 +1,7 @@
 # The phone app: families cancel and ask for classes, and everyone's notices (M1, M2, M4)
 
 What the phone app (`mobile/`) needs to match the website, for the Claude Code session that builds it on Goo's MacBook
-Pro. The decisions are `docs/DECISIONS.md` §23 and the tasks `docs/MEETING2_FEEDBACK.md` (`S1`–`S8`, `M1`, `M2`, `M4`).
+Pro. The decisions are `docs/DECISIONS.md` §23 and the tasks `docs/meetings/meeting-2-feedback.md` (`S1`–`S8`, `M1`, `M2`, `M4`).
 The server and the website's side are built: families never write the schedule themselves, they call the server,
 which checks each step with the shared rules, writes it with its audit entry, and tells whoever needs to know.
 
@@ -47,7 +47,7 @@ Every call takes `branchId` (the academy the app shows, `useBranch().branchId`, 
 
 ## The notices
 
-Every notice is an inbox item, pushed to the person's phones (`docs/mobile-push.md`), following their switches:
+Every notice is an inbox item, pushed to the person's phones (`docs/phone/push.md`), following their switches:
 
 | To | When | `type` | Link (website path) |
 | --- | --- | --- | --- |

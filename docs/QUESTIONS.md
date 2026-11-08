@@ -33,4 +33,4 @@ A12 (the kiosk's device) was answered at the third meeting: an Android tablet Hy
 ([`TODO-notes.md`](TODO-notes.md), "Kiosk app"). A15 (how coaches score a hole on a line) was answered at the second meeting: by where most of the hole sits
 ([`DECISIONS.md`](DECISIONS.md) §23). A19 (one contract per child or per family) was answered on 2026-11-04: one per
 child, each signed on its own ([`DECISIONS.md`](DECISIONS.md) §33). What the academy still has to send is listed in
-[`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), Section 7.
+[`meetings/meeting-2-feedback.md`](meetings/meeting-2-feedback.md), Section 7.

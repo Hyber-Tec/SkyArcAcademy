@@ -81,7 +81,7 @@ nothing without an account the academy made.
   rejection, still reported in 2026; the guideline itself doesn't say it). Sky Arc now serves the academy's families as
   well as its staff, which suits a public listing better than a staff-only app did. If App Review still answers with
   3.2: request unlisted distribution at https://developer.apple.com/contact/request/unlisted-app/ and reply
-  ([review-notes.md](../../store/review-notes.md)). Apple says it answers within 3 business days, though one developer
+  ([review-notes.md](../store/review-notes.md)). Apple says it answers within 3 business days, though one developer
   waited longer in April 2026. Unlisted is for good.
 - **HyberTec's account, the academy's name** (5.2.1, 4.2.6, 4.3). An app should come from whoever owns or has licensed
   its name and logo, and reviewers ask for proof when the seller's name differs from the app's. Apple accepts "a signed
@@ -115,7 +115,7 @@ reasoning for 1.0.0, which Apple is reviewing.
 
 **Decided by this check: no Sign in with Apple for now.** With "Hide My Email", Apple would give the app a private
 address the academy doesn't know, so it would open nothing. The review notes claim the exception, and a reply is ready
-([review-notes.md](../../store/review-notes.md)). Reviewers judge case by case, so a rejection quoting 4.8 is possible.
+([review-notes.md](../store/review-notes.md)). Reviewers judge case by case, so a rejection quoting 4.8 is possible.
 If Apple still asks after one reply, two ways out:
 
 1. **Email and password only in the iPhone app** (the quickest: an hour or two of work, then a new build). Guideline 4.8
@@ -175,7 +175,7 @@ Apple's sizes: https://developer.apple.com/help/app-store-connect/reference/app-
   of iPhone Duo (on sale from 2026-10-23); reviewers may use either. Before the first submission, ask Claude Code to go
   through the tabs on the iPad and iPhone Duo simulators (2.1, 2.4.1).
 - **The privacy answers.** Xcode's privacy report of the archive (Xcode → **Window** → **Organizer** → the archive →
-  **Generate Privacy Report**) should agree with [privacy-answers.md](../../store/privacy-answers.md).
+  **Generate Privacy Report**) should agree with [privacy-answers.md](../store/privacy-answers.md).
 
 ## Later, when it applies
 

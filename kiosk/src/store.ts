@@ -8,7 +8,7 @@ import { type KioskOpResult, type KioskPerson, type KioskServerState, type Kiosk
 import { APP_VERSION, BRANCH_ID, ServerError, call } from "./api";
 
 /**
- * What the tablet keeps, and its syncing (docs/kiosk.md). A clock-in or clock-out is saved on the tablet first, so it
+ * What the tablet keeps, and its syncing (docs/kiosk/). A clock-in or clock-out is saved on the tablet first, so it
  * works the same without the internet, then sent; the server applies each one once, with the time it happened. Saved
  * in the app's own storage, which Android keeps private and out of backups (app.config.ts).
  */

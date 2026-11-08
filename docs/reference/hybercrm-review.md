@@ -1,7 +1,7 @@
 # HyberCRM review and the Sky Arc fork plan
 
 > **Status: for Goo's confirmation (2026-10-15).** Nothing large is deleted or restructured until Goo confirms
-> (brief §2). Answers go to [`DECISIONS.md`](DECISIONS.md), which wins over this document.
+> (brief §2). Answers go to [`DECISIONS.md`](../DECISIONS.md), which wins over this document.
 >
 > **Sources.** HyberCRM `main` at `d659d34` (2026-10-05), read-only and never built or run here; the brief; the
 > Oct 13 meeting notes; the client assets (4 weekly schedule sheets, 10 SIUS PDFs, 10 paper-target photos, 2 logos).
@@ -729,5 +729,5 @@ type and scope.
 
 ## 15. Questions for Goo
 
-Moved: the open questions, for Goo and for the academy, are in [`QUESTIONS.md`](QUESTIONS.md), and the answers in
-[`DECISIONS.md`](DECISIONS.md). Q1–Q8 and Q13 are answered; Q9–Q12 and Q14 are still open.
+Moved: the open questions, for Goo and for the academy, are in [`QUESTIONS.md`](../QUESTIONS.md), and the answers in
+[`DECISIONS.md`](../DECISIONS.md). Q1–Q8 and Q13 are answered; Q9–Q12 and Q14 are still open.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Publishing the phone app, one command per store (docs/publishing.md explains every step around them):
+ * Publishing the phone app, one command per store (docs/publishing/README.md explains every step around them):
  *
  *   npm run publish:iphone     builds the App Store version of Sky Arc, signed by HyberTec LLC's Apple team, and
  *                              uploads it to App Store Connect (TestFlight, then the App Store)
@@ -348,7 +348,7 @@ async function iphone() {
 /** Java 17's tools (keytool), as scripts/phone.mjs builds with: Homebrew's, JAVA_HOME's, or Android Studio's own. */
 function javaHome() {
   const home = ["/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home", process.env.JAVA_HOME, "/Applications/Android Studio.app/Contents/jbr/Contents/Home"].find((j) => j && fs.existsSync(path.join(j, "bin", "keytool")));
-  if (!home) stop("Java 17 wasn't found. Run npm run phone:setup, which installs it (docs/running-the-apps.md), then run this again.");
+  if (!home) stop("Java 17 wasn't found. Run npm run phone:setup, which installs it (docs/phone/running-the-apps.md), then run this again.");
   return home;
 }
 
@@ -492,7 +492,7 @@ async function android() {
   const log = logFile("publish-android-build.log");
   const built = await streamed("./gradlew", [":app:bundleRelease", "--console=plain"], { cwd: androidDir, env, log });
   if (!built) {
-    stop([`The Google Play build didn't finish. The end of its log:`, tail(log, 20), `The whole log: ${relative(log)}. docs/running-the-apps.md, "When a build fails", has what to try; or ask Claude Code: "npm run publish:android fails".`]);
+    stop([`The Google Play build didn't finish. The end of its log:`, tail(log, 20), `The whole log: ${relative(log)}. docs/phone/running-the-apps.md, "When a build fails", has what to try; or ask Claude Code: "npm run publish:android fails".`]);
   }
   const output = path.join(androidDir, "app", "build", "outputs", "bundle", "release", "app-release.aab");
   if (!fs.existsSync(output)) stop(`The build finished but left no bundle at ${relative(output)}. Ask Claude Code: "npm run publish:android fails".`);

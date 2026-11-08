@@ -21,7 +21,7 @@ npm run lint
 ```
 
 From the repository root: `npm run iphone:sim` (the iPhone Simulator on the practice copy), `npm run iphone` (the
-iPhone plugged into the Mac), and the rest in `../docs/running-the-apps.md`.
+iPhone plugged into the Mac), and the rest in `../docs/phone/running-the-apps.md`.
 
 A package with native code needs a new build (`npm run iphone:sim -- --rebuild`): don't add one without asking.
 Pure JavaScript packages are fine. (expo-apple-authentication and expo-crypto came with Sign in with Apple, which the
@@ -298,8 +298,8 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   texts in `app.config.ts`), and
   notifications. On Android the photo library is the system's photo picker, which needs no permission, and the
   storage, draw-over-other-apps and start-with-the-phone permissions Expo's template and libraries add are blocked
-  (`android.blockedPermissions`). A new permission means new questions from both stores (docs/publishing.md).
-- **Push notifications** (`docs/mobile-push.md`): the server pushes every inbox item through Firebase Cloud Messaging.
+  (`android.blockedPermissions`). A new permission means new questions from both stores (docs/publishing/README.md).
+- **Push notifications** (`docs/phone/push.md`): the server pushes every inbox item through Firebase Cloud Messaging.
   The app keeps this install's token in `users/{uid}/devices/{deviceId}` (`DeviceDoc`, `@shared/push`; written again
   when it changes, and deleted at sign-out before signing out), through React Native Firebase's messaging
   (`src/lib/push.ts`); expo-notifications gives the phone's permission, Android's channels (`PUSH_CHANNELS`) and the
@@ -309,4 +309,4 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   (`src/state/PushProvider.tsx`). The app asks once after sign-in, saying what notifications bring (`pushReason`), and
   More → Notifications turns them on later: never a condition for using the app (Apple's guideline 4.5.4). The demo
   academy pushes nothing, so the app registers nothing there. The iPhone Simulator gets no token (try taps with
-  `xcrun simctl push`, docs/running-the-apps.md).
+  `xcrun simctl push`, docs/phone/running-the-apps.md).

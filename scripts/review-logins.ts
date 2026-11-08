@@ -1,8 +1,8 @@
 /**
- * The logins for Apple's and Google's reviewers (docs/store/review-notes.md, "The review logins"): password sign-ins with
- * confirmed emails for sample people in production, so a reviewer sees only made-up students. One for each kind of
- * account the app has: the office (the sample manager, an admin), a coach and a parent; and a student kept for trying
- * "Delete my account" without breaking the others.
+ * The logins for Apple's and Google's reviewers (docs/publishing/store/review-notes.md, "The review logins"): password
+ * sign-ins with confirmed emails for sample people in production, so a reviewer sees only made-up students. One for
+ * each kind of account the app has: the office (the sample manager, an admin), a coach and a parent; and a student kept
+ * for trying "Delete my account" without breaking the others.
  *
  * Their passwords are made here once and kept in mobile/.publish/review-logins.json (git-ignored, printed nowhere).
  * Run it again at any time, after a reviewer deletes an account for instance: every login comes back with the same

@@ -2,7 +2,7 @@ node_modules/
 .expo/
 android/
 ios/
-# The kiosk's signing key and its passwords: never in git (docs/kiosk.md).
+# The kiosk's signing key and its passwords: never in git (docs/kiosk/).
 .publish/
 *.apk
 dist/

@@ -10,7 +10,7 @@ listed below, with two differences: the coach's to-do drops "classes waiting for
 class with no coach in is the office's to sort out), and the website's `classViews`, `cellsOf`, `coachColor` and its
 check for classes left with no coach in moved to `shared/` (`classesLeftUncovered`, `noCoachWarning`), so the phone and
 the website use the same code. Still to do: the App Store update, when Goo says (its What's New is in
-`docs/store/listing.md`), then `npx tsx scripts/lead-coach.ts --clear`.
+`docs/publishing/store/listing.md`), then `npx tsx scripts/lead-coach.ts --clear`.
 
 ## What changed
 
@@ -102,7 +102,7 @@ Everything the phone groups by coach today. These are the places that read `coac
 
 - The practice copy (the emulators) has sample data in the new shape: classes like the academy's week (Monday 4:30,
   6 and 7 PM, and so on), six seats each, make-ups, practice and trials, and who's in each day (Monday three coaches
-  from 4 PM, one leaving at 6). `npm run iphone:sim` seeds it (`docs/running-the-apps.md`). Try things there:
+  from 4 PM, one leaving at 6). `npm run iphone:sim` seeds it (`docs/phone/running-the-apps.md`). Try things there:
   production holds real people now, and its only extra account is the App Store's review login (an admin).
 - The website on the same emulators shows the same week: `npm run dev:emulators`, then the Schedule page.
 - Checks, as CI runs them: `npm --prefix mobile run typecheck` and `npm --prefix mobile run lint`. Also run
@@ -114,7 +114,7 @@ Everything the phone groups by coach today. These are the places that read `coac
 - Branch from `main` (the website's side is merged). Open a pull request.
 - When the update is out, the website's last step is `npx tsx scripts/lead-coach.ts --clear` (`docs/TODO.md`).
 - The update's App Store review: the review login is now an admin with the academy's real data, the only account
-  (`docs/store/review-notes.md`); say in the notes what changed.
+  (`docs/publishing/store/review-notes.md`); say in the notes what changed.
 - Don't upload a build to App Store Connect or Google Play: 1.0 is in Apple's review. The update goes up later, when
   Goo says.
 
@@ -122,10 +122,10 @@ Everything the phone groups by coach today. These are the places that read `coac
 
 ```text
 Pull the latest main (git checkout main; git pull) and make a new branch from it, feat/mobile-classes. Read
-CLAUDE.md, mobile/AGENTS.md, docs/DECISIONS.md §21 and docs/mobile-classes.md: the website now has classes taught
+CLAUDE.md, mobile/AGENTS.md, docs/DECISIONS.md §21 and docs/phone/classes.md: the website now has classes taught
 together (a class is its own record, every coach in at its time teaches it, coaches see every class), it's live with
 the academy's real data, and the phone app (mobile/) still groups classes by one coach. Bring the phone app to the
-new model, screen by screen, as docs/mobile-classes.md lists: the staff tabs (Home, Schedule, a class, a coach, a
+new model, screen by screen, as docs/phone/classes.md lists: the staff tabs (Home, Schedule, a class, a coach, a
 student, Scan, Pay), the coach's to-do and Availability, and the family tabs. Never read a seat's coachId. Use the
 shared helpers it names, and the level colours in shared/src/schedule/seatColors.ts. Try every changed screen on the
 iPhone simulator with the practice copy (npm run iphone:sim), in light and dark mode, and run npm --prefix mobile run

@@ -52,7 +52,7 @@ end of the matching section, with the date.
 
 ## 3. The fork (2026-10-15, Goo)
 
-- **Plan confirmed** (`docs/HYBERCRM_REVIEW.md`): one fixed academy internally (`branches/skyarc`), no branch or
+- **Plan confirmed** (`docs/reference/hybercrm-review.md`): one fixed academy internally (`branches/skyarc`), no branch or
   Super Admin UI, flat URLs (`/admin`, `/coach`, `/parent`, `/kiosk`, `/trial`), the tutoring features removed.
 - **Copy, then strip:** an exact import of HyberCRM `d659d34` as its own commit, then the Sky Arc changes.
 - **No hidden Super Admin.** HyberTec's support access is an ordinary owner login that the academy can see on the
@@ -243,7 +243,7 @@ Calls made while building §7, within Goo's direction. Goo can overrule any of t
   recommends (below).
 - **Built from HyberCRM's phone app** (Expo SDK 57, React Native Firebase, its scripts): `npm run iphone` puts it on
   the iPhone plugged into the Mac, `npm run iphone:sim` opens it in the iPhone Simulator on the practice copy
-  ([docs/running-the-apps.md](running-the-apps.md)). Tabs: Today · Schedule · Scan · Students · More. It only reads,
+  ([docs/phone/running-the-apps.md](phone/running-the-apps.md)). Tabs: Today · Schedule · Scan · Students · More. It only reads,
   except the Scan tab; coaches, parents and students who sign in see that their part comes later.
 - **Reading a card** happens on the phone, in `shared/src/targets` (the same code the tests run): it finds the card's
   twelve bulls by their black discs, works out which is which from the 3 × 4 grid and the header (whichever way up the
@@ -522,10 +522,10 @@ homepage now … I'll actually test and verify from the live website".
 - **The App Store first, as soon as possible, then updates** (the owner). Android follows once it has been tried on
   Android phones. **TestFlight is optional**: Apple reviews a build without it, so the owner uses it only to try a build
   first. The owner uploads and submits; Claude Code prepares everything else, and runs the upload only when asked.
-- **The guides**: `docs/publishing.md` is the map ("should be just a summary to navigate which one to follow"), with
+- **The guides**: `docs/publishing/README.md` is the map ("should be just a summary to navigate which one to follow"), with
   step-by-step guides and their links in `docs/publishing/`: `apple/` (`app-store.md`, `testflight.md`, and
   `rules.md`, the reasons behind the answers), `google-play/` (`testing.md`, `production.md`) and `updates.md`. The
-  texts to paste stay in `docs/store/`.
+  texts to paste stay in `docs/publishing/store/`.
 - **Screenshots from the owner's iPhone** ("can't i just take screenshot from my iphone and just use that?"): eight of
   them, the families' first (a progress report, its target, Scores, Home), then the office's (Home, Schedule, Scan,
   Students). At 1179 × 2556 they are the 6.3-inch size Apple now requires; a 6.9-inch copy waits in case App Store
@@ -626,7 +626,7 @@ modern, professional", without changing much more.
 - **Not asked** (Goo): the manager answered well twice, so the four students missing from the spreadsheet come in
   without parents, and the academy owner's sign-in email waits for access (A17, A18 dropped). The office fills both
   in from the website.
-- **The phone app changes in its own session** (Goo's MacBook Pro), from `docs/mobile-classes.md`. No second App Store
+- **The phone app changes in its own session** (Goo's MacBook Pro), from `docs/phone/classes.md`. No second App Store
   submission while 1.0 is in review: the change ships as an update afterwards.
 - **When it goes live:** Goo merged it on 2026-10-26 and moved the real data in the same day, during Apple's review
   of 1.0: Apple doesn't check whether data is real, and Goo chose to let the review account, an admin, see the
@@ -681,7 +681,7 @@ first presentation.
 ## 23. The second meeting with the manager (2026-10-27), and Goo's picks (2026-10-28)
 
 The manager saw the website, the portal, the kiosk and the phone app, and asked for changes; the academy will start
-using the app once the stores approve it. Every task is in [`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md), by phase,
+using the app once the stores approve it. Every task is in [`meetings/meeting-2-feedback.md`](meetings/meeting-2-feedback.md), by phase,
 ticked as its pull request is merged (the full notes, with names and pay, are in the private notes' `meetings/`). The phone app is
 the main product: families do everything they need there, without calling or texting the academy.
 
@@ -691,7 +691,7 @@ the main product: families do everything they need there, without calling or tex
   A student who doesn't show up still gets a makeup; missing that makeup too loses it (`S5`).
 - **Everyone is notified** of what concerns them (cancellations, changes, requests, decisions, new scores and reports,
   announcements), with switches per person and push on the phone (`S4`, `P13`, `M3`, `M4`). Goo started the phone's
-  push early on the MacBook Pro (`docs/mobile-push.md`): the server already pushes every notice.
+  push early on the MacBook Pro (`docs/phone/push.md`): the server already pushes every notice.
 - **Coaches' availability:** the lock is 7 days (the notice period becomes 7 too); inside it coaches can add time,
   with an undo, but not remove it; the admin can always change any day (`C1`–`C3`).
 - **Pay: one rate, from the kiosk only** (`K1`–`K6`): no admin rate; paid time starts 30 minutes before the coach's first
@@ -984,7 +984,7 @@ Goo's asks after using the website. All of it is the website's: the phone app do
 ## 30. The third meeting with the manager (2026-11-02)
 
 Goo showed the manager the competition scan, comparisons, the parent view, Settings and progress reports, and together
-they loaded the academy's past results. The tasks and their ticks: [`MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md).
+they loaded the academy's past results. The tasks and their ticks: [`meetings/meeting-3-feedback.md`](meetings/meeting-3-feedback.md).
 
 - **The academy uses the app from now on.** Every past result is in (SIUS PDFs through the Drive, paper targets and
   competition sheets through the phone), so nothing more is imported. The manager marks the past weeks' attendance
@@ -1011,7 +1011,7 @@ they loaded the academy's past results. The tasks and their ticks: [`MEETING3_FE
 
 ## 31. Signing up in the app, and the contract before using it (Goo, 2026-11-03)
 
-Goo's answers to the sign-up proposal (`CT1`, [`MEETING3_FEEDBACK.md`](MEETING3_FEEDBACK.md)), and what was built from
+Goo's answers to the sign-up proposal (`CT1`, [`meetings/meeting-3-feedback.md`](meetings/meeting-3-feedback.md)), and what was built from
 them (`CT2`).
 
 - **The email on file links a new account**, with "Ask the academy" behind it (Goo's pick of the proposal's

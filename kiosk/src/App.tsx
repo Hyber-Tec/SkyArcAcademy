@@ -12,7 +12,7 @@ import { LOGO_BLACK, LOGO_RATIO, LOGO_WHITE } from "./brand";
 import { isSetupPin, now, punch, register, start, sync, unregister, useKiosk, view, whoIs } from "./store";
 
 /**
- * Sky Arc Kiosk: the front desk's time clock (docs/kiosk.md). The website's kiosk, made a tablet app: a coach taps,
+ * Sky Arc Kiosk: the front desk's time clock (docs/kiosk/). The website's kiosk, made a tablet app: a coach taps,
  * types their PIN and clocks in or out. It keeps the screen on and bright, hides Android's bars, and works the same
  * without the internet: what it records waits on the tablet and goes to the academy once it's back.
  */

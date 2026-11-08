@@ -6,7 +6,7 @@ Written for someone who has never done mobile development and remembers nothing 
 written out, and every step that only a person can do (unlock a phone, tap Trust) says so.
 
 The website needs none of this: GitHub deploys it from `main` (docs/DEPLOY.md), and you open it at
-https://skyarcacademy.com. Nothing here goes to TestFlight or the App Store; that's [docs/publishing.md](publishing.md).
+https://skyarcacademy.com. Nothing here goes to TestFlight or the App Store; that's [docs/publishing/README.md](../publishing/README.md).
 
 ## Before anything else: the three things to know
 
@@ -228,7 +228,7 @@ The commands say in plain words what is wrong when they know it, and what to do.
 
 ## Trying notifications
 
-Push notifications (`docs/mobile-push.md`) come from the server through Firebase Cloud Messaging, so where they can be
+Push notifications (`docs/phone/push.md`) come from the server through Firebase Cloud Messaging, so where they can be
 tried depends on the copy and the device:
 
 - **The practice copy** gets none (its Firebase files carry no keys): More → Notifications says so. The app's question
@@ -246,7 +246,7 @@ tried depends on the copy and the device:
   ```
 
 - **The Android emulator on the real Sky Arc** (`npm run android:sim:live`) and **a real phone** get a token and real
-  pushes. An iPhone needs Apple's push key in Firebase first (`docs/mobile-push.md`, "What Goo does").
+  pushes. An iPhone needs Apple's push key in Firebase first (`docs/phone/push.md`, "What Goo does").
 - **The demo academy** sends no notifications: try them with an account of the real academy.
 
 ## What a simulator cannot do
@@ -287,8 +287,8 @@ If the Firebase CLI cannot be used, the two Firebase files can be downloaded by 
 
 | | |
 | --- | --- |
-| `mobile/` | The app's code. How it is built: [mobile/README.md](../mobile/README.md). |
-| `scripts/phone.mjs` | The commands above. `scripts/publish.mjs`: the publishing commands ([docs/publishing.md](publishing.md)); `scripts/review-logins.ts`: the stores' reviewers' logins. |
+| `mobile/` | The app's code. How it is built: [mobile/README.md](../../mobile/README.md). |
+| `scripts/phone.mjs` | The commands above. `scripts/publish.mjs`: the publishing commands ([docs/publishing/README.md](../publishing/README.md)); `scripts/review-logins.ts`: the stores' reviewers' logins. |
 | `mobile/release.json` | The version and build number the app shows and the stores get. |
 | `mobile/firebase/GoogleService-Info.plist`, `mobile/firebase/google-services.json` | The skyarcacademy project's Firebase settings for the iPhone and Android apps. Never in git (they hold the project's API key); `npm run phone:setup` downloads them. |
 | `mobile/.expo/practice-login.json` | The practice logins' password, on this Mac only. |

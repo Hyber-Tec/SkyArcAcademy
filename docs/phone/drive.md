@@ -1,6 +1,6 @@
 # The phone app: admin-only Drive folders, and contracts (F4–F6)
 
-What the phone app (`mobile/`) needs after the second meeting's `F4`–`F6` (`docs/MEETING2_FEEDBACK.md`,
+What the phone app (`mobile/`) needs after the second meeting's `F4`–`F6` (`docs/meetings/meeting-2-feedback.md`,
 `docs/DECISIONS.md` §23), for the Claude Code session on Goo's MacBook Pro. The server, the rules and the website are
 done.
 
