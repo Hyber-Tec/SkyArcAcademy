@@ -6,6 +6,17 @@ unless they say how something works from then on.
 
 ## Now
 
+### The two signs for the front desk
+
+From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic sign holders ([DECISIONS.md](DECISIONS.md)
+§39):
+
+- **The contract:** its QR code opens `skyarcacademy.com/contract`, where a parent asks for each child's contract. The
+  office is told, sends it from Settings → Enrollment contract (or Home's "families waiting for a contract"), and it
+  opens on the parent's phone, filled in from what they typed.
+- **The app:** its QR code opens `skyarcacademy.com/get-app?go`, which sends an iPhone to the App Store and an Android
+  phone to Google Play.
+
 ### Coaches' kiosk PINs
 
 None was set on 2026-11-07. On the website: Employees → Directory → the coach → **Kiosk PIN** → 4 digits → Set PIN.

@@ -5,6 +5,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Now
 
+- [ ] **The two signs for the front desk:** print Claude Code's PDFs (the contract and the app), letter size or 5 × 7,
+  for the acrylic holders. Then a parent scans one to ask for a contract, or to get the app
 - [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
   tablet until then
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
@@ -69,6 +71,10 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-08 · Contracts asked for from the academy's sign: the parent asks at /contract, the office sends it from
+  the request, and it opens on their phone filled in ([DECISIONS.md](DECISIONS.md) §39)
+- [x] ✅ 2026-11-08 · The app on the website: /get-app, a band on the homepage, the stores' badges in the footer, and one
+  link that opens each phone's store (#140)
 - [x] ✅ 2026-11-08 · A student's own hours: drag their card past the class (it holds a seat in the next one), and
   canceled students on a line under the seats (Goo's picks, A and 1; [DECISIONS.md](DECISIONS.md) §38). The phone
   app shows them in its next build
