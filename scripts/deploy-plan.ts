@@ -25,6 +25,7 @@ import {
   DEPLOY_JOB,
   EVERYTHING,
   FUNCTIONS_BUILD,
+  FUNCTIONS_SOURCES,
   type FunctionCode,
   type Plan,
   type Target,
@@ -76,10 +77,10 @@ async function lastDeploy(): Promise<{ sha: string } | { everything: string }> {
   return { everything: 'no earlier deploy found' }
 }
 
-/** A commit's functions code and shared code, unpacked in a folder of their own. */
+/** What a commit's functions are built from (FUNCTIONS_SOURCES), unpacked in a folder of their own. */
 function unpack(sha: string): string {
   const dir = mkdtempSync(path.join(tmpdir(), `deploy-plan-${sha.slice(0, 7)}-`))
-  const archive = git(['archive', '--format=tar', sha, 'functions/src', 'functions/tsconfig.json', 'shared/src'])
+  const archive = git(['archive', '--format=tar', sha, ...FUNCTIONS_SOURCES])
   if (!archive.ok) throw new Error(`git archive ${sha} failed`)
   const tar = spawnSync('tar', ['-x', '-C', dir], { input: archive.raw })
   if (tar.status !== 0) throw new Error(`tar failed for ${sha}`)
