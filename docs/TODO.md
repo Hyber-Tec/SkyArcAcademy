@@ -1,17 +1,17 @@
 # To-do
 
 Goo's list, short on purpose. The details for each line are in [TODO-notes.md](TODO-notes.md), under the same title.
-When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-07.
+When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-08.
 
 ## Now
 
 - [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
   tablet until then
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
-- [ ] **Review [#128](https://github.com/Hyber-Tec/SkyArcAcademy/pull/128):** on the families' Scores page, each result
-  opens under its own row
-- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06): it goes live by itself. If Google writes, send the
-  message to Claude Code
+- [ ] **Read the terms of service** with the manager ([#134](https://github.com/Hyber-Tec/SkyArcAcademy/pull/134),
+  screenshots sent 2026-11-08). Say "merge the terms" and Claude Code puts them live
+- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-08): it goes
+  live by itself. If Google writes, send the message to Claude Code
 
 ## The manager
 
@@ -29,15 +29,14 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 - [ ] **Email from info@:** Goo puts the manager's app password in, then Claude Code switches the sender
 - [ ] **Invite the coaches** from the website (after the email)
-- [ ] **Terms of service:** Claude Code drafts the website's page from the academy's old one; Goo and the manager read it
 - [ ] **Clear the lead coach** from the seats (Claude Code, from 2026-11-13)
 - [ ] **The stores' links to skyarcacademy.com:** Google Play once 1.1.0 is approved, the App Store with the next version
 - [ ] **Google's sign-in window says skyarcacademy.com** (optional: one setting for Goo, then Claude Code)
 
 ## Questions for Goo
 
-- [ ] **Card photos from the Drive:** families see the photo without its scores; save a scored copy, as the scanner does?
-  (screenshots sent 2026-11-07)
+- [ ] **Students in the private notes:** the academy's answers of October name about 20 students, with levels and
+  grades. Keep them in the private repository, or on the Mac mini only?
 - [ ] **"To check" on the Scores page:** add a "Looks right" button that clears the mark?
 
 ## Later
@@ -72,9 +71,15 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-08 · The private notes in a private repository of their own, on both Macs, brought up to date when a
+  session starts (#131); the Mac mini's notes are in it
+- [x] ✅ 2026-11-08 · The docs in folders, with a map: meetings, phone, kiosk, publishing, reference (#132)
+- [x] ✅ 2026-11-08 · Deploys send only the functions that changed, again (#133)
+- [x] ✅ 2026-11-08 · Card photos added from the Drive are filed straightened, so families and students see each bull's
+  score, read-only (Goo's pick; #130), live
 - [x] ✅ 2026-11-07 · The kiosk fix for a forgotten clock-out while the tablet was offline (#125), live
 - [x] ✅ 2026-11-07 · The website's lines wrap between words, as on the phone (#126), live
-- [x] ✅ 2026-11-07 · Families' Scores page: kept as it is, with results opening under their row (Goo; #128)
+- [x] ✅ 2026-11-07 · Families' Scores page: kept as it is, with results opening under their row (Goo; #128), live
 - [x] ✅ 2026-11-07 · Google Search Console: skyarcacademy.com verified (Goo)
 - [x] ✅ 2026-11-07 · A private copy of the old website's pages and photos (docs/internal, before it's cancelled)
 - [x] ✅ 2026-11-07 · The contract in Korean, live in the academy: parents read it in Korean, the English counts
