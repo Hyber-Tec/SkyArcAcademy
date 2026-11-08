@@ -32,7 +32,7 @@ const ms = (t: TimestampLike | null | undefined) => (t ? t.toDate().getTime() : 
 const errorText = (e: unknown, fallback: string) => (e as { message?: string }).message?.replace(/^.*?: /, '') || fallback
 
 /**
- * The kiosk tablets (functions/src/kiosk.ts, docs/kiosk.md): the setup PIN that registers one, and the tablets
+ * The kiosk tablets (functions/src/kiosk.ts, docs/kiosk/): the setup PIN that registers one, and the tablets
  * registered, with when each was last heard from. A tablet keeps working without the internet and sends its clock-ins
  * when it's back, so "offline" here means its newest clock-ins may not be in yet.
  */

@@ -1,7 +1,7 @@
 # Testing the phone app on your own phones
 
 How to try every part of the phone app on an iPhone and an Android phone, with made-up data, before the academy's past
-data comes in (`S9`, `D1`–`D3` in [MEETING2_FEEDBACK.md](MEETING2_FEEDBACK.md)). The app is the same on both phones, so
+data comes in (`S9`, `D1`–`D3` in [meetings/meeting-2-feedback.md](../meetings/meeting-2-feedback.md)). The app is the same on both phones, so
 one checklist covers both. When something looks wrong, tell Claude Code (the last section says what to send).
 
 ## 1. Get the newest app
@@ -49,7 +49,7 @@ nothing you do there reaches a real family.
   until someone makes it again.
 
 **The demo sends no push notifications and no emails.** Its notices still arrive, in each person's inbox (Home's bell).
-A push to a phone needs the real academy, and on iPhone Apple's push key in Firebase ([mobile-push.md](mobile-push.md)).
+A push to a phone needs the real academy, and on iPhone Apple's push key in Firebase ([push.md](push.md)).
 
 ## 3. What's on the website, not the phone
 

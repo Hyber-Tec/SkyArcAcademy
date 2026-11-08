@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The kiosk tablet app (kiosk/, docs/kiosk.md): builds its install file (an APK) and installs it on a tablet over USB.
+// The kiosk tablet app (kiosk/, docs/kiosk/): builds its install file (an APK) and installs it on a tablet over USB.
 //
 //   npm run kiosk:build                 the real academy's app → kiosk/dist/SkyArcKiosk-<version>.apk
 //   npm run kiosk:build -- --practice   the practice copy's (the emulators, from the Android emulator)
@@ -61,7 +61,7 @@ function install() {
   const serial = args.find((a) => a.startsWith("--serial="))?.slice(9);
   const devices = execFileSync(adb, ["devices"], { encoding: "utf8" }).split("\n").slice(1).filter((l) => /\tdevice$/.test(l)).map((l) => l.split("\t")[0]);
   const target = serial ?? (devices.length === 1 ? devices[0] : null);
-  if (!target) throw new Error(devices.length ? `More than one device: add --serial=<one of ${devices.join(", ")}>` : "No tablet found: plug it in with USB debugging on (docs/kiosk.md).");
+  if (!target) throw new Error(devices.length ? `More than one device: add --serial=<one of ${devices.join(", ")}>` : "No tablet found: plug it in with USB debugging on (docs/kiosk/).");
   // -r keeps the app's data: its registration and any clock-ins not sent yet.
   run(adb, ["-s", target, "install", "-r", newest]);
   console.log(`Installed ${path.basename(newest)} on ${target}.`);

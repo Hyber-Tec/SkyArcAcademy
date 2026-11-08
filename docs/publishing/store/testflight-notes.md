@@ -1,6 +1,6 @@
 # TestFlight: the test information and "What to Test"
 
-What to paste into App Store Connect if you use TestFlight ([apple/testflight.md](../publishing/apple/testflight.md));
+What to paste into App Store Connect if you use TestFlight ([apple/testflight.md](../apple/testflight.md));
 it's optional. Testers see both texts in the TestFlight app.
 
 ## Test Information (needed before inviting external testers)

@@ -38,7 +38,7 @@ work started: *already done*, *small change* or *new work*.
    tune the scoring; never import them into the live system automatically, and never commit them. Goo enters them by
    hand, one by one, through the app (`P2`).
 9. **The phone app is in the stores' review.** Phone changes need a new build; follow
-   [`docs/publishing/updates.md`](publishing/updates.md).
+   [`docs/publishing/updates.md`](../publishing/updates.md).
 10. If something is unclear, **ask Goo**. Don't guess.
 
 ---
@@ -127,7 +127,7 @@ depend on (the data model, database and storage rules, Cloud Functions, notifica
 - Merge one pull request at a time, and pull `main` again after each merge.
 
 To start a phase, paste this into Claude Code on the right computer:
-> *"Read `docs/MEETING2_FEEDBACK.md` and do **Phase N**. Pull the latest from GitHub first and follow Section 0."*
+> *"Read `docs/meetings/meeting-2-feedback.md` and do **Phase N**. Pull the latest from GitHub first and follow Section 0."*
 
 ---
 
@@ -219,7 +219,7 @@ To start a phase, paste this into Claude Code on the right computer:
   notification settings come in Phase 3 (`M3`, `M4`). (#46)
   - *Plan:* **New work:** coaches' notices exist (announcements, class changes). New: notices for families and the
     office (cancellations, requests, decisions, class changes, new scores), a bell for them on the website, and each
-    person's switches. The phone's push is `M3`, started early on the MacBook Pro (`docs/mobile-push.md`).
+    person's switches. The phone's push is `M3`, started early on the MacBook Pro (`docs/phone/push.md`).
 - ✅ **S5. No-show (ghosting) policy.** A student who doesn't show up without telling anyone **still gets a makeup**. If
   they **also miss that makeup**, they **lose the credit**. Track it and show it clearly to the admin. (#46)
   - *Plan:* **Small change:** makeups owed count canceled seats only; no-shows join them, and a missed makeup loses its
@@ -283,7 +283,7 @@ To start a phase, paste this into Claude Code on the right computer:
   - **The hole as it really is:** a pellet tears a hole about 4.2 mm across, not 4.5, so the pellet's circle reached
     lines the real hole doesn't, where the coaches saw the lower ring. Each hole is measured on the photo; one that
     can't be read cleanly takes the card's usual hole, and the pellet's size when too few holes could be read. The
-    website's card page draws each hole at its size (the phone's: `docs/mobile-scores.md`).
+    website's card page draws each hole at its size (the phone's: `docs/phone/scores.md`).
   - Paper scores are **whole numbers only**. Rings run from **10 (centre) down to 1**. A card the coach already scored
     keeps the written score (`P4`).
   - *Done (#68):* on the manager's 36 hand-scored cards (local only), the app's totals went from 2.6 points per 10
@@ -328,7 +328,7 @@ To start a phase, paste this into Claude Code on the right computer:
     Google's text reader (Goo's pick, 2026-10-28), and the admin checks them before saving.
   - *Since (Goo, 2026-10-29):* a competition shows as its match, series by series, each shot placed from the sheet's
     target pictures and played back, and reports compare each match with the one before (#89, #93; DECISIONS §27).
-  - *Third meeting (2026-11-02):* it works; the follow-ups are [`CP1`–`CP5`](MEETING3_FEEDBACK.md), and competition
+  - *Third meeting (2026-11-02):* it works; the follow-ups are [`CP1`–`CP5`](meeting-3-feedback.md), and competition
     PDFs come later (`L-CP`).
 - ✅ **P8. Evaluations.** Every student was re-evaluated in **all three positions** in late August / early September
   (stapled packets with notes). An **Evaluation** type (or tag) for these: they're the most valuable history. (#48)
@@ -349,7 +349,7 @@ To start a phase, paste this into Claude Code on the right computer:
   aliases, so name matching (PDFs, scans) and display both work. (#48)
   - *Plan:* **New work:** a preferred name and other names, used by the PDF matching and in searches.
   - *Third meeting (2026-11-02):* the manager filled in every student's other names; a results sheet's name finds the
-    student by them ([`CP1`](MEETING3_FEEDBACK.md)).
+    student by them ([`CP1`](meeting-3-feedback.md)).
 - ✅ **P13. A new score or report notifies the family.** The manager: "Every time I upload something: hey, there's
   been a new file." Build the event here; push comes in Phase 3. (#46)
   - *Plan:* **Already done** for reports (a shared report notifies the family). **New work** for scores.
@@ -386,7 +386,7 @@ To start a phase, paste this into Claude Code on the right computer:
     types their name and signs with a finger; no app or account needed. The signed PDF goes to the Contracts folder
     (`F5`). The text waits for the blank contract.
   - *Third meeting (2026-11-02):* parents will sign in the app right after signing up: the sign-up flow first
-    ([`CT1`](MEETING3_FEEDBACK.md)), then the signing in the app (`CT2`), with `F1`'s two parents and `F5`'s access.
+    ([`CT1`](meeting-3-feedback.md)), then the signing in the app (`CT2`), with `F1`'s two parents and `F5`'s access.
 - ✅ **F5. Contracts are admin-only.** They hold tuition and other sensitive information. They're stored in the Drive,
   **visible only to the manager and owners, not coaches.** (#53)
   - *Plan:* **New work**, with `F6`: a Contracts folder only owners and admins see.
@@ -405,7 +405,7 @@ To start a phase, paste this into Claude Code on the right computer:
 - ✅ **S8. The admin's request inbox on the web:** one clear place (plus a badge on Home and the schedule) to approve
   or reject family requests. (#46)
   - *Plan:* **New work.**
-- ✅ **S9. Verify the imported schedule.** (not needed, the third meeting, 2026-11-02: the manager fixes the past weeks himself by marking attendance, [`AT1`](MEETING3_FEEDBACK.md)) Some entries looked wrong in the demo (for example, a student marked
+- ✅ **S9. Verify the imported schedule.** (not needed, the third meeting, 2026-11-02: the manager fixes the past weeks himself by marking attendance, [`AT1`](meeting-3-feedback.md)) Some entries looked wrong in the demo (for example, a student marked
   canceled who actually came). Compare against the **latest schedule sheet** from the manager and fix the differences.
   *(Needs the latest sheet.)*
   - *Plan:* Waits for the latest sheet.
@@ -451,11 +451,11 @@ from the app, without calling or texting the academy.
 - ✅ **M3. Push notifications** for every event from `S4` and `P13`: cancellations, changes, requests, approvals and
   rejections, new scores, new reports, announcements, for parents, students, coaches and admins. (#45)
   - *Plan:* **Started early** (Goo, 2026-10-28): the server already pushes every notice; the phone registers.
-    `docs/mobile-push.md`.
+    `docs/phone/push.md`.
   - *Done (#45):* the phone keeps its token, asks once after sign-in, shows a push while open as a toast, opens a
     tapped one (and marks it read), and keeps the badge; More → Notifications for every role. The notices `S4` and
     `P13` add reach phones by themselves: their taps go in `appTargetOf`, their words in `pushReason`. Still: Apple's
-    push key in Firebase (Goo, `docs/mobile-push.md`), then a push to a real iPhone.
+    push key in Firebase (Goo, `docs/phone/push.md`), then a push to a real iPhone.
 - ✅ **M4. Notification settings in the app, for every role:** a list of notification types each person turns on or
   off, so nobody is flooded. Parents, students, coaches and admins each see the types that apply to them. (#58)
   - *Plan:* **Coaches already have four switches**; the rest come with `S4`.
@@ -479,7 +479,7 @@ from the app, without calling or texting the academy.
   - *Plan:* **Already done** for the lock; new: add-only with Undo (`C2`).
   - *Done (#54):* inside the lock a coach's day sheet keeps the saved times and adds new ones ("Add time"), with Undo
     for 10 seconds, as the website does; past days stay read-only. With it, the phone's pay follows `K1`–`K6`
-    (`docs/mobile-pay.md`): one hourly rate, paid time from the kiosk as the shared rule says, and extra time with its
+    (`docs/phone/pay.md`): one hourly rate, paid time from the kiosk as the shared rule says, and extra time with its
     note.
 - ✅ **M8. Posts in the app:** the rich text and images from `N1`/`N2` display correctly. (#75)
   - *Plan:* **Already done:** the phone draws the editor's rich text and pictures.
@@ -496,9 +496,9 @@ from the app, without calling or texting the academy.
 
 These wait until everything else is ready, some even after launch.
 
-- ✅ **L1. Korean + English** (the third meeting's [`L-LG`](MEETING3_FEEDBACK.md), #115) across the parent portal, the phone app and the website. Many parents don't speak
+- ✅ **L1. Korean + English** (the third meeting's [`L-LG`](meeting-3-feedback.md), #115) across the parent portal, the phone app and the website. Many parents don't speak
   English, so it matters: done in one go on 2026-11-05, for what parents see (`docs/DECISIONS.md` §36).
-- [ ] **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](MEETING3_FEEDBACK.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
+- [ ] **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](meeting-3-feedback.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
   **in person with the manager** (domain and email access). Until then, invitation emails may land in spam.
 - [ ] **W1. A parent how-to video** on the website and app, recorded once both are final.
 - [ ] **W2. Tuition** on the website, if the manager asks.

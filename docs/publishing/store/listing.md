@@ -1,7 +1,7 @@
 # Store listing texts
 
-What to paste into App Store Connect ([apple/app-store.md](../publishing/apple/app-store.md), steps 11–20) and the Play
-Console ([google-play/production.md](../publishing/google-play/production.md)). Both stores count characters; each
+What to paste into App Store Connect ([apple/app-store.md](../apple/app-store.md), steps 11–20) and the Play
+Console ([google-play/production.md](../google-play/production.md)). Both stores count characters; each
 limit is given, and every text fits. Written on 2026-10-20 for the app as it is (families, coaches and the office),
 and brought up to date on 2026-10-26 for the update with classes taught together.
 Before pasting a later version, read each paragraph against the app that day: the stores reject a description that

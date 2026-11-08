@@ -22,7 +22,7 @@ import { useBranch } from "./BranchProvider";
 const ASKED_KEY = "skyarc.push-asked";
 
 /**
- * What the server tells the person, wherever they are in the app (docs/mobile-push.md), adapted from HyberCRM's phone
+ * What the server tells the person, wherever they are in the app (docs/phone/push.md), adapted from HyberCRM's phone
  * app:
  * - this phone's push token, kept on their record (again when the app comes back to the front, and when Firebase
  *   replaces it), so their notices reach the phone with the app closed;

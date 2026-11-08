@@ -1,7 +1,7 @@
 /**
  * Synthetic SIUS "Results" PDFs: the same page layout, fonts, arrows and metadata as the PDFs the academy's SIUS
- * computers print (measured from the samples in docs/HYBERCRM_REVIEW.md §8.1), with made-up shots. They feed the
- * sample data and the tests, so no real result is ever committed or uploaded.
+ * computers print (measured from the samples in docs/reference/hybercrm-review.md §8.1), with made-up shots. They feed
+ * the sample data and the tests, so no real result is ever committed or uploaded.
  */
 import { deflateSync } from 'node:zlib'
 import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, PDFName, PDFString, StandardFonts, rgb } from 'pdf-lib'

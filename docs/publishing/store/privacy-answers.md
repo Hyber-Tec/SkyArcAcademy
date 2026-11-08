@@ -1,7 +1,7 @@
 # Privacy questionnaires: the answers
 
-What the phone app collects, as Apple's **App Privacy** section ([apple/app-store.md](../publishing/apple/app-store.md),
-step 21) and Google's **Data safety** form ([google-play/production.md](../publishing/google-play/production.md), step
+What the phone app collects, as Apple's **App Privacy** section ([apple/app-store.md](../apple/app-store.md),
+step 21) and Google's **Data safety** form ([google-play/production.md](../google-play/production.md), step
 6) ask for it. Both must agree with the privacy policy (https://skyarcacademy.com/privacy). If the app starts
 collecting something new, change these, the policy and the stores' forms together.
 
@@ -103,12 +103,12 @@ emails, account ids and what they opened; the camera and the photos are the staf
 with notifications). Google's Data safety has the **account creation methods** below (username and password, and
 OAuth), with the delete account link. Everything else 1.1.0 needs was declared already.
 
-- **Push notifications** (built 2026-10-28, `docs/mobile-push.md`): in the answers above. Update Apple's App Privacy
+- **Push notifications** (built 2026-10-28, `docs/phone/push.md`): in the answers above. Update Apple's App Privacy
   (Identifiers → **Device ID**) when submitting the first build that has them; Google's **Device or other IDs** already
   covers the token. The privacy policy already says it ("If you allow notifications on a device, we keep a
   notification token for it").
 - **1.1.0: accounts made in the app, Sign in with Apple, and the enrollment contract** (2026-11-03,
-  [`DECISIONS.md`](../DECISIONS.md) §31; the privacy policy says so since that day). Update both stores' forms when
+  [`DECISIONS.md`](../../DECISIONS.md) §31; the privacy policy says so since that day). Update both stores' forms when
   submitting 1.1.0 (not before: 1.0.0 has none of it):
   - **New data:** a parent's signature on the enrollment contract (the name they type, parent or guardian, the signature
     drawn with a finger, the date and time, the network address, the phone's model and the app's version) and what they

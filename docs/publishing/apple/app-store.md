@@ -23,8 +23,8 @@ parts 4 and 5.
 - **The website** shows the privacy policy without a "Draft" banner and the Help page with the academy's email and
   phone: https://skyarcacademy.com/privacy and https://skyarcacademy.com/help (both live once this round's
   pull request is merged).
-- **The texts to paste**, in [docs/store/](../../store/): [listing.md](../../store/listing.md) (the store page),
-  [review-notes.md](../../store/review-notes.md) (for the reviewer), [privacy-answers.md](../../store/privacy-answers.md)
+- **The texts to paste**, in [docs/publishing/store/](../store/): [listing.md](../store/listing.md) (the store page),
+  [review-notes.md](../store/review-notes.md) (for the reviewer), [privacy-answers.md](../store/privacy-answers.md)
   (the privacy questions).
 
 ## Part 1: The academy's permission
@@ -125,7 +125,7 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
     **`ios-6.9-inch`** there (the same pictures at 1290 × 2796). No iPad screenshots: the app is iPhone-only.
     **App Previews** (videos) are optional: leave them empty. Apple's sizes:
     https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
-12. **The texts.** From [listing.md](../../store/listing.md), "App Store": **Promotional Text**, **Description**,
+12. **The texts.** From [listing.md](../store/listing.md), "App Store": **Promotional Text**, **Description**,
     **Keywords**, **Support URL**, **Marketing URL**.
 13. **Version and copyright.** Version: `1.0.0` (it must match the build). Copyright: `2026 HyberTec LLC`.
 14. **Build.** **Add Build** (or **+** under Build) → the build from step 8 → **Done**.
@@ -133,7 +133,7 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
     **office** login from `review-logins.json`.
 16. **Contact Information:** your first and last name, your phone in international format (`+1 404 555 0100`: Apple
     has required the `+1` since August 2026), your email.
-17. **Notes:** the notes from [review-notes.md](../../store/review-notes.md), with the four logins filled in from
+17. **Notes:** the notes from [review-notes.md](../store/review-notes.md), with the four logins filled in from
     `review-logins.json` and the phones you tried the app on. **Attachment:** the academy's permission (step 1).
 18. **Version Release:** **Manually release this version** (you choose the moment after approval).
 19. **Save** (top right).
@@ -141,16 +141,16 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
 ## Part 6: The app's information
 
 20. **App Information** (left sidebar):
-    - **Subtitle:** `Classes, scores and progress` ([listing.md](../../store/listing.md)).
+    - **Subtitle:** `Classes, scores and progress` ([listing.md](../store/listing.md)).
     - **Category:** Primary **Sports**, Secondary **Education**.
     - **Content Rights:** **Edit** → the app contains third-party content (the academy's name, logo and records) → tick
       that you have the rights to use it (the academy's permission).
-    - **Age Rating:** **Set Up Age Rating** (or **Edit**) → the answers in [listing.md](../../store/listing.md), "Age
+    - **Age Rating:** **Set Up Age Rating** (or **Edit**) → the answers in [listing.md](../store/listing.md), "Age
       rating". Apple works out **9+**.
     - **Save.**
 21. **App Privacy** (left sidebar):
     - **Privacy Policy:** **Edit** → `https://skyarcacademy.com/privacy` → **Save**.
-    - **Data Collection:** **Get Started** → the answers in [privacy-answers.md](../../store/privacy-answers.md),
+    - **Data Collection:** **Get Started** → the answers in [privacy-answers.md](../store/privacy-answers.md),
       "Apple" → **Publish**.
 22. **Pricing and Availability** (left sidebar):
     - **Price Schedule:** **Add Pricing** → United States, **USD 0.00 (Free)** → **Next** → **Confirm**.
@@ -166,10 +166,10 @@ In the app, left sidebar → **iOS App** → **1.0 Prepare for Submission**.
     **Submit for Review**. App Store Connect says what's missing if anything is; fix it and try again.
 24. **Wait.** The status goes **Waiting for Review** → **In Review** → **Pending Developer Release** (approved), with
     an email at each step. Keep the review login working meanwhile (since 2026-10-26 one admin with the academy's real
-    data: [review-notes.md](../../store/review-notes.md)), and don't upload another build while Apple reviews.
+    data: [review-notes.md](../store/review-notes.md)), and don't upload another build while Apple reviews.
 25. **If Apple rejects it,** the message names a guideline. Reply in the same thread (the app → **App Review** → the
     submission). Replies to the likeliest ones (4.8, 3.2, 5.2.1, 4.2.6 and 4.3) are ready in
-    [review-notes.md](../../store/review-notes.md); for anything else, give the message to Claude Code to draft the
+    [review-notes.md](../store/review-notes.md); for anything else, give the message to Claude Code to draft the
     reply or make the fix.
 26. **Release.** When the status is **Pending Developer Release**: **1.0** → **Release This Version**. Sky Arc shows
     in the App Store within a few hours; searching for it can take a day.

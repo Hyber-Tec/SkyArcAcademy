@@ -1,13 +1,13 @@
 # Notes for the reviewers
 
-What to paste into App Store Connect's **App Review Information** ([apple/app-store.md](../publishing/apple/app-store.md),
+What to paste into App Store Connect's **App Review Information** ([apple/app-store.md](../apple/app-store.md),
 steps 15–17), the replies to send if Apple answers with guideline 4.8 (sign-in), 3.2 (an app for one business) or
 5.2.1, 4.2.6 or 4.3 (who publishes the app), and Google Play's **Sign-in details**. Keep them true: reviewers try what
 the notes say. Checked on 2026-10-20 against Apple's list of what a complete review needs (who the app is for, the
 devices tested, the outside services, a login for each kind of account, regional differences).
 
 > **1.1.0** (submitted 2026-11-06) makes accounts in the app and has Sign in with Apple beside Google
-> ([`DECISIONS.md`](../DECISIONS.md) §31): its notes below say so (the "Accounts" paragraph) instead of 1.0.0's
+> ([`DECISIONS.md`](../../DECISIONS.md) §31): its notes below say so (the "Accounts" paragraph) instead of 1.0.0's
 > exception to guideline 4.8. The review login itself didn't change. 1.0.0's notes, in App Store Connect until then,
 > still described the sample data and four sample logins from before 2026-10-26.
 
@@ -34,7 +34,7 @@ doesn't see it. No line is needed, but say so if Apple asks about features the r
 
 - **Sign-in required:** Yes. **User name:** the office email. **Password:** the office password.
 - **Contact:** your name, phone (`+1 …`) and email.
-- **Attachment:** the academy's written permission ([apple/app-store.md](../publishing/apple/app-store.md), step 1).
+- **Attachment:** the academy's written permission ([apple/app-store.md](../apple/app-store.md), step 1).
 - **Notes** (the box takes 4,000 characters; this text is about 3,700 with the password in, so keep additions short).
   Paste it, then put the password in place of the capitals. 1.1.0's went in on 2026-11-06, tested on an iPhone 15 with
   iOS 27.0.1:
@@ -74,7 +74,7 @@ iPhone 15 with iOS 27.0.1. The app is offered in the United States only and work
 
 From 1.1.0 this doesn't apply: the app offers Sign in with Apple beside Google. The reply below was for 1.0.0, which had
 no sign-up; keep it for the record. If Apple still asks about sign-in, give the message to Claude Code
-([apple/rules.md](../publishing/apple/rules.md#sign-in-with-apple-48)).
+([apple/rules.md](../apple/rules.md#sign-in-with-apple-48)).
 
 ```
 Thank you for the review. Nobody can use Sky Arc without an account Sky Arc Sports Academy has already created: the academy adds the person's email address on its website, and only that address can open the app. The app has no sign-up. Google sign-in and email-and-password sign-in are two ways for that person to prove they own the address the academy added; any other account sees "No access yet" and nothing else (signing in with your own Google account shows this). We believe this falls under guideline 4.8's exception for "an education, enterprise, or business app that requires the user to sign in with an existing education or enterprise account". A sign-in that hides the email address could not open the app either, because access follows the address the academy holds. If you still find another sign-in option necessary, please tell us and we will change the app.
@@ -83,7 +83,7 @@ Thank you for the review. Nobody can use Sky Arc without an account Sky Arc Spor
 ## If Apple answers with guideline 3.2
 
 Apple may find that an app for one academy doesn't belong in public search. Unlisted is for good
-([apple/rules.md](../publishing/apple/rules.md#public-or-unlisted)): decide first. To go unlisted, request it at
+([apple/rules.md](../apple/rules.md#public-or-unlisted)): decide first. To go unlisted, request it at
 https://developer.apple.com/contact/request/unlisted-app/, add this line at the top of the review notes:
 
 ```

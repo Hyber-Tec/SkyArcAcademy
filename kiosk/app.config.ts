@@ -1,7 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 /**
- * Sky Arc Kiosk: the time clock on the front desk's Android tablet (docs/kiosk.md). Installed from a file over USB, never
+ * Sky Arc Kiosk: the time clock on the front desk's Android tablet (docs/kiosk/). Installed from a file over USB, never
  * from a store. It's the tablet's home screen, so it opens by itself after a restart.
  *
  * KIOSK_API: where its server is. Unset, the real academy's Cloud Functions; for the practice copy, the functions

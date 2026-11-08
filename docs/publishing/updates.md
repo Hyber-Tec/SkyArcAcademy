@@ -54,11 +54,11 @@ TestFlight and on Google Play's internal testing, with everything since 1.0.0 (t
 Sign in with Apple, notifications, the enrollment contract on the website, Korean for parents, lines that wrap between
 words). Then:
 
-- **App Store:** version **1.1.0** made in App Store Connect with its What's New ([listing.md](../store/listing.md)),
-  build 12, the review notes for 1.1.0 ([review-notes.md](../store/review-notes.md): the same office login, its
+- **App Store:** version **1.1.0** made in App Store Connect with its What's New ([listing.md](store/listing.md)),
+  build 12, the review notes for 1.1.0 ([review-notes.md](store/review-notes.md): the same office login, its
   password unchanged) and **Automatically release this version**, and **submitted for review**.
 - **Google Play:** **1.1.0 (12)** as a **draft release on the production track**, with its release notes
-  ([listing.md](../store/listing.md)). Google reviews nothing until it's rolled out: the Data safety answers change
+  ([listing.md](store/listing.md)). Google reviews nothing until it's rolled out: the Data safety answers change
   with 1.1.0 and go first. (This app sends every change for review as soon as it's saved, so the API can't hold a
   finished release back; a draft waits.)
 
@@ -67,7 +67,7 @@ words). Then:
 1. **Apple's App Privacy** (App Store Connect → Sky Arc → **App Privacy**): add **Identifiers → Device ID** (linked to
    the user, App Functionality, not tracking): the phone's notification token; 1.0.0 had no notifications. The other
    types 1.1.0 needs (Phone Number, Other User Content, Other Data Types) are ticked already. **Publish.** It changes at
-   any time, without a new review ([privacy-answers.md](../store/privacy-answers.md), "When the app changes").
+   any time, without a new review ([privacy-answers.md](store/privacy-answers.md), "When the app changes").
 2. **Google's Data safety** (Play Console → Sky Arc → **Policy and programs** → **App content** → **Data safety**): **account
    creation methods**: username and password, and OAuth (Google), now made in the app. The data types stay as they are
    (Phone number, Other info and Other user-generated content are declared already). **Save.**
@@ -94,10 +94,10 @@ new developer account). Both review at weekends too, sometimes more slowly.
 ## Keep in mind
 
 - **The review login** must keep working for every review. Since 2026-10-26 it's one admin with the academy's real
-  data (Goo's call, `docs/DECISIONS.md` §21; `docs/store/review-notes.md`). If a reviewer deleted it,
+  data (Goo's call, `docs/DECISIONS.md` §21; `docs/publishing/store/review-notes.md`). If a reviewer deleted it,
   `npx tsx scripts/review-logins.ts --real-data` brings it back with the same password.
 - **A new permission or a new kind of data** (location, notifications, a new form) changes Apple's App Privacy and
-  Google's Data safety answers ([privacy-answers.md](../store/privacy-answers.md)), and the privacy policy. Claude Code
+  Google's Data safety answers ([privacy-answers.md](store/privacy-answers.md)), and the privacy policy. Claude Code
   says so when a change adds one.
 - **Apple's rules move.** Apple has announced that from April 2027 uploads must be built with the iOS 27 SDK (already
   the case) and need iPhone Duo screenshots; Google requires the newest Android target each year (API 36 since August

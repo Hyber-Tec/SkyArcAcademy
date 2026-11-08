@@ -10,7 +10,7 @@ explained how competition sheets work, and they talked about contracts, past att
 was very happy: "This is exactly how I envisioned it."
 
 This file is **both the meeting's notes and the task tracker**, and it continues
-[`MEETING2_FEEDBACK.md`](MEETING2_FEEDBACK.md). The full notes, with names, are in the private notes
+[`meeting-2-feedback.md`](meeting-2-feedback.md). The full notes, with names, are in the private notes
 (`docs/internal/meetings/SkyArc_Meeting3_Notes.md`, git-ignored here): this repository is public, so here people are
 named by role (CLAUDE.md, "Secrets").
 
@@ -23,7 +23,7 @@ started: *already works*, *small change* or *new work*.
 ## 0. Instructions for Claude Code (read first)
 
 1. **Pull the latest `main`** before anything else.
-2. **Read the context files:** `CLAUDE.md`, `SKYARC_PROJECT_BRIEF.md`, this file, `MEETING2_FEEDBACK.md`,
+2. **Read the context files:** `CLAUDE.md`, `SKYARC_PROJECT_BRIEF.md`, this file, `meeting-2-feedback.md`,
    `docs/DECISIONS.md` (§30 records this meeting's decisions) and the code the task touches (website, phone app,
    scanner, Drive, accounts, rules and functions). Check what exists before building.
 3. **One computer this round** (Goo, 2026-11-03): the MacBook Pro does every task, the website's, the server's and the
@@ -155,15 +155,15 @@ started: *already works*, *small change* or *new work*.
     now: the academy's words, unchanged, read on the phone as a page, with the program, the discounts, the initials,
     the student's and the parent's details filled in where the paper has them, then the signature; the signed copy is a
     PDF of it as filled in. The office writes it in Settings → Enrollment contract and publishes it once the manager
-    approves the e-version ([`DECISIONS.md`](DECISIONS.md) §33).
+    approves the e-version ([`DECISIONS.md`](../DECISIONS.md) §33).
   - *Approved (2026-11-05), and sent by the office:* the manager and Goo approved the e-version. Its words are set up
     once and never edited in the app; the office changes only the prices. The office sends each family's contract from
     the student's page (the website or the phone) or the families' list in Settings, with the program it suggests and
     the discounts only it can check. The family sees the price after them, signs in the app, on the website or with the
     QR code at the front desk, and is asked whether to download their copy. The academy's signature fills itself in
-    from the one on file ([`DECISIONS.md`](DECISIONS.md) §34).
+    from the one on file ([`DECISIONS.md`](../DECISIONS.md) §34).
   - *Live (2026-11-05):* each signer gets their copy by email, the manager's name is typed as the academy's signature
-    until his SVG comes, and the demo has families' contracts in every state to try ([`DECISIONS.md`](DECISIONS.md) §35).
+    until his SVG comes, and the demo has families' contracts in every state to try ([`DECISIONS.md`](../DECISIONS.md) §35).
 
 ### CP: Competitions
 - ✅ **CP1. Read the student's name from the sheet and pick the student**, by their name **and their other names**

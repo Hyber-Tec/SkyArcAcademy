@@ -1,5 +1,5 @@
 /**
- * The kiosk tablet (`kiosk/`, docs/kiosk.md): coaches clock in and out on it with their PIN, with the internet or
+ * The kiosk tablet (`kiosk/`, docs/kiosk/): coaches clock in and out on it with their PIN, with the internet or
  * without. The tablet records each clock-in and clock-out as an op, with its own id and the time it happened, and
  * sends them when it can; the server applies them in order with `planKioskOp`. An op sent twice is applied once (its
  * id), so the tablet can always send again.

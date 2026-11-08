@@ -1,7 +1,7 @@
 # The phone app: coaches' availability inside the lock, and one hourly rate (M7, and pay)
 
 What the phone app (`mobile/`) needs to match the website after the second meeting's `C1`–`C3` and `K1`–`K6`
-(`docs/MEETING2_FEEDBACK.md`, `docs/DECISIONS.md` §23), for the Claude Code session on Goo's MacBook Pro. The server,
+(`docs/meetings/meeting-2-feedback.md`, `docs/DECISIONS.md` §23), for the Claude Code session on Goo's MacBook Pro. The server,
 the rules and the website are done; until the phone is updated it keeps working (pay shows as clocked, and a locked day
 stays read-only for coaches).
 
