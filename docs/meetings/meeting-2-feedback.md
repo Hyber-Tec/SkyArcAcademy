@@ -489,6 +489,8 @@ from the app, without calling or texting the academy.
 - [ ] **M9. A new build and release** following the release process, after the current review. (2026-11-03: Google Play
   published 1.0.0; the App Store is still reviewing it; the next update goes out once everything is ready, Goo. For
   trying it: 1.1.0, build 9, on TestFlight and Google Play's internal testing, 2026-11-03)
+  - *2026-11-06:* 1.1.0 (build 12) is live in the App Store, and in Google Play's review (still there on 2026-11-08);
+    ticked once Google Play has it.
 
 ---
 
@@ -565,14 +567,16 @@ imports them automatically, and they're **never committed**.
 - ✅ **The latest weekly schedule sheet** (this week) → `S9` (not needed: the academy uses the app from now on, third meeting)
 - ✅ **A short rules summary** (scoring, practice vs. competition) the manager offered to write, plus the rules email
   mentioned → `P9` (not needed, Goo 2026-10-28: the scoring rule is decided, `P1`)
-- [ ] **The blank enrollment contract (PDF)** → `F4` (asked 2026-10-28; asked again at the third meeting, for `CT2`)
+- ✅ **The blank enrollment contract (PDF)** → `F4` (asked 2026-10-28 and at the third meeting; received 2026-11-04,
+  signed in the app since 2026-11-05: `CT2`, #111–#113)
 - ✅ **The signed contracts** (the academy's Google Drive folder) → `F5` (not needed: the manager uploads them himself, third meeting)
 - ✅ **Parents' names and second parents' emails** (optional) → `F1`, `F3` (not asked, Goo 2026-10-28)
 - ✅ **Students' nicknames and preferred names** → `P12` (not asked now, Goo 2026-10-28)
 - ✅ **The academy owner's email**, for their owner account → `X1` (not needed: the manager's account is the owner)
 - ✅ **Payroll decisions with the academy's owner:** the clock-out rule, arrival minutes, the pay period → Section 6 (not asked: set in Settings)
 - ✅ **Honest feedback** after using the portal (three design options for anything, on request) (not asked, Goo 2026-10-28)
-- [ ] *Later, in person:* domain access and the `info@` email account → `E1` (third meeting: an invitation to Squarespace, `DM1`)
+- [ ] *Later, in person:* domain access and the `info@` email account → `E1` (third meeting: an invitation to Squarespace, `DM1`).
+  Domain access came on 2026-11-07 (`DM1`); the `info@` app password is still to come (`DM3`).
 
 ---
 
