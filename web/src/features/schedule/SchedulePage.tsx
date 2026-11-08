@@ -528,6 +528,7 @@ export function ClassSchedule({ mode, basePath }: { mode: 'admin' | 'coach'; bas
               after={dayClasses(newClass.dateKey).reduce<number | null>((m, v) => Math.max(m ?? 0, v.c.endMin), null)}
               length={settings.schedule.defaultSessionMinutes}
               seats={rules.seatsPerClass}
+              others={dayClasses(newClass.dateKey).map((v) => ({ startMin: v.c.startMin, endMin: v.c.endMin, seats: v.c.seats, taken: v.taken }))}
               onCreate={(d) => {
                 setNewClass(null)
                 void run(() => createClass(ctx, d), 'Class added')

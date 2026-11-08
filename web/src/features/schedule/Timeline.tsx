@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { peopleIn, seatKind, stretched } from '@shared/schedule/classes'
 import { type ClassRequest, REQUEST_KIND_LABELS } from '@shared/schedule/requests'
 import { KIND_COLORS, levelColor } from '@shared/schedule/seatColors'
-import { NO_COACH_ROW, type Slot, type Span, type TimelineClass, type TimelinePerson, classPieces, classSlots, clockSpan, rowHeights, stackHeight, timelineRange, timelineRows } from '@shared/schedule/timeline'
+import { NO_COACH_ROW, type Slot, type Span, type TimelineClass, type TimelinePerson, classPieces, classSlots, clockSpan, rowHeights, stackBlocks, stackHeight, timelineRange, timelineRows } from '@shared/schedule/timeline'
 import { type DateKey, WEEKDAY_SHORT, formatDateKey, formatMinutes, formatMinutesShort, weekdayOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { ContextMenuFor, MenuOnTap, menu } from '@/components/app/ItemMenu'
@@ -182,16 +182,23 @@ function layoutDay(b: Board, f: Frame, ppm: number, nameW: number): DayModel {
       needs.push({ rows, need: index === 0 ? blockNeed(b, v) : PAD * 2 + HEAD_H + 22 })
     })
   }
+  // Classes at overlapping times over the same rows (two at 5–6 PM) go one under the other, never on top of each other.
+  const stack = stackBlocks(
+    pieces.map((p, i) => ({ startMin: p.v.c.startMin, endMin: p.v.c.endMin, rows: p.rows, need: needs[i].need })),
+    GAP,
+  )
   const heights = rowHeights(
     f.rows.map(() => ROW_MIN),
-    needs,
+    stack.groups,
     INSET,
   )
   const tops: number[] = []
   for (let i = 0; i < heights.length; i++) tops.push(i ? tops[i - 1] + heights[i - 1] : 0)
-  const placed = pieces.map((p) => {
-    const [a, z] = p.rows
-    return { ...p, top: tops[a] + INSET, height: tops[z] + heights[z] - tops[a] - 2 * INSET }
+  const placed = pieces.map((p, i) => {
+    const s = stack.placed[i]
+    const [a, z] = s.rows
+    const room = tops[z] + heights[z] - tops[a] - 2 * INSET
+    return { ...p, top: tops[a] + INSET + s.offset, height: s.last ? room - s.offset : s.height }
   })
   return { ...f, ppm, nameW, width, heights, tops, pieces: placed, slots: slotsOfDay(b, f.classes, placed) }
 }

@@ -177,7 +177,7 @@ Carried over from HyberCRM, adapted to one academy:
   owners too), its students, requests and open seats one under the other, each a student card's size, coloured by
   level (`shared/src/schedule/seatColors.ts`; the layout's sums in `shared/src/schedule/timeline.ts`); a student's
   card stretches past its class by its edges, holding a seat in the class next to it, and who canceled goes on a line
-  under the seats (§38); the same menus
+  under the seats (§38); classes at the same time go one under the other, never on top; the same menus
   on a right-click as on ⋯ (`web/src/features/schedule/menus.ts`), and the panel (calendar, who's in, legend)
   floating over the right side, never beside it: Escape or its corner button opens and closes it (§29). Narrow
   screens keep the sheets' layout (§21). The website shows no events (§25).
