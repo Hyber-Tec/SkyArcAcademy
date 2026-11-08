@@ -6,6 +6,45 @@ unless they say how something works from then on.
 
 ## Now
 
+### Kiosk fix
+
+[#125](https://github.com/Hyber-Tec/SkyArcAcademy/pull/125), from checking the kiosk's logic against the schedule
+and the payroll on 2026-11-07. A coach who forgot to clock out, with the tablet offline at midnight, still showed as
+clocked in on it the next day. They'd tap Clock out, and their new day could be merged into the old shift, or lost
+with its pay. The fix follows the automatic clock-out on both sides:
+
+- **The server:** closes the forgotten shift at midnight before it applies a later clock-in or clock-out.
+- **The tablet:** shows the coach clocked out after midnight, so they clock in.
+
+The tablet runs 1.0.1 already. Merging deploys the server's part.
+
+### Coaches' kiosk PINs
+
+None was set on 2026-11-07. On the website: Employees → Directory → the coach → **Kiosk PIN** → 4 digits → Set PIN.
+PINs are unique, and kept only as fingerprints. The tablet picks a new PIN up within a minute, then that coach can
+clock in.
+
+### Google Search Console
+
+Tells Google the website lives at skyarcacademy.com, and lets it find every page.
+
+1. https://search.google.com/search-console → **Add property** → **Domain** → `skyarcacademy.com` → Continue.
+2. Copy the TXT record it shows (`google-site-verification=…`).
+3. Squarespace → Domains → skyarcacademy.com → **DNS** → **ADD RECORD**: Type **TXT**, Name `@`, Data the copied text
+   → Save. Keep every other record.
+4. Back in Search Console: **Verify**. If it fails, try again in a few minutes.
+5. **Sitemaps** (left menu) → type `sitemap.xml` → **Submit**.
+
+The site's pages already name skyarcacademy.com as their address (#119).
+
+### Review #126
+
+[#126](https://github.com/Hyber-Tec/SkyArcAcademy/pull/126): the phone app's line-break fix (#117), for the website.
+
+- Headings balance their lines.
+- Paragraphs don't leave one word alone on the last line, in Korean and English.
+- The contract's signature date stays on one line.
+
 ### Google Play 1.1.0 is in Google's review
 
 Sent on 2026-11-06, in the evening:
@@ -21,122 +60,31 @@ review, a new app on a new account, took up to eight days. Once approved, it goe
 update on their own. If Google rejects it or asks something, it says so in the Play Console's inbox and by email: send
 it to Claude Code.
 
-## Soon
+## The manager
 
-### Kiosk tablet
+### An app password for info@skyarcacademy.com
 
-Built on 2026-11-07 ([#123](https://github.com/Hyber-Tec/SkyArcAcademy/pull/123)), as Goo asked: its own Android app
-(`kiosk/`), installed from a file over USB, always on, and working without the internet. Everything is in
-[kiosk.md](kiosk.md).
+The academy's email is Google Workspace. Sending the app's email from info@ with an app password passes SPF, DKIM and
+DMARC, which the domain already publishes, so mail stops landing in spam. On a computer:
 
-Goo's picks: a "simple kiosk" (the app is the home screen, pinned with Android's "pin app"), registered with the setup
-PIN of [DECISIONS.md](DECISIONS.md) Q9.
+1. Sign in to Google as **info@skyarcacademy.com**, then go to **myaccount.google.com** → **Security**.
+2. **2-Step Verification:** turn it on if it's off (a phone number is enough).
+3. Search for **App passwords** at the top of the page (or open myaccount.google.com/apppasswords) → name it
+   **Sky Arc** → **Create**.
+4. Give Goo the 16 letters in person or in a private message: not by email, and not in a chat with others.
 
-What's left, in order:
+If Google says app passwords aren't available, the academy's Workspace admin allows 2-Step Verification first:
+admin.google.com → Security → Authentication → 2-Step Verification → **Allow users to turn on 2-Step Verification**.
 
-1. **Goo:** review and merge #123. GitHub deploys the server's part and the website's.
-2. **Goo:** set the setup PIN in Settings → Pay & time clock → Kiosk tablets.
-3. **The office:** each coach's kiosk PIN, in Employees → the coach → Kiosk PIN. None was set on 2026-11-07.
-4. **The tablet:**
-   - Goo prepares it: the settings in kiosk.md, "Setting up the tablet".
-   - Goo plugs it into the MacBook Pro.
-   - Claude Code installs `kiosk/dist/SkyArcKiosk-1.0.0-1.apk` (`npm run kiosk:install`).
-   - Goo registers it with the setup PIN, makes it the Home app, and pins it.
+### His signature for the contract
 
-### Email from info@skyarcacademy.com
+The contract's academy line shows the manager's typed name until a signature is set (`docs/DECISIONS.md` §35). Either:
 
-The second meeting's `E1`, the third's `DM3`. The academy's email is Google Workspace, and the domain already
-publishes SPF, DKIM (`google._domainkey`) and DMARC for it, so mail sent through the academy's own account passes all
-three.
+- **Draw it:** Settings → Enrollment contract → the signature → draw with a finger, on a phone or a tablet.
+- **On paper:** sign with a black pen on white paper, and Goo sends Claude Code a photo, taken flat and in good light.
+  Claude Code makes the file, and it goes in on the same page.
 
-1. **The manager:**
-   - On info@'s Google Account → Security, turn on 2-Step Verification if it's off.
-   - Then **App passwords** → make one named "Sky Arc", and keep the 16 letters.
-   - If Google says app passwords aren't available, the Workspace admin allows 2-Step Verification first.
-2. **Goo:** put it in Google Cloud console → Security → Secret Manager → `GMAIL_APP_PASSWORD` → **New version**. Never
-   in a chat or a file.
-3. **Claude Code:** in a pull request, `SENDER_EMAIL` in `shared/src/brand.ts` becomes `info@skyarcacademy.com`.
-   Merging it redeploys the functions that send mail, and they use the new password.
-
-Replies already go to the academy's email. Copies of what the app sends will show in info@'s Sent folder.
-
-### Invite the coaches
-
-The third meeting's `DM2`. After the domain (#119) and ideally the email, so the invitations come from the academy's
-address and link to its domain. From the website: each coach's page → **Access** → send the sign-in email. The
-real-data import gave nobody access yet ([DECISIONS.md](DECISIONS.md) §21).
-
-### The contract's Korean
-
-[DECISIONS.md](DECISIONS.md) §36:
-
-- In the demo academy, open a parent's contract with the phone or the browser set to Korean, and its signed PDF.
-- Read it with the manager.
-- When Goo says so, Claude Code puts it in the live academy (`scripts/contract.ts --ko-file`).
-- Tell Claude Code wherever the app's Korean reads oddly.
-
-### The contract's settings
-
-Settings → Enrollment contract:
-
-- Check the prices.
-- Add the manager's title if you like.
-- Upload his signature as an SVG when it comes. It replaces his typed name.
-
-From then on the office sends each family's contract from the student's page or the list there. Every family signs
-again, one contract per child, and each signer gets a copy by email.
-
-### Clear the lead coach
-
-`npx tsx scripts/lead-coach.ts --clear`, when Goo says so.
-
-- **Why it's there:** the iPhone app 1.0 opens a class through each seat's lead coach. 1.1.0 and Android's builds
-  don't need it.
-- **Wait:** 1.1.0 went live on 2026-11-06, and iPhones update by themselves, most within days, so give it about a week.
-- **Until then:** run `--apply` again after the office adds students.
-
-### Website: Korean lines wrap between words
-
-The phone's fix (#117) on the website:
-
-- Headings balanced, paragraphs kept from leaving a word alone on the last line.
-- The contract's signature date kept on one line.
-
-It's on the local branch `fix/web-line-breaks` on the MacBook Pro, not pushed (Goo, 2026-11-05: the phone first, the
-website later).
-
-### AI for report text
-
-[DECISIONS.md](DECISIONS.md) §26, for super admins:
-
-1. On the website, **Settings → AI**. Report text starts on Claude Sonnet 5.5 at low thinking (about $6 a month).
-   Gemini 3.5 Flash-Lite is about $1, and fine to choose: only adults use AI.
-2. Add the chosen provider's API key (the page links where to make one).
-3. **Test**, turn Report text **on**, and **Save**.
-4. Then a draft report → **Write with AI**.
-
-### Google Search Console
-
-1. https://search.google.com/search-console → **Add property** → **Domain** → `skyarcacademy.com`.
-2. Add the TXT record it shows in Squarespace (DNS → Custom records; keep every other record).
-3. **Verify**.
-4. Sitemaps → `https://skyarcacademy.com/sitemap.xml`.
-
-The site's pages already tell search engines that skyarcacademy.com is their address (#119).
-
-### The stores' links to skyarcacademy.com
-
-The old addresses keep working, so this can wait. [store/listing.md](store/listing.md) has the new ones:
-
-- **Google Play**, any time after the domain:
-  - Store settings: the website.
-  - App content: the privacy policy.
-  - Data safety: the account deletion page.
-- **App Store:** the **Privacy Policy URL**, **Support URL** and **Marketing URL** change only with the next version.
-  Apple refused a change of the privacy link through its API on 2026-11-07: "can not be modified in the current
-  state".
-
-## Waiting on the academy
+His title (Director, Head coach…) is optional.
 
 ### Website content
 
@@ -150,58 +98,112 @@ The manager's list of 2026-10-20 (the academy's question A13). The site leaves o
 - More photos (the range, the equipment, a first trial, the team, results day), and a larger match-day photo (630 px
   wide now).
 
-Photos go in on the Website page; text in `web/src/site/kit/content.ts`.
+Photos go in on the Website page (Settings → Website); the text goes to Goo or Claude Code for
+`web/src/site/kit/content.ts`.
 
 ### Legal name and mailing address
 
 The academy's question A10 ([QUESTIONS.md](QUESTIONS.md)): only if the academy wants them in the privacy policy's
 contact section (Settings → Academy). The policy is in effect with its name, email and phone.
 
-### The grades on the spreadsheet
+## Soon
 
-The academy's owner reviews the students' grades on the spreadsheet (carried over from the list of 2026-10-17).
+### Email from info@
 
-## Questions for Goo
+The second meeting's `E1`, the third's `DM3`. Once the manager has made the app password (The manager, above):
 
-### Card photos from the Drive
+1. **Goo:** Google Cloud console → Security → **Secret Manager** → `GMAIL_APP_PASSWORD` → **New version** → paste the
+   16 letters → **Add new version**. Never in a chat or a file. The functions keep using the old version until
+   they're redeployed, so nothing breaks in between.
+2. **Claude Code:** in a pull request, `SENDER_EMAIL` in `shared/src/brand.ts` becomes `info@skyarcacademy.com`.
+   Merging it redeploys the functions that send mail, and they use the new password.
 
-#101: the photo becomes the score's file, so nothing is copied, and the website shows it with the bulls' scores. The
-phone app and a family's view show it as a plain photo. Two ways:
+Replies already go to the academy's email. Copies of what the app sends will show in info@'s Sent folder.
 
-- **Claude Code's suggestion, no phone work:** save a straightened copy of the card beside it, as the phone's scanner
-  does. The folder gets a second file for that card.
-- **Or** keep one file, and have the phone app and the family view draw the scores on the photo.
+### Invite the coaches
 
-### Families' Scores page
-
-The staff's new Scores tab design (§29) for families too, or as it is?
-
-### "To check" on the Scores page
-
-#102: results the reader marked Check show there for 30 days, since nothing clears the mark yet. A button to say a
-result is right would clear it.
-
-### The demo on the phone
-
-From 1.1.0, a demo login opens the demo on the phone too, and a super admin switches to it with View the app as (§27).
-Other owners in both academies could get a switch too.
-
-### AI in shared reports
-
-A shared report doesn't say its words were drafted with AI and checked by the academy; only staff see that. Anthropic's
-guidance for apps that serve minors asks to tell users when AI is involved.
+The third meeting's `DM2`. After the email, so the invitations come from the academy's address. From the website:
+each coach's page → **Access** → send the sign-in email. The real-data import gave nobody access yet
+([DECISIONS.md](DECISIONS.md) §21).
 
 ### Terms of service
 
-The academy's earlier website (on skyarcacademy.com until the move) had a Terms of Service page at `/terms`. The new
-site has none, so #119 sends `/terms` to the privacy policy, and `/tuition` and `/schedule` to their closest pages.
-Terms would be a new page, written from the academy's own.
+Goo, 2026-11-07: the website should have terms of service beside its privacy policy. The academy's earlier website
+had a page (effective August 27, 2026: who may use it, trial and scheduling requests, safety, communications,
+acceptable use, liability, and so on).
 
-### skyarcsports.com
+1. **Claude Code:** drafts the website's page from it, for the website and the app as they are now, in English as the
+   privacy policy is.
+2. **Goo and the manager:** read it.
+3. **Then:** it goes live at `/terms`, which #119 sends to the privacy policy until then, linked beside the privacy
+   policy.
 
-A second domain of the academy's, registered at GoDaddy, with Microsoft email and no website (it shows Wix's "connect
-your domain" page). Not part of the move. To send it to the website, someone with its GoDaddy login adds a
-forward to `https://skyarcacademy.com` (GoDaddy → the domain → DNS → Forwarding). Leave its email records alone.
+### Clear the lead coach
+
+A leftover for the old iPhone app 1.0:
+
+- **Why it's there:** 1.0 could only open a class through one coach written on each student's seat, so every seat
+  got its class's lead coach.
+- **Since 1.1.0:** classes are taught together and the app doesn't need it. The iPhone app 1.1.0 is in the App Store
+  since 2026-11-06, and iPhones update by themselves, most within days.
+- **What Claude Code does:** from about 2026-11-13, it clears those names (`npx tsx scripts/lead-coach.ts --clear`).
+  Nothing changes for anyone on 1.1.0. Until then, it runs `--apply` again after the office adds students.
+
+### The stores' links to skyarcacademy.com
+
+The old addresses keep working, so this can wait. [store/listing.md](store/listing.md) has the new ones:
+
+- **Google Play**, once 1.1.0 is approved:
+  - Store settings: the website.
+  - App content: the privacy policy.
+  - Data safety: the account deletion page.
+- **App Store:** the **Privacy Policy URL**, **Support URL** and **Marketing URL** change only with the next version.
+  Apple refused a change of the privacy link through its API on 2026-11-07: "can not be modified in the current
+  state".
+
+### Google's sign-in window
+
+Signing in with Google on the website says "to continue to skyarcacademy.firebaseapp.com", Firebase's address for
+sign-in (`authDomain`). It can say skyarcacademy.com. It's optional, and the phone apps don't use it. It's two steps:
+
+1. **Goo:**
+   - Google Cloud console → APIs & Services → **Credentials** → OAuth 2.0 Client IDs.
+   - Open **Web client (auto created by Google Service)** → **Authorized redirect URIs** → **Add URI**:
+     `https://skyarcacademy.com/__/auth/handler` → **Save**.
+2. **Claude Code:** sets the `VITE_FIREBASE_AUTH_DOMAIN` secret to `skyarcacademy.com`, then checks Google sign-in on
+   the website. The website has no Sign in with Apple, so Apple's settings don't change.
+
+## Questions for Goo
+
+### Families' Scores page
+
+Screenshots sent 2026-11-07, of the same made-up student (Jiwoo, the practice copy):
+
+- **A, as it is:** one long page with everything open at once (the latest result, all results, the chart, the target,
+  the comparison).
+- **B, the staff's newer design** (§29): summary cards, then a results list where each result opens in place, with
+  the chart, the comparison and the reports folded below until opened.
+
+### Card photos from the Drive
+
+A coach can score a paper card two ways: with the phone's scanner, or by adding the card's photo from the Drive
+(#101).
+
+- **The scanner** saves a straightened copy of the card, and every view shows it with its holes' scores.
+- **A photo from the Drive** becomes the score's file as it is. The website's staff pages show it with the scores; the
+  phone app and families see the plain photo.
+
+Two ways to make them match:
+
+- **Claude Code's suggestion, no phone work:** also save a straightened copy beside the photo, as the scanner does.
+  The student's folder gets a second file for that card.
+- **Or:** keep one file, and teach the phone app and the families' pages to draw the scores on the photo.
+
+### "To check" on the Scores page
+
+When the reader of a SIUS PDF or a card photo isn't sure of something, it marks the result **Check**. The Scores page
+(#102) lists those results under "To check" for 30 days. Nothing clears the mark today, even after someone has looked
+and found the result right. The question: add a **Looks right** button on the result, which clears it?
 
 ## Later
 
@@ -238,11 +240,6 @@ The phone can pick files already, but reading a SIUS result is the website's. A 
 Lighthouse on a simulated slow phone, 2026-10-20: performance 82, accessibility 96, SEO 100. The pages show once their
 scripts have loaded. Building each page's first screen into its HTML would make it show sooner.
 
-### The website installable on a phone (PWA)
-
-People on phones use the phone app; the website is used from laptops. Once everything works, make the website
-installable and comfortable on a phone. Until then its phone layout only has to not break.
-
 ### A how-to video for parents
 
 The second meeting's `W1`: recorded once the website and the app are final.
@@ -255,16 +252,6 @@ The second meeting's `W2`, if the manager asks. The contract has the prices mean
 
 Carried on through February 28, 2027 (`C4`, 2026-10-28). In late February, ask Claude Code to carry them on again, or
 the office uses Repeat weekly.
-
-### Google's sign-in window
-
-It names `skyarcacademy.firebaseapp.com`, Firebase's address for sign-in (`authDomain`). To show
-`skyarcacademy.com`:
-
-1. Add `https://skyarcacademy.com/__/auth/handler` to the Google OAuth web client's redirect URIs (Google Cloud console
-   → APIs & Services → Credentials).
-2. Add it to Apple's Services ID return URLs ([publishing/apple/sign-in-with-apple.md](publishing/apple/sign-in-with-apple.md)).
-3. Set the `VITE_FIREBASE_AUTH_DOMAIN` secret to `skyarcacademy.com`.
 
 ## Not doing
 
@@ -279,10 +266,24 @@ Kept so they aren't brought up again. Each was decided:
 - **Automatic levels, and rules for make-ups and trials:** labels on a class, and levels changed by hand (§7).
 - **Importing past schedules:** `D1` and `S9`. The manager marks the past weeks' attendance himself.
 - **Asking the manager about the paper scoring rule:** Goo decided it (`P1`, `P9`).
+- **The website as an installable phone app (PWA):** the phone apps do it (Goo, 2026-11-07).
+- **A demo switch on the phone for other owners:** not needed (Goo, 2026-11-07).
+- **Telling families a shared report was drafted with AI:** not wanted (Goo, 2026-11-07): the academy reads and
+  checks every report before sharing it.
+- **skyarcsports.com:** not a domain the academy uses (Goo, 2026-11-07).
+- **The owner reviewing students' school grades from the spreadsheet** (2026-10-25): the import is long done, and the
+  office edits students in the app.
 
 ## Good to know
 
 These are notes, not tasks.
+
+- **The kiosk tablet** ([kiosk.md](kiosk.md)), 2026-11-07:
+  - **The device:** a Samsung Galaxy Tab A9+ (SM-X218U), Android 16, on the academy's Wi-Fi, registered as "Front desk".
+  - **Set over USB:** Sky Arc Kiosk is its home app, and its swipe lock screen is off, so a press of the power button
+    or a restart comes straight back to the kiosk.
+  - **Left off (Goo's choice):** no screen-lock PIN and no app pinning. App pinning is turned on in Android, unused.
+  - **Updating it:** `npm run kiosk:install`, with it plugged into the MacBook Pro.
 
 - **skyarcacademy.com** is the website's address since 2026-11-07. It was connected in Firebase (Advanced setup, so the
   old website stayed up until the certificate was ready) and Squarespace.
