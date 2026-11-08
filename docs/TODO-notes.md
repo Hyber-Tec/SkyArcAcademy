@@ -6,24 +6,6 @@ unless they say how something works from then on.
 
 ## Now
 
-### Connect skyarcacademy.com
-
-Waiting for the manager to hand Goo the Squarespace login (2026-11-06). The steps are in [DEPLOY.md](DEPLOY.md),
-"Moving to skyarcacademy.com". In short:
-
-- **Firebase:** Hosting → Add custom domain, `skyarcacademy.com`, **Advanced setup**, so the old website stays up until
-  the new one's certificate is ready.
-- **Squarespace:** add the two TXT records Firebase shows. When Firebase says so, swap the two A records for its own.
-- **Then `www.skyarcacademy.com`**, redirecting to `skyarcacademy.com`.
-- **Done by Claude Code on 2026-11-06:**
-  - Sign-in's authorized domains include `skyarcacademy.com` and `www.skyarcacademy.com`.
-  - The Storage bucket's CORS allows both.
-  - [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119) moves the links, the emails, the site's addresses and
-    the phone app's next build to the domain. **Merge it only once Firebase shows the domain Connected.**
-- **The phone apps need no update for this.** `skyarcacademy.web.app` serves the same site and keeps working. The
-  phone apps 1.0 and 1.1 open it, and so does every email already sent. The next phone build opens skyarcacademy.com by
-  itself.
-
 ### Google Play 1.1.0 is in Google's review
 
 Sent on 2026-11-06, in the evening:
@@ -41,40 +23,25 @@ it to Claude Code.
 
 ## Soon
 
-### Kiosk app
+### Kiosk tablet
 
-Goo, 2026-11-06. A Samsung Android tablet arrives in a few days. It goes on a wall mount at the front desk, near an
-outlet (third meeting, `L-KI`). What Goo asked for:
+Built on 2026-11-07 ([#123](https://github.com/Hyber-Tec/SkyArcAcademy/pull/123)), as Goo asked: its own Android app
+(`kiosk/`), installed from a file over USB, always on, and working without the internet. Everything is in
+[kiosk.md](kiosk.md).
 
-- **Its own app**, not the website's kiosk page (that one was for showing). It's installed from a file on the tablet,
-  with no store.
-- **Always on:** the screen never turns off, and the tablet opens only the kiosk.
-- **Works without the internet:** clock-ins and clock-outs are saved on the tablet, and sent when it's back online.
-- Goo goes over it with Claude Code before it's built.
+Goo's picks: a "simple kiosk" (the app is the home screen, pinned with Android's "pin app"), registered with the setup
+PIN of [DECISIONS.md](DECISIONS.md) Q9.
 
-**What exists:**
+What's left, in order:
 
-- The website's kiosk at `/kiosk`, opened by a signed-in admin.
-- Coaches' PINs, stored hashed (Settings, `setKioskPin`).
-- The server's `kioskIdentify` and `kioskPunch`.
-- `autoClockOut` at midnight.
-- Pay starts from the kiosk's clock-in and ends at the day's last class ([DECISIONS.md](DECISIONS.md), the second
-  meeting's `K1`–`K6`).
-- [DECISIONS.md](DECISIONS.md) Q9 planned the kiosk as a registered device with a setup PIN.
-
-**To settle when Goo goes over it:**
-
-- **Build:** a separate Expo app or a mode of the phone app, built as an APK.
-- **The device:** registered, and how. One idea: a device token from a setup PIN, as Q9 planned.
-- **Offline:**
-  - Checking PINs offline needs the hashes on the tablet, so it's a question how they're kept there.
-  - Punches go in a queue with their own time.
-  - The server needs a rule for punches sent late: accept the tablet's time within limits, and say on the payroll
-    which ones came in late.
-  - Firestore's offline cache doesn't help callable functions.
-- **Keeping it running:** Android's lock task mode (screen pinning, or Samsung's own kiosk setting), keep the screen
-  on, start on boot.
-- **Updates:** a new file, or the app checks for one.
+1. **Goo:** review and merge #123. GitHub deploys the server's part and the website's.
+2. **Goo:** set the setup PIN in Settings → Pay & time clock → Kiosk tablets.
+3. **The office:** each coach's kiosk PIN, in Employees → the coach → Kiosk PIN. None was set on 2026-11-07.
+4. **The tablet:**
+   - Goo prepares it: the settings in kiosk.md, "Setting up the tablet".
+   - Goo plugs it into the MacBook Pro.
+   - Claude Code installs `kiosk/dist/SkyArcKiosk-1.0.0-1.apk` (`npm run kiosk:install`).
+   - Goo registers it with the setup PIN, makes it the Home app, and pins it.
 
 ### Email from info@skyarcacademy.com
 
@@ -150,8 +117,6 @@ website later).
 
 ### Google Search Console
 
-After the domain:
-
 1. https://search.google.com/search-console → **Add property** → **Domain** → `skyarcacademy.com`.
 2. Add the TXT record it shows in Squarespace (DNS → Custom records; keep every other record).
 3. **Verify**.
@@ -167,9 +132,9 @@ The old addresses keep working, so this can wait. [store/listing.md](store/listi
   - Store settings: the website.
   - App content: the privacy policy.
   - Data safety: the account deletion page.
-- **App Store:**
-  - **Privacy Policy URL** (App Privacy): any time.
-  - **Support URL** and **Marketing URL:** only with the next version.
+- **App Store:** the **Privacy Policy URL**, **Support URL** and **Marketing URL** change only with the next version.
+  Apple refused a change of the privacy link through its API on 2026-11-07: "can not be modified in the current
+  state".
 
 ## Waiting on the academy
 
@@ -318,6 +283,19 @@ Kept so they aren't brought up again. Each was decided:
 ## Good to know
 
 These are notes, not tasks.
+
+- **skyarcacademy.com** is the website's address since 2026-11-07. It was connected in Firebase (Advanced setup, so the
+  old website stayed up until the certificate was ready) and Squarespace.
+  - **Squarespace's DNS:**
+    - A `@` → `199.36.158.100`;
+    - TXT `@` `hosting-site=skyarcacademy`;
+    - TXT `_acme-challenge` (Firebase's certificate);
+    - CNAME `www` → `skyarcacademy.web.app` (Firebase sends www to skyarcacademy.com).
+  - **Left as they were:** the academy's Google Workspace email (MX, SPF, DKIM, DMARC) and the earlier website's
+    leftovers (`_cf-custom-hostname`, `_openai-site-verification`, the `send`, `rsend` and `resend._domainkey` mail
+    records), which do no harm.
+  - **Still working:** skyarcacademy.web.app keeps serving the same site, for the phone apps 1.0 and 1.1 and older
+    emails ([DEPLOY.md](DEPLOY.md), "Moving to skyarcacademy.com").
 
 - **Notifications on iPhones work:** Apple's push key is in Firebase. Claude Code sent a test push to Goo's iPhone on
   2026-11-06, and it arrived. If iPhones ever stop getting them, check Firebase → Project settings → Cloud Messaging

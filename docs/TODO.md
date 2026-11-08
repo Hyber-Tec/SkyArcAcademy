@@ -5,27 +5,22 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Now
 
-- [ ] **Connect skyarcacademy.com** in Firebase and Squarespace (Goo, about 15 minutes, once the manager hands over the
-  Squarespace login), then merge [#119](https://github.com/Hyber-Tec/SkyArcAcademy/pull/119), which moves every link
-  to it
+- [ ] **Kiosk tablet:** merge [#123](https://github.com/Hyber-Tec/SkyArcAcademy/pull/123), set the setup PIN, give each
+  coach a kiosk PIN, then install it on the tablet with Claude Code ([kiosk.md](kiosk.md))
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06): it goes live by itself. If Google writes, send the
   message to Claude Code
 
 ## Soon
 
-- [ ] **Kiosk app** on the Samsung tablet: its own Android app, installed from a file, always on, and working without
-  the internet (go over it with Claude Code when the tablet arrives)
-- [ ] **Email from info@skyarcacademy.com**, so mail stops landing in spam (after the domain; the manager makes an app
-  password)
-- [ ] **Invite the coaches** from the website (after the domain and the email)
+- [ ] **Email from info@skyarcacademy.com**, so mail stops landing in spam (the manager makes an app password)
+- [ ] **Invite the coaches** from the website (after the email)
 - [ ] **The contract's Korean:** read it with the manager, then Claude Code puts it in the live academy
 - [ ] **The contract's settings:** check the prices, add the manager's title, upload his signature when it comes
 - [ ] **Clear the lead coach** from the seats, once every iPhone has 1.1.0 (from about 2026-11-13; say when)
 - [ ] **Website: Korean lines wrap between words**, as on the phone (ready on a branch; a pull request when you say)
 - [ ] **AI for report text:** Settings → AI, add the key and turn it on (if not done yet)
-- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap (after the domain)
-- [ ] **The stores' links to skyarcacademy.com:** Google Play any time after the domain, the App Store with the next
-  version
+- [ ] **Google Search Console:** add skyarcacademy.com and send its sitemap
+- [ ] **The stores' links to skyarcacademy.com:** Google Play once 1.1.0 is approved, the App Store with the next version
 
 ## Waiting on the academy
 
@@ -72,6 +67,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-07 · skyarcacademy.com connected, and every link and email moved there (#119)
+- [x] ✅ 2026-11-07 · Access to the domain's Squarespace account
 - [x] ✅ 2026-11-06 · Google Play: the Data safety form updated (Goo), and 1.1.0 sent to Google's review
 - [x] ✅ 2026-11-06 · App Store privacy: Device ID added (Goo)
 - [x] ✅ 2026-11-06 · iPhone app 1.1.0 approved and live in the App Store, within a day of sending it

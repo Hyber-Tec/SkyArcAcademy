@@ -235,7 +235,7 @@ started: *already works*, *small change* or *new work*.
     on the tab (SIUS PDFs, card photos, results sheets) are read there, all the student's.
 
 ### DM: The domain and access
-- [ ] **DM1. Connect the .com** (on Squarespace) once the manager invites Goo to the account. *(Goo)*
+- ✅ **DM1. Connect the .com** (on Squarespace), 2026-11-07: Firebase and Squarespace (Goo), then the links (#119).
   - *Plan:* Goo, with `docs/DEPLOY.md`, "Moving to skyarcacademy.com" (the steps for Firebase and Squarespace,
     2026-11-06); sign-in and Storage accept the domain already; then #119 moves the links to it.
 - [ ] **DM2. Invite the coaches** once the domain is connected.
@@ -284,7 +284,7 @@ started: *already works*, *small change* or *new work*.
 
 - ✅ **The blank contract** (digital), 2026-11-04, with his answer: one contract per child (`CT2`). Next: he reviews the
   e-version, then it's published in Settings → Enrollment contract.
-- [ ] **An invitation to the domain's Squarespace account**, to connect the .com → `DM1` (awaited, 2026-11-06)
+- ✅ **An invitation to the domain's Squarespace account**, 2026-11-07 → `DM1`
 
 Everything else is in hand, or the manager's own work in the app.
 
