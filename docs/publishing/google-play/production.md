@@ -9,7 +9,7 @@ The forms Google asks every app to fill in, the store page, and the release to e
 Play Console → Sky Arc → **Policy and programs** → **App content** (the Dashboard's "Set up your app" list opens the
 same forms). Each takes a few minutes.
 
-1. **Privacy policy:** `https://skyarcacademy.web.app/privacy`.
+1. **Privacy policy:** `https://skyarcacademy.com/privacy`.
 2. **Ads:** **No, my app does not contain ads.**
 3. **Sign-in details** (Google's newer name for **App access**): **All or some functionality is restricted** → **Add
    instructions** once, for the review login (the office's, an admin; since 2026-10-26 the only one), its email and
@@ -25,7 +25,7 @@ same forms). Each takes a few minutes.
    fit for children, honest forms (https://support.google.com/googleplay/android-developer/answer/9893335). Skip
    "Teacher Approved". Don't pick only 18 and over: Google checks that the audience "is accurate".
 6. **Data safety:** the answers in [privacy-answers.md](../../store/privacy-answers.md), "Google". It asks for the web
-   page where people can ask to delete their account without the app: `https://skyarcacademy.web.app/help` ("Deleting
+   page where people can ask to delete their account without the app: `https://skyarcacademy.com/help` ("Deleting
    your account").
 7. **The other declarations:** **Government apps:** No. **Financial features:** My app doesn't provide any financial
    features. **Health apps:** My app doesn't have any health features. **News apps:** No. **Advertising ID:** No (the
@@ -35,7 +35,7 @@ same forms). Each takes a few minutes.
 
 8. **Store settings** (**Grow users** → **Store presence** → **Store settings**): App category **Sports**; tags close to
    Sports and Education; contact details: the academy's email (Settings → Academy on the website) and website
-   `https://skyarcacademy.web.app` (a phone only if the academy wants one public).
+   `https://skyarcacademy.com` (a phone only if the academy wants one public).
 9. **Main store listing** (**Store presence** → **Main store listing**), from [listing.md](../../store/listing.md),
    "Google Play": app name, short description, full description. Then the graphics, from
    `open mobile/.publish/screenshots/android`:

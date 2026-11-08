@@ -52,7 +52,7 @@ A push to a phone needs the real academy, and on iPhone Apple's push key in Fire
 
 ## 3. What's on the website, not the phone
 
-The phone is for what people do day to day. These stay on the website (`https://skyarcacademy.web.app`, the same
+The phone is for what people do day to day. These stay on the website (`https://skyarcacademy.com`, the same
 logins; your own account switches to the demo from the account menu, **Demo data**):
 
 - **SIUS PDFs:** drag them into the Drive; the app reads each one and files it in the student's folder.

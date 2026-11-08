@@ -39,7 +39,7 @@ describe('signing links', () => {
     expect(isContractToken('short')).toBe(false)
     expect(isContractToken('a'.repeat(43) + '/')).toBe(false)
     expect(isContractToken(42)).toBe(false)
-    expect(signUrl('tok')).toBe('https://skyarcacademy.web.app/sign/tok')
+    expect(signUrl('tok')).toBe('https://skyarcacademy.com/sign/tok')
     expect(contractFileName('Mia  Larkin', '2026-10-28')).toBe('Mia Larkin enrollment contract 2026-10-28.pdf')
   })
 
@@ -114,9 +114,9 @@ describe('the signing email', () => {
   it('names the student, leads to the page and the app, and escapes names', () => {
     const e = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc Sports Academy', studentFirstName: 'Mia', url: signUrl('tok') })
     expect(e.subject).toBe('Please sign Mia’s enrollment contract')
-    expect(e.text).toContain('Read and sign: https://skyarcacademy.web.app/sign/tok')
+    expect(e.text).toContain('Read and sign: https://skyarcacademy.com/sign/tok')
     expect(e.text).toContain('It’s also waiting in Sky Arc Sports Academy’s app, if you sign in with this email.')
-    expect(e.html).toContain('href="https://skyarcacademy.web.app/sign/tok"')
+    expect(e.html).toContain('href="https://skyarcacademy.com/sign/tok"')
     const odd = contractEmail({ to: 'jane@example.test', academyName: 'Sky Arc', studentFirstName: '<Mia>', url: signUrl('tok') })
     expect(odd.html).toContain('&lt;Mia&gt;')
     expect(odd.html).not.toContain('<Mia>')

@@ -1,5 +1,5 @@
 # Checks every pull request before it can reach main, and main after each merge (two pull requests that pass apart
-# can still break together). Once main passes, it deploys to production (https://skyarcacademy.web.app) what changed
+# can still break together). Once main passes, it deploys to production (https://skyarcacademy.com) what changed
 # since the last deploy: "Plan the deploy" works it out while the checks run (scripts/deploy-plan.ts).
 # The checks need no secrets. The deploy signs in to Google Cloud as github-deploy@skyarcacademy.iam.gserviceaccount.com
 # through Workload Identity Federation (no key file), which Google allows only for main of this repository.

@@ -13,6 +13,23 @@
     "public": "web/dist",
     "cleanUrls": true,
     "trailingSlash": false,
+    "redirects": [
+      {
+        "source": "/tuition",
+        "destination": "/programs",
+        "type": 301
+      },
+      {
+        "source": "/schedule",
+        "destination": "/trial",
+        "type": 301
+      },
+      {
+        "source": "/terms",
+        "destination": "/privacy",
+        "type": 301
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.DS_Store",

@@ -55,7 +55,7 @@ ACCOUNTS (guideline 4.8)
 People sign in with Apple, with Google, or with an email and password, and can create an account in the app. Access follows the email address the academy holds: an email on a student's record opens that family's part; any other account sees "No access yet", can ask the academy for access, and can delete itself there. When the academy sends a family its enrollment contract, a parent signs it on the academy's website (opened from the app) before using the app; the demo account above is the office's and is never asked.
 
 ACCOUNT DELETION (guideline 5.1.1(v))
-More → Delete my account, for every account (also on the "No access yet" screen). It removes the sign-in and the person's profile at once; the academy's own records stay with the academy, as the screen and the privacy policy explain: https://skyarcacademy.web.app/privacy. If you try it with the demo account, we will restore the account for the next review.
+More → Delete my account, for every account (also on the "No access yet" screen). It removes the sign-in and the person's profile at once; the academy's own records stay with the academy, as the screen and the privacy policy explain: https://skyarcacademy.com/privacy. If you try it with the demo account, we will restore the account for the next review.
 
 COMMENTS (guideline 1.2)
 The only user-generated content is comments on the academy's announcements, written and read by its staff only (owners, admins, coaches); families never see them. Whoever posts chooses whether a post takes comments, owners and admins can delete any comment, and the academy can pause or remove anyone's access. Contact details: More → Help.
@@ -102,7 +102,7 @@ Reply from the same message, with the academy's written permission attached agai
 before sending.
 
 ```
-Thank you for the review. HyberTec LLC designed, built and operates the Sky Arc platform (this app, its website at skyarcacademy.web.app and its server) for Sky Arc Sports Academy, an air rifle academy, with the academy's permission to use its name and logo: the academy's written permission is attached. Sky Arc is not built from a commercialized template or an app generation service, and it is not a copy of another app: it is made for this one sport and academy (classes by coach, students and their families, scores from the range's electronic scoring, and paper air rifle targets scored from a photo with its own image analysis). Our other app serves a different business. We are glad to answer any question about it.
+Thank you for the review. HyberTec LLC designed, built and operates the Sky Arc platform (this app, its website at skyarcacademy.com and its server) for Sky Arc Sports Academy, an air rifle academy, with the academy's permission to use its name and logo: the academy's written permission is attached. Sky Arc is not built from a commercialized template or an app generation service, and it is not a copy of another app: it is made for this one sport and academy (classes by coach, students and their families, scores from the range's electronic scoring, and paper air rifle targets scored from a photo with its own image analysis). Our other app serves a different business. We are glad to answer any question about it.
 ```
 
 ## Google Play: Sign-in details

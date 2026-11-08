@@ -3,8 +3,12 @@ export const PRODUCT_NAME = 'Sky Arc'
 /** The academy's full name, for public pages and emails sent before its own document is read. */
 export const ACADEMY_NAME = 'Sky Arc Sports Academy'
 export const COMPANY_NAME = 'HyberTec LLC'
-/** The website: the only address in links and emails, until the academy's own domain points at it. */
-export const APP_DOMAIN = 'skyarcacademy.web.app'
+/**
+ * The website: the address in every link and email, the academy's own domain (docs/DEPLOY.md, "Moving to
+ * skyarcacademy.com"). Firebase's own address, skyarcacademy.web.app, serves the same site and keeps working: the phone
+ * app 1.0 and 1.1 open it, and older emails link to it.
+ */
+export const APP_DOMAIN = 'skyarcacademy.com'
 export const APP_URL = `https://${APP_DOMAIN}`
 
 /** The phone app in the stores (the owner's listings), for a family who signed with a link: their contract is in it too. */

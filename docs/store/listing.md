@@ -55,10 +55,12 @@ up `Sky Arc Sports Academy`, swap `academy` for `range`):
 air rifle,shooting,target,score,scan,coach,class,schedule,progress,report,parent,training,academy
 ```
 
-**Support URL:** `https://skyarcacademy.web.app/help` (whom to ask, signing in, deleting an account, with the academy's
+**Support URL:** `https://skyarcacademy.com/help` (whom to ask, signing in, deleting an account, with the academy's
 email and phone from the website's Settings → Academy; guideline 1.5).
-**Marketing URL:** `https://skyarcacademy.web.app` (the academy's website; `https://skyarcacademy.com` once the domain
-moves there, `docs/DEPLOY.md`).
+**Marketing URL:** `https://skyarcacademy.com` (the academy's website).
+1.0.0 and 1.1.0 went out with the same pages at `https://skyarcacademy.web.app`, which keeps working. App Store Connect
+changes the Support and Marketing URLs only with a new version, so change them with the next one; the privacy policy's
+address (App Privacy) and Google Play's (below) can change at any time.
 **Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app).
 **Category:** Sports; secondary Education.
 **What's New:** App Store Connect doesn't ask for it on the first version. 1.1.0's, as submitted on 2026-11-06 (4000;
@@ -139,9 +141,9 @@ Apple then works out **9+**, from "infrequent guns or other weapons" (frequent w
 **Full description** (4000): the App Store description above, unchanged.
 
 **App category:** Sports. **Tags:** those closest to Sports and Education.
-**Contact details:** the academy's email (the website's Settings → Academy) and website `https://skyarcacademy.web.app`;
+**Contact details:** the academy's email (the website's Settings → Academy) and website `https://skyarcacademy.com`;
 a phone only if the academy wants one public.
-**Privacy policy:** `https://skyarcacademy.web.app/privacy`.
+**Privacy policy:** `https://skyarcacademy.com/privacy`.
 
 ## Google Play: content rating
 
