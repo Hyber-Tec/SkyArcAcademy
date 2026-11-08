@@ -26,11 +26,23 @@ Tells Google the website lives at skyarcacademy.com, and lets it find every page
 
 The site's pages already name skyarcacademy.com as their address (#119).
 
-### Review #128
+### Read the terms of service
 
-[#128](https://github.com/Hyber-Tec/SkyArcAcademy/pull/128), Goo's pick of 2026-11-07. The families' Scores page
-stays as it is (A), but its results work like the staff's list. Each opens under its own row instead of one result
-shown large above "All results". The newest is open to start.
+Goo, 2026-11-07: the website should have terms of service beside its privacy policy. Claude Code wrote them on
+2026-11-08 ([#134](https://github.com/Hyber-Tec/SkyArcAcademy/pull/134): the full text is in its description), from
+the academy's earlier website's terms (in effect from August 27, 2026), for the website and the app as they are now.
+In English, as the privacy policy is; the Korean page shows the English under a note.
+
+- **New:** accounts, the enrollment contract (it wins where the two differ), students' records and scores, the app's
+  emails and notifications.
+- **Gone:** the trial "reference codes" (today's website has none) and the translation service.
+- **Kept as the academy wrote them:** safety, fair use, the liability limit (what you paid for the online service, or
+  $100), indemnification, disputes ("the laws where the academy is established").
+- **Worth a look:** whether to name Georgia in "Governing law", and the academy's legal name (A10, still open). It
+  isn't legal advice: a lawyer's read of the liability and dispute sections is worth having.
+
+Once Goo and the manager agree, Claude Code sets the date it takes effect, merges it, and the page goes live at
+`/terms` (today that address sends people to the privacy policy), linked in the footer beside it.
 
 ### Google Play 1.1.0 is in Google's review
 
@@ -127,18 +139,6 @@ The third meeting's `DM2`. After the email, so the invitations come from the aca
 each coach's page → **Access** → send the sign-in email. The real-data import gave nobody access yet
 ([DECISIONS.md](DECISIONS.md) §21).
 
-### Terms of service
-
-Goo, 2026-11-07: the website should have terms of service beside its privacy policy. The academy's earlier website
-had a page (effective August 27, 2026: who may use it, trial and scheduling requests, safety, communications,
-acceptable use, liability, and so on).
-
-1. **Claude Code:** drafts the website's page from it (saved in `docs/internal/old-website/terms.txt`), for the
-   website and the app as they are now, in English as the privacy policy is.
-2. **Goo and the manager:** read it.
-3. **Then:** it goes live at `/terms`, which #119 sends to the privacy policy until then, linked beside the privacy
-   policy.
-
 ### Clear the lead coach
 
 A leftover for the old iPhone app 1.0:
@@ -176,21 +176,13 @@ sign-in (`authDomain`). It can say skyarcacademy.com. It's optional, and the pho
 
 ## Questions for Goo
 
-### Card photos from the Drive
+### Students in the private notes
 
-A coach can score a paper card two ways: with the phone's scanner, or by adding the card's photo from the Drive
-(#101).
-
-- **The scanner** saves a straightened copy of the card, and every view shows it with its holes' scores.
-- **A photo from the Drive** becomes the score's file as it is. The website's staff pages show it with the scores; the
-  phone app and families see the plain photo.
-
-Screenshots sent 2026-11-07: the same practice card as its family sees it, scanned (with each bull's score) and from a
-Drive photo (the photo alone). Two ways to make them match:
-
-- **Claude Code's suggestion, no phone work:** also save a straightened copy beside the photo, as the scanner does.
-  The student's folder gets a second file for that card.
-- **Or:** keep one file, and teach the phone app and the families' pages to draw the scores on the photo.
+The private notes ([CLAUDE.md](../CLAUDE.md), "Local files") keep no students' records: scores, target photos, SIUS
+reports, the academy's sheets and the real data import stay on the Mac mini. One file is in between: the academy's
+answers of October (`academy-answers-2026-10.md`), which name about 20 students in their notes on what the sheets
+show, with a few levels and grades. The Mac mini kept it in the private repository, since the docs point to it. Keep
+it there, or move it to the Mac mini only?
 
 ### "To check" on the Scores page
 
@@ -270,6 +262,14 @@ Kept so they aren't brought up again. Each was decided:
 ## Good to know
 
 These are notes, not tasks.
+
+- **The private notes** (2026-11-08, [DECISIONS.md](DECISIONS.md) §2): the private repository
+  [Hyber-Tec/SkyArcAcademy-internal](https://github.com/Hyber-Tec/SkyArcAcademy-internal), in `docs/internal/` on both
+  Macs. Each meeting's own notes, the full brief and review, the academy's answers, the contract's texts, the old
+  website, the design demos and the designer's logo files. A session's start brings it up to date. Never passwords or
+  students' records: the demo logins' password stays on the Mac mini. The Mac mini's folder from before is kept at
+  `~/SkyArc-internal-backup-2026-11-08` there, until Goo says to delete it.
+- **The docs** are in folders since 2026-11-08: [README.md](README.md) maps them.
 
 - **The kiosk tablet** ([kiosk/README.md](kiosk/README.md)), 2026-11-07:
   - **The device:** a Samsung Galaxy Tab A9+ (SM-X218U), Android 16, on the academy's Wi-Fi, registered as "Front desk".
