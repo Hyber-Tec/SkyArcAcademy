@@ -2,7 +2,7 @@
  * The website's addresses (kept free of React, so the Vite config can read it too). English pages are at `/programs`,
  * Korean at `/ko/programs`, a news post at `/news/{slug}`. Every other address is the app's.
  */
-export const PAGES = ['', 'programs', 'about', 'gallery', 'news', 'trial', 'contact', 'portal', 'privacy', 'terms', 'help'] as const
+export const PAGES = ['', 'programs', 'about', 'gallery', 'news', 'trial', 'contact', 'portal', 'get-app', 'privacy', 'terms', 'help'] as const
 export type Page = (typeof PAGES)[number]
 
 /** Whether an address is one of the website's pages (and not the app's). */
@@ -56,6 +56,10 @@ export const PAGE_META: Record<Page | 'news-post', { en: { title: string; descri
   contact: {
     en: { title: 'Contact · Sky Arc Sports Academy', description: 'Questions about programs, tuition, equipment or placement? Send a message to Sky Arc Sports Academy in Suwanee, GA.' },
     ko: { title: '문의 · Sky Arc Sports Academy', description: '프로그램, 수강료, 장비, 반 배정이 궁금하신가요? Sky Arc Sports Academy에 메시지를 보내 주세요.' },
+  },
+  'get-app': {
+    en: { title: 'The Sky Arc app · Sky Arc Sports Academy', description: 'Classes, scores, progress reports and academy news on your iPhone or Android phone. Get Sky Arc on the App Store or Google Play.' },
+    ko: { title: 'Sky Arc 앱 · Sky Arc Sports Academy', description: '수업, 점수, 성장 리포트, 아카데미 소식을 iPhone과 Android 휴대폰에서 확인해요. App Store나 Google Play에서 Sky Arc를 받아 보세요.' },
   },
   portal: {
     en: { title: 'Parent portal · Sky Arc Sports Academy', description: 'One login for class schedules, scores, progress reports and academy news.' },
