@@ -27,7 +27,7 @@ import { useStudentEvaluations } from '@/features/scores/hooks'
 import { PaperScoreForm } from '@/features/scores/PaperScoreDialog'
 import { cn } from '@/lib/utils'
 import { CardCheck } from './CardCheck'
-import { type CardDraft, MAX_PHOTOS, type PhotoSource, cardNeeds, isPhotoFile } from './cards'
+import { type CardDraft, MAX_PHOTOS, type PhotoSource, cardNeeds, isPhotoFile, typing } from './cards'
 import { DrivePhotos, DriveThumb } from './DrivePhotos'
 import { useObjectUrl } from './objectUrl'
 import { readCardPhoto } from './reader'
@@ -42,7 +42,9 @@ export type SavedAction = (ids: string[]) => { label: string; onClick: () => voi
  * (several at once, dropped or picked; an iPhone's HEIC too) or ticked in their Drive folder, are read in the browser
  * with the phone app's own card reader (photos/reader.worker.ts), then checked one by one ("Card 1 of 2": each bull's
  * score in a box, what's worth a look, the position, the date, what it was, the note) and saved together, as the phone
- * saves a scanned card. Typing the scores stays, on its own tab. `drivePhotos` starts on photos picked in the Drive.
+ * saves a scanned card: each card straightened and filed in the student's folder, a photo from the Drive kept beside it,
+ * so families see the card with its scores. Typing the scores stays, on its own tab. `drivePhotos` starts on photos
+ * picked in the Drive.
  */
 export function AddPaperScoresDialog({
   open,
@@ -197,8 +199,10 @@ function AddFlow({ fixedStudent, drivePhotos, onSaved, savedAction, onDone }: { 
       return
     const toSave: CardSave[] = cards.map((c, i) => {
       const evaluation = made[i]
-      // A photo in the Drive keeps its file: it becomes the score's. One from the computer is filed as the card itself.
-      if (c.source.kind === 'drive') return { evaluation, up: null, driveFileId: c.source.file.id }
+      // The card the reader found, straightened, is filed as the score's picture, as the phone's scanner files it: so
+      // families and students see it with each bull's score, read-only (Goo, 2026-11-07). A photo picked in the Drive
+      // stays beside it as it was. A photo where no card was found (typed scores) keeps its own file from the Drive.
+      if (c.source.kind === 'drive' && typing(c)) return { evaluation, up: null, driveFileId: c.source.file.id }
       const name = cardFileName(c.dateKey, c.position as Position)
       const up = plannedFile(branchId, new File([c.read!.jpeg], name, { type: 'image/jpeg' }), { name, kind: 'jpg', mime: 'image/jpeg' }, studentFolderId(student.id), student.id, { originalName: c.source.file.name })
       return { evaluation, up, driveFileId: null }
