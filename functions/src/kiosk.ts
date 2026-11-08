@@ -1,12 +1,14 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { type DocumentSnapshot, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
-import { KIOSK_LATE_MS, type KioskOp, type KioskPlan, type KioskShiftState, planKioskOp } from '@shared/kiosk/ops'
+import { KIOSK_LATE_MS, type KioskAutoOut, type KioskOp, type KioskPlan, type KioskShiftState, planKioskOp } from '@shared/kiosk/ops'
 import type { KioskOpResult, KioskServerState } from '@shared/kiosk/tablet'
+import { type PayClass, autoClockOutAt } from '@shared/pay/paidTime'
 import { COL, ROOT } from '@shared/paths'
 import { resolveSettings } from '@shared/settings/resolve'
 import { dateKeyOf, formatMinutes, minutesOf, todayKey } from '@shared/time'
-import type { Branch } from '@shared/types'
+import type { BranchSettings } from '@shared/settings/defaults'
+import type { Availability, Branch } from '@shared/types'
 import { db } from './app'
 
 /**
@@ -159,9 +161,9 @@ export const kioskSync = onCall(async (req) => {
   const settings = resolveSettings(branch.settings)
   const list = (Array.isArray(ops) ? ops : []).slice(0, MAX_OPS)
   const results: KioskOpResult[] = []
-  for (const raw of list) results.push(await applyOp(branchId, deviceId, d.name as string, branch.timezone, raw))
+  for (const raw of list) results.push(await applyOp(branchId, deviceId, d.name as string, branch.timezone, settings, raw))
   await deviceRef.update({ lastSyncAt: FieldValue.serverTimestamp(), appVersion: typeof appVersion === 'string' ? appVersion.slice(0, 40) : (d.appVersion ?? '') })
-  const state: KioskServerState = await serverState(branchId, branch, settings.timeClock.kiosk)
+  const state: KioskServerState = await serverState(branchId, branch, settings)
   return { results, state }
 })
 
@@ -179,6 +181,7 @@ function shiftState(snap: DocumentSnapshot | null, staffId: string): KioskShiftS
   if (!snap || !s || s.staffId !== staffId) return null
   return {
     id: snap.id,
+    dateKey: s.dateKey as string,
     clockInAt: (s.clockInAt as Timestamp).toMillis(),
     clockOutAt: (s.clockOutAt as Timestamp | null)?.toMillis() ?? null,
     status: s.status as 'open' | 'closed',
@@ -189,7 +192,7 @@ function shiftState(snap: DocumentSnapshot | null, staffId: string): KioskShiftS
 const KIND_WORD = { in: 'clock-in', out: 'clock-out' } as const
 
 /** Applies one op in a transaction, once: a second time returns what the first did. */
-async function applyOp(branchId: string, deviceId: string, tabletName: string, tz: string, raw: unknown): Promise<KioskOpResult> {
+async function applyOp(branchId: string, deviceId: string, tabletName: string, tz: string, settings: BranchSettings, raw: unknown): Promise<KioskOpResult> {
   const op = parseOp(raw)
   if (!op) return { opId: String((raw as { id?: unknown } | null)?.id ?? ''), status: 'rejected', reason: 'it isn’t a clock-in or a clock-out' }
   const b = base(branchId)
@@ -220,6 +223,23 @@ async function applyOp(branchId: string, deviceId: string, tabletName: string, t
         : Promise.resolve(null),
     ])
     const name = (staff.data()?.name as string | undefined) ?? 'Someone'
+    // When the open shift is clocked out automatically, by its day's classes as the automatic clock-out decides it.
+    const openState = shiftState(openShift, op.staffId)
+    let openAutoOut: KioskAutoOut | null = null
+    if (openState && openShift) {
+      const [classes, availability] = await Promise.all([
+        tx.get(db.collection(`${b}/${COL.classes}`).where('dateKey', '==', openState.dateKey)),
+        tx.get(db.collection(`${b}/${COL.availability}`).where('dateKey', '==', openState.dateKey)),
+      ])
+      const out = autoClockOutAt({
+        shift: { staffId: op.staffId, dateKey: openState.dateKey, inMin: openShift.data()!.inMin as number, clockInMs: openState.clockInAt },
+        classes: classes.docs.map((c) => c.data() as PayClass),
+        availability: availability.docs.map((a) => a.data() as Availability),
+        settings,
+        timeZone: tz,
+      })
+      openAutoOut = out ? { at: out.atMs, by: out.by } : null
+    }
     const plan: KioskPlan =
       !staff.exists || (op.kind === 'in' && staff.data()!.status === 'finished')
         ? { kind: 'reject', reason: 'they can’t clock in here (no longer an employee?)' }
@@ -227,11 +247,27 @@ async function applyOp(branchId: string, deviceId: string, tabletName: string, t
             now,
             dateKey,
             lockedThrough: (payroll.data()?.lockedThrough as string | undefined) ?? '',
-            open: shiftState(openShift, op.staffId),
+            open: openState,
+            openAutoOut,
             target: shiftState(target, op.staffId),
             dayShifts: (day?.docs ?? []).map((s) => shiftState(s, op.staffId)).filter((s): s is KioskShiftState => s !== null),
           })
     let shiftId: string | null = null
+    // A forgotten clock-out first, as the automatic clock-out would have made it had it known of the shift.
+    if (plan.autoClose) {
+      tx.update(shiftRef(plan.autoClose.shiftId), {
+        clockOutAt: Timestamp.fromMillis(plan.autoClose.at),
+        outDateKey: dateKeyOf(plan.autoClose.at, tz),
+        outMin: minutesOf(plan.autoClose.at, tz),
+        status: 'closed',
+        autoClosed: true,
+        autoClosedBy: plan.autoClose.by,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: 'system',
+      })
+      // A new shift takes its place below; otherwise nobody is in.
+      if (plan.kind !== 'create') tx.delete(openRef)
+    }
     if (plan.kind === 'create') {
       const ref = db.collection(`${b}/${COL.clockShifts}`).doc()
       shiftId = ref.id
@@ -269,7 +305,7 @@ async function applyOp(branchId: string, deviceId: string, tabletName: string, t
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: by,
       })
-      if (openId === plan.shiftId) tx.delete(openRef)
+      if (openId === plan.shiftId && !plan.autoClose) tx.delete(openRef)
     } else if (plan.kind === 'same') shiftId = plan.shiftId
     const status: KioskOpResult['status'] = plan.kind === 'reject' ? 'rejected' : plan.kind === 'same' ? 'same' : 'applied'
     const reason = plan.kind === 'reject' || plan.kind === 'same' ? plan.reason : null
@@ -277,6 +313,20 @@ async function applyOp(branchId: string, deviceId: string, tabletName: string, t
     return { result: { opId: op.id, status, shiftId: shiftId ?? undefined, reason: reason ?? undefined } as KioskOpResult, fresh: true as const, plan, name }
   })
 
+  if (done.fresh && done.plan.autoClose) {
+    const a = done.plan.autoClose
+    await audit(branchId, {
+      action: 'shift.auto_clock_out',
+      via: 'function',
+      entityType: 'shift',
+      entityId: a.shiftId,
+      coachId: op.staffId,
+      coachName: done.name,
+      dateKey: dateKeyOf(a.at, tz),
+      context: tabletName,
+      summary: `${done.name} was clocked out automatically at ${formatMinutes(minutesOf(a.at, tz))}${a.by === 'last_class' ? ', at the end of the last class' : ''}: they hadn’t clocked out, and the tablet sent their next clock-in or clock-out later`,
+    })
+  }
   if (done.fresh && done.plan.kind !== 'same') {
     const when = `${formatMinutes(minutesOf(op.at, tz))}${dateKey === todayKey(tz, now) ? '' : ` on ${dateKey}`}`
     const offline = late ? ' (recorded without the internet, sent later)' : ''
@@ -303,7 +353,8 @@ async function applyOp(branchId: string, deviceId: string, tabletName: string, t
 }
 
 /** Who can clock in (their PINs as fingerprints), who's in now, and today's automatic clock-outs. */
-async function serverState(branchId: string, branch: Branch, kiosk: { pinLength: number; successReturnSeconds: number }): Promise<KioskServerState> {
+async function serverState(branchId: string, branch: Branch, settings: BranchSettings): Promise<KioskServerState> {
+  const kiosk = settings.timeClock.kiosk
   const b = base(branchId)
   const tz = branch.timezone
   const [owners, open, today] = await Promise.all([
@@ -327,6 +378,7 @@ async function serverState(branchId: string, branch: Branch, kiosk: { pinLength:
     timeZone: tz,
     pinLength: kiosk.pinLength,
     successReturnSeconds: kiosk.successReturnSeconds,
+    autoClockOut: { enabled: settings.timeClock.autoClockOut.enabled, localTime: settings.timeClock.autoClockOut.localTime },
     people,
     open: open.docs.map((d) => ({ staffId: d.id, shiftId: d.data().shiftId as string, clockInAt: (d.data().clockInAt as Timestamp).toMillis() })),
     autoOuts: [...latest.entries()].filter(([, s]) => s.autoClosed && !s.autoCorrected).map(([staffId, s]) => ({ staffId, at: (s.clockOutAt as Timestamp).toMillis() })),

@@ -5,12 +5,11 @@ import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, BackHandler, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Svg, { Path, SvgXml } from "react-native-svg";
-import { autoOutFor } from "@shared/kiosk/tablet";
 import type { KioskPerson } from "@shared/kiosk/tablet";
 import { formatDuration, formatInstant, formatInstantTime } from "@shared/time";
 import { API, APP_VERSION } from "./api";
 import { LOGO_BLACK, LOGO_RATIO, LOGO_WHITE } from "./brand";
-import { isSetupPin, now, openShifts, punch, register, start, sync, unregister, useKiosk, whoIs } from "./store";
+import { isSetupPin, now, punch, register, start, sync, unregister, useKiosk, view, whoIs } from "./store";
 
 /**
  * Sky Arc Kiosk: the front desk's time clock (docs/kiosk.md). The website's kiosk, made a tablet app: a coach taps,
@@ -250,9 +249,10 @@ function PinPad(p: { wide: boolean; pin: string; length: number; busy: boolean; 
 }
 
 function Action({ person, tz, busy, onClock, onBack }: { person: KioskPerson; tz: string; busy: boolean; onClock: () => void; onBack: () => void }) {
-  const k = useKiosk();
-  const open = openShifts()[person.staffId];
-  const autoOut = open ? null : autoOutFor(k.server, k.pending, person.staffId);
+  useKiosk();
+  const v = view();
+  const open = v.open[person.staffId];
+  const autoOut = open ? null : (v.autoOut[person.staffId] ?? null);
   const line = open
     ? `Clocked in at ${formatInstantTime(open.clockInAt, tz)}`
     : autoOut

@@ -4,7 +4,7 @@ import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useSyncExternalStore } from "react";
 import { kioskPinInput, type KioskOp } from "@shared/kiosk/ops";
-import { type KioskOpResult, type KioskPerson, type KioskServerState, clockOffset, openNow, punchOp, stillPending } from "@shared/kiosk/tablet";
+import { type KioskOpResult, type KioskPerson, type KioskServerState, type KioskView, clockOffset, punchOp, stillPending, tabletView } from "@shared/kiosk/tablet";
 import { APP_VERSION, BRANCH_ID, ServerError, call } from "./api";
 
 /**
@@ -115,12 +115,12 @@ export async function whoIs(pin: string): Promise<KioskPerson | null> {
   return state.server?.people.find((p) => p.pinHash === hash) ?? null;
 }
 
-/** Who's clocked in now, as the tablet sees it. */
-export const openShifts = () => openNow(state.server, state.pending);
+/** Who's clocked in now, and who was clocked out automatically, as the tablet sees it (shared/src/kiosk/tablet.ts). */
+export const view = (): KioskView => tabletView(state.server, state.pending, now());
 
 /** Clocks a coach in, or out when they're in: saved on the tablet at once, then sent. */
 export async function punch(person: KioskPerson): Promise<{ op: KioskOp; clockInAt: number | null }> {
-  const open = openShifts();
+  const { open } = view();
   const id = Crypto.randomUUID();
   const op = punchOp(person.staffId, open, now(), id);
   const clockInAt = op.kind === "out" ? (open[person.staffId]?.clockInAt ?? null) : null;
