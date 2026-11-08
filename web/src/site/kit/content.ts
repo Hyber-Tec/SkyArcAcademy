@@ -856,6 +856,7 @@ export const FOOTER = {
   ),
   copyright: l(`© ${new Date().getFullYear()} Sky Arc Sports Academy. All rights reserved.`, `© ${new Date().getFullYear()} Sky Arc Sports Academy. All rights reserved.`),
   privacy: l('Privacy policy', '개인정보 처리방침'),
+  terms: l('Terms of service', '이용약관'),
   help: l('Help', '도움말'),
   sections: { explore: l('Explore', '둘러보기'), visit: l('Visit', '오시는 길'), families: l('Families', '학부모') },
 }

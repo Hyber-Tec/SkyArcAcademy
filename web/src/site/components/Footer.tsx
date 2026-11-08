@@ -123,6 +123,9 @@ export function Footer() {
               <A to="privacy" className="inline-flex min-h-9 items-center hover:text-ink">
                 {t(FOOTER.privacy)}
               </A>
+              <A to="terms" className="inline-flex min-h-9 items-center hover:text-ink">
+                {t(FOOTER.terms)}
+              </A>
               <A to="help" className="inline-flex min-h-9 items-center hover:text-ink">
                 {t(FOOTER.help)}
               </A>
