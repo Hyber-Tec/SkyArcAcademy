@@ -23,11 +23,6 @@
         "source": "/schedule",
         "destination": "/trial",
         "type": 301
-      },
-      {
-        "source": "/terms",
-        "destination": "/privacy",
-        "type": 301
       }
     ],
     "ignore": [

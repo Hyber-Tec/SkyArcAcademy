@@ -29,9 +29,10 @@ const Trial = lazyPage(() => import('./pages/Trial'), (m) => m.Trial)
 const Contact = lazyPage(() => import('./pages/Contact'), (m) => m.Contact)
 const Portal = lazyPage(() => import('./pages/Portal'), (m) => m.Portal)
 const Privacy = lazyPage(() => import('./pages/Legal'), (m) => m.Privacy)
+const Terms = lazyPage(() => import('./pages/Legal'), (m) => m.Terms)
 const Help = lazyPage(() => import('./pages/Legal'), (m) => m.Help)
 const NotFound = lazyPage(() => import('./pages/NotFound'), (m) => m.NotFound)
-const LATER = [Programs, About, Gallery, News, NewsPostPage, Trial, Contact, Portal, Privacy, Help, NotFound]
+const LATER = [Programs, About, Gallery, News, NewsPostPage, Trial, Contact, Portal, Privacy, Terms, Help, NotFound]
 
 /**
  * The academy's website (the owner's pick of the design options, "Academy": trust-first and parent-friendly). Every
@@ -50,6 +51,7 @@ function Page() {
   if (first === 'contact' && !second) return <Contact />
   if (first === 'portal' && !second) return <Portal />
   if (first === 'privacy' && !second) return <Privacy />
+  if (first === 'terms' && !second) return <Terms />
   if (first === 'help' && !second) return <Help />
   return <NotFound />
 }
