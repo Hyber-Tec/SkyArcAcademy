@@ -9,6 +9,7 @@ import {
   type ContractLinkToken,
   type ContractPdf,
   type ContractPrefillResult,
+  type ContractRequest,
   type ContractSendRequest,
   type ContractSendResult,
   type ContractSignRequest,
@@ -114,6 +115,23 @@ export function useContractLinks() {
   const { branchId, isAdmin } = useBranch()
   const q = useMemo(() => (isAdmin ? query(branchCol(branchId, COL.contractLinks)) : null), [branchId, isAdmin])
   return useQuery<ContractLink>(q, `contract-links-${branchId}`)
+}
+
+/**
+ * Families' requests from the academy's sign (owners and admins, docs/DECISIONS.md §39): waiting for the office first,
+ * then the newest.
+ */
+export function useContractRequests() {
+  const { branchId, isAdmin } = useBranch()
+  const q = useMemo(() => (isAdmin ? query(branchCol(branchId, COL.contractRequests)) : null), [branchId, isAdmin])
+  return useQuery<ContractRequest>(q, `contract-requests-${branchId}`)
+}
+
+const closeRequestCall = httpsCallable<{ branchId: string; requestId: string }, { ok: true }>(functions, 'closeContractRequest')
+
+/** A request closed without a contract (not a family, or asked twice). */
+export async function closeContractRequest(branchId: string, requestId: string) {
+  await closeRequestCall({ branchId, requestId })
 }
 
 /** A contract's link's token (owners and admins): its QR code, and the link to copy. */

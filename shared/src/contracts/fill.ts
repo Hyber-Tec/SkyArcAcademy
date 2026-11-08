@@ -63,6 +63,22 @@ export function prefillValues(doc: ContractDocument, p: Prefill): ContractValues
   return out
 }
 
+/**
+ * A contract sent for a family's request from the academy's sign (§39): their email stays as they typed it there, in
+ * every email field, whatever the form sends (the copy goes there).
+ */
+export function withLockedEmail(doc: ContractDocument, values: ContractValues, email: string | null | undefined): ContractValues {
+  if (!email) return values
+  const out = { ...values }
+  for (const f of familyFields(doc)) if (f.kind === 'field' && f.fill === 'email') out[f.id] = email
+  return out
+}
+
+/** The contract's email fields (by ID): the ones a request's email locks. */
+export function emailFieldIds(doc: ContractDocument): string[] {
+  return familyFields(doc).flatMap((f) => (f.kind === 'field' && f.fill === 'email' ? [f.id] : []))
+}
+
 /** The addresses the family typed in the contract's email fields, as signed: where the signer's copy goes (§35). */
 export function emailsIn(doc: ContractDocument, values: ContractValues): string[] {
   const out = new Set<string>()
@@ -87,7 +103,9 @@ export function carriedValues(doc: ContractDocument, values: ContractValues): Co
   return out
 }
 
-const NAME = /^[A-Za-zÀ-ÖØ-öø-ÿ' .\-’]+$/
+/** A name as the contract takes it: English letters (the PDF prints them), with spaces, dots, hyphens and apostrophes. */
+export const ENGLISH_NAME = /^[A-Za-zÀ-ÖØ-öø-ÿ' .\-’]+$/
+const NAME = ENGLISH_NAME
 const text = (v: unknown) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '')
 
 /** One part's value checked: the clean value, or what to fix in the family's words (Korean for a parent reading it). */

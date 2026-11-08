@@ -137,6 +137,8 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/contractLinks/waiting/private/token`), { token: 't'.repeat(43) })
     await setDoc(doc(d, `branches/${A}/contractLinks/done`), link({ status: 'signed', signedAt: Timestamp.now() }))
     await setDoc(doc(d, `branches/${A}/contractLinks/other`), link({ studentId: 's2', studentName: 'Student Two' }))
+    await setDoc(doc(d, `branches/${A}/contractRequests/r1`), { studentFirstName: 'Ava', studentLastName: 'Kim', parentName: 'Grace Kim', email: 'grace@a.test', status: 'waiting', tokenHash: 'b'.repeat(64) })
+    await setDoc(doc(d, `branches/${A}/contractRequests/r1/private/link`), { token: 't'.repeat(43) })
   })
 })
 
@@ -192,6 +194,25 @@ describe('contracts sent', () => {
     await assertFails(updateDoc(doc(a, `branches/${A}/contractLinks/done`), cancel(ADMIN)))
     await assertSucceeds(updateDoc(doc(a, `branches/${A}/contractLinks/waiting`), cancel(ADMIN)))
     await assertFails(deleteDoc(doc(a, `branches/${A}/contractLinks/done`)))
+  })
+})
+
+describe('requests from the academy’s sign (docs/DECISIONS.md §39)', () => {
+  it('owners and admins read them; nobody else, and nobody writes them from the app', async () => {
+    await assertSucceeds(getDoc(doc(db(ADMIN), `branches/${A}/contractRequests/r1`)))
+    await assertSucceeds(getDocs(collection(db('owner@a.test'), `branches/${A}/contractRequests`)))
+    for (const who of ['coach@a.test', 'parent@a.test', 'kid@a.test']) {
+      await assertFails(getDoc(doc(db(who), `branches/${A}/contractRequests/r1`)))
+    }
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), `branches/${A}/contractRequests/r1`)))
+    await assertFails(setDoc(doc(db(ADMIN), `branches/${A}/contractRequests/r2`), { status: 'waiting' }))
+    await assertFails(updateDoc(doc(db(ADMIN), `branches/${A}/contractRequests/r1`), { status: 'closed' }))
+    await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), `branches/${A}/contractRequests/r3`), { status: 'waiting' }))
+  })
+
+  it('keeps the contract’s link token on the server: not even owners and admins read it', async () => {
+    await assertFails(getDoc(doc(db(ADMIN), `branches/${A}/contractRequests/r1/private/link`)))
+    await assertFails(getDoc(doc(db('parent@a.test'), `branches/${A}/contractRequests/r1/private/link`)))
   })
 })
 

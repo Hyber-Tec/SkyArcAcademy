@@ -1272,3 +1272,38 @@ schedule. Claude Code drew three options for each, and Goo picked A and 1
   Not chosen: the name inside the freed seat (2), and a count in the class's header (3).
 - **The phone app** shows both in its next build (the class card and the class page). Until then, the installed apps
   show a stretched student's hours on their seat, and a canceled student in their place, as before.
+
+## 39. Two signs for the front desk: the contract asked for by QR code, and the app (Goo, 2026-11-08)
+
+Goo is giving the academy two acrylic signs for the front desk, each with a QR code: one for the enrollment contract
+and one for the phone app. The website advertises the app too.
+
+- **The contract sign opens `skyarcacademy.com/contract`.** A parent asks there for each child's contract:
+  - what they type: the child's name and date of birth, then their own name, email and phone;
+  - up to four children, one contract each;
+  - names in English letters, as the contract writes them.
+
+  It's a request, not the contract: the program the office suggests and the discounts stay the office's (§34). Goo:
+  "they request to get a contract and admin get a notification ... they can choose a program, suggested one and then
+  they can send it".
+- **The office is told at once:** in the inbox and on their phones, and on Home ("families waiting for a contract").
+  Each request opens in Settings → Enrollment contract, where the office:
+  - picks whose contract it is: the student the records suggest (by the parent's email and the child's name), another
+    student, or a new student made from it (with the parent and the birth date);
+  - adds the parent to an existing student's record when it doesn't have their email, so their account finds the child;
+  - sends it as always: the program, the discounts.
+
+  A request that isn't a family's is closed.
+- **The parent's page opens the contract once it's sent.** If they kept the page open, it opens there to sign; it's
+  emailed to them too.
+  - What they typed fills in the contract, and they can change any of it except the email, where their copy goes.
+    Goo: "they should have ability to ... retype in case there might be typo, but obviously except the email".
+  - The page limits how often one network address asks, as the signing link does.
+- **The app sign opens `skyarcacademy.com/get-app?go`** (#140): an iPhone or iPad goes to the App Store, an Android phone
+  to Google Play, and a computer to the page.
+- **The website advertises the app** (#140): `/get-app` and `/ko/get-app`, a band on the homepage after the portal, and
+  the stores' badges in the footer. The badges are Apple's and Google's own files, unchanged, with the stores' credit
+  line. `/app` stays the signed-in app's home, where sign-in lands.
+- **No phone build is needed.** The parent's side is the website, and the office's phone gets the request's notice;
+  from the next build, tapping it opens the request on the website.
+

@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { SignupShareCard } from '@/features/access/SignupShare'
 import { AuditLogSection } from '@/features/audit/AuditLogSection'
+import { ContractRequests } from '@/features/contracts/ContractRequests'
 import { ContractSettings } from '@/features/contracts/ContractSettings'
 import { ContractsList } from '@/features/contracts/ContractsList'
 import { WebsiteSettings } from '@/features/website/WebsiteSettings'
@@ -230,6 +231,7 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
       case 'contract':
         return wrap(
           <div className="space-y-4">
+            <ContractRequests />
             <ContractSettings />
             <ContractsList />
           </div>,

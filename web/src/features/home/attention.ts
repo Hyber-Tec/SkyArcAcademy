@@ -5,6 +5,7 @@ import { COL } from '@shared/paths'
 import { isInactiveStudent } from '@shared/people'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, addDays, dateKeyOf, nowMinutes, todayKey } from '@shared/time'
+import type { ContractRequest } from '@shared/contracts/types'
 import type { AcademyClass, Availability, Session, SignupRequest, Student, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { useDayConfigs, useStaffList, useStudentList } from '@/features/data/hooks'
@@ -21,6 +22,7 @@ export type AttentionItem =
   | { kind: 'conflict'; id: string; at: number; conflict: ClassConflict }
   | { kind: 'autoClockOut'; id: string; at: number; shift: WithId<ClockShift> }
   | { kind: 'signup'; id: string; at: number; request: WithId<SignupRequest> }
+  | { kind: 'contractRequest'; id: string; at: number; request: WithId<ContractRequest> }
 
 export interface NewStudent {
   student: WithId<Student>
@@ -31,7 +33,8 @@ export interface NewStudent {
 /**
  * What needs an admin's attention (the Home badge): classes in the next four weeks that may not happen as booked
  * (listed first: no coach in, too many students, a student in two classes at once…), automatic clock-outs at the set
- * time not fixed yet, pending sign-up requests, new students nobody has opened yet, and employees without an hourly
+ * time not fixed yet, pending sign-up requests, families waiting for a contract they asked for from the academy's sign
+ * (docs/DECISIONS.md §39), new students nobody has opened yet, and employees without an hourly
  * rate. It also hands Home
  * those weeks' classes and who's in. The sidebar badge and the Home page run the same queries, so Firestore shares the
  * listeners.
@@ -53,6 +56,11 @@ export function useAttention(enabled = true) {
     [branchId, enabled],
   )
   const requests = useQuery<SignupRequest>(requestsQ, `attn-requests-${branchId}`)
+  const contractQ = useMemo(
+    () => (enabled ? query(branchCol(branchId, COL.contractRequests), where('status', '==', 'waiting')) : null),
+    [branchId, enabled],
+  )
+  const contractRequests = useQuery<ContractRequest>(contractQ, `attn-contract-requests-${branchId}`)
 
   // The next four weeks' classes, their students and who's in.
   const until = addDays(today, CONFLICT_DAYS - 1)
@@ -98,6 +106,7 @@ export function useAttention(enabled = true) {
       .filter((s) => s.autoClosed && !s.autoCorrected && s.status === 'closed' && s.autoClosedBy !== 'last_class')
       .sort((a, b) => b.clockInAt.toMillis() - a.clockInAt.toMillis())
     const pendingRequests = requests.data.slice().sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
+    const waitingContracts = contractRequests.data.slice().sort((a, b) => (a.createdAt?.toMillis() ?? 0) - (b.createdAt?.toMillis() ?? 0))
 
     const recentFrom = addDays(today, -14)
     const newStudents: NewStudent[] = students.data
@@ -114,6 +123,7 @@ export function useAttention(enabled = true) {
       ...[
         ...autoClockOuts.map((shift) => ({ kind: 'autoClockOut' as const, id: `clock-${shift.id}`, at: shift.clockInAt.toMillis(), shift })),
         ...pendingRequests.map((request) => ({ kind: 'signup' as const, id: `signup-${request.id}`, at: request.createdAt?.toMillis() ?? now, request })),
+        ...waitingContracts.map((request) => ({ kind: 'contractRequest' as const, id: `contract-${request.id}`, at: request.createdAt?.toMillis() ?? now, request })),
       ].sort((a, b) => b.at - a.at),
     ]
 
@@ -122,6 +132,7 @@ export function useAttention(enabled = true) {
       conflicts,
       autoClockOuts,
       pendingRequests,
+      waitingContracts,
       newStudents,
       payGaps,
       shifts: shifts.data,
@@ -132,9 +143,9 @@ export function useAttention(enabled = true) {
       hoursOf,
       classesLoading: classes.loading || ahead.loading || avail.loading || staff.loading,
       total: items.length + newStudents.length + payGaps.length,
-      loading: shifts.loading || students.loading || requests.loading,
+      loading: shifts.loading || students.loading || requests.loading || contractRequests.loading,
       now,
       today,
     }
-  }, [shifts, students, requests, now, today, timezone, conflicts, payGaps, byDate, avail.data, hoursOf, classes.loading, ahead.loading, avail.loading, staff.loading])
+  }, [shifts, students, requests, contractRequests, now, today, timezone, conflicts, payGaps, byDate, avail.data, hoursOf, classes.loading, ahead.loading, avail.loading, staff.loading])
 }

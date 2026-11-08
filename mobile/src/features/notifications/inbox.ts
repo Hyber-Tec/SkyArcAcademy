@@ -84,7 +84,7 @@ export function inboxTarget(n: Pick<AppNotification, "type" | "link" | "refs">):
   if (n.type === "session_deleted" || n.type === "session_reassigned_out") return null;
   // The message itself, as the website's bell opens it (older notices name the page only); a signed contract, the
   // student's page on the website; someone signing up or asking to join, the Account page (docs/DECISIONS.md §31).
-  if (n.type === "website_message" || n.type === "contract_signed" || n.type === "family_linked" || n.type === "signup_request") return n.link ? { kind: "website", path: n.link } : null;
+  if (n.type === "website_message" || n.type === "contract_signed" || n.type === "contract_requested" || n.type === "family_linked" || n.type === "signup_request") return n.link ? { kind: "website", path: n.link } : null;
   // A family's request, or their answer to a time suggested, opens the request itself (a push carries it in its link only).
   const requestId = requestNoticeId(n);
   if (requestId) return { kind: "request", id: requestId };

@@ -19,6 +19,7 @@ import {
   shownValue,
   tuitionOf,
   usDate,
+  withLockedEmail,
   withPreset,
 } from '@shared/contracts/fill'
 import { type SignatureFactsInput, contractFileName, isContractToken, signUrl, signatureFacts, signatureStatement } from '@shared/contracts/signing'
@@ -29,11 +30,13 @@ import {
   type AcademySigner,
   type ShownSigner,
   CONTRACT_PRICE_MAX,
+  CONTRACT_REQUEST_LINK_DOC,
   CONTRACT_TOKEN_DOC,
   type ContractLink,
   type ContractLinkSignedResult,
   type ContractLinkToken,
   type ContractPrefillResult,
+  type ContractRequest,
   type ContractSendRequest,
   type ContractSendResult,
   type ContractSignedResult,
@@ -74,10 +77,10 @@ import { familyOf } from './recipients'
  * can ask, as `websiteMessage` does.
  */
 
-const HOUR = 3_600_000
-const DAY = 24 * HOUR
+export const HOUR = 3_600_000
+export const DAY = 24 * HOUR
 
-const sha256 = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex')
+export const sha256 = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex')
 
 /** Contracts are in the academy or in the demo academy (§22): a token finds its own. */
 const ACADEMIES = [ACADEMY_ID, DEMO_ACADEMY_ID]
@@ -120,14 +123,14 @@ const signerForPdf = (s: ShownSigner | null) => (s ? { name: s.name, title: s.ti
 const LOGO = logoPng instanceof Uint8Array ? logoPng : null
 
 /** The caller's network address ("" when there's none to tell, as in the emulators). */
-function addressOf(raw: { headers: Record<string, string | string[] | undefined>; ip?: string }): string {
+export function addressOf(raw: { headers: Record<string, string | string[] | undefined>; ip?: string }): string {
   const forwarded = raw.headers['x-forwarded-for']
   const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim()
   return (first || raw.ip || '').slice(0, 100)
 }
 
 /** One more request counted against each limit (the website's limits' documents, server only); false when one is used up. */
-async function withinLimits(checks: { key: string; max: number; window: number }[]): Promise<boolean> {
+export async function withinLimits(checks: { key: string; max: number; window: number }[]): Promise<boolean> {
   const base = `${ROOT.branches}/${ACADEMY_ID}/${COL.websiteLimits}`
   const now = Date.now()
   const refs = checks.map((c) => ({ ...c, ref: db.doc(`${base}/${c.key}`) }))
@@ -141,13 +144,13 @@ async function withinLimits(checks: { key: string; max: number; window: number }
 }
 
 /** A network address or a link, never stored as is: its hash keys its count. */
-const limitKey = (kind: string, value: string) => `sign-${kind}-${sha256(`${ACADEMY_ID}:${value}`).slice(0, 32)}`
+export const limitKey = (kind: string, value: string) => `sign-${kind}-${sha256(`${ACADEMY_ID}:${value}`).slice(0, 32)}`
 
 const firstNameOf = (student: Student | undefined, fallback: string) => student?.firstName?.trim() || fallback.split(' ')[0] || fallback
 
 const ms = (t: unknown) => (t as Timestamp | null | undefined)?.toMillis?.() ?? 0
 
-async function requireAdmin(branchId: unknown, auth: { uid: string; token: Record<string, unknown> } | undefined, what = 'send the contract') {
+export async function requireAdmin(branchId: unknown, auth: { uid: string; token: Record<string, unknown> } | undefined, what = 'send the contract') {
   if (!auth || typeof auth.token.email !== 'string' || auth.token.email_verified !== true) throw new HttpsError('unauthenticated', 'Sign in first.')
   if (typeof branchId !== 'string' || !ACADEMIES.includes(branchId)) throw new HttpsError('invalid-argument', 'Missing academy.')
   const email = emailKey(auth.token.email)
@@ -157,7 +160,7 @@ async function requireAdmin(branchId: unknown, auth: { uid: string; token: Recor
 }
 
 /** An audit entry written by a function for an owner or admin (`caller`), about the contract. */
-function adminAudit(caller: Awaited<ReturnType<typeof requireAdmin>>, entry: Record<string, unknown>) {
+export function adminAudit(caller: Awaited<ReturnType<typeof requireAdmin>>, entry: Record<string, unknown>) {
   return {
     at: FieldValue.serverTimestamp(),
     actorUid: caller.uid,
@@ -329,11 +332,16 @@ async function emailFamily(input: {
   link: ContractLink
   token: string
   caller: Awaited<ReturnType<typeof requireAdmin>>
+  /** The parents on the student's record (the office's switch); true unless said. */
+  record?: boolean
+  /** Who else: the family who asked from the academy's sign (§39). */
+  extra?: string[]
 }): Promise<{ emailed: Emailed; emailedTo: string[] }> {
   const { branchId: b, id, link, token, caller } = input
   const base = `${ROOT.branches}/${b}`
   const [academy, student, priv] = await Promise.all([academyOf(b), db.doc(`${base}/${COL.students}/${link.studentId}`).get(), db.doc(`${base}/${COL.students}/${link.studentId}/private/profile`).get()])
-  const to = emailsFor(priv.data() as StudentPrivateProfile | undefined)
+  const onRecord = input.record === false ? [] : emailsFor(priv.data() as StudentPrivateProfile | undefined)
+  const to = [...new Set([...onRecord, ...(input.extra ?? []).map(emailKey).filter((e) => e.includes('@'))])]
   if (!to.length) return { emailed: 'no_address', emailedTo: [] }
   if (isDemoAcademy(b)) return { emailed: 'demo', emailedTo: [] }
   const real = to.filter((e) => !isReservedEmail(e))
@@ -365,18 +373,30 @@ async function emailFamily(input: {
  * link too. Returns the link, for the QR code a parent at the front desk scans.
  */
 export const sendContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds: 60, memory: '512MiB', ...LIGHT }, async (req): Promise<ContractSendResult> => {
-  const { branchId, studentId, preset, email } = (req.data ?? {}) as Partial<ContractSendRequest>
+  const { branchId, studentId, preset, email, requestId } = (req.data ?? {}) as Partial<ContractSendRequest>
   const caller = await requireAdmin(branchId, req.auth)
   const b = branchId as string
   if (typeof studentId !== 'string' || !studentId) throw new HttpsError('invalid-argument', 'Missing student.')
+  if (requestId !== undefined && (typeof requestId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(requestId))) throw new HttpsError('invalid-argument', 'That isn’t a family’s request.')
   const base = `${ROOT.branches}/${b}`
   const by: DriveActor = { uid: caller.uid, email: caller.email, name: caller.name }
-  const [studentSnap, current, academy] = await Promise.all([db.doc(`${base}/${COL.students}/${studentId}`).get(), currentTemplate(b), academyOf(b)])
+  const requestRef = requestId ? db.doc(`${base}/${COL.contractRequests}/${requestId}`) : null
+  const [studentSnap, current, academy, requestSnap, privSnap] = await Promise.all([
+    db.doc(`${base}/${COL.students}/${studentId}`).get(),
+    currentTemplate(b),
+    academyOf(b),
+    requestRef ? requestRef.get() : Promise.resolve(null),
+    db.doc(`${base}/${COL.students}/${studentId}/private/profile`).get(),
+  ])
   const student = studentSnap.data() as Student | undefined
   if (!student) throw new HttpsError('not-found', 'That student isn’t in the academy.')
   if (!current) throw new HttpsError('failed-precondition', 'The academy’s contract isn’t set up yet.')
   const checked = checkPreset(current.doc, preset ?? {})
   if (!checked.ok) throw new HttpsError('invalid-argument', checked.error)
+  // Sent for a family's request from the academy's sign (§39): what they typed fills in the contract.
+  const request = requestSnap?.data() as ContractRequest | undefined
+  if (requestRef && (!request || request.status === 'closed')) throw new HttpsError('failed-precondition', 'That request isn’t waiting any more.')
+  const dob = request?.studentDob ?? (privSnap.data() as StudentPrivateProfile | undefined)?.dob ?? null
 
   const token = randomBytes(32).toString('base64url')
   const id = sha256(token)
@@ -397,13 +417,26 @@ export const sendContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds
     fileName: null,
     canceledAt: null,
     canceledBy: null,
+    ...(request && requestRef
+      ? {
+          requestId: requestRef.id,
+          prefill: { studentName: student.name, dob, signerName: request.parentName, phone: request.phone, email: request.email },
+          lockedEmail: request.email,
+        }
+      : {}),
   }
   // One contract waits per student: a new one withdraws it.
   const waiting = await db.runTransaction(async (tx) => {
     const open = (await tx.get(db.collection(`${base}/${COL.contractLinks}`).where('studentId', '==', studentId))).docs.filter((d) => (d.data() as ContractLink).status === 'sent')
+    if (requestRef && ((await tx.get(requestRef)).data() as ContractRequest | undefined)?.status === 'closed') throw new HttpsError('failed-precondition', 'That request isn’t waiting any more.')
     for (const d of open) tx.update(d.ref, { status: 'canceled', canceledAt: FieldValue.serverTimestamp(), canceledBy: by })
     tx.create(linkRef(b, id), { ...link, createdAt: FieldValue.serverTimestamp() })
     tx.create(tokenRef(b, id), { token } satisfies ContractLinkToken)
+    if (requestRef) {
+      // The family's page, waiting on it, opens the contract.
+      tx.update(requestRef, { status: 'sent', studentId, linkId: id, sentAt: FieldValue.serverTimestamp(), sentBy: by })
+      tx.set(requestRef.collection('private').doc(CONTRACT_REQUEST_LINK_DOC), { token })
+    }
     tx.set(
       db.collection(`${base}/${COL.auditLog}`).doc(),
       adminAudit(caller, {
@@ -412,7 +445,7 @@ export const sendContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds
         entityId: id,
         studentId,
         studentName: student.name,
-        summary: `Sent ${student.name}’s enrollment contract (${presetWords(current.doc, checked.value)})${open.length ? '; the one sent before is withdrawn' : ''}`,
+        summary: `Sent ${student.name}’s enrollment contract (${presetWords(current.doc, checked.value)})${request ? `, for ${request.parentName}’s request from the academy’s sign` : ''}${open.length ? '; the one sent before is withdrawn' : ''}`,
       }),
     )
     return open.length
@@ -441,7 +474,9 @@ export const sendContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds
   } catch (e) {
     logger.error('Contract sent: telling the family failed', { branchId: b, error: String(e) })
   }
-  const mail = email === true ? await emailFamily({ branchId: b, id, link, token, caller }) : { emailed: 'off' as const, emailedTo: [] }
+  // The family who asked from the sign gets it by email too, whatever the switch (§39).
+  const extra = request ? [request.email] : []
+  const mail = email === true || extra.length ? await emailFamily({ branchId: b, id, link, token, caller, record: email === true, extra }) : { emailed: 'off' as const, emailedTo: [] }
   return { linkId: id, url: signUrl(token), told, ...mail }
 })
 
@@ -455,7 +490,7 @@ export const emailContract = onCall({ secrets: [gmailAppPassword], timeoutSecond
   const link = snap.data() as ContractLink | undefined
   const token = (secret.data() as ContractLinkToken | undefined)?.token
   if (!link || link.status !== 'sent' || !token) throw new HttpsError('failed-precondition', 'This contract isn’t waiting for a signature any more.')
-  return emailFamily({ branchId: b, id: linkId, link, token, caller })
+  return emailFamily({ branchId: b, id: linkId, link, token, caller, extra: link.lockedEmail ? [link.lockedEmail] : [] })
 })
 
 // ------------------------------------------------------------------ signing
@@ -504,6 +539,9 @@ export const getContractForSigning = onCall({ timeoutSeconds: 60, memory: '512Mi
     preset: link.preset ?? {},
     academySigner: signer,
     emailsCopy: !isDemoAcademy(branchId),
+    // Sent for a family's request from the academy's sign (§39): what they typed there, their email kept as typed.
+    prefill: link.prefill ?? null,
+    lockedEmail: link.lockedEmail ?? null,
   }
 })
 
@@ -773,7 +811,7 @@ async function signSent(input: {
   const filled = checkedSigning(doc, input.request, lang)
   const read = lang === 'ko' && template.ko?.text ? contractIn('ko', template.text, template.ko.text) : null
   const translation = read?.translated && template.ko ? { doc: read.doc, sha256: template.ko.sha256 } : null
-  const signing: ContractSigning = { ...filled, values: withPreset(doc, filled.values, link.preset ?? {}) }
+  const signing: ContractSigning = { ...filled, values: withLockedEmail(doc, withPreset(doc, filled.values, link.preset ?? {}), link.lockedEmail) }
   const { name, relation } = signing
   const signedAt = new Date()
   const student = { id: link.studentId, name: link.studentName }

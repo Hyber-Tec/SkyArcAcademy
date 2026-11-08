@@ -38,7 +38,7 @@ async function allowedTry(uid: string): Promise<boolean> {
 }
 
 /** Every student with the emails on their record (their private profile). */
-async function studentsOnFile(base: string): Promise<(StudentOnFile & { student: Student })[]> {
+export async function studentsOnFile(base: string): Promise<(StudentOnFile & { student: Student })[]> {
   const students = await db.collection(`${base}/${COL.students}`).get()
   if (students.empty) return []
   const profiles = await db.getAll(...students.docs.map((d) => db.doc(`${base}/${COL.students}/${d.id}/private/${DOC.privateProfile}`)))

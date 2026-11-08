@@ -39,6 +39,8 @@ interface ViewProps {
   suggested?: string | null
   /** The academy's signature on file, shown on its line. */
   academySigner?: ShownSigner | null
+  /** Fields the family can't change (by ID): a request's email (docs/DECISIONS.md §39). */
+  locked?: ReadonlySet<string>
 }
 
 /**
@@ -207,7 +209,7 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
           <h4 className="bg-foreground px-3 py-2 text-xs font-bold tracking-wide text-background">{b.title}</h4>
           <div className="divide-y">
             {b.fields.map((f) => (
-              <FamilyField key={f.id} field={f} value={typeof values[f.id] === 'string' ? (values[f.id] as string) : ''} onValue={(v) => onValue(f.id, v)} error={errors[f.id]} />
+              <FamilyField key={f.id} field={f} value={typeof values[f.id] === 'string' ? (values[f.id] as string) : ''} onValue={(v) => onValue(f.id, v)} error={errors[f.id]} locked={props.locked?.has(f.id)} />
             ))}
           </div>
         </section>
@@ -317,7 +319,8 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /** One field the family fills in, with the keyboard it needs. */
-function FamilyField({ field: f, value, onValue, error }: { field: ContractField; value: string; onValue: (v: string) => void; error?: string }) {
+function FamilyField({ field: f, value, onValue, error, locked }: { field: ContractField; value: string; onValue: (v: string) => void; error?: string; locked?: boolean }) {
+  const t = useT()
   const id = `contract-${f.id}`
   const kind: React.ComponentProps<typeof Input> =
     f.fill === 'date'
@@ -337,7 +340,18 @@ function FamilyField({ field: f, value, onValue, error }: { field: ContractField
         {f.label}
       </FieldLabel>
       <div className="space-y-1">
-        <Input id={id} value={value} maxLength={f.fill === 'date' ? 10 : 200} onChange={(e) => onValue(f.fill === 'date' ? typingDate(e.target.value) : e.target.value)} aria-invalid={!!error || undefined} data-testid={`contract-field-${f.id}`} {...kind} />
+        <Input
+          id={id}
+          value={value}
+          maxLength={f.fill === 'date' ? 10 : 200}
+          readOnly={locked}
+          onChange={(e) => onValue(f.fill === 'date' ? typingDate(e.target.value) : e.target.value)}
+          aria-invalid={!!error || undefined}
+          className={cn(locked && 'bg-muted text-muted-foreground')}
+          data-testid={`contract-field-${f.id}`}
+          {...kind}
+        />
+        {locked ? <p className="text-xs text-muted-foreground">{t('From your request: your copy comes here.', '요청할 때 적은 주소예요. 사본이 이 주소로 가요.')}</p> : null}
         {error ? <FieldError>{error}</FieldError> : null}
       </div>
     </Field>

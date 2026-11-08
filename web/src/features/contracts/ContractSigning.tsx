@@ -28,6 +28,7 @@ export function ContractSigning({
   signLabel,
   suggested = null,
   academySigner = null,
+  locked,
 }: {
   doc: ContractDocument
   /** "Ava": whose contract it is. */
@@ -43,6 +44,8 @@ export function ContractSigning({
   suggested?: string | null
   /** The academy's signature on file, shown on its line. */
   academySigner?: ShownSigner | null
+  /** Fields the family can't change (by ID): a request's email (docs/DECISIONS.md §39). */
+  locked?: ReadonlySet<string>
 }) {
   const [values, setValues] = useState<ContractValues>(initial)
   const [sign, setSign] = useState<SignState>({ name: '', relation: '', agree: false })
@@ -112,6 +115,7 @@ export function ContractSigning({
           today={today}
           suggested={suggested}
           academySigner={academySigner}
+          locked={locked}
         />
       </div>
 
