@@ -158,6 +158,61 @@ export interface PieceNeed {
   need: number
 }
 
+/** A block piece as stacking sees it: its time, the rows it spans, and the height its content needs. */
+export interface StackItem {
+  startMin: number
+  endMin: number
+  rows: readonly [number, number]
+  need: number
+}
+
+/** Where a stacked piece goes: the rows its group spans, how far below the group's top it starts, and its level. */
+export interface Stacked {
+  rows: [number, number]
+  offset: number
+  level: number
+  /** The level's height; the group's last level takes whatever room is left. */
+  height: number
+  last: boolean
+}
+
+/**
+ * Pieces that overlap in time over the same rows (two classes at 5–6 PM) go one under the other, never on top of each
+ * other: they're grouped (touching in time and rows, through each other too), and each takes the first level of its
+ * group where nothing overlaps it in time. Returns each item's place, and each group's rows with the height its levels
+ * need (one under the other, `gap` between them), for `rowHeights`. A piece alone keeps its own rows, at the top.
+ */
+export function stackBlocks(items: readonly StackItem[], gap: number): { placed: Stacked[]; groups: PieceNeed[] } {
+  const parent = items.map((_, i) => i)
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])))
+  const touch = (a: StackItem, b: StackItem) => a.startMin < b.endMin && b.startMin < a.endMin && a.rows[0] <= b.rows[1] && b.rows[0] <= a.rows[1]
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) if (touch(items[i], items[j])) parent[find(i)] = find(j)
+  const members = new Map<number, number[]>()
+  items.forEach((_, i) => members.set(find(i), [...(members.get(find(i)) ?? []), i]))
+  const placed: Stacked[] = new Array(items.length)
+  const groups: PieceNeed[] = []
+  for (const list of members.values()) {
+    const order = [...list].sort((a, b) => items[a].startMin - items[b].startMin || items[a].endMin - items[b].endMin || a - b)
+    const levels: number[][] = []
+    const levelOf = new Map<number, number>()
+    for (const i of order) {
+      let level = levels.findIndex((l) => l.every((j) => items[j].endMin <= items[i].startMin || items[i].endMin <= items[j].startMin))
+      if (level < 0) level = levels.push([]) - 1
+      levels[level].push(i)
+      levelOf.set(i, level)
+    }
+    const heights = levels.map((l) => Math.max(...l.map((i) => items[i].need)))
+    const rows: [number, number] = [Math.min(...list.map((i) => items[i].rows[0])), Math.max(...list.map((i) => items[i].rows[1]))]
+    const offsets = heights.map((_, l) => heights.slice(0, l).reduce((n, h) => n + h + gap, 0))
+    for (const i of list) {
+      const level = levelOf.get(i) ?? 0
+      placed[i] = list.length === 1 ? { rows: [...items[i].rows] as [number, number], offset: 0, level: 0, height: items[i].need, last: true } : { rows, offset: offsets[level], level, height: heights[level], last: level === levels.length - 1 }
+    }
+    groups.push({ rows: list.length === 1 ? items[list[0]].rows : rows, need: heights.reduce((n, h) => n + h, 0) + gap * (levels.length - 1) })
+  }
+  return { placed, groups }
+}
+
 /**
  * Each row's height: at least its base, and tall enough that every block piece fits across the rows it spans (`inset`:
  * the space a piece leaves above and below itself). A piece short of room grows its rows in equal parts.

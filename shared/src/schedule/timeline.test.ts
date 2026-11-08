@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NO_COACH_ROW, type TimelinePerson, classPieces, classRows, classSlots, clockSpan, piecesCount, rowHeights, runsOf, stackHeight, timelineRange, timelineRows } from './timeline'
+import { NO_COACH_ROW, type TimelinePerson, classPieces, classRows, classSlots, clockSpan, piecesCount, rowHeights, runsOf, stackBlocks, stackHeight, timelineRange, timelineRows } from './timeline'
 
 const t = (h: number, m = 0) => h * 60 + m
 const coach = (id: string, firstMin = t(16), name = id): TimelinePerson => ({ id, teaches: true, firstMin, name })
@@ -143,6 +143,40 @@ describe('the rows’ heights', () => {
     expect(stackHeight(6, 56, 6)).toBe(6 * 56 + 5 * 6)
     expect(stackHeight(1, 56, 6)).toBe(56)
     expect(stackHeight(0, 56, 6)).toBe(0)
+  })
+})
+
+describe('classes at the same time', () => {
+  const item = (startMin: number, endMin: number, rows: [number, number], need = 100) => ({ startMin, endMin, rows, need })
+
+  it('leaves a class alone where nothing else is at its time', () => {
+    const { placed, groups } = stackBlocks([item(t(16), t(17), [0, 2]), item(t(17), t(18), [0, 2])], 6)
+    expect(placed.map((p) => [p.rows, p.offset, p.last])).toEqual([
+      [[0, 2], 0, true],
+      [[0, 2], 0, true],
+    ])
+    expect(groups).toEqual([
+      { rows: [0, 2], need: 100 },
+      { rows: [0, 2], need: 100 },
+    ])
+  })
+
+  it('puts two classes at 5–6 PM one under the other, the rows tall enough for both', () => {
+    const { placed, groups } = stackBlocks([item(t(17), t(18), [0, 2], 400), item(t(17), t(18), [0, 2], 120)], 6)
+    expect(placed.map((p) => [p.level, p.offset, p.height, p.last])).toEqual([
+      [0, 0, 400, false],
+      [1, 406, 120, true],
+    ])
+    expect(groups).toEqual([{ rows: [0, 2], need: 526 }])
+  })
+
+  it('stacks a class only where it overlaps: a later one goes back on the first level', () => {
+    const { placed } = stackBlocks([item(t(16), t(18), [0, 1]), item(t(17), t(18), [1, 2]), item(t(18), t(19), [0, 1])], 6)
+    expect(placed.map((p) => [p.rows, p.level])).toEqual([
+      [[0, 2], 0],
+      [[0, 2], 1],
+      [[0, 1], 0],
+    ])
   })
 })
 
