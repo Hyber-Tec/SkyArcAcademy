@@ -1,0 +1,32 @@
+{
+  "name": "skyarc-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "brand": "node scripts/brand.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/netinfo": "12.0.1",
+    "expo": "~57.0.24",
+    "expo-application": "~57.0.3",
+    "expo-brightness": "~57.0.2",
+    "expo-build-properties": "~57.0.21",
+    "expo-constants": "~57.0.23",
+    "expo-crypto": "~57.0.4",
+    "expo-keep-awake": "~57.0.2",
+    "expo-navigation-bar": "~57.0.3",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-svg": "15.15.4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}
