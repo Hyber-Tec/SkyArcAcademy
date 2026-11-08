@@ -385,8 +385,8 @@ function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk
         </div>
         <SignaturePad ref={pad} invalid={!!err('signature')} onChange={onInk} label={t(`${block.label}: draw it with your finger or mouse`, `${block.label}: 손가락이나 마우스로 그려 주세요`)} />
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-          <span>{t('Sign with your finger or mouse.', '손가락이나 마우스로 서명해 주세요.')}</span>
-          <span className="font-medium text-foreground" data-testid="contract-sign-date">
+          <span className="min-w-0">{t('Sign with your finger or mouse.', '손가락이나 마우스로 서명해 주세요.')}</span>
+          <span className="shrink-0 font-medium whitespace-nowrap text-foreground" data-testid="contract-sign-date">
             {lang === 'ko' ? `날짜: ${dateText(today, 'long', 'ko')}` : `Date: ${usDate(today)}`}
           </span>
         </div>
