@@ -27,7 +27,7 @@ asked: the office fills them in from the website ([`DECISIONS.md`](DECISIONS.md)
 |---|---|---|---|
 | **A10** | **The academy's legal name and mailing address**, if it wants them in the privacy policy's contact section (Settings → Academy). The policy itself is approved and in effect (2026-10-20), with the academy's email and phone. | The privacy policy's contact details | Its name, email and phone |
 | **A13** | **Website content:** coach portraits, real families' quotes (with their permission), trial length and price, the youngest starting age, the range's safety rules, whether coaching happens in Korean, tuition rates or a guide, more photos and a larger match-day photo (`docs/TODO.md`). The phone number is set (2026-10-20). | The public website | Left out until confirmed (photos marked); sample quotes marked "Sample" |
-| **A14** | **The email address the app sends from:** `info@skyarcacademy.com` (the second meeting's `E1`), and its app password from the manager. The domain's Squarespace login: the manager hands it to Goo (awaited, 2026-11-06). | The email sender ([`TODO-notes.md`](TODO-notes.md)) | HyberTec's Gmail sends |
+| **A14** | **The email address the app sends from:** `info@skyarcacademy.com` (the second meeting's `E1`), and its app password from the manager. The domain itself is connected (2026-11-07). | The email sender ([`TODO-notes.md`](TODO-notes.md)) | HyberTec's Gmail sends |
 
 A12 (the kiosk's device) was answered at the third meeting: an Android tablet HyberTec provides, at the front desk
 ([`TODO-notes.md`](TODO-notes.md), "Kiosk app"). A15 (how coaches score a hole on a line) was answered at the second meeting: by where most of the hole sits

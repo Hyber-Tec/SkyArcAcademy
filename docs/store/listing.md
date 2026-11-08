@@ -59,8 +59,8 @@ air rifle,shooting,target,score,scan,coach,class,schedule,progress,report,parent
 email and phone from the website's Settings → Academy; guideline 1.5).
 **Marketing URL:** `https://skyarcacademy.com` (the academy's website).
 1.0.0 and 1.1.0 went out with the same pages at `https://skyarcacademy.web.app`, which keeps working. App Store Connect
-changes the Support and Marketing URLs only with a new version, so change them with the next one; the privacy policy's
-address (App Privacy) and Google Play's (below) can change at any time.
+changes the Support and Marketing URLs, and the privacy policy's, only with a new version (its API refused the privacy
+link on 2026-11-07), so change all three with the next one. Google Play's (below) can change at any time.
 **Copyright:** `2026 HyberTec LLC` (HyberTec publishes the app).
 **Category:** Sports; secondary Education.
 **What's New:** App Store Connect doesn't ask for it on the first version. 1.1.0's, as submitted on 2026-11-06 (4000;
