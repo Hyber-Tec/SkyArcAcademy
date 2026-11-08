@@ -8,8 +8,6 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
   tablet until then
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
-- [ ] **Read the terms of service** with the manager ([#134](https://github.com/Hyber-Tec/SkyArcAcademy/pull/134),
-  screenshots sent 2026-11-08). Say "merge the terms" and Claude Code puts them live
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-08): it goes
   live by itself. If Google writes, send the message to Claude Code
 
@@ -71,6 +69,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-08 · The terms of service, live at skyarcacademy.com/terms beside the privacy policy (Goo; #134)
 - [x] ✅ 2026-11-08 · The private notes in a private repository of their own, on both Macs, brought up to date when a
   session starts (#131); the Mac mini's notes are in it
 - [x] ✅ 2026-11-08 · The docs in folders, with a map: meetings, phone, kiosk, publishing, reference (#132)

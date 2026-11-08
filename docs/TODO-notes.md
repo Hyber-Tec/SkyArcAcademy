@@ -26,24 +26,6 @@ Tells Google the website lives at skyarcacademy.com, and lets it find every page
 
 The site's pages already name skyarcacademy.com as their address (#119).
 
-### Read the terms of service
-
-Goo, 2026-11-07: the website should have terms of service beside its privacy policy. Claude Code wrote them on
-2026-11-08 ([#134](https://github.com/Hyber-Tec/SkyArcAcademy/pull/134): the full text is in its description), from
-the academy's earlier website's terms (in effect from August 27, 2026), for the website and the app as they are now.
-In English, as the privacy policy is; the Korean page shows the English under a note.
-
-- **New:** accounts, the enrollment contract (it wins where the two differ), students' records and scores, the app's
-  emails and notifications.
-- **Gone:** the trial "reference codes" (today's website has none) and the translation service.
-- **Kept as the academy wrote them:** safety, fair use, the liability limit (what you paid for the online service, or
-  $100), indemnification, disputes ("the laws where the academy is established").
-- **Worth a look:** whether to name Georgia in "Governing law", and the academy's legal name (A10, still open). It
-  isn't legal advice: a lawyer's read of the liability and dispute sections is worth having.
-
-Once Goo and the manager agree, Claude Code sets the date it takes effect, merges it, and the page goes live at
-`/terms` (today that address sends people to the privacy policy), linked in the footer beside it.
-
 ### Google Play 1.1.0 is in Google's review
 
 Sent on 2026-11-06, in the evening:
@@ -270,6 +252,9 @@ These are notes, not tasks.
   students' records: the demo logins' password stays on the Mac mini. The Mac mini's folder from before is kept at
   `~/SkyArc-internal-backup-2026-11-08` there, until Goo says to delete it.
 - **The docs** are in folders since 2026-11-08: [README.md](README.md) maps them.
+- **The terms of service** are live at `/terms` since 2026-11-08 ([DECISIONS.md](DECISIONS.md) §37). Worth a lawyer's
+  read some day, the liability and dispute parts above all; "Governing law" names no state, and the academy's legal
+  name isn't on them (A10).
 
 - **The kiosk tablet** ([kiosk/README.md](kiosk/README.md)), 2026-11-07:
   - **The device:** a Samsung Galaxy Tab A9+ (SM-X218U), Android 16, on the academy's Wi-Fi, registered as "Front desk".

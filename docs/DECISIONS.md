@@ -1225,3 +1225,16 @@ unnatural … research things like a Claude skill that actually help … other l
   on the website. The website's portal keeps its own signing for parents signed in there.
 - **Other languages:** not now ("maybe someday if really needed").
 
+## 37. The terms of service (Goo, 2026-11-08)
+
+- **Live at `/terms`**, beside the privacy policy and linked from the website's footer: Goo merged #134 on 2026-11-08,
+  and they're in effect from that day. Claude Code wrote them from the academy's earlier website's terms (in effect from
+  2026-08-27), for the website and the phone app as they are now. The old site's `/terms` no longer sends people to the
+  privacy policy.
+- **What they add to the old terms:** accounts (sign-in, roles, keeping it to yourself, deleting it), the enrollment
+  contract (it governs enrollment, tuition, training and the range, and wins where the two differ), students' records,
+  scores and reports, and the app's emails and notifications. **Kept as the academy wrote them:** safety, fair use, the
+  liability limit (what was paid for the online service, or $100), indemnification and disputes. **Dropped:** the trial
+  reference codes and the translation service, which today's website doesn't have.
+- **In English, which is the text in force,** as the privacy policy's is: the Korean page shows the English under a
+  note. A later change takes a new date at the top, and families and staff hear of one that matters to them.
