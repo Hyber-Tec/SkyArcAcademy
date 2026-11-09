@@ -239,8 +239,8 @@ started: *already works*, *small change* or *new work*.
   - *Plan:* Goo, with `docs/DEPLOY.md`, "Moving to skyarcacademy.com" (the steps for Firebase and Squarespace,
     2026-11-06); sign-in and Storage accept the domain already; then #119 moves the links to it.
 - [ ] **DM2. Invite the coaches** once the domain is connected.
-- [ ] **DM3. Send email from the academy's domain** (the second meeting's `E1`), with `DM1`, so it stops landing in
-  spam.
+- ✅ **DM3. Send email from the academy's domain** (the second meeting's `E1`), with `DM1`, so it stops landing in
+  spam. *(2026-11-09: info@skyarcacademy.com sends, with the manager's app password; `docs/DECISIONS.md` §40.)*
 
 ### Later (not now)
 - [ ] **L-CP. Competition PDFs.** Accept a competition's results **PDF** (laid out like the paper sheet) as well as

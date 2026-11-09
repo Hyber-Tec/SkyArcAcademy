@@ -14,8 +14,8 @@ export const APP_URL = `https://${APP_DOMAIN}`
 /** The phone app in the stores (the owner's listings), for a family who signed with a link: their contract is in it too. */
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/sky-arc-sports-academy/id6825479602'
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.skyarcacademy.app'
-/** HyberTec's Gmail sends for now; whether the academy gets an address of its own is an open question (docs/DECISIONS.md). */
-export const SENDER_EMAIL = 'hybertecofficial@gmail.com'
+/** The academy's own address sends the app's email, through Gmail with its app password (docs/DECISIONS.md §40). */
+export const SENDER_EMAIL = 'info@skyarcacademy.com'
 
 /** The sign-in link; `email` pre-selects that Google account and fills in the email field. */
 export function signInUrl(email?: string | null, base = APP_URL): string {

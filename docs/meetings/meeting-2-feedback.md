@@ -500,8 +500,9 @@ These wait until everything else is ready, some even after launch.
 
 - ✅ **L1. Korean + English** (the third meeting's [`L-LG`](meeting-3-feedback.md), #115) across the parent portal, the phone app and the website. Many parents don't speak
   English, so it matters: done in one go on 2026-11-05, for what parents see (`docs/DECISIONS.md` §36).
-- [ ] **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](meeting-3-feedback.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
+- ✅ **E1. Emails going to spam.** (the domain is on Squarespace: the third meeting's [`DM1`–`DM3`](meeting-3-feedback.md)) Move to the academy's .com domain and send from its `info@` address. Goo does this
   **in person with the manager** (domain and email access). Until then, invitation emails may land in spam.
+  *(2026-11-09: info@ sends: the third meeting's `DM3`.)*
 - [ ] **W1. A parent how-to video** on the website and app, recorded once both are final.
 - [ ] **W2. Tuition** on the website, if the manager asks.
 - [ ] **W3. A merch shop** (the academy just got merchandise to sell to parents). Not requested yet.
@@ -575,8 +576,8 @@ imports them automatically, and they're **never committed**.
 - ✅ **The academy owner's email**, for their owner account → `X1` (not needed: the manager's account is the owner)
 - ✅ **Payroll decisions with the academy's owner:** the clock-out rule, arrival minutes, the pay period → Section 6 (not asked: set in Settings)
 - ✅ **Honest feedback** after using the portal (three design options for anything, on request) (not asked, Goo 2026-10-28)
-- [ ] *Later, in person:* domain access and the `info@` email account → `E1` (third meeting: an invitation to Squarespace, `DM1`).
-  Domain access came on 2026-11-07 (`DM1`); the `info@` app password is still to come (`DM3`).
+- ✅ *Later, in person:* domain access and the `info@` email account → `E1` (third meeting: an invitation to Squarespace, `DM1`).
+  Domain access came on 2026-11-07 (`DM1`); the `info@` app password on 2026-11-09 (`DM3`).
 
 ---
 

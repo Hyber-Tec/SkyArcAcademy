@@ -42,9 +42,9 @@ and https://firebase.google.com/docs/auth/ios/apple.
 ## 5. Optional: email to hidden addresses
 
 Someone who chooses **Hide My Email** gets an `…@privaterelay.appleid.com` address. Apple forwards mail to it only from
-senders the team registered, and the app's account emails (password reset) come from HyberTec's Gmail: on
-https://developer.apple.com/account/resources/services/configure → **Sign in with Apple for Email Communication** →
-**+**, add that Gmail address. Such a person can't be found by their email on the academy's records anyway: they ask
+senders the team registered, and the app's account emails (password reset) come from the academy's
+`info@skyarcacademy.com` (since 2026-11-09): on https://developer.apple.com/account/resources/services/configure →
+**Sign in with Apple for Email Communication** → **+**, add that address. Such a person can't be found by their email on the academy's records anyway: they ask
 the academy in the app, which approves them.
 
 ## Then
