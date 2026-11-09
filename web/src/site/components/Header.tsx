@@ -5,7 +5,7 @@ import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { seemsSignedIn } from '@/lib/signedInHint'
 import { cn } from '@/lib/utils'
-import { ACADEMY, LEVELS, type Lang, PROGRAMS, UI } from '@/site/kit/content'
+import { ACADEMY, type L, LEVELS, type Lang, PROGRAMS, UI } from '@/site/kit/content'
 import { usePlacePhoto, useSiteData } from '@/site/data'
 import { Photo } from '@/site/kit/Photo'
 import { A, useIsPage, useSite } from '@/site/kit/site'
@@ -147,8 +147,26 @@ const LINKS = [
   { to: 'about', label: UI.about },
   { to: 'gallery', label: UI.gallery },
   { to: 'news', label: UI.news },
+  { to: 'get-app', label: UI.app },
   { to: 'contact', label: UI.contact },
 ]
+
+/**
+ * A page in the menu, underlined on its own page. The menu's link sets `aria-current` from `active`, over the one the
+ * link works out itself, so it's given here.
+ */
+function MenuLink({ to, label }: { to: string; label: L }) {
+  const { t } = useSite()
+  return (
+    <NavigationMenu.Item>
+      <NavigationMenu.Link asChild active={useIsPage(to)}>
+        <A to={to} className={navLink}>
+          {t(label)}
+        </A>
+      </NavigationMenu.Link>
+    </NavigationMenu.Item>
+  )
+}
 
 /** "Log in", or "Open the app" on a browser that's signed in to the app. */
 function useLoginLabel() {
@@ -172,6 +190,7 @@ function MobileMenu() {
     { to: 'about?section=coaches', label: UI.coaches },
     { to: 'gallery', label: UI.gallery },
     { to: 'news', label: UI.news },
+    { to: 'get-app', label: UI.app },
     { to: 'contact', label: UI.contact },
   ]
   return (
@@ -297,13 +316,7 @@ export function Header() {
             <NavigationMenu.List className="flex items-center gap-0.5">
               <ProgramsMenu open={menu === 'programs'} setOpen={(on) => setMenu(on ? 'programs' : '')} />
               {LINKS.map((l) => (
-                <NavigationMenu.Item key={l.to}>
-                  <NavigationMenu.Link asChild>
-                    <A to={l.to} className={navLink}>
-                      {t(l.label)}
-                    </A>
-                  </NavigationMenu.Link>
-                </NavigationMenu.Item>
+                <MenuLink key={l.to} to={l.to} label={l.label} />
               ))}
             </NavigationMenu.List>
           </NavigationMenu.Root>

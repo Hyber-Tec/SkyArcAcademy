@@ -1304,6 +1304,9 @@ and one for the phone app. The website advertises the app too.
 - **The website advertises the app** (#140): `/get-app` and `/ko/get-app`, a band on the homepage after the portal, and
   the stores' badges in the footer. The badges are Apple's and Google's own files, unchanged, with the stores' credit
   line. `/app` stays the signed-in app's home, where sign-in lands.
+- **"App" (앱) is in the website's menu**, between News and Contact, on a computer and in the phone's menu. Goo:
+  "make /get-app as main page on the landing page such as Gallery, News, and Contact". It's named for what's there:
+  "Download" alone doesn't say what downloads. The address stays `/get-app`, which the sign's QR code opens.
 - **No phone build is needed.** The parent's side is the website, and the office's phone gets the request's notice;
   from the next build, tapping it opens the request on the website.
 

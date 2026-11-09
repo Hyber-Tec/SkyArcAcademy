@@ -42,6 +42,8 @@ export const UI = {
   coaches: l('Coaches', '코치진'),
   gallery: l('Gallery', '갤러리'),
   news: l('News', '소식'),
+  /** The phone app's page (`/get-app`), in the site's menu. */
+  app: l('App', '앱'),
   tuition: l('Tuition', '수강료'),
   contact: l('Contact', '문의'),
   trial: l('Book a trial', '체험 수업 신청'),
