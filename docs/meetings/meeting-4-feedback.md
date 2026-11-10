@@ -160,13 +160,15 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
   - *Goo, 2026-11-10:* **try decoding it in-house**, to see whether everything they want can come out (not for the live
     app yet; the coaches said SCATT can't export a PDF, only this file). What they want is the trace as a video or an
     animation on the website.
-- [ ] **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
+- ✅ **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
   - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is
     found on the circle its score allows, so two shots with the same score in a series can have their places swapped.
     SIUS and the results site are certain. Proposal: mark those shots ("≈") with a note, worked out from the saved
     scores, old results included.
-  - *Goo, 2026-11-10:* **yes.**
+  - *Goo, 2026-11-10:* **yes.** Done: on a results sheet's result, two shots with the same score in one series get
+    "≈" by their score (the darts, the match card's shots), the replay says "place may be swapped with shot 3", and a
+    line explains why; on the website and the phone. Worked out from the saved shots, so old results have it too. (#153)
 
 ## 4b. The academy's website review (2026-11-10)
 

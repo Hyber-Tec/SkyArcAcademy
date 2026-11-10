@@ -1,6 +1,6 @@
 import { Canvas } from "@shopify/react-native-skia";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { replayStepMs } from "@shared/shooting/replay";
+import { replayStepMs, swapWords } from "@shared/shooting/replay";
 import { PELLET_MM, type ShotPoint, meanPoint, targetViewMm } from "@shared/shooting/target";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react-native";
@@ -124,6 +124,7 @@ export function ShotReplay({
         `Shot ${current.number} of ${current.of}`,
         `${fmt(current, current.value)}${current.point ? "" : " (no place on the target)"}`,
         current.running !== null ? `total ${fmt(current, current.running)}` : null,
+        current.swapWith.length ? `≈ place may be swapped with ${swapWords(current.swapWith)}` : null,
       ]
         .filter(Boolean)
         .join(" · ")

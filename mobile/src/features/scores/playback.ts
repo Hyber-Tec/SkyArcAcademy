@@ -24,6 +24,8 @@ export interface PlayShot {
   running: number | null;
   /** A SIUS score, with its decimal. */
   decimal: boolean;
+  /** The shots its place may be swapped with (a results sheet's, same score: `swappableShots`); empty when certain. */
+  swapWith: number[];
 }
 
 /** One result's shots (SIUS series by series, a paper card bull by bull), with the running total. */
@@ -39,6 +41,7 @@ export function evaluationShots(e: Pick<Evaluation, "source" | "series">): PlayS
     context: s.series !== null ? `Series ${s.series}` : null,
     running: s.running,
     decimal,
+    swapWith: s.swapWith,
   }));
 }
 
@@ -63,6 +66,7 @@ export function playPoints(points: readonly EvaluationPoint[]): PlayShot[] {
         context: several ? monthDay(p.dateKey) : null,
         running: several ? null : running,
         decimal,
+        swapWith: [],
       });
     });
   }

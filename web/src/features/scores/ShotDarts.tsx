@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useState } from 'react'
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu'
-import type { ReplayShot } from '@shared/shooting/replay'
+import { type ReplayShot, swapWords } from '@shared/shooting/replay'
 import { targetViewMm } from '@shared/shooting/target'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -18,7 +18,8 @@ const scoreText = (v: number, whole: boolean) => (whole ? String(Math.round(v)) 
  * A series' shots as "darts", in firing order (a SIUS series, or a scanned card's bulls with `whole`): each a small
  * target at the replay's scale with that shot alone on it in the position's color, and its score under it. Ten to a
  * row where there's room, five on a phone. `active` rings the shot a replay is showing; a dart opens its shot
- * (`onOpen`). Needs a container (`@container`) around it.
+ * (`onOpen`). A shot whose place may be swapped with another's (a results sheet's, same score: `swappableShots`) has
+ * "≈" by its score. Needs a container (`@container`) around it.
  */
 export function SeriesDarts({
   shots,
@@ -45,7 +46,7 @@ export function SeriesDarts({
             <button
               type="button"
               onClick={() => onOpen(s.n)}
-              aria-label={`Shot ${s.n}: ${scoreText(s.value, whole)}${s.point ? '' : ', no place on the target'}. Open it`}
+              aria-label={`Shot ${s.n}: ${scoreText(s.value, whole)}${s.point ? '' : ', no place on the target'}${s.swapWith.length ? `, its place may be swapped with ${swapWords(s.swapWith)}` : ''}. Open it`}
               aria-current={on ? 'step' : undefined}
               className={cn(
                 'flex w-full flex-col items-center gap-1.5 rounded-xl p-1 pb-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
@@ -57,6 +58,11 @@ export function SeriesDarts({
               </span>
               <span className={cn('text-xs leading-none tabular-nums', on ? 'font-semibold text-[#8a6400] dark:text-[#f2c94c]' : s.value >= 10 ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
                 {scoreText(s.value, whole)}
+                {s.swapWith.length ? (
+                  <span className="ml-0.5 font-normal text-amber-700 dark:text-amber-400" title={`Its place may be swapped with ${swapWords(s.swapWith)}`} aria-hidden>
+                    ≈
+                  </span>
+                ) : null}
               </span>
             </button>
           </li>
@@ -153,6 +159,11 @@ export function ShotDialog({
                 The result gave no direction for this shot, so it has no place on the target.
               </p>
             )}
+            {current.swapWith.length ? (
+              <p className="-mt-1 text-center text-xs text-pretty text-amber-800 dark:text-amber-300" data-testid="shot-swap-note">
+                {`≈ Same score as ${swapWords(current.swapWith)} in this series. The results sheet prints each score in order but not which hole is which, so their places may be swapped.`}
+              </p>
+            ) : null}
             <DialogFooter className="flex-row items-center justify-between sm:justify-between">
               <Button variant="outline" onClick={() => go(current.n - 1)} disabled={current.n <= 1}>
                 <LuChevronLeft /> Previous

@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react'
 import { LuChevronDown, LuPencilLine, LuTrophy } from 'react-icons/lu'
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from '@shared/scores/match'
 import { POSITION_COLORS, evaluationPoints, POSITION_LABELS } from '@shared/shooting/evaluation'
+import { swappableShots } from '@shared/shooting/replay'
 import { isInnerTen } from '@shared/shooting/target'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { MiniTarget } from '@/features/scores/TargetPlot'
@@ -21,6 +22,7 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
   const { total, innerTens, whole } = matchTotal(results)
   const rows = results.flatMap((r) => r.series.map((s) => ({ key: `${r.id}-${s.n}`, r, s, points: evaluationPoints({ series: [s] }) })))
   const shown = rows.find((x) => x.key === open) ?? null
+  const swaps = shown ? swappableShots({ source: shown.r.source, series: [shown.s] }) : new Map<number, number[]>()
   return (
     <section className={className} aria-label="The match" data-testid="match-card">
       <div className="flex items-center gap-3">
@@ -108,17 +110,29 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
           <div className="flex flex-wrap justify-center gap-1.5">
             {shown.s.shots.map((t, k) => {
               const x = isInnerTen(t.v)
+              const swap = (swaps.get(k + 1) ?? []).map((j) => shotLabel(shown.r.position, shown.s.n, j - 1))
               return (
-                <span key={k} className={cn('flex min-w-14 flex-col items-center rounded-md px-1.5 py-1', x ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200' : 'bg-muted')}>
+                <span
+                  key={k}
+                  className={cn('flex min-w-14 flex-col items-center rounded-md px-1.5 py-1', x ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200' : 'bg-muted')}
+                  title={swap.length ? `Its place may be swapped with ${swap.join(' and ')}` : undefined}
+                >
                   <span className="text-[10px] text-muted-foreground">{shotLabel(shown.r.position, shown.s.n, k)}</span>
                   <span className="text-sm font-semibold tabular-nums">
                     {whole && Number.isInteger(t.v) ? t.v : t.v.toFixed(1)}
                     {x ? '*' : ''}
+                    {swap.length ? <span className="font-normal text-amber-700 dark:text-amber-400"> ≈</span> : null}
                   </span>
                 </span>
               )
             })}
           </div>
+          {swaps.size ? (
+            <p className="max-w-sm text-center text-xs text-pretty text-muted-foreground" data-testid="swap-legend">
+              ≈ The same score as another shot in this series: the sheet prints each score in order but not which hole is which,
+              so their places on the target may be swapped.
+            </p>
+          ) : null}
         </div>
       ) : null}
       <p className="mt-2 text-[11px] text-muted-foreground">* an inner ten. A series’ score is its total, then its inner tens.</p>

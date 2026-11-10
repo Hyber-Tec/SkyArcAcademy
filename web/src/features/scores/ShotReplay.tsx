@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { LuChevronLeft, LuChevronRight, LuPause, LuPlay, LuRotateCcw } from 'react-icons/lu'
 import type { Evaluation } from '@shared/shooting/evaluation'
-import { replayStepMs } from '@shared/shooting/replay'
+import { replayStepMs, swapWords } from '@shared/shooting/replay'
 import { type ShotPoint, meanPoint, targetViewMm } from '@shared/shooting/target'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -186,7 +186,9 @@ export function ShotReplay({
     </>
   )
   const line2 = current
-    ? [current.context, current.runningText !== null ? `total ${current.runningText}` : null].filter(Boolean).join(' · ')
+    ? [current.context, current.runningText !== null ? `total ${current.runningText}` : null, current.swapWith.length ? `≈ place may be swapped with ${swapWords(current.swapWith)}` : null]
+        .filter(Boolean)
+        .join(' · ')
     : [
         placed.length < count ? `${count - placed.length} without a place` : null,
         compact ? 'Play to see each shot' : 'Press play to see them one by one',

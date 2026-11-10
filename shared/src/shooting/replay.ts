@@ -4,7 +4,8 @@ import type { ShotPoint } from './target'
 /**
  * A result's shots in the order they were fired, for playing them back one by one on the target (the phone app's
  * score screen and the website's): SIUS series by series (sighters never count), a paper card bull by bull. Each
- * carries its place when it has one (SIUS directions, a scanned card) and the running total.
+ * carries its place when it has one (SIUS directions, a scanned card, a results sheet's picture), the running total,
+ * and the shots its place may be swapped with.
  */
 export interface ReplayShot {
   /** 1, 2, 3… in firing order. */
@@ -15,18 +16,53 @@ export interface ReplayShot {
   point: ShotPoint | null
   /** The total so far, this shot included (one decimal for SIUS, whole for paper). */
   running: number
+  /** The shots (their `n`) this one's place may be swapped with: `swappableShots`. Empty when its place is certain. */
+  swapWith: number[]
 }
 
 export function replayShots(e: Pick<Evaluation, 'source' | 'series'>): ReplayShot[] {
   const out: ReplayShot[] = []
+  const swaps = swappableShots(e)
   let running = 0
   for (const s of e.series) {
     for (const t of s.shots) {
       running = Math.round((running + t.v) * 10) / 10
-      out.push({ n: out.length + 1, series: e.source === 'sius' ? s.n : null, value: t.v, point: pointOf(t), running })
+      const n = out.length + 1
+      out.push({ n, series: e.source === 'sius' ? s.n : null, value: t.v, point: pointOf(t), running, swapWith: swaps.get(n) ?? [] })
     }
   }
   return out
+}
+
+/**
+ * Which shots' places may be swapped (the fourth meeting's R3): a results sheet prints every shot's score in firing
+ * order, so the order is certain, but not which hole is which. Each shot is put on the circle its score allows, where
+ * the sheet's picture shows a hole (shared/src/scores/sheetShots.ts), so two shots with the same score in one series
+ * share the same circle, and nothing says which of their two holes came first. Those are listed here, by shot number
+ * (1, 2, 3… across the result), each with the others it may be swapped with. SIUS prints each shot's own arrow, and a
+ * paper card has no firing order to get wrong, so only results sheets have any.
+ */
+export function swappableShots(e: Pick<Evaluation, 'source' | 'series'>): Map<number, number[]> {
+  const out = new Map<number, number[]>()
+  let n = 0
+  for (const s of e.series) {
+    const byScore = new Map<number, number[]>()
+    for (const t of s.shots) {
+      n++
+      if (e.source !== 'sheet' || pointOf(t) === null) continue
+      const key = Math.round(t.v * 10)
+      byScore.set(key, [...(byScore.get(key) ?? []), n])
+    }
+    for (const same of byScore.values()) if (same.length > 1) for (const k of same) out.set(k, same.filter((m) => m !== k))
+  }
+  return out
+}
+
+/** "shot 9", "shots 9 and 12", "shots 3, 9 and 12": the shots one may be swapped with, in words. */
+export function swapWords(swapWith: readonly number[]): string {
+  const list = swapWith.map(String)
+  if (list.length <= 1) return `shot ${list[0] ?? ''}`.trim()
+  return `shots ${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`
 }
 
 /**

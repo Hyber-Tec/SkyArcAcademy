@@ -1,5 +1,6 @@
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from "@shared/scores/match";
 import { POSITION_COLORS, evaluationPoints } from "@shared/shooting/evaluation";
+import { swappableShots } from "@shared/shooting/replay";
 import { isInnerTen } from "@shared/shooting/target";
 import { ChevronDown, ChevronRight, Trophy } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -77,6 +78,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
         <View style={[styles.list, { borderColor: colors.border }]}>
           {rows.map(({ key, r, s, label, placed }, i) => {
             const shown = open === key;
+            const swaps = shown ? swappableShots({ source: r.source, series: [s] }) : new Map<number, number[]>();
             return (
               <View key={key} style={i ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border } : null}>
                 <Pressable
@@ -106,17 +108,29 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
                     <View style={styles.shots}>
                       {s.shots.map((shot, k) => {
                         const x = isInnerTen(shot.v);
+                        const swap = (swaps.get(k + 1) ?? []).map((j) => shotLabel(r.position, s.n, j - 1));
                         return (
-                          <View key={k} style={[styles.shot, { backgroundColor: x ? amber.bg : colors.secondary }]}>
+                          <View
+                            key={k}
+                            style={[styles.shot, { backgroundColor: x ? amber.bg : colors.secondary }]}
+                            accessible
+                            accessibilityLabel={`${shotLabel(r.position, s.n, k)}: ${shot.v}${swap.length ? `, its place may be swapped with ${swap.join(" and ")}` : ""}`}
+                          >
                             <T variant="tiny" tone="muted">{shotLabel(r.position, s.n, k)}</T>
                             <T variant="label" style={[styles.number, x && { color: amber.fg }]}>
                               {whole && Number.isInteger(shot.v) ? String(shot.v) : shot.v.toFixed(1)}
                               {x ? "*" : ""}
+                              {swap.length ? <T variant="label" style={{ color: colors.warning, fontWeight: "400" }}>{" ≈"}</T> : null}
                             </T>
                           </View>
                         );
                       })}
                     </View>
+                    {swaps.size ? (
+                      <T variant="small" tone="muted" style={styles.note} testID="match-swap-legend">
+                        ≈ The same score as another shot in this series: the sheet prints each score in order but not which hole is which, so their places on the target may be swapped.
+                      </T>
+                    ) : null}
                     {!placed ? (
                       <T variant="small" tone="muted" style={styles.note}>
                         The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.
