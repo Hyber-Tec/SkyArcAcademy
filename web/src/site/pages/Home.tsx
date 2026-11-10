@@ -109,7 +109,7 @@ function Hero() {
             <div className="relative aspect-[4/4.5] overflow-hidden rounded-[28px] bg-warm-2 shadow-lift sm:aspect-[5/4.6] sm:rounded-[32px] lg:aspect-[5/5.5]">
               <PlacePhoto place="home.hero" sizes="(min-width: 1024px) 620px, 100vw" priority className="size-full" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/25 to-transparent" aria-hidden="true" />
-              <p className="absolute top-3.5 left-3.5 inline-flex max-w-[calc(100%-1.75rem)] items-center gap-2 rounded-2xl bg-white/95 py-2 pr-4 pl-2.5 text-[12.5px] leading-tight font-semibold text-ink shadow-soft backdrop-blur sm:top-5 sm:left-5 sm:rounded-full">
+              <p className="absolute top-3.5 left-3.5 inline-flex max-w-[calc(100%-1.75rem)] items-center gap-2 rounded-2xl bg-white/95 py-2 pr-4 pl-2.5 text-[12.5px] leading-tight font-semibold text-ink shadow-soft backdrop-blur sm:top-5 sm:left-5">
                 <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-white">
                   <LuMedal className="size-3.5" aria-hidden="true" />
                 </span>

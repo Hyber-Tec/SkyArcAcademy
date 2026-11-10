@@ -15,7 +15,7 @@ export const keepWhole = (s: string) =>
   s
     .replace(/([\p{L}\p{N}][–-])(?=[\p{L}\p{N}])/gu, '$1\u2060')
     .replace(/([\p{L}\p{N}.,])—/gu, '$1\u2060—')
-    .replace(/\b(Sky Arc|Marine Corps|Junior Olympic)\b/g, (m) => m.replace(' ', '\u00a0'))
+    .replace(/\b(Sky Arc|Marine Corps|Junior Olympic|Level 1)\b/g, (m) => m.replace(' ', '\u00a0'))
 
 export const ACADEMY = {
   name: 'Sky Arc Sports Academy',
@@ -126,7 +126,7 @@ export const HOME = {
       },
       {
         title: 'A team that knows the range',
-        text: 'Our coaches include NRA-certified instructors and Marine Corps veterans who oversee safety protocols and equipment readiness.',
+        text: 'Our coaches include NRA Level 1 Certified Instructors and an Elite Military Rifle Marksman, who oversee safety protocols and equipment readiness.',
       },
     ],
   },
@@ -175,7 +175,7 @@ export const HOME = {
   coaches: {
     eyebrow: 'Meet the team',
     title: 'Experience that shapes every athlete.',
-    text: 'Sky Arc brings together competition experience, certified instruction, military leadership, athlete development, and disciplined facility operations.',
+    text: 'Sky Arc brings together competition experience, certified instruction, elite military rifle marksmanship, athlete development, and disciplined facility operations.',
   },
   trial: {
     eyebrow: 'Your first visit',

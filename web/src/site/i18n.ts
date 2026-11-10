@@ -17,7 +17,7 @@ export const T = {
   heroCardLabel: 'Start with Trial One',
   heroCardTitle: 'Safety first. No shooting yet.',
   heroCardCta: 'Request a time',
-  heroCoaches: 'Coached by NCAA competitors & Marine Corps veterans',
+  heroCoaches: 'Coached by an NCAA National Championship competitor and an Elite Military Rifle Marksman',
 
   whyKicker: 'Why families choose Sky Arc',
   whyTitle: 'A serious sport, taught with care.',
@@ -37,7 +37,7 @@ export const T = {
     },
     {
       title: 'Coaches with real credentials',
-      text: 'NCAA and Junior Olympic competition experience, NRA-certified instructors and Marine Corps veterans.',
+      text: 'NCAA National Championship and Junior Olympic competition experience, NRA Level 1 Certified Instructors and an Elite Military Rifle Marksman.',
     },
   ],
 
