@@ -1,5 +1,5 @@
 import { collection, doc, query, where } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useEffect, useMemo, useState } from 'react'
 import { LuKeyRound, LuTablet } from 'react-icons/lu'
 import { toast } from 'sonner'

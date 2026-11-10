@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useState } from 'react'
 import { LuCheck } from 'react-icons/lu'
 import { toast } from 'sonner'

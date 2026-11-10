@@ -3,6 +3,19 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "firebase/functions",
+            "importNames": ["httpsCallable"],
+            "message": "Use httpsCallable from '@/lib/callable': it shows the server's message without the SDK's status code."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [{ "files": ["src/lib/callable.ts"], "rules": { "no-restricted-imports": "off" } }]
 }

@@ -17,7 +17,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ACADEMY_ID } from '@shared/academy'
 import { type SignInMethods, signInMethods } from '@shared/auth'
