@@ -18,6 +18,7 @@ import { playPoints } from "@/features/scores/playback";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { offsetText, positionLabel } from "@/features/scores/words";
 import { radius, space, useColors, useIsDark } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * A student's scores at a glance, for the family's Scores tab, as the website's family Scores page shows them
@@ -32,10 +33,11 @@ import { radius, space, useColors, useIsDark } from "@/theme";
  */
 export function PositionTiles({ evaluations, onOpen, testID }: { evaluations: readonly EvaluationDoc[]; onOpen: (id: string) => void; testID?: string }) {
   const colors = useColors();
+  const tour = useTourTarget(testID);
   const progress = useMemo(() => positionProgress(evaluations), [evaluations]);
   if (!progress.length) return null;
   return (
-    <View style={styles.tiles} testID={testID}>
+    <View ref={tour} style={styles.tiles} testID={testID}>
       {progress.map((p) => {
         const name = positionLabel(p.position);
         const only = p.results === 1;

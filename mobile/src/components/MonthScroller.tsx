@@ -3,6 +3,7 @@ import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo,
 import { FlatList, StyleSheet, View, type LayoutChangeEvent, type ViewToken } from "react-native";
 import { T } from "@/components/Text";
 import { space, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * Months stacked vertically and scrolled like the iOS Calendar app (permanent rule: every month calendar scrolls
@@ -144,9 +145,10 @@ export const MonthScroller = forwardRef<MonthScrollerHandle, MonthScrollerProps>
   });
 
   const cellWidth = width ? (width - inset * 2) / 7 : 0;
+  const tour = useTourTarget(testID);
 
   return (
-    <View style={styles.fill} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+    <View ref={tour} style={styles.fill} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
       {width > 0 ? (
         <FlatList
           ref={list}

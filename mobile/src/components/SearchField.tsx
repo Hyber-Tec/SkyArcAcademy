@@ -1,12 +1,14 @@
 import { Search, X } from "lucide-react-native";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { radius, space, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /** A search box (a list's own, at the top of its page): a magnifier, what's typed, and a button that clears it. */
 export function SearchField({ value, onChangeText, placeholder, testID }: { value: string; onChangeText: (text: string) => void; placeholder: string; testID?: string }) {
   const colors = useColors();
+  const tour = useTourTarget(testID);
   return (
-    <View style={[styles.box, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View ref={tour} style={[styles.box, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Search size={18} color={colors.mutedForeground} />
       <TextInput
         value={value}

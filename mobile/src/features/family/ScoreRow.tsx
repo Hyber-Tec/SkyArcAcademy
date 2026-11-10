@@ -11,6 +11,7 @@ import { ResultKindChip } from "@/features/scores/kinds";
 import { BestBadge } from "@/features/scores/ScoreParts";
 import { positionLabel, sourceLabel } from "@/features/scores/words";
 import { space, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * One score in a family's list, as the website lists it: its shots on a small target in the position's colour (a typed
@@ -63,8 +64,10 @@ export function ScoreRow({
   ]
     .filter(Boolean)
     .join(", ");
+  const tour = useTourTarget(testID, onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}

@@ -15,8 +15,8 @@ export function tourKindOf(role: Role): TourKind {
   return "office";
 }
 
-/** Raised when the tour changes enough to show everyone again, once. */
-const VERSION = 1;
+/** Raised when the tour changes enough to show everyone again, once (2: the detailed tour, pointing at each part). */
+const VERSION = 2;
 const seenKey = (uid: string, kind: TourKind) => `skyarc.tour.v${VERSION}.${kind}.${uid}`;
 
 /** Whether this account has finished or skipped its tour on this phone (kept on the phone, per account and kind). */

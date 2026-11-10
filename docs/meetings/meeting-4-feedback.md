@@ -132,8 +132,15 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
   - *Goo, 2026-11-10:* **more detail.** "Right now what we have is just really bare minimum. At least it should show and
     tell them most of the stuff we have, like 'hey, click this one (button)', and then 'from here you can see …'." The
     language step goes (English only, W1).
-- [ ] **B1b. A detailed tour:** each step points at the real button on the screen ("tap this"), opens what it opens, and
-  says what's there, through most of each role's app.
+- ✅ **B1b. A detailed tour:** each step points at the real button on the screen ("tap this"), opens what it opens, and
+  says what's there, through most of each role's app. (#155; phones get it with the next app update)
+  - *Done:* the app dims and lights one part at a time, with a card saying what it is and what to do there: the tab's
+    own button, then the parts that matter on it (a parent: choosing a child, the next class with the cancellation
+    rule, notifications, news, List or month, Ask, the score tiles, a result opened to its replay and comparison,
+    reports, notification settings, contracts). "Tap here" on what opens something does what it does in the app. A
+    part that isn't there (no scores yet, one child) is left out. Pages that open as sheets (a class) are told from
+    their card, since iOS shows no sheet over the tour. Tried on the iPhone Simulator for a parent (18 steps), a
+    student (17), a coach (13) and the office (11).
 
 ## 4. Research and propose (no code until Goo decides)
 

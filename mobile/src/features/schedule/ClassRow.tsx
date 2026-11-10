@@ -8,6 +8,7 @@ import { radius, space, useColors } from "@/theme";
 import { type ClassView, firstName, isOnNow, isOver } from "./classes";
 import { clock, listWords, nameList, plural, shortName, timeRange } from "./format";
 import { SeatCount, type StaffLook } from "./parts";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /** How a class stands, as the website's Home says it. */
 function stateOf(v: ClassView, today: string, nowMin: number): string {
@@ -54,8 +55,10 @@ export function ClassRow({
   // A coach reads who else is in; the office sees each coach's initials (the class names them all).
   const withOthers = others.length ? `With ${listWords(others.map((k) => firstName(look.nameOf(k.staffId, k.name))))}` : "No other coach in";
   const coachNames = listWords(v.coaches.map((k) => firstName(look.nameOf(k.staffId, k.name))));
+  const tour = useTourTarget(testID, onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={[timeRange(c.startMin, c.endMin, hour12), names.length ? nameList(names) : "no students yet", `${v.taken} of ${c.seats} seats`, me ? withOthers : v.coaches.length ? `coaches in: ${coachNames}` : "no coach in", state].join(", ")}

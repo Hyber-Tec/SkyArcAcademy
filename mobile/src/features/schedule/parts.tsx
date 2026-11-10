@@ -13,6 +13,7 @@ import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useIsDark } from "@/theme";
 import { type ClassView, firstName, partOf } from "./classes";
 import { clock, shortRange, timeRange } from "./format";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * The schedule's small parts, as the website draws them (web/src/features/schedule/seatParts.tsx): a student's level in
@@ -198,15 +199,18 @@ export function WhosIn({
   testID?: string;
 }) {
   const colors = useColors();
+  const tour = useTourTarget(testID);
   if (!people.length) {
     return (
-      <T variant="small" style={[styles.none, { color: colors.warning }]} testID={testID}>
-        Nobody in yet
-      </T>
+      <View ref={tour} testID={testID}>
+        <T variant="small" style={[styles.none, { color: colors.warning }]}>
+          Nobody in yet
+        </T>
+      </View>
     );
   }
   return (
-    <View style={styles.people} testID={testID}>
+    <View ref={tour} style={styles.people} testID={testID}>
       {people.map((a) => {
         const name = look.nameOf(a.staffId, a.staffName);
         const mine = a.staffId === me;

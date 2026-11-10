@@ -3,6 +3,7 @@ import { Children, cloneElement, isValidElement, type ReactElement, type ReactNo
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
 import { type Accent, radius, space, useAccents, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * A group of rows under a small title, as in the phone's own Settings. `detail` sits at the right of the title (a
@@ -28,9 +29,10 @@ export function ListSection({
 }) {
   const colors = useColors();
   const accent = useAccents()[tone];
+  const tour = useTourTarget(testID);
   const rows = Children.toArray(children).filter(isValidElement) as ReactElement<{ divider?: boolean }>[];
   return (
-    <View style={styles.section} testID={testID}>
+    <View ref={tour} style={styles.section} testID={testID}>
       {(title || detail) && (
         <View style={styles.head}>
           {Icon ? <Icon size={14} color={accent.fg} strokeWidth={2.4} style={styles.headIcon} /> : null}
@@ -89,6 +91,7 @@ export function ListRow({
   accessibilityLabel?: string;
 }) {
   const colors = useColors();
+  const tour = useTourTarget(testID, onPress);
   const content = (
     <>
       {icon}
@@ -121,12 +124,13 @@ export function ListRow({
   const line = divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border };
   if (!onPress && !onLongPress)
     return (
-      <View style={[styles.row, line]} testID={testID} accessibilityLabel={accessibilityLabel}>
+      <View ref={tour} style={[styles.row, line]} testID={testID} accessibilityLabel={accessibilityLabel}>
         {content}
       </View>
     );
   return (
     <Pressable
+      ref={tour}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
