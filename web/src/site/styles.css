@@ -73,12 +73,6 @@ html.reduce-motion .demo-marquee-track {
   animation: none;
 }
 
-/* Placeholders: clearly marked spots for content the academy still has to send. */
-.demo-placeholder {
-  background-image: repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 12px);
-  background-color: color-mix(in oklab, currentColor 4%, transparent);
-}
-
 /* Pages swap with a short cross-fade where the browser can (View Transitions). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -158,22 +152,6 @@ body {
   scroll-margin-top: 104px;
 }
 
-/* The closing banner's photo (FinalCta) melts into the black around it: above the words on phones and tablets, from
-   the left (and its top and bottom) beside them on wide screens. */
-.final-photo {
-  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 98%);
-  mask-image: linear-gradient(to bottom, #000 35%, transparent 98%);
-}
-@media (min-width: 1024px) {
-  .final-photo {
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 45%), linear-gradient(to bottom, transparent, #000 9%, #000 88%, transparent);
-    -webkit-mask-composite: source-in;
-    mask-image: linear-gradient(to right, transparent, #000 45%), linear-gradient(to bottom, transparent, #000 9%, #000 88%, transparent);
-    mask-composite: intersect;
-  }
-}
-
-
 /* The serif accent (Instrument Serif has no Hangul): in Korean the accent stays upright and a little heavier. */
 .accent {
   font-family: var(--font-serif);
@@ -204,11 +182,6 @@ html.lang-ko .uppercase {
 html.lang-ko .accent-hero {
   font-weight: 300;
   letter-spacing: -0.04em;
-}
-
-/* The shared Placeholder (portraits, missing photos), toned down for this option. */
-.demo-placeholder {
-  background-image: repeating-linear-gradient(135deg, rgb(10 10 10 / 0.05) 0 1px, transparent 1px 11px);
 }
 
 /* A faint drawing grid behind the "visit us" reticle. */

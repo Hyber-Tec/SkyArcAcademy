@@ -1,24 +1,32 @@
 import { LuCheck, LuCompass, LuHeartHandshake, LuShieldCheck, LuSprout, LuTarget, LuUsers } from 'react-icons/lu'
 import { cn } from '@/lib/utils'
-import { useSiteData } from '@/site/data'
-import { ABOUT, keepWhole, l } from '@/site/kit/content'
+import { usePlaceShown, useSiteData } from '@/site/data'
+import { ABOUT, keepWhole } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { PlacePhoto } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
 import { BookButton, Container, SectionHead } from '../components/bits'
-import { CoachPortrait, FinalCta, FocusChips, PageHero, VisitUs, crmLang } from '../components/blocks'
-
-const STORY_PHOTO = l('Photo needed: an athlete in focus', '사진 준비 중: 집중하는 선수')
-const HERO_PHOTO = l('Photo needed: coaching on the range', '사진 준비 중: 사대에서 코칭하는 모습')
+import { CoachPortrait, FocusChips, PageHero, VisitUs, crmLang, useAnyPortrait } from '../components/blocks'
 
 const VALUE_ICONS = [LuShieldCheck, LuTarget, LuSprout, LuUsers]
 
 function Mission() {
   const { t } = useSite()
+  // Without the academy's photo, the promise card follows the words instead of sitting on the photo.
+  const photo = usePlaceShown('about.story')
+  const promise = (
+    <div className={cn('rounded-[22px] bg-white p-5 shadow-float', photo ? 'absolute -bottom-6 left-6 right-6 sm:left-auto sm:-right-4 sm:w-72' : 'max-w-sm')}>
+      <p className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">
+        <span className="size-1.5 rounded-full bg-dot" aria-hidden="true" />
+        {t(ABOUT.mission.eyebrow)}
+      </p>
+      <p className="mt-2 text-[19px] leading-snug font-semibold tracking-tight text-ink">{t(ABOUT.promiseLine.title)}</p>
+    </div>
+  )
   return (
     <section className="py-20 sm:py-28" aria-labelledby="mission-title">
-      <Container className="grid items-center gap-12 lg:grid-cols-[1.08fr_1fr] lg:gap-14">
-        <div>
+      <Container className={cn('grid items-center gap-12', photo && 'lg:grid-cols-[1.08fr_1fr] lg:gap-14')}>
+        <div className={cn(!photo && 'max-w-3xl')}>
           <SectionHead kicker={t(ABOUT.mission.eyebrow)} title={<span id="mission-title">{t(ABOUT.mission.title)}</span>} />
           <div className="mt-6 space-y-5">
             {ABOUT.mission.paragraphs.map((p, i) => (
@@ -27,19 +35,16 @@ function Mission() {
               </Reveal>
             ))}
           </div>
+          {photo ? null : <Reveal delay={0.1} className="mt-8">{promise}</Reveal>}
         </div>
-        <Reveal delay={0.1} className="relative">
-          <div className="aspect-[4/4.6] overflow-hidden rounded-[30px] bg-warm-2 shadow-lift">
-            <PlacePhoto place="about.story" label={STORY_PHOTO} sizes="(min-width: 1024px) 520px, 100vw" className="size-full" />
-          </div>
-          <div className="absolute -bottom-6 left-6 right-6 rounded-[22px] bg-white p-5 shadow-float sm:left-auto sm:-right-4 sm:w-72">
-            <p className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">
-              <span className="size-1.5 rounded-full bg-dot" aria-hidden="true" />
-              {t(ABOUT.mission.eyebrow)}
-            </p>
-            <p className="mt-2 text-[19px] leading-snug font-semibold tracking-tight text-ink">{t(ABOUT.promiseLine.title)}</p>
-          </div>
-        </Reveal>
+        {photo ? (
+          <Reveal delay={0.1} className="relative">
+            <div className="aspect-[4/4.6] overflow-hidden rounded-[30px] bg-warm-2 shadow-lift">
+              <PlacePhoto place="about.story" sizes="(min-width: 1024px) 520px, 100vw" className="size-full" />
+            </div>
+            {promise}
+          </Reveal>
+        ) : null}
       </Container>
     </section>
   )
@@ -171,6 +176,7 @@ function Promise() {
 function Team() {
   const { t } = useSite()
   const { content } = useSiteData()
+  const framed = useAnyPortrait(content.team)
   if (content.team.length === 0) return null
   return (
     <section id="coaches" className="bg-warm py-20 sm:py-28" aria-labelledby="team-title">
@@ -192,7 +198,7 @@ function Team() {
               <Reveal key={p.id} delay={(i % 2) * 0.07} className="h-full">
                 <article className="h-full rounded-[28px] bg-white p-4 shadow-soft sm:p-5" lang={crmLang}>
                   <div className="flex items-start gap-4 sm:gap-6">
-                    <CoachPortrait person={p} compact className="aspect-[4/5] w-28 shrink-0 rounded-[20px] sm:w-44" />
+                    <CoachPortrait person={p} compact initials={framed} className="aspect-[4/5] w-28 shrink-0 rounded-[20px] sm:w-44" />
                     <div className="min-w-0 flex-1 pt-1">
                       <h3 className="text-[24px] leading-tight font-semibold tracking-tight text-ink">{p.name}</h3>
                       <p className="mt-0.5 text-[14.5px] text-balance text-stone">{p.role}</p>
@@ -215,7 +221,7 @@ export function About() {
   const { t } = useSite()
   return (
     <>
-      <PageHero kicker={t(ABOUT.eyebrow)} title={t(ABOUT.title)} text={t(ABOUT.text)} photo="about.hero" photoLabel={HERO_PHOTO}>
+      <PageHero kicker={t(ABOUT.eyebrow)} title={t(ABOUT.title)} text={t(ABOUT.text)} photo="about.hero">
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <BookButton />
         </div>
@@ -227,7 +233,6 @@ export function About() {
       <Promise />
       <Team />
       <VisitUs />
-      <FinalCta />
     </>
   )
 }

@@ -67,7 +67,7 @@ export function PhotosTab({ photos, content, loading }: { photos: WithId<Website
       uses.length &&
       !(await confirm({
         title: 'Hide this photo?',
-        description: `It’s used for ${joinList(uses)}. While it’s hidden, the website shows a placeholder there instead, and leaves it out of the gallery.`,
+        description: `It’s used for ${joinList(uses)}. While it’s hidden, those spots show no photo, and the gallery leaves it out.`,
         confirmLabel: 'Hide photo',
       }))
     )
@@ -395,7 +395,7 @@ function PhotoCard({
           <p className={cn('flex items-start gap-1.5 text-xs', photo.hidden ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground')}>
             <LuMapPin className="mt-px size-3.5 shrink-0" />
             <span>
-              {photo.hidden ? 'Hidden, so these show a placeholder: ' : 'Used for '}
+              {photo.hidden ? 'Hidden, so these show no photo: ' : 'Used for '}
               {uses.join(' · ')}
             </span>
           </p>

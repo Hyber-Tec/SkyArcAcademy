@@ -504,7 +504,8 @@ homepage now … I'll actually test and verify from the live website".
     but program just make me move to programs").
   - *Unconfirmed facts are left out, not marked*: the trials' price and length, tuition, the youngest age and coaching
     in Korean aren't on the pages until the academy confirms them (the owner, of the "Placeholder" note: "if we can get
-    rid of it, please get rid of it"). Photos still to come stay marked.
+    rid of it, please get rid of it"). Photos still to come stay marked. *Changed 2026-11-09 (§41):* a spot without a
+    photo shows nothing either, never a placeholder.
   - *Contact*: the phone and email the site shows are Settings → Academy's (the academy's own Gmail, never
     HyberTec's); an address or an email never breaks across lines.
   - *Official logos*: SIUS's own logo where the site names its scoring system ("so that you look more official and

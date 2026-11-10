@@ -65,7 +65,6 @@ export const WEBSITE_PLACES = [
   { id: 'about.hero', page: 'About', label: 'Top of About' },
   { id: 'about.story', page: 'About', label: 'About: our mission' },
   { id: 'menu', page: 'Menu', label: 'The Programs menu' },
-  { id: 'cta', page: 'Every page', label: 'The closing banner, at the end of every page' },
 ] as const
 export type WebsitePlace = (typeof WEBSITE_PLACES)[number]['id']
 

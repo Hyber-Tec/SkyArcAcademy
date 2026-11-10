@@ -2,8 +2,8 @@ import { motion, useInView } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { LuActivity, LuArrowRight, LuAward, LuClock, LuLayers, LuLogIn, LuMedal, LuQuote, LuRoute, LuShieldCheck, LuShirt, LuTarget, LuUserRound, LuUserRoundCheck, LuWrench } from 'react-icons/lu'
 import { cn } from '@/lib/utils'
-import { useSiteData } from '@/site/data'
-import { ACADEMY, APP, HOME, TRIAL, UI, l } from '@/site/kit/content'
+import { usePlaceShown, useSiteData } from '@/site/data'
+import { ACADEMY, APP, HOME, TRIAL, UI } from '@/site/kit/content'
 import { Lightbox } from '@/site/kit/Lightbox'
 import { EASE_OUT, Reveal, useReduced } from '@/site/kit/motion'
 import { Photo, PlacePhoto } from '@/site/kit/Photo'
@@ -12,7 +12,7 @@ import { TestimonialsColumns } from '@/site/kit/ui'
 import { useIntroReady } from '../intro-context'
 import { useBooking } from '../booking-context'
 import { BookButton, Container, SectionHead, btnInk, btnOutline, linkArrow, mins } from '../components/bits'
-import { CoachCard, FaqList, FinalCta, NewsCard, VisitUs, crmLang } from '../components/blocks'
+import { CoachCard, FaqList, NewsCard, VisitUs, crmLang, useAnyPortrait } from '../components/blocks'
 import { LevelPath } from '../components/LevelPath'
 import { PhoneShots } from '../components/PhoneShots'
 import { ReportShowcase } from '../components/ReportShowcase'
@@ -21,8 +21,6 @@ import siusLogo from '../assets/sius.webp'
 import { T } from '../i18n'
 
 const FACT_ICONS = [LuTarget, LuLayers, LuUserRound, LuActivity]
-
-const HERO_PHOTO = l('Photo needed: athletes on the range', '사진 준비 중: 사대의 선수들')
 
 /** The hero's card: how every athlete starts, and the way to ask for a first time. */
 function NextTrialCard({ className }: { className?: string }) {
@@ -62,6 +60,8 @@ function NextTrialCard({ className }: { className?: string }) {
 function Hero() {
   const { t } = useSite()
   const ready = useIntroReady()
+  // Without the academy's photo, the next trial's card stands on its own beside the words.
+  const photo = usePlaceShown('home.hero')
   const reduce = useReduced()
   const rise = (i: number) =>
     reduce
@@ -99,31 +99,42 @@ function Hero() {
           </motion.div>
         </div>
 
-        <motion.div
-          className="relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center"
-          initial={reduce ? false : { opacity: 0, scale: 0.97, y: 16 }}
-          animate={ready ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.97, y: 16 }}
-          transition={{ duration: 1, delay: 0.15, ease: EASE_OUT }}
-        >
-          <div className="relative aspect-[4/4.5] overflow-hidden rounded-[28px] bg-warm-2 shadow-lift sm:aspect-[5/4.6] sm:rounded-[32px] lg:aspect-[5/5.5]">
-            <PlacePhoto place="home.hero" label={HERO_PHOTO} sizes="(min-width: 1024px) 620px, 100vw" priority className="size-full" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/25 to-transparent" aria-hidden="true" />
-            <p className="absolute top-3.5 left-3.5 inline-flex max-w-[calc(100%-1.75rem)] items-center gap-2 rounded-2xl bg-white/95 py-2 pr-4 pl-2.5 text-[12.5px] leading-tight font-semibold text-ink shadow-soft backdrop-blur sm:top-5 sm:left-5 sm:rounded-full">
-              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-white">
-                <LuMedal className="size-3.5" aria-hidden="true" />
-              </span>
-              <span>{t(T.heroCoaches)}</span>
-            </p>
-          </div>
+        {photo ? (
           <motion.div
-            className="relative z-10 -mt-12 px-3 sm:absolute sm:right-6 sm:-bottom-10 sm:mt-0 sm:w-[300px] sm:px-0 lg:-bottom-12 xl:-right-6"
+            className="relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center"
+            initial={reduce ? false : { opacity: 0, scale: 0.97, y: 16 }}
+            animate={ready ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.97, y: 16 }}
+            transition={{ duration: 1, delay: 0.15, ease: EASE_OUT }}
+          >
+            <div className="relative aspect-[4/4.5] overflow-hidden rounded-[28px] bg-warm-2 shadow-lift sm:aspect-[5/4.6] sm:rounded-[32px] lg:aspect-[5/5.5]">
+              <PlacePhoto place="home.hero" sizes="(min-width: 1024px) 620px, 100vw" priority className="size-full" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/25 to-transparent" aria-hidden="true" />
+              <p className="absolute top-3.5 left-3.5 inline-flex max-w-[calc(100%-1.75rem)] items-center gap-2 rounded-2xl bg-white/95 py-2 pr-4 pl-2.5 text-[12.5px] leading-tight font-semibold text-ink shadow-soft backdrop-blur sm:top-5 sm:left-5 sm:rounded-full">
+                <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+                  <LuMedal className="size-3.5" aria-hidden="true" />
+                </span>
+                <span>{t(T.heroCoaches)}</span>
+              </p>
+            </div>
+            <motion.div
+              className="relative z-10 -mt-12 px-3 sm:absolute sm:right-6 sm:-bottom-10 sm:mt-0 sm:w-[300px] sm:px-0 lg:-bottom-12 xl:-right-6"
+              initial={reduce ? false : { opacity: 0, y: 24 }}
+              animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+              transition={{ duration: 0.8, delay: 0.55, ease: EASE_OUT }}
+            >
+              <NextTrialCard />
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="w-full sm:max-w-[360px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center lg:justify-self-center"
             initial={reduce ? false : { opacity: 0, y: 24 }}
             animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-            transition={{ duration: 0.8, delay: 0.55, ease: EASE_OUT }}
+            transition={{ duration: 0.8, delay: 0.3, ease: EASE_OUT }}
           >
             <NextTrialCard />
           </motion.div>
-        </motion.div>
+        )}
         <motion.dl {...rise(5)} className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4 lg:col-start-1 lg:row-start-2 lg:self-start">
           {HOME.facts.map((f, i) => {
             const Icon = FACT_ICONS[i]
@@ -273,6 +284,7 @@ function AppBand() {
 function Coaches() {
   const { t } = useSite()
   const { content } = useSiteData()
+  const framed = useAnyPortrait(content.team.slice(0, 4))
   if (content.team.length === 0) return null
   return (
     <section className="py-20 sm:py-28" aria-labelledby="coaches-title">
@@ -287,7 +299,7 @@ function Coaches() {
         </div>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {content.team.slice(0, 4).map((p, i) => (
-            <CoachCard key={p.id} person={p} index={i} />
+            <CoachCard key={p.id} person={p} index={i} framed={framed} />
           ))}
         </div>
       </Container>
@@ -517,7 +529,6 @@ export function Home() {
       <GalleryMosaic />
       <Faq />
       <VisitUs />
-      <FinalCta />
     </>
   )
 }

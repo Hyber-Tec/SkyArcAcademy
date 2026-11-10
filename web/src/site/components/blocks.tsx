@@ -1,18 +1,19 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { LuArrowRight, LuCheck, LuInstagram, LuMail, LuMapPin, LuNavigation, LuPhone, LuPin } from 'react-icons/lu'
 import { weekdayIn, weekdaysOf } from '@shared/website/hours'
+import { initials } from '@shared/people'
 import type { WebsitePlace, WebsiteTeamMember } from '@shared/website/types'
 import { SkyArcReticle } from '@/components/app/SkyArcMark'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { type SitePost, usePhotoById, usePlacePhoto, useSiteData } from '@/site/data'
-import { ACADEMY, FAQ, type FaqItem, HOME, type L, type Lang, NEWS, TEAM_PHOTO_TODO, UI, keepWhole } from '@/site/kit/content'
+import { type SitePost, usePhotoById, usePlaceShown, useSiteData } from '@/site/data'
+import { ACADEMY, FAQ, type FaqItem, type Lang, NEWS, UI, keepWhole } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
-import { Photo, PlacePhoto, Placeholder } from '@/site/kit/Photo'
-import { A, useSite } from '@/site/kit/site'
+import { Photo, PlacePhoto } from '@/site/kit/Photo'
+import { useSite } from '@/site/kit/site'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/site/kit/ui'
 import { T } from '../i18n'
-import { BookButton, Container, Kicker } from './bits'
+import { Container, Kicker } from './bits'
 
 /** The academy's time zone, for dates and "today" (Settings → Academy has the same). */
 export const ACADEMY_TZ = 'America/New_York'
@@ -89,8 +90,12 @@ export function NewsCard({ post, className, large = false }: { post: SitePost; c
 
 /* ------------------------------------------------------------------ coaches */
 
-/** A coach's portrait from the Website page, or a marked placeholder until the academy sends one. */
-export function CoachPortrait({ person, className, compact = false }: { person: WebsiteTeamMember; className?: string; compact?: boolean }) {
+/**
+ * A coach's portrait from the Website page. Without one, nothing, never a placeholder (the fourth meeting's B4); beside
+ * coaches who have theirs (`initials`, from `useAnyPortrait`), the coach's initials in the same frame, so the cards
+ * line up.
+ */
+export function CoachPortrait({ person, className, compact = false, initials: framed = false }: { person: WebsiteTeamMember; className?: string; compact?: boolean; initials?: boolean }) {
   const photo = usePhotoById(person.photoId)
   if (photo) {
     return (
@@ -99,7 +104,18 @@ export function CoachPortrait({ person, className, compact = false }: { person: 
       </div>
     )
   }
-  return <Placeholder kind="person" compact={compact} label={TEAM_PHOTO_TODO} className={cn('border-ink/15 bg-warm text-stone', compact && 'p-2', className)} />
+  if (!framed) return null
+  return (
+    <div className={cn('@container flex items-center justify-center bg-warm-2 text-ink/45', className)} aria-hidden="true">
+      <span className="text-[28cqw] leading-none font-semibold tracking-[-0.04em]">{initials(person.name)}</span>
+    </div>
+  )
+}
+
+/** Whether any of these coaches has a portrait on the website: then the others show their initials in its place. */
+export function useAnyPortrait(team: WebsiteTeamMember[]): boolean {
+  const { library } = useSiteData()
+  return useMemo(() => team.some((p) => !!p.photoId && library.some((x) => x.id === p.photoId)), [team, library])
 }
 
 /** What a coach focuses on ("Safety · Athlete development"), a chip each, so no phrase breaks across lines. */
@@ -119,15 +135,17 @@ export function FocusChips({ focus, className }: { focus: string; className?: st
   )
 }
 
-export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; index?: number }) {
+/** A coach on the homepage: `framed` when another coach has a portrait (their initials take its place). */
+export function CoachCard({ person, index = 0, framed = false }: { person: WebsiteTeamMember; index?: number; framed?: boolean }) {
   const { t } = useSite()
   const [open, setOpen] = useState(false)
+  const portrait = !!usePhotoById(person.photoId) || framed
   return (
     <Reveal delay={index * 0.06} className="h-full">
       {/* Phones: the portrait beside the words; wider screens: above them. */}
       <article className="flex h-full gap-4 rounded-[26px] border border-line bg-white p-2.5 shadow-soft sm:flex-col sm:gap-0">
-        <CoachPortrait person={person} compact className="aspect-[4/5] w-28 shrink-0 self-start rounded-[20px] sm:w-auto sm:self-stretch" />
-        <div className="flex min-w-0 flex-1 flex-col py-1 pr-1 sm:px-3 sm:pt-4 sm:pb-3" lang={crmLang}>
+        <CoachPortrait person={person} compact initials={framed} className="aspect-[4/5] w-28 shrink-0 self-start rounded-[20px] sm:w-auto sm:self-stretch" />
+        <div className={cn('flex min-w-0 flex-1 flex-col py-1 pr-1 sm:px-3 sm:pt-4 sm:pb-3', !portrait && 'pt-2.5 pl-2.5 sm:pt-3')} lang={crmLang}>
           <h3 className="text-[19px] font-semibold tracking-tight text-ink sm:text-[21px]">{person.name}</h3>
           <p className="mt-0.5 text-[14px] text-balance text-stone sm:min-h-[2lh]">{person.role}</p>
           <ul className="mt-3 space-y-2 text-[13.5px] leading-snug text-ink/80 sm:mt-4">
@@ -148,7 +166,7 @@ export function CoachCard({ person, index = 0 }: { person: WebsiteTeamMember; in
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[88dvh] overflow-y-auto rounded-[26px] p-0 sm:max-w-lg">
           <div className="flex items-center gap-4 border-b border-line p-6 pr-14">
-            <CoachPortrait person={person} compact className="size-16 shrink-0 rounded-2xl [&>span:last-child]:hidden" />
+            <CoachPortrait person={person} compact initials={framed} className="size-16 shrink-0 rounded-2xl" />
             <div lang={crmLang}>
               <DialogTitle className="text-[22px] font-semibold tracking-tight text-ink">{person.name}</DialogTitle>
               <DialogDescription className="text-[14px] text-stone">{person.role}</DialogDescription>
@@ -336,59 +354,21 @@ export function MapEmbed({ className }: { className?: string }) {
   )
 }
 
-/* ------------------------------------------------------------------ the closing call */
-
-/**
- * The closing call at the end of every page, on black: the photo the academy chose for the closing banner melts into
- * the black (from the left on wide screens, above the words on phones), or the white reticle without one.
- */
-export function FinalCta() {
-  const { t } = useSite()
-  const photo = usePlacePhoto('cta')
-  return (
-    <section className="relative isolate overflow-hidden bg-ink text-white" aria-labelledby="final-title">
-      {photo ? (
-        <div className="final-photo pointer-events-none absolute inset-x-0 top-0 -z-10 h-[300px] sm:h-[400px] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-auto lg:w-[68%] xl:w-[58%]" aria-hidden="true">
-          <Photo photo={photo} alt="" sizes="(min-width: 1280px) 58vw, (min-width: 1024px) 68vw, 100vw" className="size-full" />
-        </div>
-      ) : (
-        <SkyArcReticle className="pointer-events-none absolute -top-24 -right-24 size-[440px] opacity-[0.07] sm:-right-10 sm:size-[560px]" />
-      )}
-      <Container className={cn('relative pb-20 sm:pb-28', photo ? 'pt-[230px] sm:pt-[320px] lg:pt-28' : 'pt-20 sm:pt-28')}>
-        <div className="max-w-2xl">
-          <Kicker tone="light">{t(HOME.final.eyebrow)}</Kicker>
-          <h2 id="final-title" className="mt-5 text-[40px] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-[60px]">
-            {t(HOME.final.title)}
-          </h2>
-          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-white/70 sm:text-[18px]">{t(HOME.final.text)}</p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <BookButton />
-            <A to="contact" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/25 px-6 text-[15px] font-semibold text-white transition hover:border-white/60 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none">
-              {t(UI.contact)} <LuArrowRight className="size-4" aria-hidden="true" />
-            </A>
-          </div>
-        </div>
-      </Container>
-    </section>
-  )
-}
-
 /** The photo the academy chose for a spot, in a rounded frame (page heroes). */
-export function FramedPhoto({ place, label, className, sizes = '(min-width: 1024px) 560px, 100vw', priority, focus }: { place: WebsitePlace; label: L; className?: string; sizes?: string; priority?: boolean; focus?: string }) {
+export function FramedPhoto({ place, className, sizes = '(min-width: 1024px) 560px, 100vw', priority, focus }: { place: WebsitePlace; className?: string; sizes?: string; priority?: boolean; focus?: string }) {
   return (
     <div className={cn('overflow-hidden rounded-[30px] bg-warm-2 shadow-soft', className)}>
-      <PlacePhoto place={place} label={label} sizes={sizes} priority={priority} focus={focus} className="size-full" />
+      <PlacePhoto place={place} sizes={sizes} priority={priority} focus={focus} className="size-full" />
     </div>
   )
 }
 
-/** The top of an inner page: kicker, title, text, and the page's photo when it has a spot for one. */
+/** The top of an inner page: kicker, title, text, and the page's photo when its spot has one (else the words alone). */
 export function PageHero({
   kicker,
   title,
   text,
   photo,
-  photoLabel,
   focus,
   children,
   aside,
@@ -400,14 +380,14 @@ export function PageHero({
   /** The lead's language, when it isn't the page's. */
   textLang?: string
   photo?: WebsitePlace
-  photoLabel?: L
   focus?: string
   children?: ReactNode
   aside?: ReactNode
 }) {
+  const shown = usePlaceShown(photo)
   return (
     <section className="relative overflow-hidden bg-warm" aria-labelledby="page-title">
-      <Container className={cn('grid items-center gap-10 py-14 sm:py-20', (photo || aside) && 'lg:grid-cols-[1.08fr_1fr] lg:gap-14 lg:py-24')}>
+      <Container className={cn('grid items-center gap-10 py-14 sm:py-20', (shown || aside) && 'lg:grid-cols-[1.08fr_1fr] lg:gap-14 lg:py-24')}>
         <Reveal>
           <Kicker>{kicker}</Kicker>
           <h1 id="page-title" className="mt-5 text-[42px] leading-[1] font-semibold tracking-[-0.04em] text-balance text-ink sm:text-[56px] lg:text-[64px]">
@@ -416,9 +396,9 @@ export function PageHero({
           <p lang={textLang} className="mt-5 max-w-xl text-[17px] leading-relaxed text-pretty text-stone sm:text-[19px]">{text}</p>
           {children}
         </Reveal>
-        {photo ? (
+        {photo && shown ? (
           <Reveal delay={0.1}>
-            <FramedPhoto place={photo} label={photoLabel ?? UI.photoNeeded} priority focus={focus} className="aspect-[4/3] lg:aspect-[5/4.3]" />
+            <FramedPhoto place={photo} priority focus={focus} className="aspect-[4/3] lg:aspect-[5/4.3]" />
           </Reveal>
         ) : aside ? (
           <Reveal delay={0.1}>{aside}</Reveal>

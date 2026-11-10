@@ -7,7 +7,7 @@ import { ACADEMY, type L, type Lang, l } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { A, useSite } from '@/site/kit/site'
 import { Container } from '../components/bits'
-import { FinalCta, PageHero } from '../components/blocks'
+import { PageHero } from '../components/blocks'
 
 /**
  * The privacy policy, the terms of service and Help, as pages of the website (the App Store and Google Play link both: the policy's address
@@ -335,7 +335,6 @@ export function Privacy() {
         {lang === 'ko' ? <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-[14.5px] text-ink/80 shadow-soft">{t(TEXT.englishOnly)}</p> : null}
       </PageHero>
       <Document sections={sections} lang="en" />
-      <FinalCta />
     </>
   )
 }
@@ -634,7 +633,6 @@ export function Terms() {
         {lang === 'ko' ? <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-[14.5px] text-ink/80 shadow-soft">{t(TEXT.termsEnglishOnly)}</p> : null}
       </PageHero>
       <Document sections={sections} lang="en" />
-      <FinalCta />
     </>
   )
 }
@@ -739,7 +737,6 @@ export function Help() {
     <>
       <PageHero kicker={t(TEXT.helpKicker)} title={t(TEXT.helpTitle)} text={t(TEXT.helpLead)} />
       <Document sections={sections} />
-      <FinalCta />
     </>
   )
 }

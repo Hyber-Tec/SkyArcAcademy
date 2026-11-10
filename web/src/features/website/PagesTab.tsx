@@ -74,7 +74,7 @@ function PlacesCard({ photos, content }: { photos: WithId<WebsitePhoto>[]; conte
   async function clear(place: PlaceDef) {
     const ok = await confirm({
       title: `Remove the photo from “${place.label}”?`,
-      description: 'The photo stays in the library. Until you choose another, the website shows a marked placeholder there.',
+      description: `The photo stays in the library. Until you choose another, ${withoutPhoto(place.id)}.`,
       confirmLabel: 'Remove photo',
     })
     if (!ok) return
@@ -129,11 +129,11 @@ function PlacesCard({ photos, content }: { photos: WithId<WebsitePhoto>[]; conte
   )
 }
 
-/** What a spot shows without a photo, where it isn't a marked placeholder. */
+/** What a spot shows without a photo: never a placeholder, the words around it take the space. */
 const WITHOUT_PHOTO: Partial<Record<PlaceDef['id'], string>> = {
   menu: 'the menu shows without one',
-  cta: 'the banner shows the Sky Arc mark on black',
 }
+const withoutPhoto = (id: PlaceDef['id']) => WITHOUT_PHOTO[id] ?? 'the website leaves it out, and the words beside it take the space'
 
 function PlaceRow({
   place,
@@ -156,15 +156,15 @@ function PlaceRow({
   let status: React.ReactNode
   if (incoming?.stage === 'failed') status = <span className="text-destructive">The new photo didn’t upload: {incoming.error}</span>
   else if (incoming) status = 'Uploading the new photo: it’s shown here once it’s up.'
-  else if (photo?.hidden) status = <span className="text-amber-700 dark:text-amber-400">This photo is hidden, so {WITHOUT_PHOTO[place.id] ?? 'the website shows a placeholder here'}.</span>
+  else if (photo?.hidden) status = <span className="text-amber-700 dark:text-amber-400">This photo is hidden, so {withoutPhoto(place.id)}.</span>
   else if (photo) status = photo.caption ? photoName(photo) : 'A photo from the library'
   else if (photoId) status = 'Its photo was deleted. Choose another.'
-  else status = `No photo yet: ${WITHOUT_PHOTO[place.id] ?? 'the website shows a marked placeholder'}.`
+  else status = `No photo yet: ${withoutPhoto(place.id)}.`
 
   return (
     <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center" data-testid={`place-${place.id}`}>
       <div className="aspect-video w-full shrink-0 overflow-hidden rounded-md border bg-muted sm:w-40">
-        {incoming ? <UploadPreview upload={incoming} /> : <PhotoSlot photoId={photoId} photos={photos} uploads={uploads} className="size-full rounded-none border-0" empty="Placeholder" />}
+        {incoming ? <UploadPreview upload={incoming} /> : <PhotoSlot photoId={photoId} photos={photos} uploads={uploads} className="size-full rounded-none border-0" empty="No photo" />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{place.label}</p>

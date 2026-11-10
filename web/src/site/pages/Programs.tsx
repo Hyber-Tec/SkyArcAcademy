@@ -22,15 +22,13 @@ import {
 } from 'react-icons/lu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { LEVELS, type Level, PROGRAMS, type Rank, UI, l } from '@/site/kit/content'
+import { LEVELS, type Level, PROGRAMS, type Rank, UI } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { A, useSite } from '@/site/kit/site'
 import { BookButton, Container, SectionHead, btnOutline } from '../components/bits'
-import { FinalCta, PageHero } from '../components/blocks'
+import { PageHero } from '../components/blocks'
 import { LEVEL_FILL, LevelVisual } from '../components/LevelPath'
 import { T } from '../i18n'
-
-const HERO_PHOTO = l('Photo needed: a match on the range', '사진 준비 중: 사대에서 열린 경기')
 
 function LevelText({ level, index }: { level: Level; index: number }) {
   const { t } = useSite()
@@ -346,7 +344,7 @@ export function Programs() {
   const { t } = useSite()
   return (
     <>
-      <PageHero kicker={t(PROGRAMS.eyebrow)} title={t(PROGRAMS.title)} text={t(PROGRAMS.text)} photo="programs.hero" photoLabel={HERO_PHOTO}>
+      <PageHero kicker={t(PROGRAMS.eyebrow)} title={t(PROGRAMS.title)} text={t(PROGRAMS.text)} photo="programs.hero">
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <BookButton />
           <A to="programs?section=tuition" className={btnOutline}>
@@ -358,7 +356,6 @@ export function Programs() {
       <Pathways />
       <Placement />
       <Tuition />
-      <FinalCta />
     </>
   )
 }

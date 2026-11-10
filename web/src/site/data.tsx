@@ -162,6 +162,16 @@ export function usePlacePhoto(place: WebsitePlace): SitePhoto | null {
   return useMemo(() => (id ? (library.find((p) => p.id === id) ?? null) : null), [id, library])
 }
 
+/**
+ * Whether a spot's photo is drawn: while the site's content loads (a quiet box, so the page doesn't jump) and once it
+ * has a photo. A spot without one is left out, and the words around it take the space (the fourth meeting's B4).
+ */
+export function usePlaceShown(place: WebsitePlace | undefined): boolean {
+  const { ready, content, library } = useSiteData()
+  const id = place ? content.places?.[place] : undefined
+  return !!place && (!ready || (!!id && library.some((p) => p.id === id)))
+}
+
 export function usePhotoById(id: string | null | undefined): SitePhoto | null {
   const { library } = useSiteData()
   return useMemo(() => (id ? (library.find((p) => p.id === id) ?? null) : null), [id, library])

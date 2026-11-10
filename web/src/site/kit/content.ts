@@ -1,9 +1,9 @@
 /**
  * The website's words, in English and Korean, taken from the academy's earlier site and tidied. Nothing here is
  * invented as a fact: what the academy hasn't confirmed yet (the trials' price and length, tuition, the youngest age)
- * is left out until it does, and photos still to come show a marked placeholder. What the academy changes itself comes
- * from the CRM's Website page instead (photos, coaches, testimonials, hours, Instagram, news; site/data.tsx), and its
- * email and phone from Settings → Academy. The Korean is a draft the owner reviews (docs/TODO.md).
+ * is left out until it does, and so is a spot without a photo (docs/DECISIONS.md §41). What the academy changes
+ * itself comes from the CRM's Website page instead (photos, coaches, testimonials, hours, Instagram, news;
+ * site/data.tsx), and its email and phone from Settings → Academy. The Korean is a draft the owner reviews (docs/TODO.md).
  */
 export type Lang = 'en' | 'ko'
 export interface L {
@@ -68,8 +68,6 @@ export const UI = {
   back: l('Back', '이전'),
   next: l('Next', '다음'),
   previous: l('Previous', '이전'),
-  placeholder: l('Placeholder', '임시'),
-  photoNeeded: l('Photo needed', '사진 준비 중'),
   email: l('Email', '이메일'),
   phone: l('Phone', '전화번호'),
   address: l('Address', '주소'),
@@ -269,11 +267,6 @@ export const HOME = {
     eyebrow: l('Academy hours', '운영 시간'),
     title: l('Plan your training.', '훈련 일정을 세워 보세요'),
     text: l('Regular weekday training hours, with flexible weekend access by arrangement.', '평일에는 정규 훈련 시간이 있고, 주말에는 예약하면 유연하게 이용할 수 있어요.'),
-  },
-  final: {
-    eyebrow: l('The first shot starts here.', '첫 발은 여기서 시작돼요'),
-    title: l('Ready to find your focus?', '집중을 찾을 준비가 되셨나요?'),
-    text: l('Request Trial One online, or send us a question first.', '1차 체험을 온라인으로 신청하거나, 궁금한 점부터 먼저 물어보세요.'),
   },
 }
 
@@ -599,8 +592,6 @@ export const ABOUT = {
   },
 }
 
-export const TEAM_PHOTO_TODO = l('Photo needed: coach portrait', '사진 준비 중: 코치 사진')
-
 export type GalleryCategory = 'training' | 'coaching' | 'competition' | 'community'
 
 export const GALLERY = {
@@ -614,14 +605,6 @@ export const GALLERY = {
     { id: 'competition', label: l('Competition', '대회') },
     { id: 'community', label: l('Community', '커뮤니티') },
   ] as { id: 'all' | GalleryCategory; label: L }[],
-  /** Spots for photos the academy still has to send, while the gallery is short. */
-  todo: [
-    l('The range and its lanes', '사대와 사로'),
-    l('Equipment up close', '가까이서 본 장비'),
-    l('A first trial class', '첫 체험 수업'),
-    l('The team photo', '단체 사진'),
-    l('Results day', '결과 발표 날'),
-  ],
   empty: l('Photos are on their way.', '사진을 준비하고 있어요.'),
 }
 
