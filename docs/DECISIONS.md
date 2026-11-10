@@ -1327,3 +1327,23 @@ The academy's question A14, the second meeting's `E1` and the third's `DM3`.
 - **Apple's hidden addresses:** someone who signed in with Apple and hid their email gets the app's email only once
   info@ is registered with Apple (`docs/publishing/apple/sign-in-with-apple.md`, section 5). Optional.
 
+
+## 41. The fourth meeting: coaches onboarding, the website's polish, results and SCATT (2026-11-09)
+
+The academy's owner, the manager and two coaches, with Goo; the tasks are in `docs/meetings/meeting-4-feedback.md`.
+
+- **The kiosk starts after Sunday, November 15**, for every coach at the same time (the manager).
+- **Coaches set and change their own kiosk PIN** on the phone and on the website (B2). The office still sets or
+  removes anyone's.
+- **The website:** no closing banner at the end of each page (B3); a spot with nothing in it shows nothing, never a
+  placeholder (B4); the public address is `info@skyarcacademy.com`, from the one setting (Settings → Academy → Email,
+  B5).
+- **The contract stays English only** (Goo, at the meeting: one language for a contract). The Korean translation of
+  §36 stays in the demo academy: it isn't loaded into the live one. The screens around the contract keep their Korean.
+  The contract is on hold until the owner's final wording.
+- **A welcome tour in the phone app** after the first sign-in, per role (B1), rather than only a how-to video.
+- **Competition results from the tournaments' results site** instead of paper sheets, and **SCATT sessions** in the
+  app: researched first (R1, R2), and built once Goo decides. **Shot order:** the app says when it's certain and when
+  it's a guess (R3).
+- **Not now:** Chinese (maybe one day, checked by a native speaker), and Google reviews (after the academy expands; the
+  building closes for about a month early next year).
