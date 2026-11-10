@@ -13,8 +13,9 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **The public email:** Settings → Academy → Email → `info@skyarcacademy.com` (it still says the manager's Gmail).
   The website, the app and new reports change at once
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
-- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-09): it goes
-  live by itself. If Google writes, send the message to Claude Code
+- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still in review on 2026-11-10): it goes live by
+  itself. Check the Publishing overview and the Inbox; still in review after Nov 13 → contact Play support. No new
+  Android build until it's live
 
 ## The manager
 
@@ -35,6 +36,10 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Google's sign-in window says skyarcacademy.com** (optional: one setting for Goo, then Claude Code)
 
 ## Questions for Goo
+
+- [ ] **The fourth meeting's picks:** the levels section (B6: A, B or C), the results site (R1: go ahead, and apply
+  for a Scopos key?), SCATT (R2: ask the coaches for samples and SCATT for the format?), shot order (R3: mark the shots
+  that may be swapped?). All on the round's review page
 
 - [ ] **Students in the private notes:** the academy's answers of October name about 20 students, with levels and
   grades. Keep them in the private repository, or on the Mac mini only?
