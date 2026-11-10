@@ -1,4 +1,3 @@
-import { type Lang, dateText } from "@shared/i18n";
 import { type CompareMode, type ComparePair, compareFacts, compareModes, comparePair, positionPoints } from "@shared/reports/compare";
 import type { EvaluationPoint } from "@shared/reports/types";
 import { POSITION_COLORS, POSITION_LABELS, pointOf } from "@shared/shooting/evaluation";
@@ -13,19 +12,14 @@ import { T } from "@/components/Text";
 import type { EvaluationDoc } from "@/features/data/hooks";
 import { one, signed } from "@/features/reports/format";
 import { StillTarget } from "@/features/reports/ReportParts";
-import { useLang, useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
-import { positionLabel, sourceLabel } from "./words";
+import { sourceLabel } from "./words";
+import { formatDateKey } from "@shared/time";
 
 const MODE_LABELS: Record<CompareMode, string> = { lowest: "Lowest", previous: "Previous", first: "First", choose: "Choose two" };
-const MODE_LABELS_KO: Record<CompareMode, string> = { lowest: "최저", previous: "직전", first: "처음", choose: "직접 선택" };
-
-/** Each side's name in Korean (shared/src/reports/compare.ts names them in English). */
-const SIDE_KO: Record<string, string> = { "This result": "이 기록", Latest: "최근 기록", Earlier: "이전 기록", Later: "이후 기록", Previous: "직전 기록", First: "첫 기록", Lowest: "최저 기록" };
-const sideLabel = (label: string, lang: Lang) => (lang === "ko" ? (SIDE_KO[label] ?? label) : label);
 
 /** "Sep 3, 2026 · 85", with a SIUS result's decimal after it ("· 85 (90.2)"), as the website's choices read. */
-const pointLine = (p: EvaluationPoint, lang: Lang) => `${dateText(p.dateKey, "medium", lang)} · ${one(p.wholePer10)}${p.source === "sius" ? ` (${one(p.per10)})` : ""}`;
+const pointLine = (p: EvaluationPoint) => `${formatDateKey(p.dateKey, "medium")} · ${one(p.wholePer10)}${p.source === "sius" ? ` (${one(p.per10)})` : ""}`;
 
 /**
  * Two results of one position side by side, on a score's own screen (the family's and the staff's), as the website's
@@ -55,8 +49,6 @@ export function CompareCard({
   testID?: string;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const { width } = useWindowDimensions();
   const list = useMemo(() => positionPoints(evaluations, anchor.position), [evaluations, anchor.position]);
   const modes = useMemo(() => compareModes(list, anchor.id), [list, anchor.id]);
@@ -69,7 +61,7 @@ export function CompareCard({
   const named = { anchorId: anchor.id, anchorLabel: "This result" };
   // Picks that no longer make a pair (one deleted since) give way to the first ones.
   const pair = comparePair(list, mode, { ...named, picks }) ?? comparePair(list, mode, named);
-  const position = lang === "ko" ? positionLabel(anchor.position, "ko") : POSITION_LABELS[anchor.position].toLowerCase();
+  const position = POSITION_LABELS[anchor.position].toLowerCase();
   // Two targets side by side in the card (the page's and the card's padding on each side).
   const size = Math.min(150, Math.floor((width - space.lg * 5) / 2));
 
@@ -78,7 +70,7 @@ export function CompareCard({
     <View style={styles.head}>
       <GitCompareArrows size={16} color={colors.mutedForeground} />
       <T variant="label" style={styles.grow} accessibilityRole="header">
-        {t("Compare", "비교")}
+        Compare
       </T>
     </View>
   );
@@ -87,7 +79,7 @@ export function CompareCard({
       <Card style={styles.card} testID={testID}>
         {head}
         <T variant="small" tone="muted">
-          {t(`The only ${position} result so far: the next one compares with it here.`, `아직 ${position} 기록이 하나뿐이에요. 다음 기록부터 여기서 비교할 수 있어요.`)}
+          {`The only ${position} result so far: the next one compares with it here.`}
         </T>
       </Card>
     ) : null;
@@ -101,7 +93,7 @@ export function CompareCard({
         <SegmentedControl<CompareMode>
           value={mode}
           onChange={setChosen}
-          options={modes.map((m) => ({ value: m, label: lang === "ko" ? MODE_LABELS_KO[m] : MODE_LABELS[m] }))}
+          options={modes.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
           testID={testID ? `${testID}-mode` : undefined}
         />
       ) : null}
@@ -112,19 +104,16 @@ export function CompareCard({
               key={i}
               onPress={() => setPicking({ side: i === 0 ? 0 : 1, open: true })}
               accessibilityRole="button"
-              accessibilityLabel={t(
-                `${pair.labels[i]}: ${dateText(p.dateKey, "medium", "en")}, ${one(p.wholePer10)} per 10 shots. Choose another ${position} result.`,
-                `${sideLabel(pair.labels[i], "ko")}: ${dateText(p.dateKey, "medium", "ko")}, 10발 평균 ${one(p.wholePer10)}. 다른 ${position} 기록을 골라요.`,
-              )}
+              accessibilityLabel={`${pair.labels[i]}: ${formatDateKey(p.dateKey, "medium")}, ${one(p.wholePer10)} per 10 shots. Choose another ${position} result.`}
               style={({ pressed }) => [styles.pick, { borderColor: colors.input, backgroundColor: pressed ? colors.accent : colors.card }]}
               testID={testID ? `${testID}-pick-${i}` : undefined}
             >
               <View style={styles.grow}>
                 <T variant="tiny" tone="muted" style={styles.caps}>
-                  {sideLabel(pair.labels[i], lang).toUpperCase()}
+                  {pair.labels[i].toUpperCase()}
                 </T>
                 <T variant="small" style={styles.number} numberOfLines={1}>
-                  {pointLine(p, lang)}
+                  {pointLine(p)}
                 </T>
               </View>
               <ChevronsUpDown size={16} color={colors.mutedForeground} />
@@ -153,10 +142,8 @@ export function CompareCard({
 
 /** The pair: each side's day and score, the change between them, both targets, then the inner tens and the group size. */
 function Pair({ pair, size, anchorId, onOpen, testID }: { pair: ComparePair<EvaluationPoint>; size: number; anchorId: string; onOpen?: (id: string) => void; testID?: string }) {
-  const t = useT();
-  const lang = useLang();
   const { a, b } = pair;
-  const labels = pair.labels.map((l) => sideLabel(l, lang));
+  const labels = pair.labels;
   const facts = compareFacts(a, b);
   const color = POSITION_COLORS[b.position];
   const placed = [a, b].some((p) => p.marks.some((m) => pointOf(m) !== null));
@@ -173,8 +160,8 @@ function Pair({ pair, size, anchorId, onOpen, testID }: { pair: ComparePair<Eval
           size="md"
           label={
             facts.change === 0
-              ? t("No change per 10 shots", "10발 평균 변화 없음")
-              : t(`${one(Math.abs(facts.change))} ${facts.change > 0 ? "higher" : "lower"} per 10 shots`, `10발 평균 ${one(Math.abs(facts.change))}점 ${facts.change > 0 ? "높아요" : "낮아요"}`)
+              ? "No change per 10 shots"
+              : `${one(Math.abs(facts.change))} ${facts.change > 0 ? "higher" : "lower"} per 10 shots`
           }
           testID={testID ? `${testID}-change` : undefined}
         />
@@ -190,23 +177,23 @@ function Pair({ pair, size, anchorId, onOpen, testID }: { pair: ComparePair<Eval
       ) : null}
       {facts.innerTens ? (
         <Fact
-          label={t("Inner tens", "이너 텐")}
+          label="Inner tens"
           from={`${facts.innerTens.a}%`}
           to={`${facts.innerTens.b}%`}
           change={facts.innerTens.change}
-          unit={t(" pts", "%p")}
-          words={lang === "ko" ? ["%p 늘었어요", "%p 줄었어요"] : ["points more", "points fewer"]}
+          unit=" pts"
+          words={["points more", "points fewer"]}
         />
       ) : null}
       {facts.group ? (
         <Fact
-          label={t("Group size", "탄착군 크기")}
+          label="Group size"
           from={one(facts.group.a)}
-          to={t(`${one(facts.group.b)} mm`, `${one(facts.group.b)}mm`)}
+          to={`${one(facts.group.b)} mm`}
           change={facts.group.change}
-          unit={t(" mm", "mm")}
+          unit=" mm"
           goodWhenUp={false}
-          words={lang === "ko" ? ["mm 커졌어요", "mm 작아졌어요"] : ["mm wider", "mm tighter"]}
+          words={["mm wider", "mm tighter"]}
         />
       ) : null}
     </View>
@@ -216,15 +203,10 @@ function Pair({ pair, size, anchorId, onOpen, testID }: { pair: ComparePair<Eval
 /** One side: what it is ("First", "This result"), its day and where it came from, and its score per 10 shots. */
 function Side({ point: p, label, onOpen, testID }: { point: EvaluationPoint; label: string; onOpen?: () => void; testID?: string }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const sius = p.source === "sius";
-  const date = dateText(p.dateKey, "medium", lang);
-  const source = sourceLabel(p.source, lang);
-  const said = t(
-    `${label}, ${date}, ${source}: ${one(p.wholePer10)} per 10 shots${sius ? `, ${one(p.per10)} in decimals` : ""}`,
-    `${label}, ${date}, ${source}: 10발 평균 ${one(p.wholePer10)}${sius ? `, 소수점 ${one(p.per10)}` : ""}`,
-  );
+  const date = formatDateKey(p.dateKey, "medium");
+  const source = sourceLabel(p.source);
+  const said = `${label}, ${date}, ${source}: ${one(p.wholePer10)} per 10 shots${sius ? `, ${one(p.per10)} in decimals` : ""}`;
   const body = (
     <>
       <T variant="tiny" tone="muted" style={styles.caps}>
@@ -240,7 +222,7 @@ function Side({ point: p, label, onOpen, testID }: { point: EvaluationPoint; lab
         {one(p.wholePer10)}
       </T>
       <T variant="small" tone="muted" style={styles.centerText}>
-        {t(`per 10 shots${sius ? ` · ${one(p.per10)} decimal` : ""}`, `10발 평균${sius ? ` · 소수점 ${one(p.per10)}` : ""}`)}
+        {`per 10 shots${sius ? ` · ${one(p.per10)} decimal` : ""}`}
       </T>
     </>
   );
@@ -255,7 +237,7 @@ function Side({ point: p, label, onOpen, testID }: { point: EvaluationPoint; lab
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={t(`${said}. Opens it.`, `${said}. 누르면 열어요.`)}
+      accessibilityLabel={`${said}. Opens it.`}
       style={({ pressed }) => [styles.side, styles.sideBox, pressed && { backgroundColor: colors.accent }]}
       testID={testID}
     >
@@ -267,12 +249,11 @@ function Side({ point: p, label, onOpen, testID }: { point: EvaluationPoint; lab
 /** A typed paper card in place of a target: its shots' places weren't kept. */
 function Typed({ size }: { size: number }) {
   const colors = useColors();
-  const t = useT();
   return (
     <View style={[styles.typed, { width: size, height: size, borderRadius: size / 2, borderColor: colors.border }]}>
       <PencilLine size={18} color={colors.mutedForeground} />
       <T variant="tiny" tone="muted" style={styles.centerText}>
-        {t("Typed card: where the shots landed isn’t kept", "직접 입력한 표적지라 탄착 위치가 없어요")}
+        Typed card: where the shots landed isn’t kept
       </T>
     </View>
   );
@@ -281,7 +262,6 @@ function Typed({ size }: { size: number }) {
 /** A change as a pill: up is good (or smaller, for a group), with an arrow and the number, as the website shows it. */
 function Change({ value, unit = "", goodWhenUp = true, size = "sm", label, testID }: { value: number; unit?: string; goodWhenUp?: boolean; size?: "sm" | "md"; label?: string; testID?: string }) {
   const colors = useColors();
-  const t = useT();
   const good = value === 0 ? null : value > 0 === goodWhenUp;
   const fg = good === null ? colors.mutedForeground : good ? colors.success : colors.destructive;
   const bg = good === null ? colors.secondary : good ? colors.successTint : colors.destructiveTint;
@@ -291,7 +271,7 @@ function Change({ value, unit = "", goodWhenUp = true, size = "sm", label, testI
     <View style={[styles.change, md && styles.changeMd, { backgroundColor: bg }]} accessible={!!label} accessibilityLabel={label} testID={testID}>
       <Arrow size={md ? 15 : 12} color={fg} />
       <T variant={md ? "small" : "tiny"} style={[styles.changeText, { color: fg }]}>
-        {value === 0 ? t("No change", "변화 없음") : `${signed(value)}${unit}`}
+        {value === 0 ? "No change" : `${signed(value)}${unit}`}
       </T>
     </View>
   );
@@ -300,10 +280,7 @@ function Change({ value, unit = "", goodWhenUp = true, size = "sm", label, testI
 /** A figure on both sides, "40% → 55%", and its change (`words` say it aloud: "points more", "points fewer"). */
 function Fact({ label, from, to, change, unit, goodWhenUp = true, words }: { label: string; from: string; to: string; change: number; unit: string; goodWhenUp?: boolean; words: [up: string, down: string] }) {
   const colors = useColors();
-  const ko = useLang() === "ko";
-  const said = ko
-    ? `${label}: ${from}에서 ${to}, ${change === 0 ? "변화 없음" : `${one(Math.abs(change))}${change > 0 ? words[0] : words[1]}`}`
-    : `${label}: ${from} then ${to}, ${change === 0 ? "no change" : `${one(Math.abs(change))} ${change > 0 ? words[0] : words[1]}`}`;
+  const said = `${label}: ${from} then ${to}, ${change === 0 ? "no change" : `${one(Math.abs(change))} ${change > 0 ? words[0] : words[1]}`}`;
   return (
     <View style={[styles.fact, { backgroundColor: colors.secondary }]} accessible accessibilityLabel={said}>
       <T variant="small" tone="muted" style={styles.grow}>
@@ -340,8 +317,6 @@ function ChooseDialog({
   testID?: string;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   return (
     <Dialog
       open={open}
@@ -349,14 +324,14 @@ function ChooseDialog({
       testID={testID}
       footer={
         <Button variant="ghost" onPress={onClose} testID={testID ? `${testID}-cancel` : undefined}>
-          {t("Cancel", "닫기")}
+          Cancel
         </Button>
       }
     >
       <View style={styles.dialogHead}>
-        <T variant="heading">{t("Choose a result", "기록 고르기")}</T>
+        <T variant="heading">Choose a result</T>
         <T variant="small" tone="muted">
-          {t(`Every ${position} result, newest first, with its score per 10 shots.`, `${position} 기록 전체예요. 최근 기록부터 10발 평균과 함께 보여요.`)}
+          {`Every ${position} result, newest first, with its score per 10 shots.`}
         </T>
       </View>
       <View style={[styles.options, { borderColor: colors.border }]}>
@@ -364,8 +339,8 @@ function ChooseDialog({
           const on = p.id === current;
           const taken = p.id === other;
           const sius = p.source === "sius";
-          const date = dateText(p.dateKey, "medium", lang);
-          const source = sourceLabel(p.source, lang);
+          const date = formatDateKey(p.dateKey, "medium");
+          const source = sourceLabel(p.source);
           return (
             <Pressable
               key={p.id}
@@ -373,10 +348,7 @@ function ChooseDialog({
               onPress={() => (on ? onClose() : onPick(p.id))}
               accessibilityRole="button"
               accessibilityState={{ selected: on, disabled: taken }}
-              accessibilityLabel={t(
-                `${date}${p.id === anchorId ? ", this result" : ""}, ${source}: ${one(p.wholePer10)} per 10 shots${taken ? ", already on the other side" : ""}`,
-                `${date}${p.id === anchorId ? ", 이 기록" : ""}, ${source}: 10발 평균 ${one(p.wholePer10)}${taken ? ", 이미 비교 중" : ""}`,
-              )}
+              accessibilityLabel={`${date}${p.id === anchorId ? ", this result" : ""}, ${source}: ${one(p.wholePer10)} per 10 shots${taken ? ", already on the other side" : ""}`}
               style={({ pressed }) => [
                 styles.option,
                 i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
@@ -391,10 +363,10 @@ function ChooseDialog({
                 </T>
                 <T variant="small" tone="muted" numberOfLines={1}>
                   {[
-                    p.id === anchorId ? t("This result", "이 기록") : null,
-                    taken ? t("On the other side", "이미 비교 중") : null,
+                    p.id === anchorId ? "This result" : null,
+                    taken ? "On the other side" : null,
                     source,
-                    sius ? t(`${one(p.per10)} decimal`, `소수점 ${one(p.per10)}`) : t(`${p.shots} shots`, `${p.shots}발`),
+                    sius ? `${one(p.per10)} decimal` : `${p.shots} shots`,
                   ]
                     .filter(Boolean)
                     .join(" · ")}

@@ -11,7 +11,6 @@ import { useAuth } from '@/auth/AuthProvider'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
 import { FullPageMessage, FullPageSpinner } from '@/components/app/FullPage'
-import { LangSwitch } from '@/components/app/LangSwitch'
 import { UserMenu } from '@/components/app/UserMenu'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -20,19 +19,17 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { db } from '@/lib/firebase'
 import { useDoc } from '@/lib/firestore'
-import { useT } from '@/lib/lang'
 import { usePublicProfile } from '@/lib/publicProfile'
 import { cn } from '@/lib/utils'
 import { OrDivider } from '@/pages/public/authParts'
 import { GoogleSignInButton } from '@/pages/public/GoogleButton'
 
-const ROLE_CHOICES: { role: Role; title: string; text: string; ko: { title: string; text: string }; icon: typeof LuUsers }[] = [
-  { role: 'coach', title: 'Coach or employee', text: 'I work at this academy.', ko: { title: '코치 또는 직원', text: '이 아카데미에서 일해요.' }, icon: LuUserRound },
-  { role: 'parent', title: 'Parent or guardian', text: 'My child studies here.', ko: { title: '부모 또는 보호자', text: '자녀가 여기서 배우고 있어요.' }, icon: LuUsers },
-  { role: 'student', title: 'Student', text: 'I take classes here.', ko: { title: '학생', text: '여기서 수업을 듣고 있어요.' }, icon: LuGraduationCap },
+const ROLE_CHOICES: { role: Role; title: string; text: string;
+ icon: typeof LuUsers }[] = [
+  { role: 'coach', title: 'Coach or employee', text: 'I work at this academy.', icon: LuUserRound },
+  { role: 'parent', title: 'Parent or guardian', text: 'My child studies here.', icon: LuUsers },
+  { role: 'student', title: 'Student', text: 'I take classes here.', icon: LuGraduationCap },
 ]
-
-const ROLE_KO: Partial<Record<Role, string>> = { coach: '코치', parent: '학부모', student: '학생' }
 
 /**
  * `/join`: a signed-in coach, parent or student the app couldn't find by their email asks the academy for access
@@ -44,19 +41,17 @@ export function BranchSignupPage() {
   const { data: profile, loading } = usePublicProfile()
   const requestRef = useMemo(() => (email ? doc(db, ROOT.branches, ACADEMY_ID, COL.signupRequests, email) : null), [email])
   const { data: request, loading: requestLoading } = useDoc<SignupRequest>(requestRef)
-  const t = useT()
-
   useEffect(() => {
-    if (profile) document.title = t(`Join ${profile.name}`, `${profile.name} 가입 신청`)
-  }, [profile, t])
+    if (profile) document.title = `Join ${profile.name}`
+  }, [profile])
 
   if (loading || status === 'loading') return <FullPageSpinner />
   if (!profile) {
     return (
       <FullPageMessage
-        title={t('Sign-up isn’t available', '가입 신청을 받을 수 없어요')}
-        description={t('The academy isn’t set up for sign-ups yet.', '아카데미에서 아직 온라인 가입 신청을 받지 않아요.')}
-        actions={[{ label: t('Go home', '홈으로'), to: '/' }]}
+        title="Sign-up isn’t available"
+        description="The academy isn’t set up for sign-ups yet."
+        actions={[{ label: 'Go home', to: '/' }]}
       />
     )
   }
@@ -74,47 +69,44 @@ export function BranchSignupPage() {
         <div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
           {!open ? (
             <Message
-              title={t('Sign-up is closed', '가입 신청이 마감됐어요')}
-              text={t(`${profile.name} isn’t accepting new sign-ups online right now. Please contact the academy.`, `지금은 ${profile.name}에서 온라인 가입 신청을 받지 않아요. 아카데미에 문의해 주세요.`)}
+              title="Sign-up is closed"
+              text={`${profile.name} isn’t accepting new sign-ups online right now. Please contact the academy.`}
             />
           ) : status !== 'signedIn' ? (
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">{t(`Join ${profile.name}`, `${profile.name} 가입 신청`)}</h1>
+              <h1 className="text-xl font-semibold tracking-tight">{`Join ${profile.name}`}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 {profile.signupMessage ||
-                  t(
-                    'Sign in or create an account with the email you gave the academy: a parent or student whose email is on file gets in right away. Anyone else asks here, and the academy reviews it.',
-                    '아카데미에 등록한 이메일로 로그인하거나 계정을 만들어 주세요. 이메일이 등록된 학부모와 학생은 바로 들어갈 수 있어요. 그 밖의 분은 여기서 신청하면 아카데미가 확인해요.',
-                  )}
+                  'Sign in or create an account with the email you gave the academy: a parent or student whose email is on file gets in right away. Anyone else asks here, and the academy reviews it.'}
               </p>
-              <GoogleSignInButton className="mt-6 w-full" label={t('Continue with Google', 'Google로 계속하기')} />
-              <OrDivider label={t('or use your email', '또는 이메일로')} />
+              <GoogleSignInButton className="mt-6 w-full" label="Continue with Google" />
+              <OrDivider label="or use your email" />
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button variant="outline" asChild>
-                  <Link to={`/signup?next=${encodeURIComponent('/join')}`}>{t('Create an account', '계정 만들기')}</Link>
+                  <Link to={`/signup?next=${encodeURIComponent('/join')}`}>Create an account</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link to={`/login?next=${encodeURIComponent('/join')}`}>{t('Sign in with email', '이메일로 로그인')}</Link>
+                  <Link to={`/login?next=${encodeURIComponent('/join')}`}>Sign in with email</Link>
                 </Button>
               </div>
             </div>
           ) : needsVerification ? (
             <div className="text-center">
-              <h1 className="text-xl font-semibold tracking-tight">{t('Confirm your email first', '먼저 이메일을 인증해 주세요')}</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Confirm your email first</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {t(`We sent a link to ${user?.email}. Open it, then come back here to send your request.`, `${user?.email} 주소로 링크를 보냈어요. 링크를 열어 인증한 뒤 여기로 돌아와 신청해 주세요.`)}
+                {`We sent a link to ${user?.email}. Open it, then come back here to send your request.`}
               </p>
               <Button asChild className="mt-6">
-                <Link to={`/verify-email?next=${encodeURIComponent('/join')}`}>{t('Continue', '계속')}</Link>
+                <Link to={`/verify-email?next=${encodeURIComponent('/join')}`}>Continue</Link>
               </Button>
             </div>
           ) : isMember ? (
             <div className="text-center">
               <LuCircleCheck className="mx-auto mb-3 size-8 text-emerald-600" />
-              <h1 className="text-xl font-semibold">{t('You already have access', '이미 이용할 수 있어요')}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">{t(`${email} is a member of ${profile.name}.`, `${email} 계정은 이미 ${profile.name}에 등록돼 있어요.`)}</p>
+              <h1 className="text-xl font-semibold">You already have access</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{`${email} is a member of ${profile.name}.`}</p>
               <Button asChild className="mt-6">
-                <Link to="/app">{t(`Open ${profile.name}`, `${profile.name} 열기`)}</Link>
+                <Link to="/app">{`Open ${profile.name}`}</Link>
               </Button>
             </div>
           ) : requestLoading ? (
@@ -125,28 +117,22 @@ export function BranchSignupPage() {
             <Pending request={request} profile={profile} />
           ) : request?.status === 'rejected' ? (
             <Message
-              title={t('Request declined', '신청이 거절됐어요')}
-              text={t(
-                `${profile.name} declined the request from ${email}.${request.decisionNote ? ` Note: ${request.decisionNote}` : ''} Please contact the academy if this is a mistake.`,
-                `${profile.name}에서 ${email} 계정의 신청을 거절했어요.${request.decisionNote ? ` 메모: ${request.decisionNote}` : ''} 잘못된 것 같다면 아카데미에 문의해 주세요.`,
-              )}
+              title="Request declined"
+              text={`${profile.name} declined the request from ${email}.${request.decisionNote ? ` Note: ${request.decisionNote}` : ''} Please contact the academy if this is a mistake.`}
             />
           ) : request?.status === 'approved' ? (
             <div className="text-center">
               <LuCircleCheck className="mx-auto mb-3 size-8 text-emerald-600" />
-              <h1 className="text-xl font-semibold">{t('You’re approved', '신청이 승인됐어요')}</h1>
+              <h1 className="text-xl font-semibold">You’re approved</h1>
               <Button asChild className="mt-6">
-                <Link to="/app">{t('Continue', '계속')}</Link>
+                <Link to="/app">Continue</Link>
               </Button>
             </div>
           ) : (
             <SignupForm branchId={branchId} profile={profile} />
           )}
         </div>
-        <div className="mt-6 flex justify-center">
-          <LangSwitch />
-        </div>
-        <CompanyFooter className="mt-3 text-center" />
+        <CompanyFooter className="mt-6 text-center" />
       </main>
     </div>
   )
@@ -162,16 +148,12 @@ function Message({ title, text }: { title: string; text: string }) {
 }
 
 function Pending({ request, profile }: { request: SignupRequest; profile: BranchPublicProfile }) {
-  const t = useT()
   return (
     <div className="text-center">
       <LuClock className="mx-auto mb-3 size-8 text-amber-500" />
-      <h1 className="text-xl font-semibold tracking-tight">{t('Request sent', '신청을 보냈어요')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight">Request sent</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {t(
-          `${profile.name} will review your request to join as a ${ROLE_LABELS[request.requestedRole].toLowerCase()}. We’ll email ${request.email} when it’s approved; then sign in with ${request.email} and you’ll go straight to your portal.`,
-          `${profile.name}에서 ${ROLE_KO[request.requestedRole] ?? ROLE_LABELS[request.requestedRole]} 가입 신청을 확인할 거예요. 승인되면 ${request.email} 주소로 이메일을 보내 드려요. 그다음 ${request.email} 계정으로 로그인하면 바로 포털로 들어가요.`,
-        )}
+        {`${profile.name} will review your request to join as a ${ROLE_LABELS[request.requestedRole].toLowerCase()}. We’ll email ${request.email} when it’s approved; then sign in with ${request.email} and you’ll go straight to your portal.`}
       </p>
     </div>
   )
@@ -187,18 +169,17 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
   const [studentNames, setStudentNames] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const t = useT()
   const choices = ROLE_CHOICES.filter((c) => profile.signupRoles.includes(c.role))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!user || !email || !role) return
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error(t('Enter your first and last name.', '이름과 성을 입력해 주세요.'))
+      toast.error('Enter your first and last name.')
       return
     }
     if (role === 'parent' && !studentNames.trim()) {
-      toast.error(t('Enter your child’s name.', '자녀 이름을 입력해 주세요.'))
+      toast.error('Enter your child’s name.')
       return
     }
     setBusy(true)
@@ -217,9 +198,9 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
-      toast.success(t('Request sent', '신청을 보냈어요'))
+      toast.success('Request sent')
     } catch (err) {
-      toast.error(t('Could not send the request', '신청을 보내지 못했어요'), { description: (err as Error).message })
+      toast.error('Could not send the request', { description: (err as Error).message })
     } finally {
       setBusy(false)
     }
@@ -227,14 +208,14 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
 
   return (
     <form onSubmit={submit}>
-      <h1 className="text-xl font-semibold tracking-tight">{t(`Join ${profile.name}`, `${profile.name} 가입 신청`)}</h1>
+      <h1 className="text-xl font-semibold tracking-tight">{`Join ${profile.name}`}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        {t('Signed in as', '로그인한 계정:')} <span className="font-medium text-foreground">{email}</span>
+        Signed in as <span className="font-medium text-foreground">{email}</span>
       </p>
       {profile.signupMessage ? <p className="mt-3 text-sm">{profile.signupMessage}</p> : null}
       <FieldGroup className="mt-6">
         <Field>
-          <FieldLabel>{t('I am a…', '가입 유형')}</FieldLabel>
+          <FieldLabel>I am a…</FieldLabel>
           <div className="grid gap-2 sm:grid-cols-3">
             {choices.map((c) => (
               <button
@@ -247,8 +228,8 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
                 )}
               >
                 <c.icon className="size-5 text-muted-foreground" />
-                <span className="text-sm font-medium">{t(c.title, c.ko.title)}</span>
-                <span className="text-xs text-muted-foreground">{t(c.text, c.ko.text)}</span>
+                <span className="text-sm font-medium">{c.title}</span>
+                <span className="text-xs text-muted-foreground">{c.text}</span>
               </button>
             ))}
           </div>
@@ -257,37 +238,34 @@ function SignupForm({ branchId, profile }: { branchId: string; profile: BranchPu
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="su-first">{t('First name', '이름')}</FieldLabel>
+                <FieldLabel htmlFor="su-first">First name</FieldLabel>
                 <Input id="su-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="su-last">{t('Last name', '성')}</FieldLabel>
+                <FieldLabel htmlFor="su-last">Last name</FieldLabel>
                 <Input id="su-last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </Field>
             </div>
             <Field>
-              <FieldLabel htmlFor="su-phone">{t('Phone (optional)', '전화번호 (선택)')}</FieldLabel>
+              <FieldLabel htmlFor="su-phone">Phone (optional)</FieldLabel>
               <Input id="su-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
             {role === 'parent' ? (
               <Field>
-                <FieldLabel htmlFor="su-students">{t('Child’s name', '자녀 이름')}</FieldLabel>
-                <Input id="su-students" value={studentNames} onChange={(e) => setStudentNames(e.target.value)} placeholder={t('e.g. Ava Patel', '예: Ava Patel')} />
+                <FieldLabel htmlFor="su-students">Child’s name</FieldLabel>
+                <Input id="su-students" value={studentNames} onChange={(e) => setStudentNames(e.target.value)} placeholder="e.g. Ava Patel" />
                 <FieldDescription>
-                  {t(
-                    'If you have several children at the academy, list them all. New to the academy? Say so in the message.',
-                    '아카데미에 다니는 자녀가 여러 명이면 모두 적어 주세요. 아카데미가 처음이라면 메시지에 남겨 주세요.',
-                  )}
+                  If you have several children at the academy, list them all. New to the academy? Say so in the message.
                 </FieldDescription>
               </Field>
             ) : null}
             <Field>
-              <FieldLabel htmlFor="su-msg">{t('Message (optional)', '메시지 (선택)')}</FieldLabel>
+              <FieldLabel htmlFor="su-msg">Message (optional)</FieldLabel>
               <Textarea id="su-msg" value={message} onChange={(e) => setMessage(e.target.value)} rows={3} />
             </Field>
             <Button type="submit" disabled={busy} className="w-full">
               {busy ? <Spinner /> : null}
-              {t('Send request', '신청 보내기')}
+              Send request
             </Button>
           </>
         ) : null}

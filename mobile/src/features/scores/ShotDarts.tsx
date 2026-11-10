@@ -1,5 +1,4 @@
 import { Canvas, Circle } from "@shopify/react-native-skia";
-import { type Lang, josa } from "@shared/i18n";
 import type { Evaluation } from "@shared/shooting/evaluation";
 import { type ReplayShot, replayShots } from "@shared/shooting/replay";
 import { PELLET_MM, type ShotPoint, offsetWords, targetViewMm } from "@shared/shooting/target";
@@ -11,10 +10,8 @@ import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { SHEET_EDGES } from "@/components/Sheet";
 import { T } from "@/components/Text";
-import { useLang, useT } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 import { ChosenShot, NEWEST, RingNumbers, ShotDot, TargetFace, toPoints, useTargetFont } from "./Target";
-import { offsetText } from "./words";
 
 const COLUMNS = 5;
 const GAP = space.sm;
@@ -42,7 +39,6 @@ const fmtScore = (e: Pick<Evaluation, "source">, v: number) => (e.source === "si
  */
 export function ShotDarts({ evaluation, color, width, current, onOpen }: { evaluation: Pick<Evaluation, "source" | "series">; color: string; width: number; current: number | null; onOpen: (n: number) => void }) {
   const colors = useColors();
-  const t = useT();
   const { shots, view } = useShots(evaluation);
   const cell = (width - GAP * (COLUMNS - 1)) / COLUMNS;
   const dart = Math.min(cell - 6, 72);
@@ -56,7 +52,7 @@ export function ShotDarts({ evaluation, color, width, current, onOpen }: { evalu
         return (
           <View key={s.n} style={styles.series} testID={`darts-series-${s.n}`}>
             <View style={styles.head}>
-              <T variant="label">{t(`Series ${s.n}`, `${s.n}시리즈`)}</T>
+              <T variant="label">{`Series ${s.n}`}</T>
               <T variant="label" style={styles.number}>
                 {fmtScore(evaluation, s.total)}
               </T>
@@ -76,10 +72,7 @@ export function ShotDarts({ evaluation, color, width, current, onOpen }: { evalu
                     key={shot.n}
                     onPress={() => onOpen(shot.n)}
                     accessibilityRole="button"
-                    accessibilityLabel={t(
-                      `Shot ${shot.n}: ${fmtScore(evaluation, shot.value)}${shot.point ? "" : ", no place on the target"}`,
-                      `${shot.n}번째 발: ${fmtScore(evaluation, shot.value)}${shot.point ? "" : ", 표적 위치 없음"}`,
-                    )}
+                    accessibilityLabel={`Shot ${shot.n}: ${fmtScore(evaluation, shot.value)}${shot.point ? "" : ", no place on the target"}`}
                     testID={`dart-${shot.n}`}
                     style={({ pressed }) => [{ width: cell, height: dart + LABEL, opacity: pressed ? 0.6 : 1 }]}
                   >
@@ -116,8 +109,6 @@ function Dart({ shot, x, y, size, view, color, current }: { shot: ReplayShot; x:
  */
 export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluation: Pick<Evaluation, "source" | "series">; color: string; n: number | null; onChange: (n: number) => void; onClose: () => void }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const { width } = useWindowDimensions();
   const { shots, view } = useShots(evaluation);
   const size = Math.min(width - space.lg * 2, 440);
@@ -132,19 +123,19 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
           <>
             <View style={styles.sheetHead}>
               <View style={styles.grow}>
-                <T variant="heading">{t(`Shot ${shot.n} of ${count}`, `${count}발 중 ${shot.n}번째`)}</T>
+                <T variant="heading">{`Shot ${shot.n} of ${count}`}</T>
                 {shot.series !== null ? (
                   <T variant="small" tone="muted">
-                    {t(`Series ${shot.series}`, `${shot.series}시리즈`)}
+                    {`Series ${shot.series}`}
                   </T>
                 ) : null}
               </View>
               <Button variant="ghost" size="sm" onPress={onClose} testID="shot-sheet-done">
-                {t("Done", "닫기")}
+                Done
               </Button>
             </View>
             <View style={styles.sheetBody}>
-              <Canvas style={{ width: size, height: size }} accessibilityLabel={t(`Shot ${shot.n} on the target`, `표적 위 ${shot.n}번째 발`)} accessible>
+              <Canvas style={{ width: size, height: size }} accessibilityLabel={`Shot ${shot.n} on the target`} accessible>
                 <TargetFace view={view} size={size}>
                   {shots.map((other) => (other.point && other.n !== shot.n ? <ShotDot key={other.n} point={other.point} color={color} view={view} size={size} faint /> : null))}
                 </TargetFace>
@@ -155,12 +146,12 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
                 {fmtScore(evaluation, shot.value)}
               </T>
               <T tone="muted" style={styles.center}>
-                {where(shot.point, lang)}
+                {where(shot.point)}
               </T>
               <View style={styles.steps}>
                 <IconButton
                   icon={<ChevronLeft size={24} color={shot.n > 1 ? colors.foreground : colors.mutedForeground} />}
-                  accessibilityLabel={t("Previous shot", "이전 발")}
+                  accessibilityLabel="Previous shot"
                   onPress={() => shot.n > 1 && onChange(shot.n - 1)}
                   size={52}
                   filled
@@ -171,7 +162,7 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
                 </T>
                 <IconButton
                   icon={<ChevronRight size={24} color={shot.n < count ? colors.foreground : colors.mutedForeground} />}
-                  accessibilityLabel={t("Next shot", "다음 발")}
+                  accessibilityLabel="Next shot"
                   onPress={() => shot.n < count && onChange(shot.n + 1)}
                   size={52}
                   filled
@@ -186,13 +177,8 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
   );
 }
 
-/** Where a shot hit, in words: its distance from the centre and the direction ("중앙에서 오른쪽 위로 3.2mm"). */
-function where(p: ShotPoint | null, lang: Lang): string {
-  if (lang === "ko") {
-    if (!p) return "표적 위치 없음";
-    const way = offsetText(p, "ko", 0.5);
-    return `중앙에서 ${way ? `${josa(way, "으로/로")} ` : ""}${Math.hypot(p.x, p.y).toFixed(1)}mm`;
-  }
+/** Where a shot hit, in words: its distance from the centre and the direction. */
+function where(p: ShotPoint | null): string {
   if (!p) return "No place on the target";
   const d = Math.hypot(p.x, p.y);
   const way = offsetWords(p, 0.5);

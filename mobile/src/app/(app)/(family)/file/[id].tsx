@@ -1,7 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { FileView } from "@/features/drive/FileView";
 import { useFamily } from "@/features/family/FamilyProvider";
-import { useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 
 /**
@@ -13,11 +12,10 @@ export default function FamilyFileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { name } = useBranch();
   const family = useFamily();
-  const t = useT();
   return (
     <FileView
       id={id ?? null}
-      gone={{ title: t("This file isn’t available", "이 파일을 볼 수 없어요"), text: t(`It may have been removed. Ask ${name} if you need it.`, "삭제됐을 수 있어요. 필요하면 아카데미에 문의해 주세요.") }}
+      gone={{ title: "This file isn’t available", text: `It may have been removed. Ask ${name} if you need it.` }}
       // A score's own file in the family's own student's folder, as the rules give it.
       allow={(f) => !!f.evaluationId && !!f.studentId && family.ids.includes(f.studentId)}
     />

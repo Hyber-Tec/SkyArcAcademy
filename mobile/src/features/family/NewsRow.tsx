@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { categoryText, newsPreview, postHolds, postedDay } from "@/features/announcements/format";
-import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 import type { NewsPost } from "./news";
@@ -36,15 +35,13 @@ export function NewsRow({
   testID?: string;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const { timezone } = useBranch();
   const preview = newsPreview(a);
-  const day = postedDay(a, timezone, today, lang);
-  const category = categoryText(a.category, lang);
-  const holds = postHolds(a, lang);
+  const day = postedDay(a, timezone, today);
+  const category = categoryText(a.category);
+  const holds = postHolds(a);
   const talk = comments > 0 ? (comments === 1 ? "1 comment" : `${comments} comments`) : null;
-  const label = [a.title, isNew ? t("New", "새 소식") : null, a.pinned ? t("Pinned", "고정됨") : null, category, day, holds.pictures, holds.files, talk, preview].filter(Boolean).join(", ");
+  const label = [a.title, isNew ? "New" : null, a.pinned ? "Pinned" : null, category, day, holds.pictures, holds.files, talk, preview].filter(Boolean).join(", ");
   return (
     <Pressable
       testID={testID}
@@ -70,7 +67,7 @@ export function NewsRow({
             <T variant="small" tone="muted" style={styles.shrink}>
               {a.pinned ? (
                 <>
-                  <Text style={[styles.pinned, { color: colors.warning }]}>{t("Pinned", "고정")}</Text>
+                  <Text style={[styles.pinned, { color: colors.warning }]}>Pinned</Text>
                   {" · "}
                 </>
               ) : null}

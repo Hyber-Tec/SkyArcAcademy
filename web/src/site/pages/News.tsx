@@ -9,7 +9,7 @@ import { Reveal } from '@/site/kit/motion'
 import { Photo } from '@/site/kit/Photo'
 import { A, useSite } from '@/site/kit/site'
 import { Container, btnOutline } from '../components/bits'
-import { NewsCard, PageHero, crmLang, formatDate } from '../components/blocks'
+import { NewsCard, PageHero, formatDate } from '../components/blocks'
 import { T } from '../i18n'
 import { NotFound } from './NotFound'
 
@@ -18,7 +18,7 @@ const PAGE = 12
 const CATEGORIES: NewsCategory[] = ['results', 'competitions', 'announcements', 'training']
 
 export function News() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { posts: all, ready } = useSiteData()
   const [cat, setCat] = useState<'all' | NewsCategory>('all')
   const [shown, setShown] = useState(PAGE)
@@ -37,7 +37,6 @@ export function News() {
   return (
     <>
       <PageHero kicker={t(NEWS.eyebrow)} title={t(NEWS.title)} text={t(NEWS.text)}>
-        {lang !== 'en' && all.length ? <p className="mt-6 text-[13.5px] text-stone">{t(NEWS.writtenNote)}</p> : null}
       </PageHero>
       <section className="py-14 sm:py-20" aria-label={t(UI.news)}>
         <Container>
@@ -107,7 +106,7 @@ function PostBody({ html }: { html: string }) {
       }
     }
   }, [clean])
-  return <div ref={ref} lang={crmLang} className="post-body text-[17.5px] leading-[1.75] text-ink/85" dangerouslySetInnerHTML={{ __html: clean }} />
+  return <div ref={ref} className="post-body text-[17.5px] leading-[1.75] text-ink/85" dangerouslySetInnerHTML={{ __html: clean }} />
 }
 
 export function NewsPostPage({ slug }: { slug: string }) {
@@ -133,7 +132,7 @@ function PostLoading() {
 }
 
 function PostView({ post }: { post: SitePostFull }) {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { posts } = useSiteData()
   const [copied, setCopied] = useState(false)
   useEffect(() => {
@@ -160,7 +159,7 @@ function PostView({ post }: { post: SitePostFull }) {
             <div className="mt-6 flex flex-wrap items-center gap-2 text-[13px]">
               <span className="rounded-full bg-warm-2 px-3 py-1 font-medium text-ink">{t(NEWS.categories[post.category])}</span>
               <time dateTime={new Date(post.publishedAt).toISOString()} className="text-stone">
-                {formatDate(post.publishedAt, lang)}
+                {formatDate(post.publishedAt)}
               </time>
               {post.pinned ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-[12px] font-medium text-ink">
@@ -168,10 +167,9 @@ function PostView({ post }: { post: SitePostFull }) {
                 </span>
               ) : null}
             </div>
-            <h1 lang={crmLang} className="mt-5 text-[36px] leading-[1.06] font-semibold tracking-[-0.035em] text-balance text-ink sm:text-[52px]">
+            <h1 className="mt-5 text-[36px] leading-[1.06] font-semibold tracking-[-0.035em] text-balance text-ink sm:text-[52px]">
               {post.title}
             </h1>
-            {lang === 'ko' ? <p className="mt-4 rounded-xl bg-warm px-4 py-2.5 text-[13.5px] text-stone">{t(T.inEnglish)}</p> : null}
           </Reveal>
         </Container>
         {post.cover ? (

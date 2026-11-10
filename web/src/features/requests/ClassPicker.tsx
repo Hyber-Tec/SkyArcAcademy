@@ -4,9 +4,8 @@ import type { ClassSeats } from '@shared/schedule/requests'
 import type { DateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useLang, useT } from '@/lib/lang'
-import { dateIn, timeRangeIn } from '@/lib/langFormat'
 import { cn } from '@/lib/utils'
+import { formatDateKey, formatTimeRange } from '@shared/time'
 
 /**
  * Classes with seats open, by day, to pick one (a family asking, the office suggesting another): each says how many of
@@ -29,8 +28,6 @@ export function ClassPicker({
   marked?: { dateKey: DateKey; label: string } | null
   label?: string
 }) {
-  const lang = useLang()
-  const t = useT()
   const byDay = useMemo(() => {
     const m = new Map<DateKey, WithId<ClassSeats>[]>()
     for (const c of choices) m.set(c.dateKey, [...(m.get(c.dateKey) ?? []), c])
@@ -43,7 +40,7 @@ export function ClassPicker({
       {byDay.map(([day, list]) => (
         <div key={day}>
           <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            {dateIn(day, 'weekdayMedium', lang)}
+            {formatDateKey(day, 'weekdayMedium')}
             {marked?.dateKey === day ? <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-medium">{marked.label}</span> : null}
           </div>
           <div className="grid gap-1.5 sm:grid-cols-2">
@@ -62,10 +59,10 @@ export function ClassPicker({
                     on ? 'border-foreground bg-foreground text-background' : 'hover:bg-muted/60',
                   )}
                 >
-                  <span className="tabular-nums">{timeRangeIn(c.startMin, c.endMin, lang)}</span>
+                  <span className="tabular-nums">{formatTimeRange(c.startMin, c.endMin)}</span>
                   <span className={cn('flex items-center gap-1 text-xs whitespace-nowrap', on ? 'text-background/80' : 'text-muted-foreground')}>
                     {on ? <LuCheck className="size-3.5" /> : null}
-                    {t(`${open} ${open === 1 ? 'seat' : 'seats'} open`, `빈자리 ${open}개`)}
+                    {`${open} ${open === 1 ? 'seat' : 'seats'} open`}
                   </span>
                 </button>
               )

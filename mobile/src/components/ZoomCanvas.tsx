@@ -6,7 +6,6 @@ import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "rea
 import { Gesture, GestureDetector, type GestureTouchEvent } from "react-native-gesture-handler";
 import { type SharedValue, cancelAnimation, useAnimatedReaction, useDerivedValue, useSharedValue, withDecay, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { useT } from "@/lib/lang";
 import { useScrollGesture } from "./ZoomScrollView";
 
 /** How far in a pinch may go, and where a double tap goes. */
@@ -323,7 +322,6 @@ export function ZoomCanvas({
 
   // Zoomed in, the way back to the whole picture shows in the corner (beside the canvas, so its tap is its own).
   const [zoomed, setZoomed] = useState(false);
-  const t = useT();
   useAnimatedReaction(
     () => zoom.value > 1.05,
     (now, before) => {
@@ -350,7 +348,7 @@ export function ZoomCanvas({
         <Pressable
           onPress={zoomOut}
           accessibilityRole="button"
-          accessibilityLabel={t("Zoom out", "원래 크기로")}
+          accessibilityLabel="Zoom out"
           hitSlop={8}
           testID={testID ? `${testID}-zoom-out` : undefined}
           style={({ pressed }) => [styles.zoomOut, { opacity: pressed ? 0.6 : 1 }]}

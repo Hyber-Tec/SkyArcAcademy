@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { LuCalendarCheck } from 'react-icons/lu'
 import { cn } from '@/lib/utils'
-import { type Lang, UI } from '@/site/kit/content'
+import { UI } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
@@ -69,5 +69,5 @@ export function BookButton({ className, label, icon = true }: { className?: stri
   )
 }
 
-/** "30 min" / "30분". */
-export const mins = (n: number, lang: Lang) => (lang === 'ko' ? `${n}분` : `${n} min`)
+/** "30 min". */
+export const mins = (n: number) => `${n} min`

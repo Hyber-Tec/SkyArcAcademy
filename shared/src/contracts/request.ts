@@ -1,4 +1,3 @@
-import { type Lang, pick } from '../i18n'
 import { ENGLISH_NAME } from './fill'
 
 /**
@@ -20,7 +19,6 @@ export interface ContractRequestInput {
   parentName: string
   email: string
   phone: string
-  lang: Lang
 }
 
 /** Up to four children on one request: one contract each. */
@@ -40,39 +38,37 @@ function checkDob(v: string, today: string): string | null | undefined {
 
 /**
  * The request checked: its clean values, or what to fix (keys like `children.0.firstName`, `parentName`, `email`), in
- * the family's words: Korean for a parent reading it. `today` is YYYY-MM-DD.
+ * the family's words. `today` is YYYY-MM-DD.
  */
 export function checkContractRequest(raw: unknown, today: string): { ok: true; value: ContractRequestInput } | { ok: false; errors: Record<string, string> } {
   const r = (raw ?? {}) as Record<string, unknown>
-  const lang: Lang = r.lang === 'ko' ? 'ko' : 'en'
-  const say = (en: string, ko: string) => pick(lang, en, ko)
   const errors: Record<string, string> = {}
   const name = (key: string, v: string, part: 'first' | 'last' | 'full') => {
-    if (!v) errors[key] = part === 'first' ? say('Type the first name.', '이름을 입력해 주세요.') : part === 'last' ? say('Type the last name.', '성을 입력해 주세요.') : say('Type your name.', '이름을 입력해 주세요.')
-    else if (v.length > 60) errors[key] = say('This is too long.', '너무 길어요.')
-    else if (!ENGLISH_NAME.test(v) || !hasLetters(v, 1)) errors[key] = say('Type the name in English letters.', '이름은 영문으로 입력해 주세요.')
-    else if (part === 'full' && (!v.includes(' ') || !hasLetters(v, 2))) errors[key] = say('Type your first and last name.', '이름과 성을 모두 입력해 주세요.')
+    if (!v) errors[key] = part === 'first' ? 'Type the first name.' : part === 'last' ? 'Type the last name.' : 'Type your name.'
+    else if (v.length > 60) errors[key] = 'This is too long.'
+    else if (!ENGLISH_NAME.test(v) || !hasLetters(v, 1)) errors[key] = 'Type the name in English letters.'
+    else if (part === 'full' && (!v.includes(' ') || !hasLetters(v, 2))) errors[key] = 'Type your first and last name.'
   }
   const list = Array.isArray(r.children) ? r.children.slice(0, REQUEST_CHILDREN_MAX + 1) : []
-  if (!list.length) errors.children = say('Add your child.', '자녀를 추가해 주세요.')
-  if (list.length > REQUEST_CHILDREN_MAX) errors.children = say(`Up to ${REQUEST_CHILDREN_MAX} children at a time.`, `한 번에 자녀 ${REQUEST_CHILDREN_MAX}명까지 신청할 수 있어요.`)
+  if (!list.length) errors.children = 'Add your child.'
+  if (list.length > REQUEST_CHILDREN_MAX) errors.children = `Up to ${REQUEST_CHILDREN_MAX} children at a time.`
   const children = list.slice(0, REQUEST_CHILDREN_MAX).map((c, i) => {
     const x = (c ?? {}) as Record<string, unknown>
     const child = { firstName: clean(x.firstName), lastName: clean(x.lastName), dob: clean(x.dob) }
     name(`children.${i}.firstName`, child.firstName, 'first')
     name(`children.${i}.lastName`, child.lastName, 'last')
     const dob = checkDob(child.dob, today)
-    if (dob === undefined) errors[`children.${i}.dob`] = say('Choose the date of birth.', '생년월일을 골라 주세요.')
+    if (dob === undefined) errors[`children.${i}.dob`] = 'Choose the date of birth.'
     return { firstName: child.firstName, lastName: child.lastName, dob: dob ?? null }
   })
   const parentName = clean(r.parentName)
   name('parentName', parentName, 'full')
   const email = clean(r.email).toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) errors.email = say('Type an email address.', '이메일 주소를 입력해 주세요.')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) errors.email = 'Type an email address.'
   const phone = clean(r.phone)
-  if (phone.replace(/\D/g, '').length < 7 || phone.length > 30 || !/^[0-9+()\-. ]+$/.test(phone)) errors.phone = say('Type a phone number.', '전화번호를 입력해 주세요.')
+  if (phone.replace(/\D/g, '').length < 7 || phone.length > 30 || !/^[0-9+()\-. ]+$/.test(phone)) errors.phone = 'Type a phone number.'
   if (Object.keys(errors).length) return { ok: false, errors }
-  return { ok: true, value: { children, parentName, email, phone, lang } }
+  return { ok: true, value: { children, parentName, email, phone } }
 }
 
 /** "Ava Kim": a child's name as the contract and the records write it. */

@@ -68,8 +68,6 @@ export interface SignatureFactsInput {
   sentBy?: { name: string; atMs: number } | null
   /** The academy's signature put on it, as on file in Settings: who signs for the academy, and whether it's their name typed. */
   academySigner?: { name: string; title: string; typed?: boolean } | null
-  /** The Korean translation the signer read (docs/DECISIONS.md §36): its text's SHA-256. */
-  translation?: { sha256: string } | null
 }
 
 /** The zone's short name at that moment ("EDT"). */
@@ -96,12 +94,6 @@ export function signatureFacts(i: SignatureFactsInput): { label: string; value: 
     ...(i.sentBy ? [{ label: 'Sent by', value: `${i.sentBy.name}, ${formatDateKey(dateKeyOf(i.sentBy.atMs, i.timezone), 'long')}` }] : []),
     { label: 'Contract signed', value: i.templateName },
     { label: 'Its text’s SHA-256', value: i.templateSha256 },
-    ...(i.translation
-      ? [
-          { label: 'Read in', value: 'Korean: the academy’s translation, for reference (the English text is the contract), after the English in this PDF' },
-          { label: 'The translation’s SHA-256', value: i.translation.sha256 },
-        ]
-      : []),
     ...(i.academySigner
       ? [
           {

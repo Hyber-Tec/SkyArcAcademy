@@ -1,4 +1,3 @@
-import { josa } from "@shared/i18n";
 import { reportFacts, toPoint } from "@shared/reports/facts";
 import { POSITIONS, POSITION_COLORS, type Position, inOrder } from "@shared/shooting/evaluation";
 import { positionProgress } from "@shared/shooting/progress";
@@ -18,7 +17,6 @@ import { monthDay, plural } from "@/features/schedule/format";
 import { playPoints } from "@/features/scores/playback";
 import { ShotReplay } from "@/features/scores/ShotReplay";
 import { offsetText, positionLabel } from "@/features/scores/words";
-import { useLang, useT } from "@/lib/lang";
 import { radius, space, useColors, useIsDark } from "@/theme";
 
 /**
@@ -34,14 +32,12 @@ import { radius, space, useColors, useIsDark } from "@/theme";
  */
 export function PositionTiles({ evaluations, onOpen, testID }: { evaluations: readonly EvaluationDoc[]; onOpen: (id: string) => void; testID?: string }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const progress = useMemo(() => positionProgress(evaluations), [evaluations]);
   if (!progress.length) return null;
   return (
     <View style={styles.tiles} testID={testID}>
       {progress.map((p) => {
-        const name = positionLabel(p.position, lang);
+        const name = positionLabel(p.position);
         const only = p.results === 1;
         const mark = p.best ?? p.latest;
         return (
@@ -50,22 +46,13 @@ export function PositionTiles({ evaluations, onOpen, testID }: { evaluations: re
             style={styles.tile}
             onPress={mark ? () => onOpen(mark.id) : undefined}
             testID={testID ? `${testID}-${p.position}` : undefined}
-            accessibilityLabel={(lang === "ko"
-              ? [
-                  name,
-                  p.average !== null ? `10발 평균 ${one(p.average)}` : null,
-                  mark ? `${only ? "기록 1개" : "최고"} ${one(mark.per10)}, ${monthDay(mark.dateKey, lang)}` : null,
-                  only ? null : `기록 ${p.results}개`,
-                  mark ? `누르면 ${only ? "" : "최고 "}기록을 열어요` : null,
-                ]
-              : [
-                  name,
-                  p.average !== null ? `average ${one(p.average)} per 10 shots` : null,
-                  mark ? `${only ? "one result" : "best"} ${one(mark.per10)} on ${monthDay(mark.dateKey)}` : null,
-                  only ? null : plural(p.results, "result"),
-                  mark ? `Opens the ${only ? "" : "best "}${name.toLowerCase()} result` : null,
-                ]
-            )
+            accessibilityLabel={[
+              name,
+              p.average !== null ? `average ${one(p.average)} per 10 shots` : null,
+              mark ? `${only ? "one result" : "best"} ${one(mark.per10)} on ${monthDay(mark.dateKey)}` : null,
+              only ? null : plural(p.results, "result"),
+              mark ? `Opens the ${only ? "" : "best "}${name.toLowerCase()} result` : null,
+            ]
               .filter(Boolean)
               .join(", ")}
           >
@@ -79,19 +66,19 @@ export function PositionTiles({ evaluations, onOpen, testID }: { evaluations: re
               {p.average !== null ? one(p.average) : "–"}
             </T>
             <T variant="tiny" tone="muted">
-              {t("average", "평균")}
+              average
             </T>
             {mark ? (
               <>
                 <View style={styles.bestLine}>
                   {only ? null : <Trophy size={12} color={colors.warning} />}
                   <T variant="small" style={styles.best} numberOfLines={1}>
-                    {only ? t("1 result", "기록 1개") : t(`Best ${one(mark.per10)}`, `최고 ${one(mark.per10)}`)}
+                    {only ? "1 result" : `Best ${one(mark.per10)}`}
                   </T>
                 </View>
                 <T variant="tiny" tone="muted" numberOfLines={1}>
-                  {monthDay(mark.dateKey, lang)}
-                  {only ? "" : ` · ${t(plural(p.results, "result"), `기록 ${p.results}개`)}`}
+                  {monthDay(mark.dateKey)}
+                  {only ? "" : ` · ${plural(p.results, "result")}`}
                 </T>
               </>
             ) : null}
@@ -112,8 +99,6 @@ function usePaper() {
 /** The scores over time, a line per position (whole scores per 10 shots), from the first result to `to` (today). */
 export function ScoresChart({ evaluations, to, testID }: { evaluations: readonly EvaluationDoc[]; to: DateKey; testID?: string }) {
   const paper = usePaper();
-  const t = useT();
-  const lang = useLang();
   const points = useMemo(() => inOrder(evaluations.filter((e) => e.shots > 0)).map(toPoint), [evaluations]);
   if (points.length < 2) return null;
   const from = points[0].dateKey;
@@ -121,17 +106,17 @@ export function ScoresChart({ evaluations, to, testID }: { evaluations: readonly
     <Card style={styles.gap} testID={testID}>
       <View style={styles.cardHead}>
         <T variant="label" style={styles.grow}>
-          {t("Scores over time", "점수 변화")}
+          Scores over time
         </T>
         <T variant="small" tone="muted">
-          {t("per 10 shots", "10발 평균")}
+          per 10 shots
         </T>
       </View>
       <View style={[styles.paper, paper]}>
-        <TrendChart series={trendSeries(points, lang)} from={from} to={to > from ? to : from} testID={testID ? `${testID}-chart` : undefined} />
+        <TrendChart series={trendSeries(points)} from={from} to={to > from ? to : from} testID={testID ? `${testID}-chart` : undefined} />
       </View>
       <T variant="tiny" tone="muted">
-        {t("Tap the chart to read a day’s scores. Higher is better; 100 is every shot a 10.", "차트를 누르면 그날 점수를 볼 수 있어요. 높을수록 좋고, 100은 모든 발이 10점이라는 뜻이에요.")}
+        Tap the chart to read a day’s scores. Higher is better; 100 is every shot a 10.
       </T>
     </Card>
   );
@@ -148,15 +133,13 @@ const RECENT = 5;
  */
 export function ShotPattern({ evaluations, size, testID }: { evaluations: readonly EvaluationDoc[]; size: number; testID?: string }) {
   const paper = usePaper();
-  const t = useT();
-  const lang = useLang();
   // Newest first, as the list gives them.
   const placed = useMemo(() => evaluations.filter(canReplay), [evaluations]);
   const positions = POSITIONS.filter((p) => placed.some((e) => e.position === p));
   const [chosen, setChosen] = useState<Position | null>(null);
   const pos = chosen && positions.includes(chosen) ? chosen : (placed[0]?.position ?? null);
   const recent = useMemo(() => (pos ? inOrder(placed.filter((e) => e.position === pos).slice(0, RECENT)) : []), [placed, pos]);
-  const shots = useMemo(() => playPoints(recent.map(toPoint), lang), [recent, lang]);
+  const shots = useMemo(() => playPoints(recent.map(toPoint)), [recent]);
   const counts = useMemo(() => reportFacts(recent, [], null).facts.distribution, [recent]);
   // Their average point in words, and their group against the position's results before them.
   const facts = useMemo(() => {
@@ -170,18 +153,18 @@ export function ShotPattern({ evaluations, size, testID }: { evaluations: readon
   if (!pos || !recent.length) return null;
   const { onTarget, mpi, group, before } = facts;
   const which = recent.length === 1 ? "the latest result" : `the last ${recent.length} results`;
-  const where = mpi ? offsetText(mpi, lang) : null;
+  const where = mpi ? offsetText(mpi) : null;
   const away = mpi ? one(Math.round(Math.hypot(mpi.x, mpi.y) * 10) / 10) : "";
   return (
     <Card style={styles.gap} testID={testID}>
       <View style={styles.cardHead}>
         <T variant="label" style={styles.grow}>
-          {t("Where the shots land", "탄착 위치")}
+          Where the shots land
         </T>
         <View style={[styles.dot, { backgroundColor: POSITION_COLORS[pos] }]} />
       </View>
       {positions.length > 1 ? (
-        <SegmentedControl<Position> value={pos} onChange={setChosen} options={positions.map((p) => ({ value: p, label: positionLabel(p, lang) }))} testID={testID ? `${testID}-position` : undefined} />
+        <SegmentedControl<Position> value={pos} onChange={setChosen} options={positions.map((p) => ({ value: p, label: positionLabel(p) }))} testID={testID ? `${testID}-position` : undefined} />
       ) : null}
       <View style={styles.center}>
         <ShotReplay
@@ -189,34 +172,28 @@ export function ShotPattern({ evaluations, size, testID }: { evaluations: readon
           shots={shots}
           color={POSITION_COLORS[pos]}
           size={size}
-          caption={t(`${positionLabel(pos, "en")} · ${onTarget} shots in ${which}`, `${positionLabel(pos, "ko")} · ${recent.length === 1 ? "최근 기록" : `최근 기록 ${recent.length}개`} · ${onTarget}발`)}
+          caption={`${positionLabel(pos)} · ${onTarget} shots in ${which}`}
         />
       </View>
       {mpi || group !== null ? (
         <View style={styles.words} testID={testID ? `${testID}-words` : undefined}>
           {mpi ? (
             <T variant="small" tone="muted">
-              {lang === "ko"
-                ? where
-                  ? `평균 탄착점(파란 십자)은 중앙에서 ${josa(where, "으로/로")} ${away}mm 떨어져 있어요.`
-                  : "평균 탄착점(파란 십자)이 중앙에 딱 맞아요."
-                : where
-                  ? `On average they land ${where} of the centre (the blue cross), ${away} mm away.`
-                  : "On average they land right on the centre (the blue cross)."}
+              {where
+                ? `On average they land ${where} of the centre (the blue cross), ${away} mm away.`
+                : "On average they land right on the centre (the blue cross)."}
             </T>
           ) : null}
           {group !== null ? (
             <T variant="small" tone="muted">
-              {lang === "ko"
-                ? `탄착군 크기는 평균 ${one(group)}mm${before !== null ? `로, 이전 기록의 ${one(before)}mm${group < before ? "보다 작아요" : group > before ? "보다 커요" : "와 같아요"}` : "예요"}. 작을수록 잘 모인 거예요.`
-                : `Group size ${one(group)} mm on average${before !== null ? `, ${group < before ? "tighter than" : group > before ? "wider than" : "the same as"} the ${one(before)} mm of the results before` : ""}. Smaller is tighter.`}
+              {`Group size ${one(group)} mm on average${before !== null ? `, ${group < before ? "tighter than" : group > before ? "wider than" : "the same as"} the ${one(before)} mm of the results before` : ""}. Smaller is tighter.`}
             </T>
           ) : null}
         </View>
       ) : null}
       <View style={[styles.paper, paper]}>
         <T variant="small" style={[styles.paperTitle, { color: INK.secondary }]}>
-          {t("Each shot’s score", "발별 점수")}
+          Each shot’s score
         </T>
         <DistributionBar {...counts} />
       </View>

@@ -136,50 +136,9 @@ describe('the signed contract', () => {
     expect(page.split('10/28/2026').length - 1).toBe(2)
   })
 
-  it('adds the Korean the family read after the English, in a Korean font, marked a translation for reference', async () => {
-    const ko = parseContract(
-      `# 메이플 레인지 등록 계약서
-[[footer: 1 Example Road, Springfield]]
-> **계약 당사자:** Maple Range Club과 아래에 서명한 부모
-## 1. 프로그램
-부모는 아래에서 선택한 단계에 학생을 등록합니다.
-[[choose: 선택한 단계 | 월 수강료 ($)]]
-- STARTER · 입문 | 월 $100 | 기본기와 안전 수칙
-- TEAM | 월 $200 | 대회
-[[academy check: 적용된 할인]]
-- 형제자매: $10 할인 | $10
-- 개인 소총: $5 할인 | $5
-## 2. 책임 면제
-부모는 법이 허용하는 범위에서 프로그램으로 인한 청구를 포기합니다.
-[[initials: 부모 이니셜]]
-[[family: 학생]]
-- 학생 이름 = student
-- 생년월일 = date
-[[family: 부모]]
-- 이름 = signer
-- 전화번호 = phone
-[[academy: 장비]]
-- 일련번호
-[[sign: 부모 서명]]
-[[academy sign: 클럽 대표자]]`,
-      { anyText: true },
-    ).doc
-    const { translatedContract } = await import('@shared/contracts/translation')
-    const english = await pagesText(await buildContractPdf(signed))
-    const pages = await pagesText(await buildContractPdf({ ...signed, translation: { doc: translatedContract(doc, ko), relation: '부모' } }))
-    expect(pages.length).toBeGreaterThan(english.length)
-    const korean = pages.slice(english.length - 1, -1).join(' ')
-    for (const words of ['한국어 번역본 (참고용)', '영어 원문을 따릅니다', '메이플 레인지 등록 계약서', '선택한 단계', '월 $190 (정가 $200에서 $10 할인)', '학생 이름', 'Mia Larkin', 'Jane Larkin (부모) 전자 서명', '날짜']) {
-      expect(korean.replace(/\s+/g, ' ')).toContain(words)
-    }
-    // The English comes first, and the record of the signing stays the last page.
-    expect(pages[0]).toContain('MAPLE RANGE ENROLLMENT AGREEMENT')
-    expect(pages.at(-1)).toContain('Signature record')
-  })
-
   it('prints what its font has', () => {
     expect(pdfText('José O’Neil – “Mia”')).toBe('José O’Neil – “Mia”')
-    expect(pdfText('김지우 Kim')).toBe('??? Kim')
+    expect(pdfText('Мия Kim')).toBe('??? Kim')
     expect(pdfText('two\nlines')).toBe('two lines')
   })
 })

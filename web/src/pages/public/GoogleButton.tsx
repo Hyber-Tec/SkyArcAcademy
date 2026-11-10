@@ -4,8 +4,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { useLang, useT } from '@/lib/lang'
-import { authErrorIn } from './authText'
+import { authErrorMessage } from "@shared/auth";
 
 export function GoogleSignInButton({
   label,
@@ -20,8 +19,6 @@ export function GoogleSignInButton({
   hint?: string | null
 }) {
   const { signIn } = useAuth()
-  const lang = useLang()
-  const t = useT()
   const [busy, setBusy] = useState(false)
   return (
     <Button
@@ -34,14 +31,14 @@ export function GoogleSignInButton({
         try {
           await signIn(hint)
         } catch (e) {
-          toast.error(t('Sign-in failed', '로그인하지 못했어요'), { description: authErrorIn((e as { code?: string }).code, 'google', lang) })
+          toast.error('Sign-in failed', { description: authErrorMessage((e as { code?: string }).code, 'google') })
         } finally {
           setBusy(false)
         }
       }}
     >
       {busy ? <Spinner /> : <FcGoogle className="size-4" />}
-      {label ?? t('Sign in with Google', 'Google로 로그인')}
+      {label ?? 'Sign in with Google'}
     </Button>
   )
 }

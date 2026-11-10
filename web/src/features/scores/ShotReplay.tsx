@@ -4,7 +4,6 @@ import type { Evaluation } from '@shared/shooting/evaluation'
 import { replayStepMs } from '@shared/shooting/replay'
 import { type ShotPoint, meanPoint, targetViewMm } from '@shared/shooting/target'
 import { Button } from '@/components/ui/button'
-import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { type PlayShot, SPEEDS, type Speed, playEvaluation, prefersReducedMotion, speedLabel } from './playback'
 import { MpiCross, NewestShot, ShotMark, TargetFace } from './TargetPlot'
@@ -74,9 +73,7 @@ export function ShotReplay({
   caption?: string
   className?: string
 }) {
-  const lang = useLang()
-  const tr = useT()
-  const shots = useMemo(() => given ?? (evaluation ? playEvaluation(evaluation, lang) : []), [given, evaluation, lang])
+  const shots = useMemo(() => given ?? (evaluation ? playEvaluation(evaluation) : []), [given, evaluation])
   const placed = useMemo(() => shots.filter((s): s is Placed => s.point !== null), [shots])
   /** The shot being shown as the newest (1…n); null shows every shot. */
   const [step, setStep] = useState<number | null>(null)
@@ -173,26 +170,26 @@ export function ShotReplay({
   const line1 = current ? (
     <>
       {current.of} · <span className={cn('font-semibold', t.strong)}>{current.valueText}</span>
-      {current.point ? null : tr(' (no place on the target)', ' (표적에 자리 없음)')}
+      {current.point ? null : ' (no place on the target)'}
     </>
   ) : caption ? (
     caption
   ) : (
     <>
-      {tr(`${count} shots`, `${count}발`)}
+      {`${count} shots`}
       {total !== null ? (
         <>
           {' '}
-          · {tr('total', '총점')} <span className={cn('font-semibold', t.strong)}>{total}</span>
+          · total <span className={cn('font-semibold', t.strong)}>{total}</span>
         </>
       ) : null}
     </>
   )
   const line2 = current
-    ? [current.context, current.runningText !== null ? tr(`total ${current.runningText}`, `누적 ${current.runningText}`) : null].filter(Boolean).join(' · ')
+    ? [current.context, current.runningText !== null ? `total ${current.runningText}` : null].filter(Boolean).join(' · ')
     : [
-        placed.length < count ? tr(`${count - placed.length} without a place`, `자리 없는 발 ${count - placed.length}개`) : null,
-        compact ? tr('Play to see each shot', '재생하면 한 발씩 보여요') : tr('Press play to see them one by one', '재생 버튼을 누르면 한 발씩 보여요'),
+        placed.length < count ? `${count - placed.length} without a place` : null,
+        compact ? 'Play to see each shot' : 'Press play to see them one by one',
       ]
         .filter(Boolean)
         .join(' · ')
@@ -202,7 +199,7 @@ export function ShotReplay({
     <Button
       type="button"
       size="icon"
-      aria-label={playing ? tr('Pause', '일시정지') : tr('Play the shots one by one', '한 발씩 재생')}
+      aria-label={playing ? 'Pause' : 'Play the shots one by one'}
       aria-pressed={playing}
       onClick={play}
       className={cn('rounded-full', compact ? 'size-8' : 'size-11', t.play)}
@@ -211,17 +208,17 @@ export function ShotReplay({
     </Button>
   )
   const backButton = (
-    <Button type="button" variant="ghost" size={icon} aria-label={tr('Previous shot', '이전 발')} onClick={back} disabled={step === 1} className={t.button}>
+    <Button type="button" variant="ghost" size={icon} aria-label="Previous shot" onClick={back} disabled={step === 1} className={t.button}>
       <LuChevronLeft />
     </Button>
   )
   const nextButton = (
-    <Button type="button" variant="ghost" size={icon} aria-label={tr('Next shot', '다음 발')} onClick={forward} className={t.button}>
+    <Button type="button" variant="ghost" size={icon} aria-label="Next shot" onClick={forward} className={t.button}>
       <LuChevronRight />
     </Button>
   )
   const restartButton = (
-    <Button type="button" variant="ghost" size="icon-sm" aria-label={tr('Play again from the first shot', '첫 발부터 다시 재생')} onClick={restart} className={t.button}>
+    <Button type="button" variant="ghost" size="icon-sm" aria-label="Play again from the first shot" onClick={restart} className={t.button}>
       <LuRotateCcw />
     </Button>
   )
@@ -229,7 +226,7 @@ export function ShotReplay({
   return (
     <div
       role="group"
-      aria-label={tr('Play the shots back', '사격 다시 보기')}
+      aria-label="Play the shots back"
       aria-keyshortcuts="Space ArrowLeft ArrowRight Home End"
       tabIndex={0}
       onKeyDown={onKeyDown}
@@ -240,7 +237,7 @@ export function ShotReplay({
         <TargetFace
           view={view}
           size={size}
-          label={current ? tr(`Shot ${current.number}: ${current.valueText}`, `${current.number}번째 발: ${current.valueText}`) : tr(`${placed.length} shots on the target`, `표적 위 ${placed.length}발`)}
+          label={current ? `Shot ${current.number}: ${current.valueText}` : `${placed.length} shots on the target`}
           className="block h-auto w-full"
         >
           {step === null
@@ -274,8 +271,8 @@ export function ShotReplay({
               variant="ghost"
               size="sm"
               onClick={changeSpeed}
-              aria-label={tr(`Speed ${speedLabel(speed)}. Change the speed`, `재생 속도 ${speedLabel(speed)}. 속도 바꾸기`)}
-              title={tr('Speed', '재생 속도')}
+              aria-label={`Speed ${speedLabel(speed)}. Change the speed`}
+              title="Speed"
               className={cn('h-7 min-w-11 rounded-full border px-2 text-xs tabular-nums', t.speed)}
             >
               {speedLabel(speed)}

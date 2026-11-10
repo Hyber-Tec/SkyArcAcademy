@@ -1,6 +1,5 @@
 import { MAKEUP_LOOKBACK_DAYS, makeupsLost, makeupsOwed } from "@shared/schedule/classes";
-import { type Lang, josa, pick } from "@shared/i18n";
-import { type ClassRequestStatus, REQUEST_STATUS_LABELS, REQUEST_STATUS_LABELS_KO, isOpenRequest, requestHistory, requestHorizon, requestWaitsOn } from "@shared/schedule/requests";
+import { type ClassRequestStatus, REQUEST_STATUS_LABELS, isOpenRequest, requestHistory, requestHorizon, requestWaitsOn } from "@shared/schedule/requests";
 import { addDays, formatMinutesShort } from "@shared/time";
 import { router } from "expo-router";
 import { CalendarPlus, Check, ChevronDown, ChevronUp, Hourglass, MessageCircleQuestionMark, RotateCcw } from "lucide-react-native";
@@ -16,7 +15,6 @@ import { RECENT_REQUESTS_MS, type RequestDoc, millis, useClassSeat } from "@/fea
 import { RequestHistory } from "@/features/requests/History";
 import { whatFor } from "@/features/requests/RequestRow";
 import { clock, monthDay, plural, shortDay, shortRange, timeRange } from "@/features/schedule/format";
-import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { type Colors, radius, space, useColors } from "@/theme";
@@ -69,11 +67,11 @@ export function useClassesToDo(): ClassesToDo {
   }, [requests.data, seats.data, since, now]);
 }
 
-/** "6 PM", "6:30 PM" or "18:00": a class's start, mid-sentence (오후 6:00). */
-const startClock = (m: number, hour12: boolean, lang: Lang = "en") => (lang === "ko" ? clock(m, hour12, "ko") : hour12 ? formatMinutesShort(m) : clock(m, false));
+/** "6 PM", "6:30 PM" or "18:00": a class's start, mid-sentence. */
+const startClock = (m: number, hour12: boolean) => (hour12 ? formatMinutesShort(m) : clock(m, false));
 
-/** "Tue, Nov 3 · 5–6 PM": the class a request is about (11월 3일 (화) · 오후 5:00~6:00). */
-const classLine = (c: { dateKey: string; startMin: number; endMin: number }, hour12: boolean, lang: Lang = "en") => `${shortDay(c.dateKey, lang)} · ${shortRange(c.startMin, c.endMin, hour12, lang)}`;
+/** "Tue, Nov 3 · 5–6 PM": the class a request is about. */
+const classLine = (c: { dateKey: string; startMin: number; endMin: number }, hour12: boolean) => `${shortDay(c.dateKey)} · ${shortRange(c.startMin, c.endMin, hour12)}`;
 
 /** Who asked last: "You" (null), the student by their first name, or the other parent's. */
 function askedBy(r: RequestDoc, me: string, family: FamilyState): string | null {
@@ -85,15 +83,7 @@ function askedBy(r: RequestDoc, me: string, family: FamilyState): string | null 
 }
 
 /** "You asked for an extra class on Mon, Nov 2 at 6 PM.", "… a makeup for Oct 28 on …", "… to move the class on Oct 28 to …". */
-function askedText(r: RequestDoc, who: string | null, hour12: boolean, lang: Lang): string {
-  if (lang === "ko") {
-    // The parent themself needs no subject; another of the family by name.
-    const p = who ? `${josa(who, "이/가")} ` : "";
-    const when = `${shortDay(r.dateKey, "ko")} ${startClock(r.startMin, hour12, "ko")}`;
-    if (r.kind === "makeup") return `${p}${r.forDateKey ? `${monthDay(r.forDateKey, "ko")} 수업 보강을` : "보강을"} 신청했어요: ${when}`;
-    if (r.kind === "reschedule") return `${p}${r.forDateKey ? `${monthDay(r.forDateKey, "ko")} 수업을` : "수업을"} 옮겨 달라고 신청했어요: ${when}`;
-    return `${p}추가 수업을 신청했어요: ${when}`;
-  }
+function askedText(r: RequestDoc, who: string | null, hour12: boolean): string {
   const by = who ?? "You";
   const when = `${shortDay(r.dateKey)} at ${startClock(r.startMin, hour12)}`;
   if (r.kind === "makeup") return `${by} asked for a makeup${r.forDateKey ? ` for ${monthDay(r.forDateKey)}` : ""} on ${when}.`;
@@ -117,8 +107,6 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
   const { branchId, settings, timezone, actor } = useBranch();
   const { now } = useAcademyNow();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const hour12 = settings.general.timeFormat !== "24h";
   const [busy, setBusy] = useState<string | null>(null);
   // Each line names its child when the parent sees more than one.
@@ -127,18 +115,18 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
 
   const withdraw = async (r: RequestDoc) => {
     const ok = await confirmAsync({
-      title: t("Withdraw this request?", "신청을 취소할까요?"),
-      message: t("The academy won’t see it anymore. You can ask again any time.", "아카데미에서 더는 이 신청을 보지 않아요. 언제든 다시 신청할 수 있어요."),
-      confirmLabel: t("Withdraw", "신청 취소"),
-      cancelLabel: t("Cancel", "닫기"),
+      title: "Withdraw this request?",
+      message: "The academy won’t see it anymore. You can ask again any time.",
+      confirmLabel: "Withdraw",
+      cancelLabel: "Cancel",
     });
     if (!ok) return;
     setBusy(r.id);
     try {
       await withdrawRequest(branchId, r.id);
-      toast.success(t("Request withdrawn", "신청을 취소했어요"));
+      toast.success("Request withdrawn");
     } catch (e) {
-      toast.error(t("Couldn’t withdraw it", "신청을 취소하지 못했어요"), { description: requestError(e, t("Please try again.", "다시 시도해 주세요."), lang) });
+      toast.error("Couldn’t withdraw it", { description: requestError(e, "Please try again.") });
     } finally {
       setBusy(null);
     }
@@ -147,25 +135,23 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
   const accept = async (r: RequestDoc) => {
     const o = r.offer;
     if (!o) return;
-    const when = lang === "ko" ? `${shortDay(o.dateKey, "ko")} ${timeRange(o.startMin, o.endMin, hour12, "ko")}` : `${shortDay(o.dateKey)}, ${timeRange(o.startMin, o.endMin, hour12)}`;
+    const when = `${shortDay(o.dateKey)}, ${timeRange(o.startMin, o.endMin, hour12)}`;
     const first = family.firstName(r.studentId, r.studentName);
-    const moved = r.kind === "reschedule" && r.forDateKey ? t(` The class on ${shortDay(r.forDateKey)} is canceled.`, ` 원래 ${shortDay(r.forDateKey, "ko")} 수업은 취소돼요.`) : "";
+    const moved = r.kind === "reschedule" && r.forDateKey ? ` The class on ${shortDay(r.forDateKey)} is canceled.` : "";
     const ok = await confirmAsync({
-      title: t(`Book ${when}?`, "이 시간으로 예약할까요?"),
+      title: `Book ${when}?`,
       message:
-        lang === "ko"
-          ? `${when}\n${family.who === "parent" ? `${first} 학생이` : ""} 바로 이 수업에 예약돼요.${moved}`.replace("\n ", "\n")
-          : `${family.who === "parent" ? `${first} is` : "You’re"} booked in that class at once.${moved}`,
-      confirmLabel: t("Book it", "예약하기"),
-      cancelLabel: t("Cancel", "닫기"),
+        `${family.who === "parent" ? `${first} is` : "You’re"} booked in that class at once.${moved}`,
+      confirmLabel: "Book it",
+      cancelLabel: "Cancel",
     });
     if (!ok) return;
     setBusy(r.id);
     try {
       await answerOffer(branchId, r.id, "accept", o.classId);
-      toast.success(t("Booked", "예약했어요"), { description: t(`${when}. The academy is told.`, `${when} · 아카데미에도 알렸어요.`) });
+      toast.success("Booked", { description: `${when}. The academy is told.` });
     } catch (e) {
-      toast.error(t("Not booked", "예약하지 못했어요"), { description: requestError(e, t("Please try again.", "다시 시도해 주세요."), lang) });
+      toast.error("Not booked", { description: requestError(e, "Please try again.") });
     } finally {
       setBusy(null);
     }
@@ -176,7 +162,7 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
       {todo.offers.length ? (
         <View style={styles.section} testID="family-needs-answer">
           <SectionHeading
-            title={t("Needs your answer", "답이 필요해요")}
+            title="Needs your answer"
             icon={<MessageCircleQuestionMark size={17} color={colors.info} />}
             color={colors.info}
             tint={colors.infoTint}
@@ -187,7 +173,7 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
               key={r.id}
               r={r}
               name={nameOf(r)}
-              asked={askedText(r, askedBy(r, actor.email, family), hour12, lang)}
+              asked={askedText(r, askedBy(r, actor.email, family), hour12)}
               now={now}
               busy={busy === r.id}
               onAccept={() => void accept(r)}
@@ -201,12 +187,12 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
 
       {todo.waiting.length ? (
         <View style={styles.section} testID="family-waiting">
-          <SectionHeading title={t("Waiting for the academy", "아카데미 확인 중")} icon={<Hourglass size={16} color={colors.warning} />} color={colors.warning} tint={colors.warningTint} count={todo.waiting.length} />
+          <SectionHeading title="Waiting for the academy" icon={<Hourglass size={16} color={colors.warning} />} color={colors.warning} tint={colors.warningTint} count={todo.waiting.length} />
           <Group>
             {todo.waiting.map((r, i) => (
               <RequestItem key={r.id} r={r} name={nameOf(r)} divider={i > 0} reader={reader}>
                 <Button size="sm" variant="ghost" wrap disabled={busy === r.id} busy={busy === r.id} onPress={() => void withdraw(r)} testID={`family-request-withdraw-${r.id}`}>
-                  {t("Withdraw", "신청 취소")}
+                  Withdraw
                 </Button>
               </RequestItem>
             ))}
@@ -216,7 +202,7 @@ export function RequestsPanel({ todo }: { todo: ClassesToDo }) {
 
       {todo.owed.length ? (
         <View style={styles.section} testID="family-makeups">
-          <SectionHeading title={t("Makeups to book", "잡아야 할 보강")} icon={<RotateCcw size={16} color={colors.makeup} />} color={colors.makeup} tint={colors.makeupTint} count={todo.owed.length} />
+          <SectionHeading title="Makeups to book" icon={<RotateCcw size={16} color={colors.makeup} />} color={colors.makeup} tint={colors.makeupTint} count={todo.owed.length} />
           <Group>
             {todo.owed.map((s, i) => (
               <MakeupRow key={s.id} s={s} name={nameOf(s)} asked={todo.askedFor.get(s.id)?.status ?? null} divider={i > 0} hour12={hour12} />
@@ -255,12 +241,11 @@ function Tag({ children, color, tint }: { children: string; color: string; tint:
 /** "History", to fold a request's back and forth open or shut. */
 function HistoryToggle({ open, onToggle, testID }: { open: boolean; onToggle: () => void; testID: string }) {
   const colors = useColors();
-  const t = useT();
   const Chevron = open ? ChevronUp : ChevronDown;
   return (
     <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} hitSlop={8} style={styles.historyToggle} testID={testID}>
       <T variant="small" tone="muted" style={styles.historyText}>
-        {t("History", "진행 내역")}
+        History
       </T>
       <Chevron size={15} color={colors.mutedForeground} />
     </Pressable>
@@ -295,8 +280,6 @@ function OfferCard({
   reader: Reader;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const o = r.offer;
   const seat = useClassSeat(o?.classId ?? null);
   const [history, setHistory] = useState(false);
@@ -307,13 +290,13 @@ function OfferCard({
   const full = left === 0;
   const blocked = started || gone || full;
   const seats = started
-    ? t("That class has started: ask for another time.", "이미 시작한 수업이에요. 다른 시간을 요청해 주세요.")
+    ? "That class has started: ask for another time."
     : gone
-      ? t("That class is no longer on the schedule: ask for another time.", "더 이상 일정에 없는 수업이에요. 다른 시간을 요청해 주세요.")
+      ? "That class is no longer on the schedule: ask for another time."
       : full
-        ? t("That class is full now: ask for another time.", "자리가 다 찼어요. 다른 시간을 요청해 주세요.")
+        ? "That class is full now: ask for another time."
         : left !== null
-          ? t(`${plural(left, "seat")} left`, `${left}자리 남음`)
+          ? `${plural(left, "seat")} left`
           : null;
   return (
     <View style={[styles.offer, { backgroundColor: colors.infoTint, borderColor: `${colors.info}55` }]} testID={`family-offer-${r.id}`}>
@@ -325,10 +308,10 @@ function OfferCard({
       <T tone="muted">{asked}</T>
       <View style={styles.suggestion}>
         <T variant="small" style={[styles.suggests, { color: colors.info }]}>
-          {t("The academy suggests", "아카데미 제안")}
+          The academy suggests
         </T>
         <T variant="heading" style={styles.big} testID={`family-offer-when-${r.id}`}>
-          {classLine(o, reader.hour12, lang)}
+          {classLine(o, reader.hour12)}
         </T>
         {seats ? (
           <T variant="small" tone={blocked ? "destructive" : "muted"} testID={`family-offer-seats-${r.id}`}>
@@ -347,13 +330,13 @@ function OfferCard({
           onPress={onAccept}
           testID={`family-offer-accept-${r.id}`}
         >
-          {t("Accept", "수락하기")}
+          Accept
         </Button>
         <Button size="lg" variant="outline" wrap disabled={busy} onPress={onAnother} testID={`family-offer-another-${r.id}`}>
-          {t("Ask for another time", "다른 시간 요청")}
+          Ask for another time
         </Button>
         <Button variant="ghost" wrap disabled={busy} onPress={onWithdraw} testID={`family-request-withdraw-${r.id}`}>
-          {t("Withdraw", "신청 취소")}
+          Withdraw
         </Button>
       </View>
       {requestHistory(r).length >= 2 ? <HistoryToggle open={history} onToggle={() => setHistory(!history)} testID={`family-request-history-${r.id}`} /> : null}
@@ -369,17 +352,16 @@ function OfferCard({
  */
 function RequestItem({ r, name, divider, reader, tag, children }: { r: RequestDoc; name: string | null; divider: boolean; reader: Reader; tag?: ReactNode; children?: ReactNode }) {
   const colors = useColors();
-  const lang = useLang();
   const [history, setHistory] = useState(false);
   return (
     <View style={[styles.item, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID={`family-request-${r.id}`}>
       <View style={styles.itemTop}>
         <View style={styles.grow}>
-          <T variant="label">{classLine(r, reader.hour12, lang)}</T>
+          <T variant="label">{classLine(r, reader.hour12)}</T>
           <View style={styles.tagLine}>
             {tag ?? (
               <Tag color={colors.warning} tint={colors.warningTint}>
-                {whatFor(r, lang)}
+                {whatFor(r)}
               </Tag>
             )}
             {name ? (
@@ -408,12 +390,8 @@ function RequestItem({ r, name, divider, reader, tag, children }: { r: RequestDo
  */
 function MakeupRow({ s, name, asked, divider, hour12 }: { s: SessionDoc; name: string | null; asked: ClassRequestStatus | null; divider: boolean; hour12: boolean }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const what =
-    lang === "ko"
-      ? `${shortDay(s.dateKey, "ko")} ${startClock(s.startMin, hour12, "ko")} 수업 ${s.status === "no_show" ? "결석" : "취소"}`
-      : `${s.status === "no_show" ? "missed" : "canceled"} ${shortDay(s.dateKey)}, ${startClock(s.startMin, hour12)}`;
+    `${s.status === "no_show" ? "missed" : "canceled"} ${shortDay(s.dateKey)}, ${startClock(s.startMin, hour12)}`;
   const text = name ? `${name} · ${what}` : `${what[0].toUpperCase()}${what.slice(1)}`;
   return (
     <View style={[styles.makeup, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]} testID={`family-makeup-${s.id}`}>
@@ -422,7 +400,7 @@ function MakeupRow({ s, name, asked, divider, hour12 }: { s: SessionDoc; name: s
       </T>
       {asked ? (
         <T variant="small" tone="muted" style={styles.asked} testID={`family-makeup-asked-${s.id}`}>
-          {asked === "offered" ? t("Answer above", "위에서 답해 주세요") : t("Asked", "신청함")}
+          {asked === "offered" ? "Answer above" : "Asked"}
         </T>
       ) : (
         <Button
@@ -431,10 +409,10 @@ function MakeupRow({ s, name, asked, divider, hour12 }: { s: SessionDoc; name: s
           wrap
           icon={<CalendarPlus size={16} color={colors.makeup} />}
           onPress={() => router.push({ pathname: "/ask", params: { studentId: s.studentId, kind: "makeup", forSessionId: s.id } })}
-          accessibilityLabel={t(`Book a makeup for ${text}`, `보강 잡기: ${text}`)}
+          accessibilityLabel={`Book a makeup for ${text}`}
           testID={`family-makeup-ask-${s.id}`}
         >
-          {t("Book", "보강 잡기")}
+          Book
         </Button>
       )}
     </View>
@@ -443,7 +421,6 @@ function MakeupRow({ s, name, asked, divider, hour12 }: { s: SessionDoc; name: s
 
 /** Makeups missed: their credit is used ("The makeup for 10/13 was missed on Oct 20, so it counts as used."). */
 function LostMakeups({ lost, nameOf }: { lost: SessionDoc[]; nameOf: (s: SessionDoc) => string | null }) {
-  const lang = useLang();
   return (
     <View style={styles.lost} testID="family-makeups-lost">
       {lost.map((s) => {
@@ -452,9 +429,7 @@ function LostMakeups({ lost, nameOf }: { lost: SessionDoc[]; nameOf: (s: Session
         const name = nameOf(s);
         return (
           <T key={s.id} variant="small" tone="muted">
-            {lang === "ko"
-              ? `${name ? `${name} · ` : ""}${monthDay(s.dateKey, "ko")} ${was ? `(${was[1]}/${was[2]} 수업) ` : ""}보강 수업에 빠져서, 이 보강은 쓴 것으로 처리됐어요.`
-              : `${name ? `${name}: the` : "The"} makeup${forDay} was missed on ${monthDay(s.dateKey)}, so it counts as used.`}
+            {`${name ? `${name}: the` : "The"} makeup${forDay} was missed on ${monthDay(s.dateKey)}, so it counts as used.`}
           </T>
         );
       })}
@@ -465,8 +440,6 @@ function LostMakeups({ lost, nameOf }: { lost: SessionDoc[]; nameOf: (s: Session
 /** The requests answered or withdrawn in the last two weeks, folded: each with how it ended. */
 function AnsweredFold({ list, nameOf, reader }: { list: RequestDoc[]; nameOf: (r: RequestDoc) => string | null; reader: Reader }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const [open, setOpen] = useState(false);
   const Chevron = open ? ChevronUp : ChevronDown;
   return (
@@ -475,12 +448,12 @@ function AnsweredFold({ list, nameOf, reader }: { list: RequestDoc[]; nameOf: (r
         onPress={() => setOpen(!open)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={t(`Recent requests, ${list.length}`, `최근 신청 ${list.length}개`)}
+        accessibilityLabel={`Recent requests, ${list.length}`}
         style={({ pressed }) => [styles.foldHead, pressed && styles.pressed]}
         testID="family-answered-toggle"
       >
         <T variant="label" tone="muted">
-          {t("Recent requests", "최근 신청")}
+          Recent requests
         </T>
         <T variant="small" tone="muted" style={styles.count}>
           {list.length}
@@ -495,12 +468,12 @@ function AnsweredFold({ list, nameOf, reader }: { list: RequestDoc[]; nameOf: (r
               <RequestItem
                 key={r.id}
                 r={r}
-                name={[nameOf(r), whatFor(r, lang)].filter(Boolean).join(" · ")}
+                name={[nameOf(r), whatFor(r)].filter(Boolean).join(" · ")}
                 divider={i > 0}
                 reader={reader}
                 tag={
                   <Tag color={c.color} tint={c.tint}>
-                    {pick(lang, REQUEST_STATUS_LABELS[r.status], REQUEST_STATUS_LABELS_KO[r.status])}
+                    {REQUEST_STATUS_LABELS[r.status]}
                   </Tag>
                 }
               />

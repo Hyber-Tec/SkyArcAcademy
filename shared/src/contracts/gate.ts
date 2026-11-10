@@ -1,5 +1,4 @@
 import { isLinkable } from '../access/onFile'
-import type { Lang } from '../i18n'
 import type { Role } from '../roles'
 import type { StudentStatus } from '../types'
 
@@ -30,9 +29,8 @@ export function contractGate(input: { role: Role; students: readonly GateStudent
   return { open: toSign.length === 0, toSign }
 }
 
-/** "Ava", "Ava and Leo", "Ava, Leo and Mia" (Korean: "Ava, Leo, Mia"): first names, for the signing page's words. */
-export function firstNames(names: readonly string[], lang: Lang = 'en'): string {
+/** "Ava", "Ava and Leo", "Ava, Leo and Mia": first names, for the signing page's words. */
+export function firstNames(names: readonly string[]): string {
   const first = names.map((n) => n.trim().split(/\s+/)[0] || n)
-  if (lang === 'ko') return first.join(', ')
   return first.length < 2 ? (first[0] ?? '') : `${first.slice(0, -1).join(', ')} and ${first.at(-1)}`
 }

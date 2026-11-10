@@ -2,8 +2,7 @@
 
 The platform for **Sky Arc Sports Academy**, a youth air rifle academy (standing, kneeling, prone): class scheduling with
 makeups, cancellations and trial booking; coaches' availability, kiosk clock-in, time entries and payroll; and progress
-reports (SIUS target PDFs and paper-target photos) that parents can follow over time. English first; Korean and other
-languages come once every feature works.
+reports (SIUS target PDFs and paper-target photos) that parents can follow over time. In English only.
 
 It's forked from HyberTec's **HyberCRM** and runs on Firebase: Auth, Firestore, Storage, Cloud Functions and Hosting.
 Today it has HyberCRM's schedule, availability, employees, kiosk, payroll, announcements and access for one academy,

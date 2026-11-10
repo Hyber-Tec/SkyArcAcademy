@@ -12,7 +12,6 @@ import { IconButton } from "@/components/IconButton";
 import { Spinner } from "@/components/Loading";
 import { T } from "@/components/Text";
 import { type DriveFileDoc, useDriveFile } from "@/features/data/hooks";
-import { useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { space, useColors } from "@/theme";
 import { useLocalCopy } from "./download";
@@ -26,7 +25,6 @@ import { useLocalCopy } from "./download";
  */
 export function FileView({ id, gone, allow }: { id: string | null; gone: { title: string; text: string }; allow?: (f: DriveFileDoc) => boolean }) {
   const file = useDriveFile(id);
-  const t = useT();
   // `allow`: what this person may open, past the rules (the phone's copy of what another account saw on it).
   const f = file.data && (!allow || allow(file.data)) ? file.data : null;
   const copy = useLocalCopy(f && f.status === "ready" && !f.trashed ? { id: f.id, kind: f.kind, size: f.size, name: f.name } : null);
@@ -35,7 +33,7 @@ export function FileView({ id, gone, allow }: { id: string | null; gone: { title
       file={f ? { name: f.name, mime: f.mime, size: f.size, category: categoryOf(f.kind) } : null}
       loading={file.loading}
       unavailable={
-        !f || f.trashed ? gone : f.status !== "ready" ? { title: t("This file is still uploading", "아직 파일을 올리는 중이에요"), text: t("Try again in a moment.", "잠시 뒤에 다시 열어 주세요.") } : null
+        !f || f.trashed ? gone : f.status !== "ready" ? { title: "This file is still uploading", text: "Try again in a moment." } : null
       }
       copy={copy}
     />
@@ -70,7 +68,6 @@ export function FileViewer({
   copy: { uri: string | null; error: string | null; loading: boolean; retry: () => void };
 }) {
   const colors = useColors();
-  const t = useT();
   const { width, height } = useWindowDimensions();
   const kind = file?.category ?? "other";
   const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -78,10 +75,10 @@ export function FileViewer({
   const share = async () => {
     if (!copy.uri || !file) return;
     try {
-      if (!(await Sharing.isAvailableAsync())) return void toast.error(t("Sharing isn’t available on this phone", "이 기기에서는 공유할 수 없어요"));
+      if (!(await Sharing.isAvailableAsync())) return void toast.error("Sharing isn’t available on this phone");
       await Sharing.shareAsync(copy.uri, { mimeType: file.mime, dialogTitle: file.name });
     } catch {
-      toast.error(t("Couldn’t share the file", "파일을 공유하지 못했어요"));
+      toast.error("Couldn’t share the file");
     }
   };
 
@@ -89,8 +86,8 @@ export function FileViewer({
     <Stack.Screen
       options={{
         title: file?.name ?? "",
-        headerLeft: () => <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel={t("Close", "닫기")} onPress={close} size={36} testID="file-close" />,
-        headerRight: () => (copy.uri ? <IconButton icon={<Share size={20} color={colors.foreground} />} accessibilityLabel={t("Share", "공유")} onPress={() => void share()} size={36} testID="file-share" /> : null),
+        headerLeft: () => <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} size={36} testID="file-close" />,
+        headerRight: () => (copy.uri ? <IconButton icon={<Share size={20} color={colors.foreground} />} accessibilityLabel="Share" onPress={() => void share()} size={36} testID="file-share" /> : null),
       }}
     />
   );
@@ -99,7 +96,7 @@ export function FileViewer({
     return (
       <View style={[styles.fill, { backgroundColor: colors.background }]} testID="file-screen">
         {header}
-        <Spinner label={file ? t(`Opening ${file.name}…`, `${file.name} 여는 중…`) : t("Opening…", "여는 중…")} />
+        <Spinner label={file ? `Opening ${file.name}…` : "Opening…"} />
       </View>
     );
   }
@@ -110,12 +107,12 @@ export function FileViewer({
         <EmptyState
           testID="file-unavailable"
           icon={<FileQuestion size={26} color={colors.mutedForeground} />}
-          title={unavailable?.title ?? t("Couldn’t open this file", "파일을 열지 못했어요")}
-          text={unavailable?.text ?? t("Check your connection and try again.", "인터넷 연결을 확인하고 다시 시도해 주세요.")}
+          title={unavailable?.title ?? "Couldn’t open this file"}
+          text={unavailable?.text ?? "Check your connection and try again."}
           action={
             copy.error ? (
               <Button variant="outline" onPress={copy.retry} testID="file-retry">
-                {t("Try again", "다시 시도")}
+                Try again
               </Button>
             ) : undefined
           }
@@ -144,9 +141,9 @@ export function FileViewer({
       ) : (
         <View style={styles.other}>
           <T variant="heading">{file.name}</T>
-          <T tone="muted">{t(`${formatBytes(file.size)}. Open it in another app on this phone.`, `${formatBytes(file.size)} · 이 기기의 다른 앱에서 열어 주세요.`)}</T>
+          <T tone="muted">{`${formatBytes(file.size)}. Open it in another app on this phone.`}</T>
           <Button onPress={() => void share()} icon={<Share size={18} color={colors.primaryForeground} />} testID="file-open-with">
-            {t("Open with…", "다른 앱으로 열기")}
+            Open with…
           </Button>
         </View>
       )}

@@ -6,7 +6,7 @@ import { APP_URL } from '../shared/src/brand.ts'
 import { PAGES, PAGE_META, type Page, isSitePath } from './src/site/paths.ts'
 
 /**
- * The site has two pages: the academy's website (index.html, at `/`, `/programs`, `/ko/…` and the other addresses in
+ * The site has two pages: the academy's website (index.html, at `/`, `/programs` and the other addresses in
  * src/site/paths.ts) and the app (app.html, every other address), as Firebase Hosting serves them. The dev server does
  * the same.
  */
@@ -29,13 +29,13 @@ const SOURCE_URL = 'https://skyarcacademy.web.app'
 
 const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
-/** The website's address for a page in a language ("/ko/programs"). */
-const pagePath = (page: Page, lang: 'en' | 'ko') => `${lang === 'ko' ? '/ko/' : '/'}${page}`
+/** The website's address for a page ("/programs"). */
+const pagePath = (page: Page) => `/${page}`
 
 /**
- * Each website page gets its own copy of index.html with its title, description, address and language, so search
- * engines and link previews (which don't run the site) read the right ones: `programs.html`, `ko/programs.html`, and
- * `news-post.html` for the posts (firebase.json sends `/news/…` there). Also the sitemap and robots.txt.
+ * Each website page gets its own copy of index.html with its title, description and address, so search engines and
+ * link previews (which don't run the site) read the right ones: `programs.html`, and `news-post.html` for the posts
+ * (firebase.json sends `/news/…` there). Also the sitemap and robots.txt.
  */
 function sitePages(): Plugin {
   return {
@@ -50,34 +50,22 @@ function sitePages(): Plugin {
       const index = bundle['index.html']
       if (!index || index.type !== 'asset') return
       const template = String(index.source).replaceAll(SOURCE_URL, APP_URL)
-      const render = (page: Page | 'news-post', lang: 'en' | 'ko') => {
-        const meta = PAGE_META[page][lang]
-        const own = page === 'news-post' ? pagePath('news', lang) : pagePath(page, lang)
-        const en = page === 'news-post' ? pagePath('news', 'en') : pagePath(page, 'en')
-        const ko = page === 'news-post' ? pagePath('news', 'ko') : pagePath(page, 'ko')
+      const render = (page: Page | 'news-post') => {
+        const meta = PAGE_META[page]
+        const own = page === 'news-post' ? pagePath('news') : pagePath(page)
         return template
-          .replace('<html lang="en">', `<html lang="${lang}"${lang === 'ko' ? ' class="lang-ko"' : ''}>`)
           .replace(/<title>[^<]*<\/title>/, `<title>${escape(meta.title)}</title>`)
           .replace(/(<meta name="description" content=")[^"]*(")/, `$1${escape(meta.description)}$2`)
           .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${escape(meta.title)}$2`)
           .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${escape(meta.description)}$2`)
           .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${APP_URL}${own}$2`)
           .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${APP_URL}${own}$2`)
-          .replace(/(<link rel="alternate" hreflang="en" href=")[^"]*(")/, `$1${APP_URL}${en}$2`)
-          .replace(/(<link rel="alternate" hreflang="ko" href=")[^"]*(")/, `$1${APP_URL}${ko}$2`)
-          .replace(/(<link rel="alternate" hreflang="x-default" href=")[^"]*(")/, `$1${APP_URL}${en}$2`)
       }
-      index.source = render('', 'en')
-      for (const page of PAGES) {
-        if (page) this.emitFile({ type: 'asset', fileName: `${page}.html`, source: render(page, 'en') })
-        this.emitFile({ type: 'asset', fileName: page ? `ko/${page}.html` : 'ko/index.html', source: render(page, 'ko') })
-      }
-      // `/ko` without the slash.
-      this.emitFile({ type: 'asset', fileName: 'ko.html', source: render('', 'ko') })
-      this.emitFile({ type: 'asset', fileName: 'news-post.html', source: render('news-post', 'en') })
-      this.emitFile({ type: 'asset', fileName: 'ko/news-post.html', source: render('news-post', 'ko') })
+      index.source = render('')
+      for (const page of PAGES) if (page) this.emitFile({ type: 'asset', fileName: `${page}.html`, source: render(page) })
+      this.emitFile({ type: 'asset', fileName: 'news-post.html', source: render('news-post') })
 
-      const urls = PAGES.flatMap((page) => (['en', 'ko'] as const).map((lang) => `${APP_URL}${pagePath(page, lang)}`))
+      const urls = PAGES.map((page) => `${APP_URL}${pagePath(page)}`)
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',

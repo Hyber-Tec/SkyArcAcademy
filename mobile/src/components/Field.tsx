@@ -2,7 +2,6 @@ import { Eye, EyeOff } from "lucide-react-native";
 import { forwardRef, useId, useState } from "react";
 import { InputAccessoryView, Keyboard, Platform, Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 import { T } from "@/components/Text";
-import { useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 
 type FieldProps = TextInputProps & { label?: string; hint?: string; error?: string | null; right?: React.ReactNode };
@@ -17,7 +16,6 @@ const NO_RETURN_KEY = new Set<TextInputProps["keyboardType"]>(["number-pad", "de
  */
 export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, hint, error, right, style, ...props }, ref) {
   const colors = useColors();
-  const t = useT();
   const grows = StyleSheet.flatten(style)?.flex === 1;
   const bar = useId();
   const done = Platform.OS === "ios" && (!!props.multiline || NO_RETURN_KEY.has(props.keyboardType)) && !props.inputAccessoryViewID;
@@ -43,8 +41,8 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, h
       {done ? (
         <InputAccessoryView nativeID={bar}>
           <View style={[styles.bar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("Done typing", "입력 완료")} hitSlop={10} onPress={() => Keyboard.dismiss()} testID={props.testID ? `${props.testID}-done` : undefined}>
-              <T variant="label">{t("Done", "완료")}</T>
+            <Pressable accessibilityRole="button" accessibilityLabel="Done typing" hitSlop={10} onPress={() => Keyboard.dismiss()} testID={props.testID ? `${props.testID}-done` : undefined}>
+              <T variant="label">Done</T>
             </Pressable>
           </View>
         </InputAccessoryView>
@@ -69,7 +67,6 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, h
  */
 export const PasswordField = forwardRef<TextInput, Omit<FieldProps, "secureTextEntry" | "right">>(function PasswordField(props, ref) {
   const colors = useColors();
-  const t = useT();
   const [shown, setShown] = useState(false);
   return (
     <Field
@@ -80,7 +77,7 @@ export const PasswordField = forwardRef<TextInput, Omit<FieldProps, "secureTextE
       keyboardType={shown && Platform.OS === "android" ? "visible-password" : props.keyboardType}
       secureTextEntry={!shown}
       right={
-        <Pressable accessibilityRole="button" accessibilityLabel={shown ? t("Hide password", "비밀번호 숨기기") : t("Show password", "비밀번호 보기")} hitSlop={8} onPress={() => setShown((s) => !s)}>
+        <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide password" : "Show password"} hitSlop={8} onPress={() => setShown((s) => !s)}>
           {shown ? <EyeOff size={20} color={colors.mutedForeground} /> : <Eye size={20} color={colors.mutedForeground} />}
         </Pressable>
       }

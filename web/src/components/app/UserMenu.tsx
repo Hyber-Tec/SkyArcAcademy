@@ -19,7 +19,6 @@ import { SidebarMenuButton } from '@/components/ui/sidebar'
 import { Switch } from '@/components/ui/switch'
 import { initials } from '@shared/people'
 import { NoticeSwitchesDialog } from '@/features/notifications/NoticeSwitches'
-import { useT } from '@/lib/lang'
 import { SignInSecurityDialog } from './SignInSecurity'
 import { ThemeSubmenu } from './ThemeToggle'
 
@@ -41,7 +40,6 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
   const navigate = useNavigate()
   const [security, setSecurity] = useState(false)
   const [notices, setNotices] = useState(false)
-  const t = useT()
   const name = branch?.member?.displayName || user?.displayName || email || ''
 
   const trigger =
@@ -55,7 +53,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
         <LuChevronsUpDown className="ml-auto size-4" />
       </SidebarMenuButton>
     ) : (
-      <Button variant="ghost" size="icon" className="rounded-full" aria-label={t('Account menu', '계정 메뉴')}>
+      <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu">
         <UserAvatar className="size-8" />
       </Button>
     )
@@ -84,11 +82,11 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
                 const on = !branch.isDemo
                 branch.setDemo(on)
                 navigate('/app')
-                toast.success(on ? t('Demo data: made-up students and classes', '데모 데이터: 가상의 학생과 수업이에요') : t('The academy’s real data', '아카데미의 실제 데이터예요'))
+                toast.success(on ? 'Demo data: made-up students and classes' : 'The academy’s real data')
               }}
             >
               <LuPresentation />
-              {t('Demo data', '데모 데이터')}
+              Demo data
               <Switch checked={branch.isDemo} tabIndex={-1} aria-hidden className="pointer-events-none ml-auto" />
             </DropdownMenuItem>
           ) : null}
@@ -100,7 +98,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
           ) : null}
           <DropdownMenuItem onSelect={() => setSecurity(true)}>
             <LuKeyRound />
-            {t('Sign-in & security', '로그인 및 보안')}
+            {'Sign-in & security'}
           </DropdownMenuItem>
           <ThemeSubmenu />
         </DropdownMenuGroup>
@@ -112,7 +110,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'sidebar
           }}
         >
           <LuLogOut />
-          {t('Sign out', '로그아웃')}
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

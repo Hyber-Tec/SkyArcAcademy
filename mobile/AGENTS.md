@@ -122,7 +122,7 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        reports (also the staff's list, a report's staff card and sharing), account (also a coach's
                        details, notification switches and the sign-in methods, SignInSecurity, for every role; and
                        KioskPin, the PIN a person clocks in with), tour (the welcome tour after the first sign-in: one
-                       step a tab per kind of person, parents choosing their language first; More's "Take the tour"
+                       step a tab per kind of person; More's "Take the tour"
                        plays it again; the notifications question waits for it)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, ChoiceRow (one of a few choices), Skeleton, Screen,
@@ -178,11 +178,9 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   symbols (SF Symbols on iPhone, Material on Android).
 - **Words:** Coach (not tutor), Class (not session; a class is its own record, one time on one day with its seats, and
   each student in it is a session), Academy (not branch or center), Position = Standing / Kneeling / Prone. Sentence
-  case, plain words. Parents read Korean too (`docs/DECISIONS.md` §36): every text a parent can see goes through
-  `useT()` (`src/lib/lang.ts`: `t("Home", "홈")`), written as `.claude/skills/korean-ux-writing` says; the staff's
-  tabs and a student's stay English (`EnglishOnly`).
+  case, plain words, in English only (`docs/DECISIONS.md` §42: no Korean, no language switch).
 - **Lines wrap between words** (Goo, 2026-11-05): text goes through `T` (`src/components/Text.tsx`) or `Button`, which
-  keep a Korean word whole ("주세요", "10월 29일"), dates and times together, a "·" at the end of a line, and a
+  keep dates and times together, a "·" at the end of a line, and a
   paragraph's last word with the one before it (`src/lib/lineBreaks.ts`). A plain React Native `Text` with words in it
   skips all that: use `T`, or `keepWords()` and `lineBreakProps()` on it.
 - **Classes are taught together** (`docs/DECISIONS.md` §21): a class is `classes/{id}`, and `/class/[id]` opens it by
@@ -213,15 +211,14 @@ src/theme/             the website's neutral palette in light and dark with Sky 
   (guideline 4.8) beside Google; deleting an Apple account confirms with Apple and revokes the app's Apple tokens
   (Apple's rule too). Android has no Apple button.
 - **The enrollment contract comes first, once the office sends it, and it's signed on the website** (docs/DECISIONS.md
-  §31, §33, §34 and §36): when a student's contract is sent (`contractLinks`, status `sent`), the family's part shows
+  §31, §33 and §34): when a student's contract is sent (`contractLinks`, status `sent`), the family's part shows
   ContractGate (src/features/contracts/SignContract.tsx) until it's signed (`contractGate`, `@shared/contracts/gate`);
   nothing is asked before. The app doesn't draw the contract for families (Goo, 2026-11-05: "writing the contract can
   be all done by website, just like the QR code"): a parent taps each child's contract, `contractLinkForFamily` gives
   its page (`/sign/{token}`, the QR code's), and the app opens it on the website in the in-app browser, with
-  `?lang=` (the language they read the app in) and `&from=app`. They read it, fill it in and sign it there, in Korean
-  or English; the app opens by itself once every one is signed (the contracts are watched live), with a word that it's
+  `?from=app`. They read it, fill it in and sign it there; the app opens by itself once every one is signed (the contracts are watched live), with a word that it's
   done. The copy comes by email and stays under More → Enrollment contract (PdfSheet). A change to the contract's
-  screens, or a new language, is a website change, with no new build. A student waits for their parent. Anything that
+  screens is a website change, with no new build. A student waits for their parent. Anything that
   can't be read opens the app rather than locking anyone out.
 
   The office sends a student's contract from the student's screen (StudentContract: the program, the discounts, the

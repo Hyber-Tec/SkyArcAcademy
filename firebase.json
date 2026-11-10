@@ -23,6 +23,16 @@
         "source": "/schedule",
         "destination": "/trial",
         "type": 301
+      },
+      {
+        "source": "/ko",
+        "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/ko/:path*",
+        "destination": "/:path",
+        "type": 301
       }
     ],
     "ignore": [
@@ -34,10 +44,6 @@
       {
         "source": "/news/**",
         "destination": "/news-post.html"
-      },
-      {
-        "source": "/ko/news/**",
-        "destination": "/ko/news-post.html"
       },
       {
         "regex": "^/(?:[^a].*|a(?:[^s].*)?|as(?:[^s].*)?|ass(?:[^e].*)?|asse(?:[^t].*)?|asset(?:[^s].*)?|assets(?:[^/].*)?)?$",

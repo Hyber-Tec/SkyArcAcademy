@@ -40,7 +40,6 @@ import { parseContract } from '../shared/src/contracts/document'
 import { RELATION_LABELS, checkContractSigning, relationLabel, usDate, withPreset } from '../shared/src/contracts/fill'
 import { contractFilePlace, contractFoldersToMake } from '../shared/src/contracts/filing'
 import { contractFileName, signatureFacts, signatureStatement } from '../shared/src/contracts/signing'
-import { contractIn } from '../shared/src/contracts/translation'
 import { ACADEMY_SIGNER_ID, type AcademySigner, CONTRACT_TOKEN_DOC, type ContractTemplate, templateLabel } from '../shared/src/contracts/types'
 import { type DriveActor, contractsFolderStudent, driveObjectPath, studentFolderId } from '../shared/src/drive/types'
 import { COL, DOC } from '../shared/src/paths'
@@ -271,9 +270,6 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
       }
       const sig = s.signed
       const png = sig ? encodePng(drawSampleSignature(sig.name)) : null
-      // A parent who read it in Korean: their PDF has the Korean too, once the contract has its translation (§36).
-      const read = sig?.lang === 'ko' && template.ko?.text ? contractIn('ko', template.text, template.ko.text) : null
-      const translation = read?.translated && template.ko ? { doc: read.doc, sha256: template.ko.sha256 } : null
       const checked = sig && png ? checkContractSigning(doc, { values: sig.values, relation: sig.relation, signature: `data:image/png;base64,${Buffer.from(png).toString('base64')}`, agree: true }) : null
       if (sig && png && checked && !checked.ok) console.warn(`  ${c.studentName}: the sample couldn't fill the contract in (${Object.keys(checked.errors).join(', ')}); it's left waiting`)
       if (sig && png && checked?.ok) {
@@ -305,14 +301,12 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
               templateSha256: template.sha256,
               sentBy: { name: manager.name, atMs: s.at.getTime() },
               academySigner: { name: signer.name, title: signer.title, typed: !signer.image },
-              translation: translation ? { sha256: translation.sha256 } : null,
             }),
             footnote: `Signed electronically ${sig.via === 'app' ? `in ${academyName}’s app` : `through ${academyName}’s website`}. The SHA-256 identifies the exact text of the contract that was signed: the same text always gives the same value.`,
           },
           sample: false,
           createdAt: sig.at,
           logo: LOGO,
-          translation: translation ? { doc: translation.doc, relation: relationLabel(sig.relation, 'ko') } : null,
         })
         const fileId = `${SAMPLE_PREFIX}contract-${key}`
         const fileName = contractFileName(c.studentName, signedOn)
@@ -347,7 +341,7 @@ async function sampleContracts(docs: SampleDoc[], shooting: SampleDoc[], academy
         for (const email of parentLogins(c.studentId)) {
           out.push({
             path: `${base}/${COL.notifications}/${SAMPLE_PREFIX}contract-sent-${key}-${email}`,
-            data: { recipientKey: email, type: 'contract_sent', title: `Please sign ${first}’s enrollment contract`, body: `${academyName} sent ${first}’s contract. Open the app to read it and sign it.`, ko: { title: `${first} 학생 등록 계약서에 서명해 주세요`, body: `${academyName}에서 ${first} 학생 계약서를 보냈어요. 앱에서 읽고 서명해 주세요.` }, link: 'parent', refs: {}, createdAt: s.at, readAt: null },
+            data: { recipientKey: email, type: 'contract_sent', title: `Please sign ${first}’s enrollment contract`, body: `${academyName} sent ${first}’s contract. Open the app to read it and sign it.`, link: 'parent', refs: {}, createdAt: s.at, readAt: null },
           })
         }
       }

@@ -8,31 +8,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, HOME, type L, TRIAL, l } from '@/site/kit/content'
+import { ACADEMY, HOME, TRIAL } from '@/site/kit/content'
 import { EASE_OUT, useReduced } from '@/site/kit/motion'
 import { useSite } from '@/site/kit/site'
 import { T } from '../i18n'
 import type { ErrorCode, Step, Wizard, WizardForm } from '../wizard-state'
-import { crmLang } from './blocks'
-import { ChoiceCards, Field, Segmented, inputClass, selectTriggerClass } from './fields'
+import { ChoiceCards, Field, inputClass, selectTriggerClass } from './fields'
 
 /**
  * Requesting Trial One: the days that suit the family, the athlete and the parent, a last look, then it's sent to the
  * academy (the CRM's Website page, and an email to the office). The same screens run in the trial drawer (any "Book a
  * trial" button) and on the trial page.
  */
-const errorText = (code: ErrorCode | undefined): L | null =>
+const errorText = (code: ErrorCode | undefined): string | null =>
   code ? (code === 'email' ? TRIAL.errors.email : code === 'consent' ? TRIAL.errors.consent : code === 'days' ? T.daysError : TRIAL.errors.required) : null
 
 /** Weekdays to offer when the Website page has no hours yet (the office reads the English). */
-const WEEKDAYS: L[] = [
-  l('Monday', '월요일'),
-  l('Tuesday', '화요일'),
-  l('Wednesday', '수요일'),
-  l('Thursday', '목요일'),
-  l('Friday', '금요일'),
-  l('Saturday', '토요일'),
-  l('Sunday', '일요일'),
+const WEEKDAYS: string[] = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ]
 
 /** The day choices: the hours the website shows, or the weekdays. `value` is what the office reads. */
@@ -43,18 +42,18 @@ function useDayOptions(): { value: string; label: string; detail: string | null;
     () =>
       content.hours.length
         ? content.hours.map((h) => ({ value: `${h.days} · ${h.time}`, label: h.days, detail: h.time, note: h.note || null }))
-        : WEEKDAYS.map((d) => ({ value: d.en, label: t(d), detail: null, note: null })),
+        : WEEKDAYS.map((d) => ({ value: d, label: t(d), detail: null, note: null })),
     [content.hours, t],
   )
 }
 
 export function TrialWizard({ wizard, variant, onClose, title }: { wizard: Wizard; variant: 'drawer' | 'card'; onClose?: () => void; title?: string }) {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { state, dispatch } = wizard
   const reduce = useReduced()
   const body = useRef<HTMLDivElement>(null)
   const steps: Step[] = ['time', 'details', 'review']
-  const stepLabels: Record<Step, L> = { time: T.stepTime, details: T.stepDetails, review: T.stepReview, done: T.done }
+  const stepLabels: Record<Step, string> = { time: T.stepTime, details: T.stepDetails, review: T.stepReview, done: T.done }
   const index = state.step === 'done' ? steps.length : steps.indexOf(state.step)
 
   // Each step starts at its top.
@@ -137,7 +136,7 @@ export function TrialWizard({ wizard, variant, onClose, title }: { wizard: Wizar
       <div className={cn('shrink-0 border-t border-line bg-white px-5 py-4 sm:px-7', drawer ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : 'rounded-b-[28px]')}>
         {state.step === 'done' ? (
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-            <Button type="button" variant="ghost" className="h-12 rounded-full px-5 text-[15px]" onClick={() => dispatch({ type: 'reset', language: lang, keepParent: true })}>
+            <Button type="button" variant="ghost" className="h-12 rounded-full px-5 text-[15px]" onClick={() => dispatch({ type: 'reset', keepParent: true })}>
               {t(T.another)}
             </Button>
             {onClose ? (
@@ -164,7 +163,7 @@ export function TrialWizard({ wizard, variant, onClose, title }: { wizard: Wizar
                   {state.days.length ? (
                     <>
                       <span className="block text-stone">{t(T.daysChosen)}</span>
-                      <span className="block truncate font-semibold text-ink" lang={crmLang}>
+                      <span className="block truncate font-semibold text-ink">
                         {state.days.map((d) => d.split(' · ')[0]).join(', ')}
                       </span>
                     </>
@@ -207,7 +206,6 @@ function DaysStep({ wizard }: { wizard: Wizard }) {
   const { t } = useSite()
   const { state, dispatch } = wizard
   const options = useDayOptions()
-  const { content } = useSiteData()
   return (
     <section aria-labelledby="wiz-days" className="space-y-4">
       <div>
@@ -216,7 +214,7 @@ function DaysStep({ wizard }: { wizard: Wizard }) {
         </h3>
         <p className="mt-1 text-[13.5px] leading-relaxed text-stone">{t(T.daysHint)}</p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2" role="group" aria-labelledby="wiz-days" lang={content.hours.length ? crmLang : undefined}>
+      <div className="grid gap-2 sm:grid-cols-2" role="group" aria-labelledby="wiz-days">
         {options.map((o) => {
           const on = state.days.includes(o.value)
           return (
@@ -314,19 +312,6 @@ function DetailsStep({ wizard }: { wizard: Wizard }) {
             <Input id="wiz-phone" type="tel" inputMode="tel" autoComplete="tel" value={f.phone} onChange={(e) => set('phone')(e.target.value)} aria-invalid={inv('phone')} className={inputClass} />
           </Field>
         </div>
-        <div className="grid gap-1.5">
-          <span className="text-[13px] font-medium text-ink">{t(TRIAL.fields.language)}</span>
-          <Segmented
-            label={t(TRIAL.fields.language)}
-            value={f.language}
-            onChange={(v) => set('language')(v)}
-            options={[
-              { value: 'en', label: 'English' },
-              { value: 'ko', label: '한국어' },
-            ]}
-            className="w-full sm:w-72"
-          />
-        </div>
         <Field id="wiz-notes" label={t(TRIAL.fields.notes)}>
           <Textarea id="wiz-notes" value={f.notes} onChange={(e) => set('notes')(e.target.value)} rows={3} maxLength={4000} className="min-h-24 rounded-xl border-line bg-white px-3.5 py-3 text-[15px] md:text-[15px] focus-visible:border-ink focus-visible:ring-ink/10" />
         </Field>
@@ -416,7 +401,7 @@ function ReviewStep({ wizard, go }: { wizard: Wizard; go: (s: Step) => void }) {
     <div className="space-y-6">
       <dl className="rounded-2xl border border-line px-4 sm:px-5">
         <Row label={t(T.when)} onEdit={() => go('time')}>
-          <ul className="space-y-0.5" lang={crmLang}>
+          <ul className="space-y-0.5">
             {state.days.map((d) => (
               <li key={d} className="font-semibold">
                 {d}
@@ -444,9 +429,7 @@ function ReviewStep({ wizard, go }: { wizard: Wizard; go: (s: Step) => void }) {
           <br />
           <span className="[overflow-wrap:anywhere] text-stone">{f.email}</span>
           <br />
-          <span className="text-stone">
-            {f.phone} · {t(T.reply)}: {f.language === 'ko' ? '한국어' : 'English'}
-          </span>
+          <span className="text-stone">{f.phone}</span>
         </Row>
         {f.notes.trim() ? (
           <Row label={t(T.notesLabel)} onEdit={() => go('details')}>
@@ -465,7 +448,7 @@ function ReviewStep({ wizard, go }: { wizard: Wizard; go: (s: Step) => void }) {
             <LuCheck className="mt-0.5 size-3.5 shrink-0 text-ink" aria-hidden="true" /> {t(T.noShooting)}
           </li>
           {HOME.trial.bring.map((b) => (
-            <li key={b.en} className="flex gap-2">
+            <li key={b} className="flex gap-2">
               <LuCheck className="mt-0.5 size-3.5 shrink-0 text-ink" aria-hidden="true" /> {t(b)}
             </li>
           ))}
@@ -503,7 +486,7 @@ function DoneStep({ wizard }: { wizard: Wizard }) {
           <p className="flex items-center gap-2 text-[16px] font-semibold text-ink">
             <LuCalendarDays className="size-4" aria-hidden="true" /> {t(TRIAL.kinds.one.name)}
           </p>
-          <ul className="space-y-0.5 pl-6 text-[14px] text-stone" lang={crmLang}>
+          <ul className="space-y-0.5 pl-6 text-[14px] text-stone">
             {state.days.map((d) => (
               <li key={d}>{d}</li>
             ))}

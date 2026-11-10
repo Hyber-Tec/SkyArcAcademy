@@ -15,7 +15,6 @@ import {
   emailsIn,
   prefillValues,
   presetValues,
-  relationLabel,
   shownValue,
   tuitionOf,
   usDate,
@@ -24,7 +23,6 @@ import {
 } from '@shared/contracts/fill'
 import { type SignatureFactsInput, contractFileName, isContractToken, signUrl, signatureFacts, signatureStatement } from '@shared/contracts/signing'
 import { contractFilePlace, contractFoldersToMake } from '@shared/contracts/filing'
-import { contractIn } from '@shared/contracts/translation'
 import {
   ACADEMY_SIGNER_ID,
   type AcademySigner,
@@ -49,7 +47,6 @@ import {
 import { type DriveActor, contractsFolderId, driveObjectPath, studentFolderId } from '@shared/drive/types'
 import { contractEmail, signedCopyEmail } from '@shared/email/contract'
 import { COL, ROOT, emailKey } from '@shared/paths'
-import type { Lang } from '@shared/i18n'
 import { dateKeyOf } from '@shared/time'
 import type { Branch, Member, Student, StudentPrivateProfile } from '@shared/types'
 import { LIGHT, db } from './app'
@@ -197,8 +194,8 @@ async function templateOf(branchId: string, templateId: string) {
 }
 
 /** A field problem in the signer's words, or the whole signing checked against the contract. */
-function checkedSigning(doc: ContractDocument, input: unknown, lang: Lang = 'en'): ContractSigning {
-  const checked = checkContractSigning(doc, (input ?? {}) as Record<string, unknown>, lang)
+function checkedSigning(doc: ContractDocument, input: unknown): ContractSigning {
+  const checked = checkContractSigning(doc, (input ?? {}) as Record<string, unknown>)
   if (!checked.ok) throw new HttpsError('invalid-argument', 'Some parts need another look.', { errors: checked.errors })
   return checked.value
 }
@@ -255,8 +252,7 @@ export const setContractPrices = onCall({ timeoutSeconds: 60, ...LIGHT }, async 
     const version = Math.max(0, ...all.docs.map((d) => (d.data() as ContractTemplate).version || 0)) + 1
     const ref = templatesOf(b).doc()
     tx.update(currentSnap.ref, { current: false, replacedAt: FieldValue.serverTimestamp(), replacedBy: by })
-    // The academy's Korean translation stays with the new prices: its dollars are the English's (translation.ts).
-    const template: ContractTemplate = { title: current.title, text, sha256: sha256(text), version, current: true, publishedAt: null, publishedBy: by, ...(current.ko ? { ko: current.ko } : {}) }
+    const template: ContractTemplate = { title: current.title, text, sha256: sha256(text), version, current: true, publishedAt: null, publishedBy: by }
     tx.create(ref, { ...template, publishedAt: FieldValue.serverTimestamp() })
     tx.set(
       db.collection(`${ROOT.branches}/${b}/${COL.auditLog}`).doc(),
@@ -465,7 +461,6 @@ export const sendContract = onCall({ secrets: [gmailAppPassword], timeoutSeconds
         type: 'contract_sent' as const,
         title: `Please sign ${first}’s enrollment contract`,
         body: `${academy.name} sent ${first}’s contract. Open the app to read it and sign it.`,
-        ko: { title: `${first} 학생 등록 계약서에 서명해 주세요`, body: `${academy.name}에서 ${first} 학생 계약서를 보냈어요. 앱에서 읽고 서명해 주세요.` },
         link: 'parent',
         refs: {},
       })),
@@ -535,7 +530,7 @@ export const getContractForSigning = onCall({ timeoutSeconds: 60, memory: '512Mi
     academy: contact,
     firstName,
     studentName: student?.name ?? link.studentName,
-    contract: { title: template.title, text: template.text, version: template.version, ko: template.ko?.text ?? null },
+    contract: { title: template.title, text: template.text, version: template.version },
     preset: link.preset ?? {},
     academySigner: signer,
     emailsCopy: !isDemoAcademy(branchId),
@@ -569,8 +564,6 @@ async function storeSignedCopy(input: {
   how: SignatureFactsInput['how']
   sentBy: SignatureFactsInput['sentBy']
   signedAt: Date
-  /** The Korean the signer read, when they read it in Korean: drawn after the English, recorded on the last page. */
-  translation: { doc: ContractDocument; sha256: string } | null
 }) {
   const { branchId, academy, signer, studentName, signing, signedAt } = input
   let pdf: Uint8Array
@@ -599,14 +592,12 @@ async function storeSignedCopy(input: {
           templateSha256: input.template.sha256,
           sentBy: input.sentBy,
           academySigner: signer ? { name: signer.name, title: signer.title, typed: !signer.image } : null,
-          translation: input.translation ? { sha256: input.translation.sha256 } : null,
         }),
         footnote: `Signed electronically ${'link' in input.how || input.how.where === 'website' ? `through ${academy.name}’s website` : `in ${academy.name}’s app`}. The SHA-256 identifies the exact text of the contract that was signed: the same text always gives the same value.`,
       },
       sample: false,
       createdAt: signedAt,
       logo: LOGO,
-      translation: input.translation ? { doc: input.translation.doc, relation: relationLabel(signing.relation, 'ko') } : null,
     })
   } catch (e) {
     logger.error('The signed contract could not be built', { branchId, error: String(e) })
@@ -806,11 +797,7 @@ async function signSent(input: {
   const { branchId, id, link } = input
   const base = `${ROOT.branches}/${branchId}`
   const [academy, signer, { template, doc }] = await Promise.all([academyOf(branchId), academySignerOf(branchId), templateOf(branchId, link.templateId)])
-  // The language the signer read it in: the form's messages, and the Korean they read in the PDF (docs/DECISIONS.md §36).
-  const lang: Lang = (input.request as { lang?: unknown } | null)?.lang === 'ko' ? 'ko' : 'en'
-  const filled = checkedSigning(doc, input.request, lang)
-  const read = lang === 'ko' && template.ko?.text ? contractIn('ko', template.text, template.ko.text) : null
-  const translation = read?.translated && template.ko ? { doc: read.doc, sha256: template.ko.sha256 } : null
+  const filled = checkedSigning(doc, input.request)
   const signing: ContractSigning = { ...filled, values: withLockedEmail(doc, withPreset(doc, filled.values, link.preset ?? {}), link.lockedEmail) }
   const { name, relation } = signing
   const signedAt = new Date()
@@ -828,7 +815,6 @@ async function signSent(input: {
     how: input.how,
     sentBy: { name: link.createdBy?.name || 'The office', atMs: ms(link.createdAt) || signedAt.getTime() },
     signedAt,
-    translation,
   })
   let filed = false
   try {
@@ -934,7 +920,7 @@ export const contractPrefill = onCall({ timeoutSeconds: 30, ...LIGHT }, async (r
 /**
  * The phone app's way to a contract (Goo, 2026-11-05: "writing the contract can be all done by website, just like the QR
  * code"): a parent signed in to the app gets the link of the contract the office sent for one of their children, still
- * waiting, and the app opens its page on the website, where they read it in their language and sign it. Only their own
+ * waiting, and the app opens its page on the website, where they read it and sign it. Only their own
  * family's, only a parent's; the link signs once, as the QR code's does.
  */
 export const contractLinkForFamily = onCall({ timeoutSeconds: 30, ...LIGHT }, async (req): Promise<{ path: string; linkId: string }> => {

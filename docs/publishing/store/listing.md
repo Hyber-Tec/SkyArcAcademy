@@ -75,7 +75,7 @@ Families
 • Classes: what's coming and what's past, the months at a glance, and asking for a class, a make-up or another time. The academy answers in the app.
 • Every score with its shots played back and compared with the last one, and the progress reports the academy shares.
 • Notifications when a class changes, a request is answered, or a new score or report arrives. You choose which.
-• Korean for parents: Language · 언어 on the sign-in screen and under More.
+• Korean for parents, on the sign-in screen and under More (removed after 1.1.0: English only, docs/DECISIONS.md §42).
 
 Coaches
 • Every class with everyone in at its time, your availability (you can add time inside the lock), and your hours.
@@ -94,7 +94,7 @@ And many smaller fixes, like lines that wrap between words.
 ```
 • Families: create an account, sign the enrollment contract the academy sends, ask for classes and make-ups, get notifications.
 • Every score with its shots played back, and the academy's progress reports.
-• Korean for parents (Language · 언어).
+• Korean for parents (removed after 1.1.0).
 • Coaches: availability and hours; Scan sizes each hole and adds competitions from a photo.
 • The office: answer requests, suggest another class, send contracts.
 • Many smaller fixes.

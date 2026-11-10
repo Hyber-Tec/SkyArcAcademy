@@ -1,13 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { LuEye, LuEyeOff } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
-import { PASSWORD_STRENGTH_LABELS, PASSWORD_STRENGTH_LABELS_KO, passwordStrength } from '@shared/auth'
+import { PASSWORD_STRENGTH_LABELS, passwordStrength } from '@shared/auth'
 import { CompanyFooter } from '@/components/app/CompanyFooter'
-import { LangSwitch } from '@/components/app/LangSwitch'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useLang, useT } from '@/lib/lang'
 import { usePublicProfile } from '@/lib/publicProfile'
 import { cn } from '@/lib/utils'
 
@@ -32,9 +30,7 @@ export function withQuery(path: string, query: Record<string, string | null | un
   return s ? `${path}?${s}` : path
 }
 
-/**
- * The card every sign-in page shows: Sky Arc's logo, then the page's own content; English · 한국어 under it.
- */
+/** The card every sign-in page shows: Sky Arc's logo, then the page's own content. */
 export function AuthShell({
   title,
   description,
@@ -57,7 +53,6 @@ export function AuthShell({
         <div className="mt-6">{children}</div>
         {footer ? <div className="mt-6 space-y-2 border-t pt-4 text-xs text-muted-foreground">{footer}</div> : null}
       </div>
-      <LangSwitch />
       <CompanyFooter />
     </div>
   )
@@ -65,11 +60,10 @@ export function AuthShell({
 
 /** "or" between Google and the email form. */
 export function OrDivider({ label }: { label?: string }) {
-  const t = useT()
   return (
     <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
       <div className="h-px flex-1 bg-border" />
-      {label ?? t('or', '또는')}
+      {label ?? 'or'}
       <div className="h-px flex-1 bg-border" />
     </div>
   )
@@ -94,7 +88,6 @@ export function PasswordInput({
   invalid?: boolean
 }) {
   const [shown, setShown] = useState(false)
-  const t = useT()
   return (
     <div className="relative">
       <Input
@@ -114,7 +107,7 @@ export function PasswordInput({
         size="icon"
         className="absolute top-1/2 right-0.5 size-8 -translate-y-1/2 text-muted-foreground"
         onClick={() => setShown((s) => !s)}
-        aria-label={shown ? t('Hide password', '비밀번호 숨기기') : t('Show password', '비밀번호 보기')}
+        aria-label={shown ? 'Hide password' : 'Show password'}
         tabIndex={-1}
       >
         {shown ? <LuEyeOff /> : <LuEye />}
@@ -127,7 +120,6 @@ const STRENGTH_COLORS = ['bg-muted', 'bg-red-500', 'bg-amber-500', 'bg-emerald-5
 
 /** Four bars and a word under a new password. */
 export function StrengthMeter({ password }: { password: string }) {
-  const lang = useLang()
   const s = passwordStrength(password)
   if (!password) return null
   return (
@@ -137,7 +129,7 @@ export function StrengthMeter({ password }: { password: string }) {
           <div key={n} className={cn('h-1 flex-1 rounded-full', n <= s ? STRENGTH_COLORS[s] : 'bg-muted')} />
         ))}
       </div>
-      <span className="w-16 text-right text-xs text-muted-foreground">{lang === 'ko' ? PASSWORD_STRENGTH_LABELS_KO[s] : PASSWORD_STRENGTH_LABELS[s]}</span>
+      <span className="w-16 text-right text-xs text-muted-foreground">{PASSWORD_STRENGTH_LABELS[s]}</span>
     </div>
   )
 }

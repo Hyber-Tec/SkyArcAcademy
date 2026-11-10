@@ -119,13 +119,6 @@ export const REQUEST_KIND_LABELS: Record<ClassRequestKind, string> = {
   extra: 'Extra class',
 }
 
-/** The same in Korean, for a parent reading Korean (docs/DECISIONS.md §36). */
-export const REQUEST_KIND_LABELS_KO: Record<ClassRequestKind, string> = {
-  makeup: '보강',
-  reschedule: '수업 시간 변경',
-  extra: '추가 수업',
-}
-
 /** What families read about their request. */
 export const REQUEST_STATUS_LABELS: Record<ClassRequestStatus, string> = {
   pending: 'Waiting for the academy',
@@ -134,16 +127,6 @@ export const REQUEST_STATUS_LABELS: Record<ClassRequestStatus, string> = {
   rejected: 'Not approved',
   withdrawn: 'Withdrawn',
 }
-
-/** The same in Korean. */
-export const REQUEST_STATUS_LABELS_KO: Record<ClassRequestStatus, string> = {
-  pending: '아카데미 확인 중',
-  offered: '다른 시간 제안',
-  approved: '승인',
-  rejected: '승인되지 않음',
-  withdrawn: '신청 취소',
-}
-
 /** What the office reads about a request: who it waits on, or how it ended. */
 export const REQUEST_OFFICE_STATUS_LABELS: Record<ClassRequestStatus, string> = {
   pending: 'Waiting on us',

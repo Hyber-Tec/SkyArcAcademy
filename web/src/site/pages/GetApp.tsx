@@ -58,7 +58,7 @@ export function GetApp() {
             {APP.features.map((f, i) => {
               const Icon = ICONS[i]
               return (
-                <li key={f.title.en} className="h-full">
+                <li key={f.title} className="h-full">
                   <Reveal delay={0.06 * i} className="flex h-full flex-col rounded-[26px] border border-line bg-white p-6 shadow-soft">
                     <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-ink text-white">
                       <Icon className="size-5" aria-hidden="true" />

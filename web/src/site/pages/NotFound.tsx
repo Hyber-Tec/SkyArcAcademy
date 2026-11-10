@@ -7,10 +7,10 @@ import { BookButton, Container, btnOutline } from '../components/bits'
 import { T } from '../i18n'
 
 export function NotFound() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   useEffect(() => {
-    document.title = `${TITLES['404'][lang]} · ${ACADEMY.name}`
-  }, [lang])
+    document.title = `${TITLES['404']} · ${ACADEMY.name}`
+  }, [])
   return (
     <section className="relative overflow-hidden bg-warm" aria-labelledby="nf-title">
       <Container className="grid min-h-[68vh] items-center gap-10 py-20 lg:grid-cols-[1.1fr_1fr]">

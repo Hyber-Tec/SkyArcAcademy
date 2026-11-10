@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { dayHours } from '@shared/availability'
 import { familyStatusLabel } from '@shared/schedule/family'
-import { type DateKey, formatMinutesShort, todayKey as todayKeyOf } from '@shared/time'
+import { type DateKey, formatDateKey, formatMinutesShort, formatTimeRange, todayKey as todayKeyOf } from '@shared/time'
 import type { Session, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { MonthScroller, type MonthScrollerHandle } from '@/components/app/MonthScroller'
@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDayConfigs } from '@/features/data/hooks'
 import { timeRange } from '@/lib/calendar'
-import { useLang, useT } from '@/lib/lang'
-import { dateIn, timeIn, timeRangeIn } from '@/lib/langFormat'
 import { useLoadWindow } from '@/lib/useLoadWindow'
 import { cn } from '@/lib/utils'
 import { type Family, hasEnded, useFamilySessions } from './data'
@@ -21,8 +19,6 @@ import { type Family, hasEnded, useFamilySessions } from './data'
  */
 export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Family; ids: string[]; now: number; onOpen: (s: WithId<Session>) => void }) {
   const { settings, timezone } = useBranch()
-  const lang = useLang()
-  const t = useT()
   const today = todayKeyOf(timezone, now)
   const [anchor] = useState(today)
   const scroller = useRef<MonthScrollerHandle>(null)
@@ -38,9 +34,9 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
   return (
     <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card" data-testid="family-month">
       <div className="flex items-center justify-between border-b px-3 py-1.5">
-        <div className="text-sm font-semibold">{dateIn(topMonth, 'monthYear', lang)}</div>
+        <div className="text-sm font-semibold">{formatDateKey(topMonth, 'monthYear')}</div>
         <Button variant="ghost" size="xs" onClick={() => scroller.current?.scrollToDate(today, { block: 'month' })}>
-          {t('Today', '오늘')}
+          Today
         </Button>
       </div>
       {/* The months open once the first classes are in, so their boxes don't push the month down after it's placed. */}
@@ -78,8 +74,8 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
                       key={s.id}
                       type="button"
                       onClick={() => onOpen(s)}
-                      title={`${showKid ? `${kid} · ` : ''}${timeRangeIn(s.startMin, s.endMin, lang)} · ${familyStatusLabel(s.status, ended, lang)}`}
-                      aria-label={`${showKid ? `${kid}, ` : ''}${dateIn(d, 'weekdayMedium', lang)}, ${timeRangeIn(s.startMin, s.endMin, lang)}, ${familyStatusLabel(s.status, ended, lang)}`}
+                      title={`${showKid ? `${kid} · ` : ''}${formatTimeRange(s.startMin, s.endMin)} · ${familyStatusLabel(s.status, ended)}`}
+                      aria-label={`${showKid ? `${kid}, ` : ''}${formatDateKey(d, 'weekdayMedium')}, ${formatTimeRange(s.startMin, s.endMin)}, ${familyStatusLabel(s.status, ended)}`}
                       className={cn(
                         // Each class is a box filling the day; several share the height.
                         'flex flex-1 flex-col items-center justify-center rounded-md px-0.5 py-1 text-center leading-tight transition-shadow hover:shadow-sm sm:rounded-lg sm:px-1 sm:py-1.5',
@@ -90,15 +86,15 @@ export function FamilyMonthCalendar({ family, ids, now, onOpen }: { family: Fami
                       )}
                       data-testid="family-month-class"
                     >
-                      <span className="text-[10.5px] font-semibold tabular-nums sm:hidden">{lang === 'ko' ? timeIn(s.startMin, 'ko') : formatMinutesShort(s.startMin)}</span>
-                      <span className="hidden text-xs font-semibold text-balance tabular-nums sm:block">{lang === 'ko' ? timeRangeIn(s.startMin, s.endMin, 'ko') : timeRange(s.startMin, s.endMin)}</span>
+                      <span className="text-[10.5px] font-semibold tabular-nums sm:hidden">{formatMinutesShort(s.startMin)}</span>
+                      <span className="hidden text-xs font-semibold text-balance tabular-nums sm:block">{timeRange(s.startMin, s.endMin)}</span>
                       {showKid ? <span className="mt-0.5 hidden w-full truncate text-[11px] font-medium opacity-80 sm:block">{kid}</span> : null}
                       {showKid ? <span className="w-full truncate text-[10px] font-medium opacity-80 sm:hidden">{kid}</span> : null}
                     </button>
                   )
                 })}
                 {sessions.length > maxChips ? (
-                  <div className="text-center text-[10px] text-muted-foreground sm:text-[11px]">{t(`+${sessions.length - maxChips} more`, `+${sessions.length - maxChips}개 더`)}</div>
+                  <div className="text-center text-[10px] text-muted-foreground sm:text-[11px]">{`+${sessions.length - maxChips} more`}</div>
                 ) : null}
               </div>
             )

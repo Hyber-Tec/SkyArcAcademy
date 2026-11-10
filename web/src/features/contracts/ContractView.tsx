@@ -2,13 +2,11 @@ import { LuCheck, LuEraser } from 'react-icons/lu'
 import { type ContractBlock, type ContractDocument, type ContractField, type Line, dollarsText, pricedChoice, signerField } from '@shared/contracts/document'
 import { type ContractValues, RELATION_LABELS, SIGN_KEYS, optionHeading, optionPrices, relationLabel, tuitionOf, tuitionText, typingDate, usDate } from '@shared/contracts/fill'
 import type { ShownSigner, SignerRelation } from '@shared/contracts/types'
-import { dateText } from '@shared/i18n'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { SignaturePad, type SignaturePadHandle } from './SignaturePad'
 
@@ -82,7 +80,6 @@ function Words({ line }: { line: Line }) {
 
 function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
   const { values, onValue, errors } = props
-  const t = useT()
   switch (b.kind) {
     case 'heading':
       return <h3 className="pt-3 text-base font-bold tracking-tight text-brand-text">{b.text}</h3>
@@ -142,7 +139,7 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
           <section data-part={b.id} className="overflow-hidden rounded-lg border" data-testid="contract-academy-check">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 bg-brand-solid px-3 py-2 text-white">
               <h4 className="text-xs font-bold tracking-wide">{b.label}</h4>
-              <span className="text-xs">{t('Set by the academy', '아카데미 적용')}</span>
+              <span className="text-xs">Set by the academy</span>
             </div>
             <ul className="divide-y">
               {b.options.map((o) => {
@@ -155,17 +152,17 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
                     </span>
                     <span className="min-w-0 flex-1">
                       {o.text}
-                      {left ? <span className="block text-xs text-muted-foreground">{t('Doesn’t apply to the program chosen.', '고른 프로그램에는 적용되지 않아요.')}</span> : null}
+                      {left ? <span className="block text-xs text-muted-foreground">Doesn’t apply to the program chosen.</span> : null}
                     </span>
                     {on && o.amount !== null && !left ? <span className="font-semibold whitespace-nowrap tabular-nums">−{dollarsText(o.amount)}</span> : null}
-                    <span className="sr-only">{on ? t('Applied', '적용됨') : t('Not applied', '적용 안 됨')}</span>
+                    <span className="sr-only">{on ? 'Applied' : 'Not applied'}</span>
                   </li>
                 )
               })}
             </ul>
             <p className="border-t bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              {list.length ? t('The academy applied these.', '아카데미가 적용한 항목이에요.') : t('None applied.', '적용된 항목이 없어요.')}{' '}
-              {t('Ask the academy if one should change.', '바꿔야 할 항목이 있으면 아카데미에 문의해 주세요.')}
+              {list.length ? 'The academy applied these.' : 'None applied.'}{' '}
+              Ask the academy if one should change.
             </p>
           </section>
         )
@@ -173,7 +170,7 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
       return (
         <fieldset data-part={b.id} className="space-y-2">
           <legend className="text-sm font-semibold">{b.label}</legend>
-          <p className="text-xs text-muted-foreground">{t('Check any that apply.', '해당하는 항목을 모두 골라 주세요.')}</p>
+          <p className="text-xs text-muted-foreground">Check any that apply.</p>
           {b.options.map((o) => (
             <label key={o.id} className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card px-3 py-2.5 hover:bg-muted/40 has-data-[state=checked]:border-primary" data-testid={`contract-check-${o.id}`}>
               <Checkbox checked={list.includes(o.id)} onCheckedChange={(v) => onValue(b.id, v === true ? [...list.filter((x) => x !== o.id), o.id] : list.filter((x) => x !== o.id))} className="mt-0.5" />
@@ -217,7 +214,7 @@ function Block({ block: b, ...props }: ViewProps & { block: ContractBlock }) {
         <section className="overflow-hidden rounded-lg border">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 bg-brand-solid px-3 py-2 text-white">
             <h4 className="text-xs font-bold tracking-wide">{b.title}</h4>
-            <span className="text-xs">{t('Filled in by the academy', '아카데미 작성')}</span>
+            <span className="text-xs">Filled in by the academy</span>
           </div>
           <dl className="divide-y">
             {b.fields.map((f) => (
@@ -243,11 +240,9 @@ function Choose({ block: b, values, onValue, errors, doc, suggested }: ViewProps
   const priced = pricedChoice(doc) === b
   const prices = priced ? optionPrices(doc, values) : null
   const tuition = priced ? tuitionOf(doc, values) : null
-  const lang = useLang()
-  const t = useT()
   return (
     <div data-part={b.id} className="space-y-3">
-      <div className={cn('text-sm font-semibold', error && 'text-destructive')}>{t(`${b.label}: choose one`, `${b.label} (하나 선택)`)}</div>
+      <div className={cn('text-sm font-semibold', error && 'text-destructive')}>{`${b.label}: choose one`}</div>
       <RadioGroup value={chosen} onValueChange={(v) => onValue(b.id, v)} className="grid gap-2 sm:grid-cols-2" aria-label={b.label} aria-invalid={!!error || undefined}>
         {b.options.map((o) => {
           const { name, sub } = optionHeading(o.title)
@@ -280,7 +275,7 @@ function Choose({ block: b, values, onValue, errors, doc, suggested }: ViewProps
                 </span>
                 {suggested === o.id ? (
                   <span className="mt-2 inline-flex h-5 items-center rounded-full bg-brand/10 px-2 text-[11px] font-semibold text-brand-text" data-testid="contract-suggested">
-                    {t('Suggested by the academy', '아카데미 추천')}
+                    Suggested by the academy
                   </span>
                 ) : null}
                 {on && o.lines.length ? (
@@ -301,7 +296,7 @@ function Choose({ block: b, values, onValue, errors, doc, suggested }: ViewProps
       {option ? (
         <dl className="divide-y rounded-lg border" data-testid="contract-chosen">
           <Row label={b.label} value={option.title} />
-          {b.priceLabel ? <Row label={b.priceLabel} value={tuition ? tuitionText(tuition, lang) : option.price} /> : null}
+          {b.priceLabel ? <Row label={b.priceLabel} value={tuition ? tuitionText(tuition) : option.price} /> : null}
         </dl>
       ) : null}
     </div>
@@ -320,11 +315,10 @@ function Row({ label, value }: { label: string; value: string }) {
 
 /** One field the family fills in, with the keyboard it needs. */
 function FamilyField({ field: f, value, onValue, error, locked }: { field: ContractField; value: string; onValue: (v: string) => void; error?: string; locked?: boolean }) {
-  const t = useT()
   const id = `contract-${f.id}`
   const kind: React.ComponentProps<typeof Input> =
     f.fill === 'date'
-      ? { inputMode: 'numeric', placeholder: 'MM/DD/YYYY', autoComplete: /birth|생년월일|생일/i.test(f.label) ? 'bday' : 'off' }
+      ? { inputMode: 'numeric', placeholder: 'MM/DD/YYYY', autoComplete: /birth/i.test(f.label) ? 'bday' : 'off' }
       : f.fill === 'phone'
         ? { type: 'tel', autoComplete: 'tel' }
         : f.fill === 'email'
@@ -351,7 +345,7 @@ function FamilyField({ field: f, value, onValue, error, locked }: { field: Contr
           data-testid={`contract-field-${f.id}`}
           {...kind}
         />
-        {locked ? <p className="text-xs text-muted-foreground">{t('From your request: your copy comes here.', '요청할 때 적은 주소예요. 사본이 이 주소로 가요.')}</p> : null}
+        {locked ? <p className="text-xs text-muted-foreground">From your request: your copy comes here.</p> : null}
         {error ? <FieldError>{error}</FieldError> : null}
       </div>
     </Field>
@@ -365,25 +359,23 @@ function FamilyField({ field: f, value, onValue, error, locked }: { field: Contr
 function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk, onClear, today }: ViewProps & { block: Extract<ContractBlock, { kind: 'sign' }> }) {
   const named = !!signerField(doc)
   const err = (k: keyof typeof SIGN_KEYS) => errors[SIGN_KEYS[k]]
-  const lang = useLang()
-  const t = useT()
   return (
     <section data-part={block.id} className="space-y-5 rounded-xl border-2 border-foreground/80 p-4 sm:p-5" data-testid="contract-sign-part">
       {named ? null : (
         <Field data-part={SIGN_KEYS.name} data-invalid={!!err('name')}>
-          <FieldLabel htmlFor="signer-name">{t('Your full name', '이름 (영문)')}</FieldLabel>
+          <FieldLabel htmlFor="signer-name">Your full name</FieldLabel>
           <Input id="signer-name" value={sign.name} autoComplete="name" autoCapitalize="words" maxLength={100} aria-invalid={!!err('name') || undefined} onChange={(e) => onSign({ name: e.target.value })} data-testid="signer-name" />
           {err('name') ? <FieldError>{err('name')}</FieldError> : null}
         </Field>
       )}
 
       <Field data-part={SIGN_KEYS.relation} data-invalid={!!err('relation')}>
-        <FieldLabel id="signer-relation-label">{t(`You are ${studentFirst}’s`, `${studentFirst} 학생과의 관계`)}</FieldLabel>
+        <FieldLabel id="signer-relation-label">{`You are ${studentFirst}’s`}</FieldLabel>
         <RadioGroup value={sign.relation} onValueChange={(v) => onSign({ relation: v as SignerRelation })} className="grid grid-cols-2 gap-2" aria-labelledby="signer-relation-label">
           {(Object.keys(RELATION_LABELS) as SignerRelation[]).map((r) => (
             <label key={r} htmlFor={`relation-${r}`} className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-3 text-sm font-medium text-foreground has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted/40" data-testid={`relation-${r}`}>
               <RadioGroupItem value={r} id={`relation-${r}`} />
-              {relationLabel(r, lang)}
+              {relationLabel(r)}
             </label>
           ))}
         </RadioGroup>
@@ -394,14 +386,14 @@ function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk
         <div className="flex items-center justify-between gap-2">
           <FieldLabel>{block.label}</FieldLabel>
           <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-            <LuEraser /> {t('Clear', '지우기')}
+            <LuEraser /> Clear
           </Button>
         </div>
-        <SignaturePad ref={pad} invalid={!!err('signature')} onChange={onInk} label={t(`${block.label}: draw it with your finger or mouse`, `${block.label}: 손가락이나 마우스로 그려 주세요`)} />
+        <SignaturePad ref={pad} invalid={!!err('signature')} onChange={onInk} label={`${block.label}: draw it with your finger or mouse`} />
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-          <span className="min-w-0">{t('Sign with your finger or mouse.', '손가락이나 마우스로 서명해 주세요.')}</span>
+          <span className="min-w-0">Sign with your finger or mouse.</span>
           <span className="shrink-0 font-medium whitespace-nowrap text-foreground" data-testid="contract-sign-date">
-            {lang === 'ko' ? `날짜: ${dateText(today, 'long', 'ko')}` : `Date: ${usDate(today)}`}
+            {`Date: ${usDate(today)}`}
           </span>
         </div>
         {err('signature') ? <FieldError>{err('signature')}</FieldError> : null}
@@ -411,9 +403,9 @@ function FamilySign({ block, doc, sign, onSign, errors, studentFirst, pad, onInk
         <Checkbox id="signer-agree" checked={sign.agree} className="mt-0.5" onCheckedChange={(v) => onSign({ agree: v === true })} data-testid="signer-agree" />
         <div className="space-y-1">
           <FieldLabel htmlFor="signer-agree" className="leading-snug font-medium">
-            {t('I agree to sign this contract electronically', '이 계약서의 전자 서명에 동의합니다')}
+            I agree to sign this contract electronically
           </FieldLabel>
-          <p className="text-xs text-muted-foreground">{t('My typed name and the signature I drew are my signature on it.', '입력한 이름과 직접 그린 서명을 이 계약서의 제 서명으로 인정합니다.')}</p>
+          <p className="text-xs text-muted-foreground">My typed name and the signature I drew are my signature on it.</p>
           {err('agree') ? <FieldError>{err('agree')}</FieldError> : null}
         </div>
       </Field>
@@ -432,15 +424,13 @@ export function TypedName({ name, className }: { name: string; className?: strin
 }
 
 function AcademySign({ label, signer, today }: { label: string; signer: ShownSigner | null; today: string }) {
-  const lang = useLang()
-  const t = useT()
-  const date = (key: string) => (lang === 'ko' ? dateText(key, 'long', 'ko') : usDate(key))
+  const date = (key: string) => usDate(key)
   return (
     <div className="grid gap-3 rounded-lg border border-dashed px-3 py-3 sm:grid-cols-[1fr_8rem] sm:items-end" data-testid="contract-academy-sign">
       <div className="min-w-0">
         {signer?.image ? (
           <div className="mb-1 rounded-md bg-white px-2 py-1">
-            <img src={signer.image} alt={t(`${signer.name}’s signature`, `${signer.name} 서명`)} className="h-12 w-auto max-w-full object-contain" />
+            <img src={signer.image} alt={`${signer.name}’s signature`} className="h-12 w-auto max-w-full object-contain" />
           </div>
         ) : signer ? (
           <TypedName name={signer.name} className="mb-1" />
@@ -448,12 +438,12 @@ function AcademySign({ label, signer, today }: { label: string; signer: ShownSig
         <div className="font-medium">{label}</div>
         <div className="text-xs text-muted-foreground">
           {signer
-            ? t(`Signed for the academy by ${[signer.name, signer.title].filter(Boolean).join(', ')}, as you sign`, `아카데미 서명: ${[signer.name, signer.title].filter(Boolean).join(', ')} (서명할 때 함께 들어가요)`)
-            : t('Signed by the academy', '아카데미가 서명해요')}
+            ? `Signed for the academy by ${[signer.name, signer.title].filter(Boolean).join(', ')}, as you sign`
+            : 'Signed by the academy'}
         </div>
       </div>
       <div className="text-xs text-muted-foreground sm:text-right">
-        {t('Date:', '날짜:')} {signer ? date(today) : '—'}
+        Date: {signer ? date(today) : '—'}
       </div>
     </div>
   )

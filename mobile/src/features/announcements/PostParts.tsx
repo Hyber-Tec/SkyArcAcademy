@@ -10,7 +10,6 @@ import { Card } from "@/components/Card";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
 import { Skeleton } from "@/components/Skeleton";
 import { T } from "@/components/Text";
-import { useLang, useT } from "@/lib/lang";
 import { reachable } from "@/lib/links";
 import { radius, space, useColors } from "@/theme";
 import { attachmentCategory, categoryText, isPicture } from "./format";
@@ -27,19 +26,17 @@ type Post = Announcement & { id: string };
  */
 export function PostCard({ post: a, meta, detail, onOpenPicture }: { post: Post; meta: string; detail?: string; onOpenPicture: (picture: PostPicture) => void }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const blocks = useMemo(() => htmlBlocks(a.contentHtml), [a.contentHtml]);
   return (
     <Card style={styles.post} testID="news-post">
       <View style={styles.chips}>
         {a.pinned ? (
           <Badge tone="warning" icon={<Pin size={11} color={colors.warning} />}>
-            {t("Pinned", "고정")}
+            Pinned
           </Badge>
         ) : null}
-        {a.archived ? <Badge tone="outline">{t("Archived", "보관됨")}</Badge> : null}
-        <Badge icon={<Tag size={11} color={colors.foreground} />}>{categoryText(a.category, lang)}</Badge>
+        {a.archived ? <Badge tone="outline">Archived</Badge> : null}
+        <Badge icon={<Tag size={11} color={colors.foreground} />}>{categoryText(a.category)}</Badge>
       </View>
       <T variant="title" accessibilityRole="header" style={styles.title} testID="news-post-title">
         {a.title}
@@ -58,15 +55,15 @@ export function PostCard({ post: a, meta, detail, onOpenPicture }: { post: Post;
   );
 }
 
-const FILE_KINDS: Record<FileCategory, { icon: LucideIcon; label: string; ko: string }> = {
-  pdf: { icon: FileText, label: "PDF", ko: "PDF" },
-  image: { icon: FileImage, label: "Picture", ko: "사진" },
-  document: { icon: FileText, label: "Document", ko: "문서" },
-  spreadsheet: { icon: FileSpreadsheet, label: "Spreadsheet", ko: "스프레드시트" },
-  presentation: { icon: Presentation, label: "Presentation", ko: "프레젠테이션" },
-  video: { icon: FilePlay, label: "Video", ko: "동영상" },
-  text: { icon: FileText, label: "Text", ko: "텍스트" },
-  other: { icon: FileIcon, label: "File", ko: "파일" },
+const FILE_KINDS: Record<FileCategory, { icon: LucideIcon; label: string; }> = {
+  pdf: { icon: FileText, label: "PDF" },
+  image: { icon: FileImage, label: "Picture" },
+  document: { icon: FileText, label: "Document" },
+  spreadsheet: { icon: FileSpreadsheet, label: "Spreadsheet" },
+  presentation: { icon: Presentation, label: "Presentation" },
+  video: { icon: FilePlay, label: "Video" },
+  text: { icon: FileText, label: "Text" },
+  other: { icon: FileIcon, label: "File" },
 };
 
 /**
@@ -75,15 +72,14 @@ const FILE_KINDS: Record<FileCategory, { icon: LucideIcon; label: string; ko: st
  */
 export function PostAttachments({ post: a, onOpen }: { post: Post; onOpen: (file: AnnouncementAttachment) => void }) {
   const colors = useColors();
-  const t = useT();
   const files = a.attachments ?? [];
   if (!files.length) return null;
   return (
-    <ListSection title={t(files.length === 1 ? "Attachment" : "Attachments", "첨부 파일")} testID="news-post-files">
+    <ListSection title={files.length === 1 ? "Attachment" : "Attachments"} testID="news-post-files">
       {files.map((f, i) => {
         if (isPicture(f)) return <AttachedPicture key={f.path || i} file={f} onPress={() => onOpen(f)} testID={`news-post-file-${i}`} />;
         const kind = FILE_KINDS[attachmentCategory(f)];
-        const kindLabel = t(kind.label, kind.ko);
+        const kindLabel = kind.label;
         const Icon = kind.icon;
         return (
           <ListRow
@@ -112,15 +108,14 @@ export function PostAttachments({ post: a, onOpen }: { post: Post; onOpen: (file
 /** An attached picture, shown in its own shape (at most 320 points tall), with its name and size; a tap opens it full screen. */
 function AttachedPicture({ file: f, divider = false, onPress, testID }: { file: AnnouncementAttachment; divider?: boolean; onPress: () => void; testID?: string }) {
   const colors = useColors();
-  const t = useT();
   const [ratio, setRatio] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="imagebutton"
-      accessibilityLabel={t(`Picture: ${f.name}${f.size ? `, ${formatBytes(f.size)}` : ""}`, `사진: ${f.name}${f.size ? `, ${formatBytes(f.size)}` : ""}`)}
-      accessibilityHint={t("Opens it full screen", "전체 화면으로 열어요")}
+      accessibilityLabel={`Picture: ${f.name}${f.size ? `, ${formatBytes(f.size)}` : ""}`}
+      accessibilityHint="Opens it full screen"
       style={({ pressed }) => [divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, pressed && { backgroundColor: colors.accent }]}
       testID={testID}
     >

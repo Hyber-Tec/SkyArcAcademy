@@ -1,5 +1,4 @@
-import { type NotificationType, notificationMeta } from "@shared/comms";
-import type { Lang } from "@shared/i18n";
+import { notificationMeta } from "@shared/comms";
 import { minutesOf } from "@shared/time";
 import {
   Bell,
@@ -30,7 +29,6 @@ import { StyleSheet, View } from "react-native";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
 import { clock } from "@/features/schedule/format";
-import { useLang } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 import type { InboxItem } from "./inbox";
 
@@ -68,34 +66,10 @@ const millis = (t: unknown) => (t as { toMillis?: () => number } | null)?.toMill
 /** "Class Canceled" → "Class canceled": the app's words are in sentence case. */
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
-/** Each kind of notification in Korean, for a parent reading Korean (`notificationMeta` names them in English). */
-const KIND_KO: Partial<Record<NotificationType, string>> = {
-  announcement: "아카데미 소식",
-  announcement_updated: "소식 수정",
-  session_created: "수업 추가",
-  session_canceled: "수업 취소",
-  session_restored: "수업 다시 열림",
-  session_deleted: "수업 삭제",
-  session_time_changed: "수업 시간 변경",
-  session_date_changed: "수업 날짜 변경",
-  session_no_show: "결석",
-  report_shared: "성장 리포트",
-  request_approved: "신청 승인",
-  request_rejected: "신청 거절",
-  request_offered: "다른 시간 제안",
-  request_accepted: "제안 수락",
-  request_asked_again: "다시 요청",
-  score_added: "새 점수",
-  contract_sent: "등록 계약서",
-  contract_signed: "계약서 서명",
-};
-
-/** What a notification says, in the reader's language: its Korean (written by Cloud Functions) for a parent reading Korean. */
-export function inboxText(n: Pick<InboxItem, "type" | "title" | "body" | "ko">, lang: Lang): { kind: string; title: string; body: string } {
-  const ko = lang === "ko";
-  const kind = (ko ? KIND_KO[n.type] : null) ?? sentence(notificationMeta(n.type).label);
-  const text = ko && n.ko?.title ? n.ko : { title: n.title, body: n.body };
-  return { kind, title: text.title || kind, body: text.body };
+/** What a notification says: its kind, title and body. */
+export function inboxText(n: Pick<InboxItem, "type" | "title" | "body">): { kind: string; title: string; body: string } {
+  const kind = sentence(notificationMeta(n.type).label);
+  return { kind, title: n.title || kind, body: n.body };
 }
 
 /**
@@ -128,16 +102,15 @@ export function InboxRow({
   testID?: string;
 }) {
   const colors = useColors();
-  const lang = useLang();
   const meta = notificationMeta(n.type);
   const Icon = ICONS[n.type] ?? Bell;
   const ms = millis(n.createdAt);
-  const time = ms === null ? (lang === "ko" ? "방금" : "Just now") : clock(minutesOf(ms, timezone), hour12, lang);
+  const time = ms === null ? "Just now" : clock(minutesOf(ms, timezone), hour12);
   const unread = !n.readAt;
-  const text = inboxText(n, lang);
-  const label = [unread ? (lang === "ko" ? "읽지 않음" : "Unread") : null, text.kind, text.title === text.kind ? null : text.title, text.body, time].filter(Boolean).join(", ");
+  const text = inboxText(n);
+  const label = [unread ? "Unread" : null, text.kind, text.title === text.kind ? null : text.title, text.body, time].filter(Boolean).join(", ");
   return (
-    <SwipeToDelete divider={divider} onPress={onOpen} onLongPress={onLongPress} onDelete={onDelete} accessibilityLabel={label} deleteLabel={lang === "ko" ? "삭제" : "Delete"} testID={testID}>
+    <SwipeToDelete divider={divider} onPress={onOpen} onLongPress={onLongPress} onDelete={onDelete} accessibilityLabel={label} deleteLabel="Delete" testID={testID}>
       <View style={styles.row}>
         <View>
           <View style={[styles.icon, { backgroundColor: `${meta.color}1f` }]}>

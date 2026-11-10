@@ -1,18 +1,15 @@
 import { type AnchorHTMLAttributes, type ReactNode, createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { LangContext, browserLang, storeLang, storedLang } from '@/lib/lang'
 import { PAGE_META, type Page, isSitePath } from '../paths'
-import { ACADEMY, type L, type Lang, TITLES, keepWhole } from './content'
+import { ACADEMY, TITLES, keepWhole } from './content'
 
 /**
- * The website's pages and languages. English is at `/programs`, Korean at `/ko/programs`; a news post at
- * `/news/{slug}`. Firebase Hosting serves each page's own HTML (built with its title and description, for search and
+ * The website's pages: `/programs` and the others, a news post at `/news/{slug}`. Firebase Hosting serves each page's own HTML (built with its title and description, for search and
  * link previews), and from there the site moves between its pages without reloading: a click on any link to one of
  * them is handled here, with a short cross-fade where the browser can. `?section=tuition` scrolls to a part of a page.
  * Links to the app (Log in, the privacy policy) load the app as usual.
  */
 export interface Route {
-  lang: Lang
   /** "news/match-day-ab12cd", "" for the homepage. */
   path: string
   segments: string[]
@@ -22,48 +19,22 @@ export interface Route {
 }
 
 export function parseLocation(pathname: string, search: string): Route {
-  let segments = pathname.split('/').filter(Boolean)
-  let lang: Lang = 'en'
-  if (segments[0] === 'ko') {
-    lang = 'ko'
-    segments = segments.slice(1)
-  }
+  const segments = pathname.split('/').filter(Boolean)
   const query = search.replace(/^\?/, '')
-  return { lang, path: segments.join('/'), segments, section: new URLSearchParams(query).get('section'), query }
+  return { path: segments.join('/'), segments, section: new URLSearchParams(query).get('section'), query }
 }
 
-export function hrefFor(path: string, lang: Lang): string {
-  const clean = path.replace(/^\/+/, '')
-  if (lang === 'ko') return `/ko/${clean}`
-  return `/${clean}`
-}
+export const hrefFor = (path: string): string => `/${path.replace(/^\/+/, '')}`
 
-/** Crawlers and page checkers read the page they asked for: never sent to another language. */
-const isBot = () => /bot|crawl|spider|slurp|lighthouse|headless/i.test(navigator.userAgent)
-
-/**
- * The page a visit opens on: the Korean one for an English address when the visitor chose Korean before (the switch,
- * here or in the portal: the same choice, 'skyarc:lang'), or chose nothing and their browser prefers Korean
- * (docs/DECISIONS.md §36). Never the other way, and never over a choice of English. The address becomes the Korean
- * page's in place, so Back doesn't return to the English one; the HTML, its canonical address and hreflang stay as built.
- */
-function firstRoute(): Route {
-  const route = parseLocation(location.pathname, location.search)
-  if (route.lang === 'en' && isSitePath(location.pathname) && !isBot() && (storedLang() ?? browserLang()) === 'ko') {
-    history.replaceState(history.state, '', hrefFor(route.path, 'ko') + location.search + location.hash)
-    return parseLocation(location.pathname, location.search)
-  }
-  return route
-}
+const firstRoute = (): Route => parseLocation(location.pathname, location.search)
 
 const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches
 
 interface SiteValue extends Route {
-  /** The text in the page's language. */
-  t: (x: L) => string
-  href: (path: string, lang?: Lang) => string
+  /** A text as the page shows it: what reads as one kept on one line (`keepWhole`). */
+  t: (x: string) => string
+  href: (path: string) => string
   go: (path: string) => void
-  setLang: (lang: Lang) => void
   /** A value from the address's query: `/trial?kind=two` → param('kind'). */
   param: (name: string) => string | null
 }
@@ -149,52 +120,26 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, [route])
 
   useEffect(() => {
-    document.documentElement.lang = route.lang
-    document.documentElement.classList.toggle('lang-ko', route.lang === 'ko')
-  }, [route.lang])
-
-  // Korean pages read best in Pretendard, loaded only for them.
-  useEffect(() => {
-    if (route.lang !== 'ko' || document.getElementById('font-ko')) return
-    const link = document.createElement('link')
-    link.id = 'font-ko'
-    link.rel = 'stylesheet'
-    link.href = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'
-    document.head.appendChild(link)
-  }, [route.lang])
-
-  useEffect(() => {
     const key = route.segments[0] ?? ''
     // A post's page names the post itself once it's read (News sets it).
     if (key === 'news' && route.segments[1]) return
     const meta = isSitePath(`/${route.path}`) ? PAGE_META[key as Page] : null
-    document.title = meta ? meta[route.lang].title : `${TITLES['404'][route.lang]} · ${ACADEMY.name}`
-  }, [route.lang, route.segments, route.path])
+    document.title = meta ? meta.title : `${TITLES['404']} · ${ACADEMY.name}`
+  }, [route.segments, route.path])
 
   const value = useMemo<SiteValue>(
     () => ({
       ...route,
-      t: (x) => keepWhole(x[route.lang]),
-      href: (path, lang = route.lang) => hrefFor(path, lang),
+      t: keepWhole,
+      href: hrefFor,
       go: (path) => {
-        window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(path, route.lang) }))
-      },
-      setLang: (lang) => {
-        // The visitor's choice, kept for their next visit and the portal's sign-in (web/src/lib/lang.ts).
-        storeLang(lang)
-        window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(route.path, lang) + (route.query ? `?${route.query}` : '') }))
+        window.dispatchEvent(new CustomEvent('site:navigate', { detail: hrefFor(path) }))
       },
       param: (name) => new URLSearchParams(route.query).get(name),
     }),
     [route],
   )
-  // The app's own parts on the site (its dialogs and sheets) speak the page's language too.
-  const appLang = useMemo(() => ({ lang: route.lang, chosen: storedLang(), setLang: value.setLang }), [route.lang, value.setLang])
-  return (
-    <Ctx.Provider value={value}>
-      <LangContext value={appLang}>{children}</LangContext>
-    </Ctx.Provider>
-  )
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
 export function useSite(): SiteValue {
@@ -203,7 +148,7 @@ export function useSite(): SiteValue {
   return v
 }
 
-/** A link to a page of the site, in the current language. */
+/** A link to a page of the site. */
 export function A({ to, children, ...rest }: { to: string; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
   const { href, path } = useSite()
   const target = to.replace(/^\/+/, '').split('?')[0]

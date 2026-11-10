@@ -118,7 +118,8 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     anything else that moves against the scroll, show Goo the options with pictures, and change it once Goo picks.
   - *Options shown 2026-11-10:* confirmed: the marker climbs as the page goes down, and nothing else moves against the
     scroll. A, flip the ladder so the marker moves down with the page (recommended); B, the phones' horizontal bar on
-    computers too; C, keep the ladder with a marker that jumps instead of sliding. Waiting for Goo's pick.
+    computers too; C, keep the ladder with a marker that jumps instead of sliding.
+  - *Goo, 2026-11-10:* **A.**
 - ✅ **B1. A welcome tour in the phone app** after the first sign-in: per role (parent, student, coach, admin), short,
   skip and replay. (#149; phones get it with the next app update)
   - *Plan:* **new work, phone only.** The first step chooses the language for parents (English or Korean, which also
@@ -127,6 +128,11 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     cancelling before the academy's cutoff, asking for a makeup, scores and comparing them, reports, notifications). The
     rules come from the academy's settings, never written in. Skip at any step; "Take the tour" in More replays it.
     Kept on the phone (per account), so no server change.
+  - *Goo, 2026-11-10:* **more detail.** "Right now what we have is just really bare minimum. At least it should show and
+    tell them most of the stuff we have, like 'hey, click this one (button)', and then 'from here you can see …'." The
+    language step goes (English only, W1).
+- [ ] **B1b. A detailed tour:** each step points at the real button on the screen ("tap this"), opens what it opens, and
+  says what's there, through most of each role's app.
 
 ## 4. Research and propose (no code until Goo decides)
 
@@ -139,21 +145,39 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     athletes come from the team list; names fit the existing matcher, and each shooter keeps a competitor number.
     Phase 1: paste a link → preview → save (one competition per position); phase 2: a nightly check of the hosts. Store
     the data, not a PDF. Our own (free) Scopos application key first. Missing from the app: the Oct 31 Precision
-    match (8 results) and two results from Sep 26. Waiting for Goo's decision.
+    match (8 results) and two results from Sep 26.
+  - *Goo, 2026-11-10:* **build it, automatic:** the academy has no page of its own on the site and shouldn't paste links
+    after each competition, whatever its format: find every match the academy's athletes shot, anywhere on the site.
+    The academy will pay for Scopos's key if needed; Goo wants the estimated price first. "Make the technology first,
+    then consider the rules later" (Goo takes the responsibility).
 - [ ] **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
   - *Proposed 2026-11-10:* the export is a small database: sessions, shot times and aiming times read cleanly and match
     the screen, but the trace itself is compressed and deliberately scrambled by SCATT, and no scores, impact points or
     calibration are stored. Don't build on it yet: ask the coaches for SCATT's PDF printout and more samples, and SCATT
-    for the format or an export (and permission). Meanwhile a screen recording of a replay can go in the Drive. Waiting
-    for Goo's decision.
+    for the format or an export (and permission). Meanwhile a screen recording of a replay can go in the Drive.
+  - *Goo, 2026-11-10:* **try decoding it in-house**, to see whether everything they want can come out (not for the live
+    app yet; the coaches said SCATT can't export a PDF, only this file). What they want is the trace as a video or an
+    animation on the website.
 - [ ] **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
   - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is
     found on the circle its score allows, so two shots with the same score in a series can have their places swapped.
     SIUS and the results site are certain. Proposal: mark those shots ("≈") with a note, worked out from the saved
-    scores, old results included. Waiting for Goo's decision.
+    scores, old results included.
+  - *Goo, 2026-11-10:* **yes.**
+
+## 4b. The academy's website review (2026-11-10)
+
+The owner's first notes after reading the website page by page (more will come in Google Drive), sent by Goo:
+
+- ✅ **W1. English only:** "Please remove all Korean-language content … an English-only website is appropriate for our
+  audience", including Korean in photos. Goo: "no Korean language in this project. Please remove all." (§42, #151;
+  phones get it with the next app update)
+- [ ] **W2. The coaches' backgrounds, worded exactly:** "Every phrase matters, and their experience and qualifications
+  must be presented accurately, without ambiguity. For the main page, please use the designation 'Elite Military Rifle
+  Marksman.'"
 
 ## 5. On hold
 

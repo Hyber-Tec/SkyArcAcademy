@@ -4,7 +4,6 @@ import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/fire
 import { isDemoAcademy } from '@shared/academy'
 import { isReservedEmail } from '@shared/brand'
 import { reportEmail, reportSignInUrl } from '@shared/email/report'
-import { dateText } from '@shared/i18n'
 import { type NoticePrefs, noticeOn } from '@shared/notices'
 import { COL, ROOT } from '@shared/paths'
 import type { ProgressReportDoc } from '@shared/reports/types'
@@ -52,10 +51,6 @@ export const onProgressReportWritten = onDocumentUpdated({ document: REPORT, sec
         title: r.member.role === 'student' ? 'Your progress report is ready' : `${first}’s progress report is ready`,
         body: `${after.period.label} progress report${branch?.name ? ` from ${branch.name}` : ''}.`,
         // A parent reading Korean (docs/DECISIONS.md §36).
-        ko: {
-          title: `${first} 학생 성장 리포트가 나왔어요`,
-          body: `${dateText(after.startDate, 'monthDay', 'ko')}~${dateText(after.endDate, 'monthDay', 'ko')} 리포트예요. 앱에서 확인해 보세요.`,
-        },
         link: `report/${reportId}`,
         refs: { reportId },
       })),

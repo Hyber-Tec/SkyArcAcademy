@@ -55,7 +55,7 @@ export async function allFamilies(branchId: string): Promise<Person[]> {
 /** One notice to each person whose switch for it is on (and who isn't `except`). `link` is per person, by role. */
 export function noticesFor(
   people: readonly Person[],
-  notice: { type: NotificationType; title: string; body: string; ko?: Outgoing['ko'] },
+  notice: { type: NotificationType; title: string; body: string },
   link: (p: Person) => string,
   refs: Outgoing['refs'],
   except: string | null = null,
@@ -63,7 +63,7 @@ export function noticesFor(
   const key = noticeKeyOf(notice.type)
   return people
     .filter((p) => p.key !== except && noticeOn(p.prefs, key))
-    .map((p) => ({ recipientKey: p.key, type: notice.type, title: notice.title, body: notice.body, ...(notice.ko ? { ko: notice.ko } : {}), link: link(p), refs }))
+    .map((p) => ({ recipientKey: p.key, type: notice.type, title: notice.title, body: notice.body, link: link(p), refs }))
 }
 
 /** A family member's Classes page on a date (`parent/classes?date=…`, `student/…`). */

@@ -4,7 +4,6 @@ import type { ReplayShot } from '@shared/shooting/replay'
 import { targetViewMm } from '@shared/shooting/target'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { DART_PX, placedShots, seriesText, shotOfText, shotOffset } from './playback'
 import { LAST_SHOT_FILL, MiniTarget, NewestShot, ShotMark, TargetFace } from './TargetPlot'
@@ -37,7 +36,6 @@ export function SeriesDarts({
   /** Whole-number scores (a paper card's). */
   whole?: boolean
 }) {
-  const t = useT()
   return (
     <ol className="grid max-w-[22rem] grid-cols-5 gap-2 @[37rem]:max-w-[44.5rem] @[37rem]:grid-cols-10">
       {shots.map((s) => {
@@ -47,7 +45,7 @@ export function SeriesDarts({
             <button
               type="button"
               onClick={() => onOpen(s.n)}
-              aria-label={t(`Shot ${s.n}: ${scoreText(s.value, whole)}${s.point ? '' : ', no place on the target'}. Open it`, `${s.n}번째 발: ${scoreText(s.value, whole)}${s.point ? '' : ', 표적에 자리 없음'}. 열기`)}
+              aria-label={`Shot ${s.n}: ${scoreText(s.value, whole)}${s.point ? '' : ', no place on the target'}. Open it`}
               aria-current={on ? 'step' : undefined}
               className={cn(
                 'flex w-full flex-col items-center gap-1.5 rounded-xl p-1 pb-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
@@ -91,8 +89,6 @@ export function ShotDialog({
   whole?: boolean
 }) {
   // While the dialog closes, it keeps showing the last shot.
-  const lang = useLang()
-  const t = useT()
   const [shown, setShown] = useState<number | null>(shot)
   if (shot !== null && shot !== shown) setShown(shot)
   const n = shot ?? shown
@@ -103,7 +99,7 @@ export function ShotDialog({
     placed.map((s) => s.point),
     BIG_PX,
   )
-  const offset = current?.point ? shotOffset(current.point, lang) : null
+  const offset = current?.point ? shotOffset(current.point) : null
   const go = (n: number) => {
     if (n >= 1 && n <= count) onShot(n)
   }
@@ -117,7 +113,7 @@ export function ShotDialog({
       go(current.n + 1)
     }
   }
-  const title = current ? [current.series !== null ? seriesText(current.series, lang) : null, shotOfText(current.n, count, lang)].filter(Boolean).join(' · ') : ''
+  const title = current ? [current.series !== null ? seriesText(current.series) : null, shotOfText(current.n, count)].filter(Boolean).join(' · ') : ''
 
   return (
     <Dialog open={shot !== null && current !== null} onOpenChange={(o) => (o ? undefined : onShot(null))}>
@@ -129,7 +125,7 @@ export function ShotDialog({
               <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
             <div className="mx-auto w-full max-w-[328px] rounded-xl bg-white p-1">
-              <TargetFace view={view} size={BIG_PX} label={t(`Shot ${current.n}: ${scoreText(current.value, whole)}`, `${current.n}번째 발: ${scoreText(current.value, whole)}`)} className="block h-auto w-full">
+              <TargetFace view={view} size={BIG_PX} label={`Shot ${current.n}: ${scoreText(current.value, whole)}`} className="block h-auto w-full">
                 {placed
                   .filter((s) => s.n !== current.n)
                   .map((s) => (
@@ -140,30 +136,30 @@ export function ShotDialog({
             </div>
             <dl className="grid grid-cols-3 divide-x rounded-xl border text-center" aria-live="polite">
               <div className="px-2 py-2.5">
-                <dt className="text-xs text-muted-foreground">{t('Score', '점수')}</dt>
+                <dt className="text-xs text-muted-foreground">Score</dt>
                 <dd className="mt-0.5 text-2xl leading-tight font-semibold tabular-nums">{scoreText(current.value, whole)}</dd>
               </div>
               <div className="px-2 py-2.5">
-                <dt className="text-xs text-muted-foreground">{t('From the centre', '중심에서')}</dt>
+                <dt className="text-xs text-muted-foreground">From the centre</dt>
                 <dd className="mt-1.5 text-sm font-medium tabular-nums">{offset ? `${offset.mm} mm` : '—'}</dd>
               </div>
               <div className="px-2 py-2.5">
-                <dt className="text-xs text-muted-foreground">{t('Direction', '방향')}</dt>
+                <dt className="text-xs text-muted-foreground">Direction</dt>
                 <dd className="mt-1.5 text-sm font-medium first-letter:uppercase">{offset ? offset.words : '—'}</dd>
               </div>
             </dl>
             {current.point ? null : (
               <p className="-mt-1 text-center text-xs text-muted-foreground">
-                {t('The result gave no direction for this shot, so it has no place on the target.', '이 발은 방향 정보가 없어서 표적에 자리가 없어요.')}
+                The result gave no direction for this shot, so it has no place on the target.
               </p>
             )}
             <DialogFooter className="flex-row items-center justify-between sm:justify-between">
               <Button variant="outline" onClick={() => go(current.n - 1)} disabled={current.n <= 1}>
-                <LuChevronLeft /> {t('Previous', '이전')}
+                <LuChevronLeft /> Previous
               </Button>
-              <span className="text-xs text-muted-foreground tabular-nums">{t(`${current.n} of ${count}`, `${current.n} / ${count}`)}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{`${current.n} of ${count}`}</span>
               <Button variant="outline" onClick={() => go(current.n + 1)} disabled={current.n >= count}>
-                {t('Next', '다음')} <LuChevronRight />
+                Next <LuChevronRight />
               </Button>
             </DialogFooter>
           </>

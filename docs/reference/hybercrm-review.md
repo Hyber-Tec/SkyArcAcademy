@@ -245,16 +245,16 @@ change with it. (Built as plain paths, without a `portalPath()` helper: `DECISIO
 
 ### What changes and where
 
-| HyberCRM | Sky Arc (UI) | Korean (to confirm) | Persisted values and URLs | Internal code |
-|---|---|---|---|---|
-| Tutor / Teacher | **Coach** | 코치 | role `tutor` → **`coach`**; `/tutor/*` → `/coach/*`; `schedule.tutorOrder` → `coachOrder` | `tutorId` and similar stay where kept; new code says `coach` |
-| Branch / center | **Academy** | 아카데미 | — (internal `branches/skyarc` stays) | `branchId` stays |
-| Session | **Class** | 수업 | — | the `sessions` collection stays; one document = one student's class |
-| Subject | — (**Position** on reports) | 입사 / 슬사 / 복사 | `position: 'standing' \| 'kneeling' \| 'prone'` | subjects removed |
-| Progress report | **Progress Report** (SIUS or paper) | 성적 기록 / 결과 | `source: 'sius' \| 'paper'` | `progressReports` collection kept, schema v3 |
-| Makeup | **Makeup (MU)** | 보강 | `kind: 'makeup'` | — |
-| Trial | **Trial class** | 체험 수업 | `kind: 'trial'` | — |
-| Level (new, from the sheets) | Discovery … Precision | (keep English names?) | `level` | — |
+| HyberCRM | Sky Arc (UI) | Persisted values and URLs | Internal code |
+|---|---|---|---|
+| Tutor / Teacher | **Coach** | role `tutor` → **`coach`**; `/tutor/*` → `/coach/*`; `schedule.tutorOrder` → `coachOrder` | `tutorId` and similar stay where kept; new code says `coach` |
+| Branch / center | **Academy** | — (internal `branches/skyarc` stays) | `branchId` stays |
+| Session | **Class** | — | the `sessions` collection stays; one document = one student's class |
+| Subject | — (**Position** on reports) | `position: 'standing' \| 'kneeling' \| 'prone'` | subjects removed |
+| Progress report | **Progress Report** (SIUS or paper) | `source: 'sius' \| 'paper'` | `progressReports` collection kept, schema v3 |
+| Makeup | **Makeup (MU)** | `kind: 'makeup'` | — |
+| Trial | **Trial class** | `kind: 'trial'` | — |
+| Level (new, from the sheets) | Discovery … Precision | `level` | — |
 
 ### Rules for the rename
 
@@ -607,8 +607,7 @@ and money formatting, and English text written into inbox items by the server.
 
 - `shared/src/i18n/{en,ko}.ts`: `en` is the source; `ko` must `satisfy` the same shape, so a missing or extra key
   fails the typecheck.
-- `shared/src/i18n/format.ts` passes `ko-KR` to the existing time formatters (they already take a locale), so
-  times read "오후 4:30" in Korean.
+- `shared/src/i18n/format.ts` passes the language's locale to the existing time formatters (they already take one).
 - `web/src/i18n/LanguageProvider.tsx` with `useT()` and `{name}` interpolation; it sets `<html lang>` and Korean
   line breaking (`word-break: keep-all`).
 - The choice is stored under `skyarc.lang` (the homepage already uses it) and, once signed in, on the member

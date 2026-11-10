@@ -67,7 +67,7 @@ SERVICES THE APP USES
 Google Firebase (sign-in, database, file storage, server functions) and Google Sign-In. No payment or advertising services. Progress reports' text can be drafted on our server by an AI service, then checked by the academy's staff before families see it.
 
 TESTED ON
-iPhone 15 with iOS 27.0.1. The app is offered in the United States only and works the same for everyone. Parents can read it in Korean (Language · 언어); staff screens are in English.
+iPhone 15 with iOS 27.0.1. The app is offered in the United States only, works the same for everyone, and is in English.
 ```
 
 ## If Apple answers with guideline 4.8

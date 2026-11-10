@@ -5,7 +5,6 @@ import { type ContractValues, SIGN_KEYS, checkContractSigning, missingParts } fr
 import type { ContractSignRequest, ShownSigner } from '@shared/contracts/types'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { useLang, useT } from '@/lib/lang'
 import { ContractView, type SignState } from './ContractView'
 import type { SignaturePadHandle } from './SignaturePad'
 
@@ -52,8 +51,6 @@ export function ContractSigning({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const lang = useLang()
-  const t = useT()
   const pad = useRef<SignaturePadHandle>(null)
   const drop = useCallback((key: string) => setErrors((e) => (e[key] ? Object.fromEntries(Object.entries(e).filter(([k]) => k !== key)) : e)), [])
 
@@ -69,10 +66,10 @@ export function ContractSigning({
     e.preventDefault()
     setProblem(null)
     const request: ContractSignRequest = { values, name: sign.name, relation: sign.relation, signature: pad.current?.toPng() ?? '', agree: sign.agree }
-    const checked = checkContractSigning(doc, request, lang)
+    const checked = checkContractSigning(doc, request)
     if (!checked.ok) {
       setErrors(checked.errors)
-      const first = missingParts(doc, checked.errors, lang)[0]
+      const first = missingParts(doc, checked.errors)[0]
       if (first) goTo(first.id)
       return
     }
@@ -80,8 +77,7 @@ export function ContractSigning({
     setBusy(true)
     try {
       const { values: clean, name, relation, signature } = checked.value
-      // The language they read it in: the server's messages, and the Korean in the signed PDF (docs/DECISIONS.md §36).
-      const outcome = await onSign({ values: clean, name, relation, signature, agree: true, lang })
+      const outcome = await onSign({ values: clean, name, relation, signature, agree: true })
       if (outcome?.errors) setErrors(outcome.errors)
       if (outcome?.problem) setProblem(outcome.problem)
     } finally {
@@ -89,7 +85,7 @@ export function ContractSigning({
     }
   }
 
-  const missing = missingParts(doc, errors, lang)
+  const missing = missingParts(doc, errors)
   return (
     <form onSubmit={(e) => void submit(e)} className="space-y-5" noValidate data-testid="contract-sign">
       <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
@@ -123,7 +119,7 @@ export function ContractSigning({
         {missing.length ? (
           <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm" data-testid="contract-missing" role="alert">
             <p className="flex items-center gap-2 font-medium text-destructive">
-              <LuCircleAlert className="size-4 shrink-0" aria-hidden /> {t('Still to fill in', '아직 채우지 않은 항목')}
+              <LuCircleAlert className="size-4 shrink-0" aria-hidden /> Still to fill in
             </p>
             <ul className="mt-2 space-y-1">
               {missing.map((m) => (
@@ -138,7 +134,7 @@ export function ContractSigning({
         ) : null}
         {problem ? <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{problem}</p> : null}
         <Button type="submit" size="lg" className="w-full" disabled={busy} data-testid="sign-contract">
-          {busy ? <Spinner /> : null} {signLabel ?? t('Sign the contract', '계약서에 서명하기')}
+          {busy ? <Spinner /> : null} {signLabel ?? 'Sign the contract'}
         </Button>
         <p className="text-xs text-muted-foreground">{note}</p>
       </div>

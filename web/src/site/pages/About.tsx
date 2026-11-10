@@ -6,7 +6,7 @@ import { Reveal } from '@/site/kit/motion'
 import { PlacePhoto } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
 import { BookButton, Container, SectionHead } from '../components/bits'
-import { CoachPortrait, FocusChips, PageHero, VisitUs, crmLang, useAnyPortrait } from '../components/blocks'
+import { CoachPortrait, FocusChips, PageHero, VisitUs, useAnyPortrait } from '../components/blocks'
 
 const VALUE_ICONS = [LuShieldCheck, LuTarget, LuSprout, LuUsers]
 
@@ -30,7 +30,7 @@ function Mission() {
           <SectionHead kicker={t(ABOUT.mission.eyebrow)} title={<span id="mission-title">{t(ABOUT.mission.title)}</span>} />
           <div className="mt-6 space-y-5">
             {ABOUT.mission.paragraphs.map((p, i) => (
-              <Reveal key={p.en} delay={0.05 + i * 0.05}>
+              <Reveal key={p} delay={0.05 + i * 0.05}>
                 <p className={cn('text-[16.5px] leading-[1.75] text-pretty', i === 0 ? 'text-ink' : 'text-stone')}>{t(p)}</p>
               </Reveal>
             ))}
@@ -80,7 +80,7 @@ function Values() {
           {ABOUT.values.map((v, i) => {
             const Icon = VALUE_ICONS[i]
             return (
-              <Reveal key={v.title.en} delay={i * 0.06} className="h-full">
+              <Reveal key={v.title} delay={i * 0.06} className="h-full">
                 <article className="flex h-full flex-col rounded-[26px] border border-line bg-white p-6 shadow-soft sm:p-7">
                   <div className="flex items-center justify-between">
                     <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-warm">
@@ -98,7 +98,7 @@ function Values() {
         <Reveal className="mt-6 grid gap-x-4 rounded-[22px] border border-line bg-warm sm:grid-cols-2 lg:grid-cols-4">
           {ABOUT.principles.map((p, i) => (
             <div
-              key={p.title.en}
+              key={p.title}
               className={cn(
                 'relative py-4 pr-5 pl-6 sm:pl-7',
                 // Dividers: between the rows on phones, and in the middle of the gaps between columns.
@@ -131,7 +131,7 @@ function Approach() {
           {ABOUT.approach.items.map((a, i) => {
             const Icon = icons[i]
             return (
-              <li key={a.title.en}>
+              <li key={a.title}>
                 <Reveal delay={i * 0.08} className="flex gap-5 rounded-[24px] border border-white/10 bg-white/[0.04] p-6">
                   <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
                     <Icon className="size-5" aria-hidden="true" />
@@ -159,7 +159,7 @@ function Promise() {
         <SectionHead kicker={t(ABOUT.promise.eyebrow)} title={<span id="promise-title">{t(ABOUT.promise.title)}</span>} />
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {ABOUT.promise.items.map((p, i) => (
-            <Reveal key={p.title.en} delay={i * 0.07} className="h-full">
+            <Reveal key={p.title} delay={i * 0.07} className="h-full">
               <article className="h-full rounded-[26px] bg-warm p-7">
                 <span className="inline-flex size-9 items-center justify-center rounded-full bg-ink text-[14px] font-semibold text-white">{i + 1}</span>
                 <h3 className="mt-5 text-[21px] font-semibold tracking-tight text-ink">{t(p.title)}</h3>
@@ -196,7 +196,7 @@ function Team() {
             )
             return (
               <Reveal key={p.id} delay={(i % 2) * 0.07} className="h-full">
-                <article className="h-full rounded-[28px] bg-white p-4 shadow-soft sm:p-5" lang={crmLang}>
+                <article className="h-full rounded-[28px] bg-white p-4 shadow-soft sm:p-5">
                   <div className="flex items-start gap-4 sm:gap-6">
                     <CoachPortrait person={p} compact initials={framed} className="aspect-[4/5] w-28 shrink-0 rounded-[20px] sm:w-44" />
                     <div className="min-w-0 flex-1 pt-1">

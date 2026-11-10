@@ -11,7 +11,6 @@ import { GoogleMark } from "@/components/GoogleMark";
 import { T } from "@/components/Text";
 import { appleProblem } from "@/lib/appleSignIn";
 import { authErrorText, passwordProblemText } from "@/lib/authText";
-import { useLang, useT } from "@/lib/lang";
 import { googleSignInConfigured } from "@/lib/googleSignIn";
 import { useAuth } from "@/state/AuthProvider";
 import { space } from "@/theme";
@@ -23,8 +22,6 @@ import { space } from "@/theme";
  */
 export default function CreateAccountScreen() {
   const { createAccount, signInWithGoogle, signInWithApple, appleAvailable } = useAuth();
-  const t = useT();
-  const lang = useLang();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,7 +37,7 @@ export default function CreateAccountScreen() {
     try {
       await (which === "google" ? signInWithGoogle() : signInWithApple());
     } catch (e) {
-      setError((which === "apple" ? appleProblem(e, lang) : null) ?? authErrorText((e as { code?: string }).code, which === "google" ? "google" : "sign-up", lang));
+      setError((which === "apple" ? appleProblem(e) : null) ?? authErrorText((e as { code?: string }).code, which === "google" ? "google" : "sign-up"));
     } finally {
       setBusy(null);
     }
@@ -48,15 +45,15 @@ export default function CreateAccountScreen() {
 
   async function submit() {
     setError(null);
-    if (!name.trim()) return setError(t("Enter your full name.", "이름을 입력해 주세요."));
-    if (!looksLikeEmail(email)) return setError(authErrorText("invalid-email", "sign-up", lang));
-    const problem = passwordProblemText(password, email, lang);
+    if (!name.trim()) return setError("Enter your full name.");
+    if (!looksLikeEmail(email)) return setError(authErrorText("invalid-email", "sign-up"));
+    const problem = passwordProblemText(password, email);
     if (problem) return setError(problem);
     setBusy("password");
     try {
       await createAccount(name, email, password);
     } catch (e) {
-      setError(authErrorText((e as { code?: string }).code, "sign-up", lang));
+      setError(authErrorText((e as { code?: string }).code, "sign-up"));
       setBusy(null);
     }
   }
@@ -64,19 +61,19 @@ export default function CreateAccountScreen() {
   return (
     <CenteredCard testID="create-account-screen">
       <AuthHeader
-        title={t("Create your account", "계정 만들기")}
-        subtitle={t("Use the email you gave the academy: that’s how the app finds your child.", "아카데미에 등록된 이메일로 만들면 자녀 정보가 자동으로 연결돼요.")}
+        title="Create your account"
+        subtitle="Use the email you gave the academy: that’s how the app finds your child."
       />
       {googleSignInConfigured && (
         <Button variant="outline" size="lg" icon={<GoogleMark />} onPress={() => void withProvider("google")} busy={busy === "google"} disabled={busy !== null} testID="google-create">
-          {t("Continue with Google", "Google로 계속하기")}
+          Continue with Google
         </Button>
       )}
       {appleAvailable && <AppleButton onPress={() => void withProvider("apple")} busy={busy === "apple"} disabled={busy !== null} testID="apple-create" />}
-      {(googleSignInConfigured || appleAvailable) && <OrDivider label={t("or make a password", "또는 비밀번호로 만들기")} />}
+      {(googleSignInConfigured || appleAvailable) && <OrDivider label="or make a password" />}
       <View style={styles.form}>
         <Field
-          label={t("Full name", "이름")}
+          label="Full name"
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -88,7 +85,7 @@ export default function CreateAccountScreen() {
         />
         <Field
           ref={emailRef}
-          label={t("Email", "이메일")}
+          label="Email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -104,28 +101,28 @@ export default function CreateAccountScreen() {
         <View>
           <PasswordField
             ref={passwordRef}
-            label={t("Password", "비밀번호")}
+            label="Password"
             value={password}
             onChangeText={setPassword}
             textContentType="newPassword"
             autoComplete="new-password"
             returnKeyType="go"
             onSubmitEditing={() => void submit()}
-            placeholder={t("At least 8 characters", "8자 이상")}
+            placeholder="At least 8 characters"
             testID="create-password"
           />
           <StrengthMeter password={password} />
         </View>
         {error ? <ErrorBox>{error}</ErrorBox> : null}
         <Button size="lg" onPress={() => void submit()} busy={busy === "password"} disabled={busy !== null} testID="create-submit">
-          {t("Create account", "계정 만들기")}
+          Create account
         </Button>
         <T variant="small" tone="muted" style={styles.center}>
-          {t("We’ll email you a link to confirm the address first.", "먼저 이메일 주소를 확인하는 링크를 보내 드려요.")}
+          We’ll email you a link to confirm the address first.
         </T>
       </View>
       <Button variant="link" onPress={back} testID="create-back">
-        {t("I have an account: sign in", "이미 계정이 있나요? 로그인")}
+        I have an account: sign in
       </Button>
       <HelpLinks />
     </CenteredCard>

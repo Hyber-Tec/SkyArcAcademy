@@ -5,40 +5,13 @@ import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { seemsSignedIn } from '@/lib/signedInHint'
 import { cn } from '@/lib/utils'
-import { ACADEMY, type L, LEVELS, type Lang, PROGRAMS, UI } from '@/site/kit/content'
+import { ACADEMY, LEVELS, PROGRAMS, UI } from '@/site/kit/content'
 import { usePlacePhoto, useSiteData } from '@/site/data'
 import { Photo } from '@/site/kit/Photo'
 import { A, useIsPage, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
 import { BookButton, Container } from './bits'
-
-/** The language switch: "EN | 한국어", the page stays the same. */
-export function LangSwitch({ tone = 'ink', className }: { tone?: 'ink' | 'light'; className?: string }) {
-  const { t, lang, setLang } = useSite()
-  const item = (l: Lang, label: string) => (
-    <button
-      type="button"
-      onClick={() => setLang(l)}
-      aria-pressed={lang === l}
-      lang={l}
-      className={cn(
-        'inline-flex min-h-9 items-center rounded-md px-1.5 transition focus-visible:ring-2 focus-visible:outline-none',
-        tone === 'light' ? 'focus-visible:ring-white/50' : 'focus-visible:ring-ink/30',
-        lang === l ? (tone === 'light' ? 'font-semibold text-white' : 'font-semibold text-ink') : tone === 'light' ? 'text-white/55 hover:text-white' : 'text-stone hover:text-ink',
-      )}
-    >
-      {label}
-    </button>
-  )
-  return (
-    <div role="group" aria-label={t(UI.language)} className={cn('inline-flex items-center', className)}>
-      {item('en', 'EN')}
-      <span className={cn('mx-0.5 h-3.5 w-px', tone === 'light' ? 'bg-white/25' : 'bg-ink/20')} aria-hidden="true" />
-      {item('ko', '한국어')}
-    </div>
-  )
-}
 
 const navLink =
   'inline-flex h-10 items-center rounded-full px-3.5 text-[15px] font-medium text-ink/80 transition hover:bg-warm hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none aria-[current=page]:text-ink aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-3.5 aria-[current=page]:after:-bottom-[15px] aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-ink relative'
@@ -155,7 +128,7 @@ const LINKS = [
  * A page in the menu, underlined on its own page. The menu's link sets `aria-current` from `active`, over the one the
  * link works out itself, so it's given here.
  */
-function MenuLink({ to, label }: { to: string; label: L }) {
+function MenuLink({ to, label }: { to: string; label: string }) {
   const { t } = useSite()
   return (
     <NavigationMenu.Item>
@@ -230,10 +203,6 @@ function MobileMenu() {
               <LuChevronRight className="size-4 text-stone" aria-hidden="true" />
             </a>
           </div>
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-warm px-4 py-2">
-            <span className="text-[14px] text-stone">{t(UI.language)}</span>
-            <LangSwitch className="text-[15px]" />
-          </div>
           <div className="mt-6 space-y-2 px-3 text-[14px] text-stone">
             <p className="flex items-start gap-2">
               <LuMapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -298,8 +267,6 @@ export function Header() {
             <span className="truncate">{t(T.utility)}</span>
           </p>
           <div className="flex shrink-0 items-center gap-3">
-            <LangSwitch tone="light" />
-            <span className="h-4 w-px bg-white/20" aria-hidden="true" />
             <A to="portal" className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-1.5 font-medium text-white/85 transition hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none">
               <LuUserRound className="size-3.5" aria-hidden="true" />
               {t(UI.portal)}

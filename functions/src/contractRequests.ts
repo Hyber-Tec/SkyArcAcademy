@@ -68,7 +68,6 @@ export const requestContract = onCall({ timeoutSeconds: 60, ...LIGHT }, async (r
       parentName: r.parentName,
       email: r.email,
       phone: r.phone,
-      lang: r.lang,
       status: 'waiting',
       createdAt: null,
       matchedStudentId: match?.id ?? null,

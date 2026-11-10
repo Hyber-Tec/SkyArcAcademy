@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/Skeleton";
 import { recordReportView, useReport } from "@/features/family/data";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { ReportBody } from "@/features/reports/ReportBody";
-import { useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, useColors } from "@/theme";
 
@@ -23,7 +22,6 @@ export default function FamilyReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { branchId, actor, role, name } = useBranch();
   const colors = useColors();
-  const t = useT();
   const family = useFamily();
   const report = useReport(id ?? null);
   // Only the family's own students' reports (a copy this phone kept from an earlier sign-in never shows).
@@ -48,11 +46,11 @@ export default function FamilyReportScreen() {
       <Screen typing={false} testID="report-screen">
         <EmptyState
           icon={<FileX2 size={26} color={colors.mutedForeground} />}
-          title={t("Report not available", "리포트를 볼 수 없어요")}
-          text={t(`It may have been taken back to be changed. Ask ${name} if you were expecting it.`, "아카데미가 고치려고 잠시 내렸을 수 있어요. 기다리던 리포트라면 아카데미에 문의해 주세요.")}
+          title="Report not available"
+          text={`It may have been taken back to be changed. Ask ${name} if you were expecting it.`}
           action={
             <Button variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/reports"))} testID="report-back">
-              {t("Back to reports", "리포트로 돌아가기")}
+              Back to reports
             </Button>
           }
         />

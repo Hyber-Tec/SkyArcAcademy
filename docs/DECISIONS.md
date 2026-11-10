@@ -1190,11 +1190,13 @@ even the testflight too", with something made up in the demo to try it.
 
 ## 36. Korean for parents (Goo, 2026-11-05)
 
+*Replaced by §42 (2026-11-10): the website, the portal, the phone app and everything else are English only.*
+
 Goo, once the contract was live: "let's make the Korean version … only when parents see it: the parent portal, the
 parent app, the landing page … the contract too … you're always perfect in English, but your Korean feels a bit
 unnatural … research things like a Claude skill that actually help … other languages, not now … and the build too."
 
-- **Who reads Korean:** a parent whose phone or browser is set to Korean, or who chooses it: 한국어 / English in Profile
+- **Who reads Korean:** a parent whose phone or browser is set to Korean, or who chooses it: a Korean / English switch in Profile
   (website) and More (phone), and on the pages before signing in and a contract's link, remembered on that browser or
   phone (the public website's switch carries into the portal's). Students and staff read English, whatever their phone
   says. (Goo's pick of three; the others: every parent in Korean, or the office choosing per family.)
@@ -1210,11 +1212,11 @@ unnatural … research things like a Claude skill that actually help … other l
   the live academy gets it with `scripts/contract.ts --ko-file` once they approve. Until then a parent reading Korean
   sees the English contract inside Korean screens.
 - **Korean that doesn't read as a translation:** `.claude/skills/korean-ux-writing`, a skill for Claude Code built from
-  research: Toss's UX writing rules (해요체 everywhere, active voice, positive framing, no stacked honorifics, 돼요),
+  research: Toss's UX writing rules (the polite everyday register, active voice, positive framing, no stacked honorifics),
   the translationese patterns and their fixes (after the k-skill korean-humanizer's catalogue), particles after names,
-  Korean dates and money, and the app's glossary (입사/슬사/복사, 보강, 체험 수업, 성장 리포트…). The Korean is written
+  Korean dates and money, and the app's glossary of shooting terms. The Korean is written
   from what each screen means, with that skill, and the website's earlier word-for-word draft is rewritten.
-- **How it's built:** each text sits next to its English in the code (`t('Home', '홈')`), as the public website already
+- **How it's built:** each text sits next to its English in the code (`t(english, korean)`), as the public website already
   had it; `shared/src/i18n.ts` decides who reads which language and writes particles, dates and times. No translation
   files to keep in step.
 - **The phone app opens the contract on the website** (Goo, the same day: "writing the contract from parents can be all
@@ -1222,7 +1224,7 @@ unnatural … research things like a Claude skill that actually help … other l
   we can easily change language … than rebuilding mobile again"). A parent's phone app no longer draws the contract:
   each child's contract opens from the app on its page on the website (the QR code's), in the in-app browser, in the
   language they read the app in; the app opens once every one is signed, and says so when the parent closes the
-  page. The language can be changed right there, before the app opens (English · 한국어, as on sign-in), in the app and
+  page. The language can be changed right there, before the app opens (the English / Korean switch, as on sign-in), in the app and
   on the website. The website's portal keeps its own signing for parents signed in there.
 - **Other languages:** not now ("maybe someday if really needed").
 
@@ -1305,7 +1307,7 @@ and one for the phone app. The website advertises the app too.
 - **The website advertises the app** (#140): `/get-app` and `/ko/get-app`, a band on the homepage after the portal, and
   the stores' badges in the footer. The badges are Apple's and Google's own files, unchanged, with the stores' credit
   line. `/app` stays the signed-in app's home, where sign-in lands.
-- **"App" (앱) is in the website's menu**, between News and Contact, on a computer and in the phone's menu. Goo:
+- **"App" is in the website's menu**, between News and Contact, on a computer and in the phone's menu. Goo:
   "make /get-app as main page on the landing page such as Gallery, News, and Contact". It's named for what's there:
   "Download" alone doesn't say what downloads. The address stays `/get-app`, which the sign's QR code opens.
 - **No phone build is needed.** The parent's side is the website, and the office's phone gets the request's notice;
@@ -1341,6 +1343,7 @@ The academy's owner, the manager and two coaches, with Goo; the tasks are in `do
   B5).
 - **The contract stays English only** (Goo, at the meeting: one language for a contract). The Korean translation of
   §36 stays in the demo academy: it isn't loaded into the live one. The screens around the contract keep their Korean.
+  *Changed the next day: no Korean anywhere (§42).*
   The contract is on hold until the owner's final wording.
 - **A welcome tour in the phone app** after the first sign-in, per role (B1), rather than only a how-to video.
 - **Competition results from the tournaments' results site** instead of paper sheets, and **SCATT sessions** in the
@@ -1348,3 +1351,25 @@ The academy's owner, the manager and two coaches, with Goo; the tasks are in `do
   it's a guess (R3).
 - **Not now:** Chinese (maybe one day, checked by a native speaker), and Google reviews (after the academy expands; the
   building closes for about a month early next year).
+
+## 42. English only (the academy, through Goo, 2026-11-10)
+
+After going through the website page by page, the academy asked for **no Korean anywhere**: "The translations read
+unnaturally, and I would prefer to keep the website entirely in English. As we are based in the United States, an
+English-only website is appropriate for our audience … Including Korean text, whether in photos or other content, would
+likely make it even harder for [Americans] to engage." Goo: "So no Korean language in this project. Please remove all."
+
+- **Everything is English:** the public website, the portal, the phone app (parents included), the contract and its
+  pages, the phone notifications, the office's emails and the front desk's signs (`scripts/signs.ts`). There's no
+  language switch, no Korean step in the phone app's welcome tour, no "reply in" choice on the website's forms.
+- **Old addresses keep working:** `/ko` and `/ko/…` send visitors to the same English page (a permanent redirect in
+  `firebase.json`), so links shared before still open. The website's offline copy starts over (`sw.js`, v3).
+- **The code has no Korean either:** the English and Korean pairs (`t(english, korean)`), `shared/src/i18n.ts`, the contract's Korean translation
+  (and its font, Noto Sans KR, in the signed PDF), the Korean push texts and the `korean-ux-writing` skill are gone.
+  Contracts already signed keep their PDFs as they were.
+- **What's stored stays:** older phone apps (1.1 and before) still save their phone's language with their push token,
+  and Firestore still has old `lang` fields; nothing reads them. Phones get the English version with the next app
+  update; until then a Korean phone running 1.1 shows the Korean it was built with.
+- **The stores:** the App Store and Google Play listings lose their Korean at the next submission (`docs/TODO.md`).
+- Replaces §36, and the Korean parts of §18 (the website's Korean pages) and §41.
+

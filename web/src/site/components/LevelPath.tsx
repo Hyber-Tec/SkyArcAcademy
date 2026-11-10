@@ -196,7 +196,7 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
               const on = b.level === active
               return (
                 <li
-                  key={b.rank.name.en}
+                  key={b.rank.name}
                   className={cn(
                     'flex min-h-0 flex-1 items-center justify-between gap-1.5 rounded-lg px-2 transition-[opacity,box-shadow] duration-500 xl:gap-2 xl:px-2.5',
                     LEVEL_FILL[b.level],
@@ -235,7 +235,7 @@ function RankScale({ level, active, className }: { level: MotionValue<number>; a
         <ol className="flex h-8 gap-[3px]">
           {BANDS.map((b) => (
             <li
-              key={b.rank.name.en}
+              key={b.rank.name}
               title={`${t(b.rank.name)} · ${b.level === 0 ? t(T.path.entry) : t(b.rank.range)}`}
               className={cn('flex-1 rounded-md transition-[opacity,box-shadow] duration-500', LEVEL_FILL[b.level], b.level === active ? 'opacity-100 shadow-[0_0_0_1.5px_rgb(10_10_10/0.9)]' : 'opacity-35')}
             >
@@ -374,7 +374,7 @@ function Chapter({
       <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-stone">{t(lv.text)}</p>
       <ul className="mt-5 grid max-w-xl gap-2.5">
         {lv.focus.map((f) => (
-          <li key={f.en} className="flex gap-2.5 text-[15px] leading-snug text-ink/85">
+          <li key={f} className="flex gap-2.5 text-[15px] leading-snug text-ink/85">
             <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-white">
               <LuCheck className="size-3" aria-hidden="true" />
             </span>
@@ -384,9 +384,9 @@ function Chapter({
       </ul>
       <div className="mt-6 flex flex-wrap gap-2">
         {lv.ranks.map((r) => (
-          <span key={r.name.en} className={cn('inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-semibold', r.track?.en === 'Precision' ? 'border border-dashed border-ink/30 text-ink' : LEVEL_FILL[index])}>
+          <span key={r.name} className={cn('inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-semibold', r.track === 'Precision' ? 'border border-dashed border-ink/30 text-ink' : LEVEL_FILL[index])}>
             {t(r.name)}
-            <span className={cn('text-[12px] font-medium opacity-70', /\d/.test(r.range.en) && 'font-mono')}>{t(r.range)}</span>
+            <span className={cn('text-[12px] font-medium opacity-70', /\d/.test(r.range) && 'font-mono')}>{t(r.range)}</span>
           </span>
         ))}
       </div>

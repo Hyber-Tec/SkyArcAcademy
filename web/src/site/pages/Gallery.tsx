@@ -8,7 +8,7 @@ import { Reveal } from '@/site/kit/motion'
 import { Photo } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
 import { Container } from '../components/bits'
-import { PageHero, crmLang } from '../components/blocks'
+import { PageHero } from '../components/blocks'
 import { T } from '../i18n'
 
 type Album = 'all' | GalleryCategory
@@ -18,7 +18,7 @@ const PAGE = 24
 
 /** Albums (a card per album with its cover and count) above the chosen album's photos; a photo opens full screen. */
 export function Gallery() {
-  const { t, lang, query } = useSite()
+  const { t, query } = useSite()
   const { photos, ready } = useSiteData()
   const wanted = new URLSearchParams(query).get('album') as Album | null
   const [album, setAlbum] = useState<Album>(wanted && GALLERY.categories.some((c) => c.id === wanted) ? wanted : 'all')
@@ -98,7 +98,7 @@ export function Gallery() {
             <h2 className="text-[26px] font-semibold tracking-tight text-ink sm:text-[30px]">{album === 'all' ? t(T.allPhotos) : t(albumLabel)}</h2>
             {items.length ? (
               <span className="text-[14px] text-stone">
-                {lang === 'ko' ? `${items.length}${t(T.photos)}` : `${items.length} ${items.length === 1 ? 'photo' : t(T.photos)}`}
+                {`${items.length} ${items.length === 1 ? 'photo' : t(T.photos)}`}
               </span>
             ) : null}
           </div>
@@ -110,7 +110,7 @@ export function Gallery() {
                 <button type="button" onClick={() => setOpen(i)} className="group relative block w-full overflow-hidden rounded-[22px] bg-warm-2 text-left focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:outline-none" aria-label={g.caption || g.alt || t(UI.gallery)}>
                   <Photo photo={g} alt={g.alt} sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw" className="h-auto w-full transition duration-700 ease-out group-hover:scale-[1.03]" />
                   <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 to-transparent p-4 pt-12 text-white">
-                    <span className="text-[15px] font-medium" lang={crmLang}>
+                    <span className="text-[15px] font-medium">
                       {g.caption}
                     </span>
                     <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[11.5px] backdrop-blur">{t(GALLERY.categories.find((c) => c.id === g.album)?.label ?? GALLERY.categories[0].label)}</span>

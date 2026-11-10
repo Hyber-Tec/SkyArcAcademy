@@ -3,9 +3,8 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import type { IconType } from 'react-icons'
 import { LuBatteryFull, LuChartLine, LuCrosshair, LuGauge, LuMessageSquareQuote, LuWifi } from 'react-icons/lu'
 import { ReportDocument } from '@/features/reports/ReportDocument'
-import { EnglishApp } from '@/site/kit/EnglishApp'
 import { cn } from '@/lib/utils'
-import { HOME, type L } from '@/site/kit/content'
+import { HOME } from '@/site/kit/content'
 import { useReduced } from '@/site/kit/motion'
 import { SAMPLE_REPORT } from '@/site/kit/ReportPreview'
 import { useSite } from '@/site/kit/site'
@@ -26,8 +25,8 @@ const PAPER_PHONE = 430
 
 interface Note {
   icon: IconType
-  title: L
-  text: L
+  title: string
+  text: string
   /** Text in the report where this note's part starts (null: the top). */
   anchor: string | null
   side: 'left' | 'right'
@@ -197,9 +196,7 @@ export function ReportShowcase({ header, footer, className }: { header?: ReactNo
           <motion.div style={still ? undefined : { y }} className="will-change-transform">
             <div style={{ height: size.paperH ? size.paperH * scale : undefined }}>
               <div ref={paperRef} className="report-canvas origin-top-left px-3 pt-3 pb-10" style={{ width: size.paper, transform: `scale(${scale})` }}>
-                <EnglishApp>
-                  <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
-                </EnglishApp>
+                <ReportDocument report={SAMPLE_REPORT} audience="family" timezone="America/New_York" />
               </div>
             </div>
           </motion.div>
@@ -223,11 +220,11 @@ export function ReportShowcase({ header, footer, className }: { header?: ReactNo
           </div>
           <div className={cn('relative flex items-center gap-12 2xl:gap-16', !still && 'max-xl:-translate-y-10 max-sm:-translate-y-12')}>
             <div className="hidden flex-col gap-24 xl:flex">
-              {NOTES.map((n, i) => (n.side === 'left' ? <NoteCard key={n.title.en} note={n} state={noteState(i)} /> : null))}
+              {NOTES.map((n, i) => (n.side === 'left' ? <NoteCard key={n.title} note={n} state={noteState(i)} /> : null))}
             </div>
             {ipad}
             <div className="hidden flex-col gap-24 pt-40 xl:flex">
-              {NOTES.map((n, i) => (n.side === 'right' ? <NoteCard key={n.title.en} note={n} state={noteState(i)} /> : null))}
+              {NOTES.map((n, i) => (n.side === 'right' ? <NoteCard key={n.title} note={n} state={noteState(i)} /> : null))}
             </div>
           </div>
           {!still ? <NotePill index={active} progress={pinned} /> : null}
@@ -236,7 +233,7 @@ export function ReportShowcase({ header, footer, className }: { header?: ReactNo
       {still ? (
         <div className="mx-auto grid max-w-4xl gap-3 px-5 sm:grid-cols-2 sm:px-8 xl:hidden">
           {NOTES.map((n) => (
-            <NoteCard key={n.title.en} note={n} state="on" className="w-auto" />
+            <NoteCard key={n.title} note={n} state="on" className="w-auto" />
           ))}
         </div>
       ) : null}

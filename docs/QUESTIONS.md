@@ -26,7 +26,7 @@ asked: the office fills them in from the website ([`DECISIONS.md`](DECISIONS.md)
 | | Question | Needed for | Until answered |
 |---|---|---|---|
 | **A10** | **The academy's legal name and mailing address**, if it wants them in the privacy policy's contact section (Settings → Academy). The policy itself is approved and in effect (2026-10-20), with the academy's email and phone. | The privacy policy's contact details | Its name, email and phone |
-| **A13** | **Website content:** coach portraits, real families' quotes (with their permission), trial length and price, the youngest starting age, the range's safety rules, whether coaching happens in Korean, tuition rates or a guide, more photos and a larger match-day photo (`docs/TODO.md`). The phone number is set (2026-10-20). | The public website | Left out until confirmed (photos marked); sample quotes marked "Sample" |
+| **A13** | **Website content:** coach portraits, real families' quotes (with their permission), trial length and price, the youngest starting age, the range's safety rules, tuition rates or a guide, more photos and a larger match-day photo (`docs/TODO.md`). The phone number is set (2026-10-20). | The public website | Left out until confirmed (photos marked); sample quotes marked "Sample" |
 
 A14 (the address the app sends from) was answered on 2026-11-09: the academy's info@ ([`DECISIONS.md`](DECISIONS.md)
 §40). A12 (the kiosk's device) was answered at the third meeting: an Android tablet HyberTec provides, at the front desk

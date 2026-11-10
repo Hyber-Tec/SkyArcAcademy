@@ -27,7 +27,6 @@ export function websiteMessageLines(m: CleanMessage): { label: string; value: st
   lines.push({ label: m.kind === 'trial' ? 'Parent or guardian' : 'From', value: m.name })
   lines.push({ label: 'Email', value: m.email })
   if (m.phone) lines.push({ label: 'Phone', value: m.phone })
-  lines.push({ label: 'Reply in', value: m.lang === 'ko' ? 'Korean' : 'English' })
   if (m.message) lines.push({ label: m.kind === 'trial' ? 'Notes' : 'Message', value: m.message })
   return lines
 }

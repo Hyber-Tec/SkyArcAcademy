@@ -2,7 +2,6 @@ import { type CardReview, bullState } from "@shared/targets/review";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
-import { useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 import { STATE_COLORS, scoreLabel } from "./CardView";
 
@@ -14,7 +13,6 @@ const GAP = space.sm;
  */
 export function BullTiles({ review, onBull, plain = false }: { review: CardReview; onBull?: (n: number) => void; plain?: boolean }) {
   const colors = useColors();
-  const t = useT();
   // Five to a row, sized from the width there is (a percentage width leaves the rows' height to guesswork).
   const [width, setWidth] = useState(0);
   const tile = width ? (width - GAP * 4) / 5 : 0;
@@ -30,7 +28,7 @@ export function BullTiles({ review, onBull, plain = false }: { review: CardRevie
               key={b.n}
               testID={`score-tile-${b.n}`}
               accessible
-              accessibilityLabel={t(`Bull ${b.n}: ${shown.join(" and ")}`, `${b.n}번 표적: ${shown.join(", ")}`)}
+              accessibilityLabel={`Bull ${b.n}: ${shown.join(" and ")}`}
               style={[styles.tile, { width: tile, height: tile / 0.9, backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <T variant="tiny" tone="muted">

@@ -19,7 +19,6 @@ import { relativeDay } from "@/features/family/format";
 import { useChildColor } from "@/features/family/tints";
 import { millis, useClassSeats } from "@/features/requests/data";
 import { longDay, shortDay } from "@/features/schedule/format";
-import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
@@ -32,17 +31,16 @@ const close = () => (router.canGoBack() ? router.back() : router.replace("/class
 export default function FamilyDaySheet() {
   const { date } = useLocalSearchParams<{ date?: string }>();
   const colors = useColors();
-  const t = useT();
   if (!isDateKey(date)) {
     return (
       <ScrollView style={[styles.fill, { backgroundColor: colors.grouped }]} contentContainerStyle={styles.content} testID="family-day-sheet">
         <EmptyState
           icon={<CalendarX2 size={26} color={colors.mutedForeground} />}
-          title={t("This day couldn’t be opened", "이 날짜를 열 수 없어요")}
-          text={t("Go back to Classes and pick a day.", "수업 탭으로 돌아가 날짜를 다시 골라 주세요.")}
+          title="This day couldn’t be opened"
+          text="Go back to Classes and pick a day."
           action={
             <Button variant="outline" onPress={close} testID="family-day-close">
-              {t("Close", "닫기")}
+              Close
             </Button>
           }
         />
@@ -63,8 +61,6 @@ function DaySheet({ date }: { date: DateKey }) {
   const family = useFamily();
   const { settings } = useBranch();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const dotOf = useChildColor();
   const { today, nowMin, now } = useAcademyNow();
   const hour12 = settings.general.timeFormat !== "24h";
@@ -78,7 +74,7 @@ function DaySheet({ date }: { date: DateKey }) {
   const groups = familyClasses(sessions.data.filter((s) => shown.has(s.studentId)));
   const openClasses = seats.data.filter((c) => isRequestable({ ...c, startMs: millis(c.startAt) }, now, horizon)).length;
   const loading = sessions.loading || hours.loading || (inWindow && seats.loading);
-  const near = relativeDay(date, today, lang);
+  const near = relativeDay(date, today);
   const askable = inWindow && open;
 
   // Asking takes the sheet's place, set to this day (and to the child chosen on the tabs).
@@ -94,10 +90,10 @@ function DaySheet({ date }: { date: DateKey }) {
             </T>
           ) : null}
           <T variant="title" accessibilityRole="header" testID="family-day-title">
-            {longDay(date, lang)}
+            {longDay(date)}
           </T>
         </View>
-        <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel={t("Close", "닫기")} onPress={close} filled testID="family-day-close" />
+        <IconButton icon={<X size={20} color={colors.foreground} />} accessibilityLabel="Close" onPress={close} filled testID="family-day-close" />
       </View>
 
       {loading ? (
@@ -108,7 +104,7 @@ function DaySheet({ date }: { date: DateKey }) {
       ) : (
         <>
           {groups.length ? (
-            <ListSection footer={open ? undefined : t("The academy is closed on this day.", "이날은 아카데미 휴무예요.")} testID="family-day-classes">
+            <ListSection footer={open ? undefined : "The academy is closed on this day."} testID="family-day-classes">
               {groups.map((g) => (
                 <FamilyClassRow
                   key={g.id}
@@ -124,7 +120,7 @@ function DaySheet({ date }: { date: DateKey }) {
             <Card style={styles.none} testID={open ? "family-day-none" : "family-day-closed"}>
               <CalendarX2 size={20} color={colors.mutedForeground} />
               <T tone="muted" style={styles.grow}>
-                {open ? t(`No classes on ${shortDay(date)}.`, `${shortDay(date, "ko")}에는 수업이 없어요.`) : t("The academy is closed on this day.", "이날은 아카데미 휴무예요.")}
+                {open ? `No classes on ${shortDay(date)}.` : "The academy is closed on this day."}
               </T>
             </Card>
           )}
@@ -132,15 +128,15 @@ function DaySheet({ date }: { date: DateKey }) {
           {askable && openClasses > 0 ? (
             <View style={styles.ask}>
               <Button size="lg" wrap icon={<CalendarPlus size={18} color={colors.primaryForeground} />} onPress={ask} testID="family-day-ask">
-                {t("Ask for a class on this day", "이날 수업 신청하기")}
+                Ask for a class on this day
               </Button>
               <T variant="small" tone="muted" style={styles.center}>
-                {t("The academy approves each request, or suggests another time.", "아카데미에서 신청을 승인하거나 다른 시간을 제안해요.")}
+                The academy approves each request, or suggests another time.
               </T>
             </View>
           ) : askable ? (
             <T variant="small" tone="muted" style={styles.center} testID="family-day-full">
-              {t("No seats are open on this day right now. Seats open up when students cancel.", "지금은 이날 빈자리가 없어요. 다른 학생이 취소하면 자리가 생겨요.")}
+              No seats are open on this day right now. Seats open up when students cancel.
             </T>
           ) : null}
         </>

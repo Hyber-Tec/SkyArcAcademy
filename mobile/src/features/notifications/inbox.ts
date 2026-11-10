@@ -1,6 +1,5 @@
 import { Timestamp, collection, deleteDoc, doc, getDoc, limit, orderBy, query, updateDoc, where, writeBatch } from "@react-native-firebase/firestore";
 import type { AppNotification } from "@shared/comms";
-import type { Lang } from "@shared/i18n";
 import { COL, ROOT } from "@shared/paths";
 import { appTargetOf, requestNoticeId } from "@shared/push";
 import type { Session } from "@shared/types";
@@ -45,7 +44,7 @@ export function markInboxRead(branchId: string, n: Pick<InboxItem, "id" | "readA
 }
 
 /** Marks every unread one read, in one batch (as the website, at most 450 at a time). */
-export function markAllInboxRead(branchId: string, list: readonly InboxItem[], lang: Lang = "en"): void {
+export function markAllInboxRead(branchId: string, list: readonly InboxItem[]): void {
   const unread = list.filter((n) => !n.readAt).slice(0, 450);
   if (!unread.length) return;
   const batch = writeBatch(db);
@@ -54,14 +53,12 @@ export function markAllInboxRead(branchId: string, list: readonly InboxItem[], l
   batch
     .commit()
     .catch(() =>
-      lang === "ko"
-        ? toast.error("읽음으로 표시하지 못했어요", { description: "인터넷 연결을 확인하고 다시 시도해 주세요." })
-        : toast.error("Couldn’t mark them read", { description: "Check your connection, then try again." }),
+      toast.error("Couldn’t mark them read", { description: "Check your connection, then try again." }),
     );
 }
 
-export function deleteInboxItem(branchId: string, id: string, lang: Lang = "en"): void {
-  deleteDoc(doc(items(branchId), id)).catch(() => toast.error(lang === "ko" ? "알림을 지우지 못했어요" : "Couldn’t delete the notification"));
+export function deleteInboxItem(branchId: string, id: string): void {
+  deleteDoc(doc(items(branchId), id)).catch(() => toast.error("Couldn’t delete the notification"));
 }
 
 /**

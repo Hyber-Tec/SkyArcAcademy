@@ -15,7 +15,6 @@ import { T } from "@/components/Text";
 import { confirmIdentity } from "@/features/account/api";
 import { authErrorText, passwordProblemText } from "@/lib/authText";
 import { auth } from "@/lib/firebase";
-import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/state/AuthProvider";
 import { useBranch } from "@/state/BranchProvider";
@@ -37,7 +36,6 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
   const { name: academy } = useBranch();
   const { email, methods: known } = useAuth();
   const colors = useColors();
-  const t = useT();
   // A password added on the website since this phone signed in only shows once Firebase's copy here is fetched again.
   const [fresh, setFresh] = useState<SignInMethods | null>(null);
   useEffect(() => {
@@ -59,9 +57,9 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
   return (
     <Screen testID={testID}>
       <T tone="muted" style={styles.intro}>
-        {t(`Your access to ${academy} follows your email, ${email}, whichever way you sign in.`, `어떤 방법으로 로그인하든 ${academy} 이용 권한은 이메일(${email})을 따라가요.`)}
+        {`Your access to ${academy} follows your email, ${email}, whichever way you sign in.`}
       </T>
-      <ListSection title={t("Ways to sign in", "로그인 방법")} footer={t("Use the same ones on the website and in the app.", "웹사이트와 앱에서 같은 방법을 쓸 수 있어요.")} testID="security-methods">
+      <ListSection title="Ways to sign in" footer="Use the same ones on the website and in the app." testID="security-methods">
         <ListRow
           icon={
             <RowIcon>
@@ -69,8 +67,8 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
             </RowIcon>
           }
           title="Google"
-          subtitle={methods.google ? (email ?? "") : t("Not connected", "연결 안 됨")}
-          right={methods.google ? <Badge style={styles.center}>{t("Connected", "연결됨")}</Badge> : undefined}
+          subtitle={methods.google ? (email ?? "") : "Not connected"}
+          right={methods.google ? <Badge style={styles.center}>Connected</Badge> : undefined}
           testID="security-google"
         />
         {methods.apple ? (
@@ -82,7 +80,7 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
             }
             title="Apple"
             subtitle={email ?? ""}
-            right={<Badge style={styles.center}>{t("Connected", "연결됨")}</Badge>}
+            right={<Badge style={styles.center}>Connected</Badge>}
             testID="security-apple"
           />
         ) : null}
@@ -92,16 +90,16 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
               <KeyRound size={17} color={colors.foreground} />
             </RowIcon>
           }
-          title={t("Password", "비밀번호")}
+          title="Password"
           subtitle={
             methods.password
-              ? t("You can sign in with your email and password.", "이메일과 비밀번호로 로그인할 수 있어요.")
-              : t(`Add one to sign in without ${methods.apple ? "Apple" : "Google"}.`, `비밀번호를 추가하면 ${methods.apple ? "Apple" : "Google"} 없이도 로그인할 수 있어요.`)
+              ? "You can sign in with your email and password."
+              : `Add one to sign in without ${methods.apple ? "Apple" : "Google"}.`
           }
           right={
             open ? undefined : (
               <Button size="sm" variant="outline" onPress={() => setOpen(true)} testID="security-password-open">
-                {methods.password ? t("Change", "변경") : t("Add", "추가")}
+                {methods.password ? "Change" : "Add"}
               </Button>
             )
           }
@@ -126,8 +124,6 @@ export function SignInSecurityScreen({ testID = "security-screen" }: { testID?: 
 /** Change the password (the current one first), or add one to a Google account: the website's PasswordDialog. */
 function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean; confirmWith: "google" | "apple"; email: string; onClose: (changed: boolean) => void }) {
   const { changePassword, sendPasswordReset } = useAuth();
-  const t = useT();
-  const lang = useLang();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -140,10 +136,10 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
   async function submit() {
     if (busy) return;
     setError(null);
-    if (!adding && !current) return setError(t("Enter your current password.", "현재 비밀번호를 입력해 주세요."));
-    const problem = passwordProblemText(next, email, lang);
+    if (!adding && !current) return setError("Enter your current password.");
+    const problem = passwordProblemText(next, email);
     if (problem) return setError(problem);
-    if (next !== confirm) return setError(t("The two new passwords don’t match.", "새 비밀번호가 서로 달라요."));
+    if (next !== confirm) return setError("The two new passwords don’t match.");
     setBusy(true);
     const attempt = () => changePassword(adding ? null : current, next);
     try {
@@ -159,12 +155,12 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
         }
         await attempt();
       }
-      toast.success(adding ? t("Password added", "비밀번호를 추가했어요") : t("Password changed", "비밀번호를 바꿨어요"), {
-        description: adding ? t("You can now sign in with your email and password too.", "이제 이메일과 비밀번호로도 로그인할 수 있어요.") : undefined,
+      toast.success(adding ? "Password added" : "Password changed", {
+        description: adding ? "You can now sign in with your email and password too." : undefined,
       });
       onClose(true);
     } catch (e) {
-      setError(authErrorText(codeOf(e), "change-password", lang));
+      setError(authErrorText(codeOf(e), "change-password"));
       setBusy(false);
     }
   }
@@ -173,26 +169,26 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
     setSending(true);
     try {
       await sendPasswordReset(email);
-      toast.success(t("Reset link sent", "재설정 링크를 보냈어요"), { description: t(`Check ${email}.`, `${email} 메일함을 확인해 주세요.`) });
+      toast.success("Reset link sent", { description: `Check ${email}.` });
     } catch (e) {
-      toast.error(authErrorText(codeOf(e), "reset", lang));
+      toast.error(authErrorText(codeOf(e), "reset"));
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <ListSection title={adding ? t("Add a password", "비밀번호 추가") : t("Change your password", "비밀번호 변경")} testID="security-password-form">
+    <ListSection title={adding ? "Add a password" : "Change your password"} testID="security-password-form">
       <View style={styles.form}>
         <T variant="small" tone="muted">
           {adding
-            ? t(`Then you can also sign in with ${email} and this password, on the website or in the app.`, `추가하면 웹사이트와 앱에서 ${email} 계정과 이 비밀번호로도 로그인할 수 있어요.`)
-            : t(`For ${email}.`, `${email} 계정`)}
+            ? `Then you can also sign in with ${email} and this password, on the website or in the app.`
+            : `For ${email}.`}
         </T>
         {!adding ? (
           <View>
             <PasswordField
-              label={t("Current password", "현재 비밀번호")}
+              label="Current password"
               value={current}
               onChangeText={setCurrent}
               autoComplete="current-password"
@@ -204,16 +200,16 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
               testID="security-current"
             />
             <Button variant="link" style={styles.forgot} onPress={() => void forgot()} disabled={sending} testID="security-forgot">
-              {sending ? t("Sending…", "보내는 중…") : t("Forgot it?", "비밀번호 찾기")}
+              {sending ? "Sending…" : "Forgot it?"}
             </Button>
           </View>
         ) : null}
         <PasswordField
           ref={nextRef}
-          label={t("New password", "새 비밀번호")}
+          label="New password"
           value={next}
           onChangeText={setNext}
-          placeholder={t("At least 8 characters", "8자 이상")}
+          placeholder="At least 8 characters"
           autoComplete="new-password"
           textContentType="newPassword"
           returnKeyType="next"
@@ -225,7 +221,7 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
         <StrengthMeter password={next} />
         <PasswordField
           ref={confirmRef}
-          label={t("Type it again", "새 비밀번호 확인")}
+          label="Type it again"
           value={confirm}
           onChangeText={setConfirm}
           autoComplete="new-password"
@@ -237,10 +233,10 @@ function PasswordForm({ adding, confirmWith, email, onClose }: { adding: boolean
         {error ? <ErrorBox>{error}</ErrorBox> : null}
         <View style={styles.buttons}>
           <Button variant="outline" onPress={() => onClose(false)} disabled={busy} style={styles.grow} testID="security-cancel">
-            {t("Cancel", "취소")}
+            Cancel
           </Button>
           <Button onPress={() => void submit()} busy={busy} style={styles.grow} testID="security-submit">
-            {adding ? t("Add password", "비밀번호 추가") : t("Change password", "비밀번호 변경")}
+            {adding ? "Add password" : "Change password"}
           </Button>
         </View>
       </View>

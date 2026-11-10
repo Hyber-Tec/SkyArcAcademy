@@ -1,11 +1,9 @@
 import { LuPresentation } from 'react-icons/lu'
 import { useOptionalBranch } from '@/branch/BranchProvider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 
 const HINT = 'Made-up students and classes, for showing the app. Switch back to the academy’s data in the account menu.'
-const HINT_KO = '앱을 보여 주기 위한 가상의 학생과 수업이에요. 계정 메뉴에서 아카데미의 실제 데이터로 돌아갈 수 있어요.'
 
 /**
  * Marks the demo academy while it's shown (docs/DECISIONS.md §22), so its made-up people are never taken for the
@@ -14,9 +12,8 @@ const HINT_KO = '앱을 보여 주기 위한 가상의 학생과 수업이에요
  */
 export function DemoBadge({ variant = 'pill', className }: { variant?: 'row' | 'pill' | 'dot'; className?: string }) {
   const branch = useOptionalBranch()
-  const t = useT()
   if (!branch?.isDemo) return null
-  if (variant === 'dot') return <span className={cn('pointer-events-none size-2 rounded-full bg-amber-500 ring-2 ring-sidebar', className)} aria-label={t('Demo data', '데모 데이터')} />
+  if (variant === 'dot') return <span className={cn('pointer-events-none size-2 rounded-full bg-amber-500 ring-2 ring-sidebar', className)} aria-label="Demo data" />
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -30,11 +27,11 @@ export function DemoBadge({ variant = 'pill', className }: { variant?: 'row' | '
           )}
         >
           {variant === 'row' ? <LuPresentation className="size-3.5" /> : null}
-          {variant === 'row' ? t('Demo data', '데모 데이터') : t('Demo', '데모')}
+          {variant === 'row' ? 'Demo data' : 'Demo'}
         </span>
       </TooltipTrigger>
       <TooltipContent side={variant === 'row' ? 'right' : 'bottom'} className="max-w-64">
-        {t(HINT, HINT_KO)}
+        {HINT}
       </TooltipContent>
     </Tooltip>
   )

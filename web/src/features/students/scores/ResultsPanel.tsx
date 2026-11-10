@@ -1,21 +1,18 @@
 import { type ReactNode, useId, useMemo, useState } from 'react'
 import { LuChevronDown, LuMessageSquareQuote, LuPencilLine } from 'react-icons/lu'
-import { dateText } from '@shared/i18n'
-import { type Evaluation, POSITION_COLORS, evaluationPoints, per10, totalWithTens } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_COLORS, evaluationPoints, per10, totalWithTens, POSITION_LABELS, SOURCE_LABELS } from '@shared/shooting/evaluation'
 import { matchResults } from '@shared/scores/match'
 import type { WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
-import { positionIn, sourceIn } from '@/features/family/familyText'
 import { one } from '@/features/reports/model'
 import { ResultKindChip } from '@/features/scores/kinds'
 import { MatchCard } from '@/features/scores/MatchCard'
 import { BestBadge } from '@/features/scores/ResultParts'
 import { Unfold } from '@/features/scores/ResultRow'
 import { MiniTarget } from '@/features/scores/TargetPlot'
-import { useLang, useT } from '@/lib/lang'
-import { timeIn } from '@/lib/langFormat'
 import { cn } from '@/lib/utils'
 import { FeaturedResult } from './FeaturedResult'
+import { formatDateKey, formatMinutes } from '@shared/time'
 
 /** Rows shown before "Show all". */
 const LIMIT = 8
@@ -49,7 +46,6 @@ export function ResultsPanel({
   /** How an opened result compares. */
   insight?: (e: WithId<Evaluation>) => ReactNode
 }) {
-  const t = useT()
   const rows = useMemo(() => [...evaluations].reverse(), [evaluations])
   const first = (selectedId && rows.some((e) => e.id === selectedId) ? selectedId : rows[0]?.id) ?? null
   /** The results open (any number), each with how many times it was opened (each opening plays it again). */
@@ -74,7 +70,7 @@ export function ResultsPanel({
     onSelect?.(e.id)
   }
 
-  if (!rows.length) return <p className="border-t px-5 py-10 text-center text-sm text-muted-foreground">{t('No scores yet. Results show here after classes.', '아직 점수가 없어요. 수업이 끝나면 여기에 보여요.')}</p>
+  if (!rows.length) return <p className="border-t px-5 py-10 text-center text-sm text-muted-foreground">No scores yet. Results show here after classes.</p>
 
   const shown = showAll ? rows : rows.slice(0, LIMIT)
 
@@ -82,11 +78,11 @@ export function ResultsPanel({
     <div className="border-t" data-testid="results-list">
       <div className={cn(COLUMNS, 'hidden border-b bg-muted/30 py-2 pl-5 text-xs font-medium text-muted-foreground @xl:grid', 'pr-12')} aria-hidden>
         <span />
-        <span>{t('Result', '기록')}</span>
-        <span className="text-right">{t('Per 10', '10발 평균')}</span>
-        <span className="text-right">{t('Total', '총점')}</span>
-        <span className="hidden text-right @2xl:block">{t('Inner tens', '이너 텐')}</span>
-        <span className="hidden text-right @2xl:block">{t('Group', '탄착군')}</span>
+        <span>Result</span>
+        <span className="text-right">Per 10</span>
+        <span className="text-right">Total</span>
+        <span className="hidden text-right @2xl:block">Inner tens</span>
+        <span className="hidden text-right @2xl:block">Group</span>
       </div>
       <ul className="divide-y">
         {shown.map((e) => (
@@ -108,7 +104,7 @@ export function ResultsPanel({
       {rows.length > LIMIT ? (
         <div className="border-t px-5 py-2.5 text-center">
           <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)}>
-            {showAll ? t('Show the latest only', '최근 기록만 보기') : t(`Show all ${rows.length} results`, `기록 ${rows.length}개 모두 보기`)}
+            {showAll ? 'Show the latest only' : `Show all ${rows.length} results`}
           </Button>
         </div>
       ) : null}
@@ -119,8 +115,6 @@ export function ResultsPanel({
 /** One result in a family's list: its target in small, when, the position, and the figures; opened, the result under it. */
 function ResultRow({ e, open, onToggle, best = false, children }: { e: WithId<Evaluation>; open: boolean; onToggle: () => void; best?: boolean; children: ReactNode }) {
   const detailId = useId()
-  const lang = useLang()
-  const t = useT()
   const color = POSITION_COLORS[e.position]
   const whole = per10(e.wholeTotal, e.shots)
   const decimal = e.source === 'sius' ? per10(e.total, e.shots) : null
@@ -134,9 +128,7 @@ function ResultRow({ e, open, onToggle, best = false, children }: { e: WithId<Ev
         aria-expanded={open}
         aria-controls={open ? detailId : undefined}
         aria-label={
-          lang === 'ko'
-            ? `${dateText(e.dateKey, 'medium', 'ko')}, ${positionIn(e.position, 'ko')}, ${sourceIn(e.source, 'ko')}: 10발 평균 ${whole !== null ? one(whole) : '점수 없음'}${best ? ', 개인 최고 기록' : ''}${e.note ? ', 코치 메모 있음' : ''}. ${open ? '닫기' : '여기에서 열기'}`
-            : `${dateText(e.dateKey, 'medium', 'en')}, ${positionIn(e.position, 'en')}, ${sourceIn(e.source, 'en')}: ${whole !== null ? one(whole) : 'no score'} per 10 shots${best ? ', a new personal best' : ''}${e.note ? ', with a coach’s note' : ''}. ${open ? 'Close it' : 'Open it here'}`
+          `${formatDateKey(e.dateKey, 'medium')}, ${POSITION_LABELS[e.position]}, ${SOURCE_LABELS[e.source]}: ${whole !== null ? one(whole) : 'no score'} per 10 shots${best ? ', a new personal best' : ''}${e.note ? ', with a coach’s note' : ''}. ${open ? 'Close it' : 'Open it here'}`
         }
         className={cn('flex w-full items-center gap-2 py-2 pr-5 pl-5 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset', open ? 'bg-muted/50' : 'hover:bg-muted/40')}
       >
@@ -144,19 +136,19 @@ function ResultRow({ e, open, onToggle, best = false, children }: { e: WithId<Ev
         {points.length ? (
           <MiniTarget points={points} color={color} size={40} />
         ) : (
-          <span className="flex size-10 items-center justify-center rounded-full border border-dashed text-muted-foreground" title={t('Typed in: no places on the target', '직접 입력한 점수라 표적에 맞은 자리가 없어요')}>
+          <span className="flex size-10 items-center justify-center rounded-full border border-dashed text-muted-foreground" title="Typed in: no places on the target">
             <LuPencilLine className="size-4" />
           </span>
         )}
         <span className="min-w-0">
           <span className="block truncate font-medium">
-            {dateText(e.dateKey, 'medium', lang)}
-            {e.timeMin !== null ? <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">{timeIn(e.timeMin, lang)}</span> : null}
+            {formatDateKey(e.dateKey, 'medium')}
+            {e.timeMin !== null ? <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">{formatMinutes(e.timeMin)}</span> : null}
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
             <span className="truncate">
-              {positionIn(e.position, lang)} · {e.match?.name || sourceIn(e.source, lang)}
+              {POSITION_LABELS[e.position]} · {e.match?.name || SOURCE_LABELS[e.source]}
             </span>
             <ResultKindChip e={e} />
             {best ? <BestBadge position={e.position} size="sm" words="wide" /> : null}

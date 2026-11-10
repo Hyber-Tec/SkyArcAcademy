@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { Bell } from "lucide-react-native";
 import { IconButton } from "@/components/IconButton";
-import { useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { useColors } from "@/theme";
 import { useInbox } from "./inbox";
@@ -13,7 +12,6 @@ import { useInbox } from "./inbox";
  */
 export function InboxBell({ testID = "today-notifications" }: { testID?: string }) {
   const colors = useColors();
-  const t = useT();
   const { isCoach, role } = useBranch();
   const inbox = useInbox();
   if (!isCoach && role !== "parent" && role !== "student" && !inbox.data.length) return null;
@@ -22,7 +20,7 @@ export function InboxBell({ testID = "today-notifications" }: { testID?: string 
     <IconButton
       icon={<Bell size={20} color={colors.foreground} />}
       badge={unread}
-      accessibilityLabel={t("Notifications", "알림")}
+      accessibilityLabel="Notifications"
       onPress={() => router.push("/inbox")}
       size={36}
       filled

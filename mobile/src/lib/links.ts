@@ -1,30 +1,29 @@
-import type { Lang } from "@shared/i18n";
 import * as WebBrowser from "expo-web-browser";
 import { Linking, Platform } from "react-native";
 import { env } from "./env";
 import { toast } from "./toast";
 
 /** Opens a page of the website (`/admin/schedule`, the privacy policy) in the phone's in-app browser. */
-export async function openWebsite(path: string, lang: Lang = "en"): Promise<void> {
+export async function openWebsite(path: string): Promise<void> {
   const url = `${env.webUrl}${path.startsWith("/") ? path : `/${path}`}`;
-  await openUrl(url, lang);
+  await openUrl(url);
 }
 
-export async function openUrl(url: string, lang: Lang = "en"): Promise<void> {
+export async function openUrl(url: string): Promise<void> {
   try {
     await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET, controlsColor: "#0A0A0A" });
   } catch {
-    toast.error(lang === "ko" ? "페이지를 열지 못했어요" : "Couldn’t open the page", { description: url });
+    toast.error("Couldn’t open the page", { description: url });
   }
 }
 
 /** An address in the phone's maps app (Apple Maps on an iPhone, the map app on Android). */
-export async function openMap(address: string, lang: Lang = "en"): Promise<void> {
+export async function openMap(address: string): Promise<void> {
   const q = encodeURIComponent(address.trim());
   try {
     await Linking.openURL(Platform.OS === "ios" ? `https://maps.apple.com/?q=${q}` : `geo:0,0?q=${q}`);
   } catch {
-    toast.error(lang === "ko" ? "지도를 열지 못했어요" : "Couldn’t open the map", { description: address });
+    toast.error("Couldn’t open the map", { description: address });
   }
 }
 
@@ -46,23 +45,17 @@ export const webLink = (site: string) => (/^https?:\/\//i.test(site.trim()) ? si
 const dialable = (phone: string) => phone.replace(/[^\d+]/g, "");
 
 /** Calls, texts or emails someone through the phone's own apps. */
-export async function contact(kind: "call" | "text" | "email", value: string, lang: Lang = "en"): Promise<void> {
+export async function contact(kind: "call" | "text" | "email", value: string): Promise<void> {
   const url = kind === "email" ? `mailto:${value.trim()}` : `${kind === "call" ? "tel" : "sms"}:${dialable(value)}`;
   try {
     await Linking.openURL(url);
   } catch {
     const problem =
-      lang === "ko"
-        ? kind === "email"
-          ? "메일을 보낼 앱이 없어요"
-          : kind === "call"
-            ? "이 기기로는 전화를 걸 수 없어요"
-            : "이 기기로는 문자를 보낼 수 없어요"
-        : kind === "email"
-          ? "No mail app to write with"
-          : kind === "call"
-            ? "This phone can’t make calls"
-            : "This phone can’t send texts";
+      kind === "email"
+        ? "No mail app to write with"
+        : kind === "call"
+          ? "This phone can’t make calls"
+          : "This phone can’t send texts";
     toast.error(problem, { description: value });
   }
 }

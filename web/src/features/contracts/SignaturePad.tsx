@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 
 /** What the signing page asks of the pad. */
@@ -26,8 +25,6 @@ export function SignaturePad({ ref, invalid, onChange, label }: { ref?: React.Re
   const strokes = useRef<Point[][]>([])
   const drawing = useRef<{ id: number; stroke: Point[] } | null>(null)
   const [hasInk, setHasInk] = useState(false)
-  const t = useT()
-
   const ink = () => strokes.current.reduce((n, s) => n + s.slice(1).reduce((m, p, i) => m + Math.hypot((p.x - s[i].x) * ASPECT, p.y - s[i].y), 0), 0)
 
   /** Draws every stroke, at the canvas's size (CSS pixels × the screen's density). */
@@ -90,7 +87,7 @@ export function SignaturePad({ ref, invalid, onChange, label }: { ref?: React.Re
       {/* The line to sign on, and what to do, until there's ink. */}
       <div aria-hidden className="pointer-events-none absolute inset-x-[6%] bottom-[24%] flex items-end gap-2 border-b border-zinc-300 pb-1 text-zinc-400">
         <span className="text-lg leading-none">×</span>
-        {hasInk ? null : <span className="text-sm">{t('Sign here with your finger or mouse', '여기에 손가락이나 마우스로 서명해 주세요')}</span>}
+        {hasInk ? null : <span className="text-sm">Sign here with your finger or mouse</span>}
       </div>
       <canvas
         ref={canvas}

@@ -37,9 +37,6 @@ export function passwordStrength(password: string): 0 | 1 | 2 | 3 | 4 {
 
 export const PASSWORD_STRENGTH_LABELS = ['Too short', 'Weak', 'Fair', 'Good', 'Strong'] as const
 
-/** The same in Korean, for the sign-up a parent reads in Korean. */
-export const PASSWORD_STRENGTH_LABELS_KO = ['너무 짧아요', '약함', '보통', '좋음', '강함'] as const
-
 /** A plausible email address (the server has the final word). */
 export function looksLikeEmail(email: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())

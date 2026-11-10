@@ -2,7 +2,6 @@ import { Image } from "expo-image";
 import { X } from "lucide-react-native";
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useT } from "@/lib/lang";
 
 /**
  * A picture on its own, over everything, on black: pinch to zoom (iPhone), tap it or the close button to go back.
@@ -10,7 +9,6 @@ import { useT } from "@/lib/lang";
  */
 export function ImageViewer({ image, onClose }: { image: { uri: string; alt: string } | null; onClose: () => void }) {
   const insets = useSafeAreaInsets();
-  const t = useT();
   const { width, height } = useWindowDimensions();
   return (
     <Modal visible={!!image} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent supportedOrientations={["portrait"]} onRequestClose={onClose}>
@@ -26,15 +24,15 @@ export function ImageViewer({ image, onClose }: { image: { uri: string; alt: str
             showsHorizontalScrollIndicator={false}
             showsVerticalScrollIndicator={false}
           >
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("Close image", "사진 닫기")} accessibilityHint={Platform.OS === "ios" ? t("Pinch to zoom", "두 손가락으로 확대해요") : undefined}>
-              <Image source={{ uri: image.uri }} style={{ width, height }} contentFit="contain" accessibilityLabel={image.alt || t("Image", "사진")} />
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close image" accessibilityHint={Platform.OS === "ios" ? "Pinch to zoom" : undefined}>
+              <Image source={{ uri: image.uri }} style={{ width, height }} contentFit="contain" accessibilityLabel={image.alt || "Image"} />
             </Pressable>
           </ScrollView>
         ) : null}
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={t("Close", "닫기")}
+          accessibilityLabel="Close"
           hitSlop={8}
           testID="image-viewer-close"
           style={({ pressed }) => [styles.close, { top: insets.top + 8, opacity: pressed ? 0.6 : 1 }]}

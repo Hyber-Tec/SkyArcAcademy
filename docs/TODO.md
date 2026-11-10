@@ -6,7 +6,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 ## Now
 
 - [ ] **The two signs for the front desk:** print Claude Code's PDFs (the contract and the app), letter size or 5 × 7,
-  for the acrylic holders. Then a parent scans one to ask for a contract, or to get the app
+  for the acrylic holders. Then a parent scans one to ask for a contract, or to get the app. Now in English only: if
+  the Korean ones were printed, print the new ones instead
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
@@ -23,7 +24,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
   she'd send a better signature with her final wording. Draw it in Settings → Enrollment contract, or sign on paper and
   Goo sends a photo. The title is optional
 - [ ] **Website content:** coach photos, real families' quotes (with their permission), trial length and price, the
-  youngest age, the range's safety rules, coaching in Korean, tuition, more photos
+  youngest age, the range's safety rules, tuition, more photos
 - [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)
 - [ ] **Cancel the old website's ChatGPT subscription:** fine to do. Keep the domain on Squarespace and the Google
   Workspace email
@@ -33,13 +34,11 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Invite the coaches** from the website
 - [ ] **Clear the lead coach** from the seats (Claude Code, from 2026-11-13)
 - [ ] **The stores' links to skyarcacademy.com:** Google Play once 1.1.0 is approved, the App Store with the next version
+- [ ] **The stores in English only:** the next App Store and Google Play submission drops Korean (the build has no
+  Korean any more; check the listings have no Korean text or localization)
 - [ ] **Google's sign-in window says skyarcacademy.com** (optional: one setting for Goo, then Claude Code)
 
 ## Questions for Goo
-
-- [ ] **The fourth meeting's picks:** the levels section (B6: A, B or C), the results site (R1: go ahead, and apply
-  for a Scopos key?), SCATT (R2: ask the coaches for samples and SCATT for the format?), shot order (R3: mark the shots
-  that may be swapped?). All on the round's review page
 
 - [ ] **Students in the private notes:** the academy's answers of October name about 20 students, with levels and
   grades. Keep them in the private repository, or on the Mac mini only?
@@ -61,7 +60,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 - ~~Clocking in from a phone or by location~~: the kiosk only (third meeting)
 - ~~Events on the schedule and the website~~: removed at Goo's request
-- ~~Other languages~~: Korean for parents only
+- ~~Other languages~~: English only (the academy, 2026-11-10)
 - ~~A merch shop~~: not asked for
 - ~~Automatic travel-hour pay~~: added by hand, unless the manager asks
 - ~~Several academies or branches~~: one academy, plus the demo
@@ -77,6 +76,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-10 · The fourth meeting's picks: B6 A; R1 build it, automatic; R2 decode it in-house; R3 yes
 - [x] ✅ 2026-11-09 · The app's email comes from info@skyarcacademy.com, with the manager's app password
   ([DECISIONS.md](DECISIONS.md) §40)
 - [x] ✅ 2026-11-08 · Contracts asked for from the academy's sign: the parent asks at /contract, the office sends it from
