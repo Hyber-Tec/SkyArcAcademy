@@ -120,7 +120,10 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        time at one hourly rate, paid from shortly before the first class, `@shared/pay/paidTime`; the
                        period chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
                        reports (also the staff's list, a report's staff card and sharing), account (also a coach's
-                       details, notification switches and the sign-in methods, SignInSecurity, for every role)
+                       details, notification switches and the sign-in methods, SignInSecurity, for every role; and
+                       KioskPin, the PIN a person clocks in with), tour (the welcome tour after the first sign-in: one
+                       step a tab per kind of person, parents choosing their language first; More's "Take the tour"
+                       plays it again; the notifications question waits for it)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, ChoiceRow (one of a few choices), Skeleton, Screen,
                        TabHeader, SectionTitle, SectionHeading (a part of a page in its colour),

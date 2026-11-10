@@ -5,7 +5,7 @@ import { dateKeyOf, formatDateKey, formatInstant } from "@shared/time";
 import * as Application from "expo-application";
 import { router } from "expo-router";
 import type { ContractPdf } from "@shared/contracts/types";
-import { Bell, Eye, FileSignature, Globe, KeyRound, Languages, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
+import { Bell, Compass, Eye, FileSignature, Globe, KeyRound, Languages, LifeBuoy, LogOut, ShieldCheck } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
@@ -19,6 +19,7 @@ import { useSignedContracts } from "@/features/family/data";
 import { AcademyContact } from "@/features/family/FamilyParts";
 import { useFamily } from "@/features/family/FamilyProvider";
 import { studentLine } from "@/features/students/format";
+import { tourSignals } from "@/features/tour/state";
 import { callable, errorMessage } from "@/lib/api";
 import { env } from "@/lib/env";
 import { useLang, useT } from "@/lib/lang";
@@ -238,6 +239,13 @@ export default function FamilyMoreScreen() {
           subtitle={t("The same, on a bigger screen, and reports to download as PDFs", "큰 화면에서 같은 내용을 보고, 리포트를 PDF로 내려받을 수 있어요")}
           onPress={() => void openWebsite(`/${portal}`, lang)}
           testID="family-more-website"
+        />
+        <ListRow
+          icon={<ToneIcon icon={Compass} tone="violet" />}
+          title={t("Take the tour", "앱 둘러보기")}
+          subtitle={t("How the app works, tab by tab", "탭마다 무엇을 할 수 있는지 다시 볼 수 있어요")}
+          onPress={() => tourSignals.replay()}
+          testID="family-more-tour"
         />
         <ListRow
           icon={<ToneIcon icon={LifeBuoy} tone="blue" />}
