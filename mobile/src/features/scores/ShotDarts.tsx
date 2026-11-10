@@ -1,6 +1,6 @@
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type ReplayShot, replayShots } from "@shared/shooting/replay";
+import { type ReplayShot, replayShots, swapWords } from "@shared/shooting/replay";
 import { PELLET_MM, type ShotPoint, offsetWords, targetViewMm } from "@shared/shooting/target";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useMemo } from "react";
@@ -72,13 +72,14 @@ export function ShotDarts({ evaluation, color, width, current, onOpen }: { evalu
                     key={shot.n}
                     onPress={() => onOpen(shot.n)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Shot ${shot.n}: ${fmtScore(evaluation, shot.value)}${shot.point ? "" : ", no place on the target"}`}
+                    accessibilityLabel={`Shot ${shot.n}: ${fmtScore(evaluation, shot.value)}${shot.point ? "" : ", no place on the target"}${shot.swapWith.length ? `, its place may be swapped with ${swapWords(shot.swapWith)}` : ""}`}
                     testID={`dart-${shot.n}`}
                     style={({ pressed }) => [{ width: cell, height: dart + LABEL, opacity: pressed ? 0.6 : 1 }]}
                   >
                     <View style={{ height: dart }} />
                     <T variant="small" style={[styles.score, { color: shot.value >= 10 ? colors.foreground : colors.mutedForeground }, shot.value >= 10 && styles.ten]}>
                       {fmtScore(evaluation, shot.value)}
+                      {shot.swapWith.length ? <T variant="small" style={{ color: colors.warning, fontWeight: "400" }}>{" ≈"}</T> : null}
                     </T>
                   </Pressable>
                 ))}
@@ -148,6 +149,11 @@ export function ShotSheet({ evaluation, color, n, onChange, onClose }: { evaluat
               <T tone="muted" style={styles.center}>
                 {where(shot.point)}
               </T>
+              {shot.swapWith.length ? (
+                <T variant="small" style={[styles.center, { color: colors.warning }]} testID="shot-sheet-swap">
+                  {`≈ Same score as ${swapWords(shot.swapWith)} in this series. The results sheet prints each score in order but not which hole is which, so their places may be swapped.`}
+                </T>
+              ) : null}
               <View style={styles.steps}>
                 <IconButton
                   icon={<ChevronLeft size={24} color={shot.n > 1 ? colors.foreground : colors.mutedForeground} />}

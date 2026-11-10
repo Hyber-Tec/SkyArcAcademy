@@ -1,7 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react'
 import { LuFileText, LuMessageSquareQuote, LuScanSearch } from 'react-icons/lu'
 import { type Evaluation, POSITION_COLORS, per10, POSITION_LABELS, SOURCE_LABELS } from '@shared/shooting/evaluation'
-import { replayShots } from '@shared/shooting/replay'
+import { replayShots, swapWords } from '@shared/shooting/replay'
 import { offsetWords } from '@shared/shooting/target'
 import type { WithId } from '@shared/types'
 import { Badge } from '@/components/ui/badge'
@@ -147,19 +147,38 @@ export function FeaturedResult({
             ))
           ) : (
             <ul className="space-y-1 text-sm">
-              {e.series.map((s) => (
-                <li key={s.n} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="w-16 shrink-0 text-xs text-muted-foreground">{e.source === 'sheet' ? seriesText(s.n) : 'Bulls'}</span>
-                  <span className="font-medium tabular-nums">{one(s.total)}</span>
-                  <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
-                    {s.shots.map((t, i) => (
-                      <span key={i}>{one(t.v)}</span>
-                    ))}
-                  </span>
-                </li>
-              ))}
+              {e.series.map((s, si) => {
+                const before = e.series.slice(0, si).reduce((sum, x) => sum + x.shots.length, 0)
+                return (
+                  <li key={s.n} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="w-16 shrink-0 text-xs text-muted-foreground">{e.source === 'sheet' ? seriesText(s.n) : 'Bulls'}</span>
+                    <span className="font-medium tabular-nums">{one(s.total)}</span>
+                    <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+                      {s.shots.map((t, i) => {
+                        const swap = shots[before + i]?.swapWith ?? []
+                        return (
+                          <span key={i}>
+                            {one(t.v)}
+                            {swap.length ? (
+                              <span className="text-amber-700 dark:text-amber-400" title={`Its place may be swapped with ${swapWords(swap)}`}>
+                                ≈
+                              </span>
+                            ) : null}
+                          </span>
+                        )
+                      })}
+                    </span>
+                  </li>
+                )
+              })}
             </ul>
           )}
+          {shots.some((t) => t.swapWith.length) ? (
+            <p className="text-xs text-pretty text-muted-foreground" data-testid="swap-legend">
+              <span className="font-semibold text-amber-700 dark:text-amber-400">≈</span> The same score as another shot in its series: the results sheet
+              prints each score in order but not which hole is which, so those shots’ places may be swapped.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

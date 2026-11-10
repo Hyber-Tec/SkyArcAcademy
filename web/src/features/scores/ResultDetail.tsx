@@ -121,6 +121,12 @@ export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluatio
                 </ol>
               </section>
             )}
+            {shots.some((t) => t.swapWith.length) ? (
+              <p className="text-xs text-pretty text-muted-foreground" data-testid="swap-legend">
+                <span className="font-semibold text-amber-700 dark:text-amber-400">≈</span> The same score as another shot in its series: the results sheet
+                prints each score in order but not which hole is which, so those shots’ places may be swapped.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </div>

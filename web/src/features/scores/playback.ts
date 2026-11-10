@@ -23,6 +23,8 @@ export interface PlayShot {
   context: string | null
   /** The total so far, this shot included; null when several results play together. */
   runningText: string | null
+  /** The shots its place may be swapped with (a results sheet's, same score: `swappableShots`); empty when certain. */
+  swapWith: number[]
 }
 
 const scoreText = (sius: boolean, v: number) => (sius ? v.toFixed(1) : String(Math.round(v)))
@@ -46,6 +48,7 @@ export function playEvaluation(e: Pick<Evaluation, 'source' | 'series'>): PlaySh
     of: shotOfText(s.n, shots.length),
     context: s.series !== null ? seriesText(s.series) : null,
     runningText: scoreText(sius, s.running),
+    swapWith: s.swapWith,
   }))
 }
 
@@ -70,6 +73,7 @@ export function playPoints(points: readonly EvaluationPoint[]): PlayShot[] {
         of: shotOfText(i + 1, p.marks.length),
         context: several ? formatDateKey(p.dateKey, 'monthDay') : null,
         runningText: several ? null : scoreText(sius, running),
+        swapWith: [],
       })
     })
   }
