@@ -1,22 +1,26 @@
 # To-do
 
 Goo's list, short on purpose. The details for each line are in [TODO-notes.md](TODO-notes.md), under the same title.
-When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-09.
+When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-10.
 
 ## Now
 
 - [ ] **The two signs for the front desk:** print Claude Code's PDFs (the contract and the app), letter size or 5 × 7,
   for the acrylic holders. Then a parent scans one to ask for a contract, or to get the app
-- [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
-  tablet until then
+- [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
+  meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
+  the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
+- [ ] **The public email:** Settings → Academy → Email → `info@skyarcacademy.com` (it still says the manager's Gmail).
+  The website, the app and new reports change at once
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-09): it goes
   live by itself. If Google writes, send the message to Claude Code
 
 ## The manager
 
-- [ ] **His signature for the contract:** draw it in Settings → Enrollment contract, or sign on paper and Goo sends a
-  photo. His title is optional
+- [ ] **The signature for the contract:** none is drawn yet (a typed name shows). At the fourth meeting the owner said
+  she'd send a better signature with her final wording. Draw it in Settings → Enrollment contract, or sign on paper and
+  Goo sends a photo. The title is optional
 - [ ] **Website content:** coach photos, real families' quotes (with their permission), trial length and price, the
   youngest age, the range's safety rules, coaching in Korean, tuition, more photos
 - [ ] **Legal name and mailing address** for the privacy policy (only if the academy wants them there)

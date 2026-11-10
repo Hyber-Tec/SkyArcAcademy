@@ -20,11 +20,25 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
 sizes, with a picture of each.
 
-### Coaches' kiosk PINs
+### Kiosk PINs before Sunday, November 15
 
-None was set on 2026-11-07. On the website: Employees → Directory → the coach → **Kiosk PIN** → 4 digits → Set PIN.
-PINs are unique, and kept only as fingerprints. The tablet picks a new PIN up within a minute, then that coach can
+Everyone starts clocking in on the kiosk after Sunday, November 15 (the fourth meeting). On 2026-11-10 the two coaches
+with accounts had their PINs (set at the meeting); three employee records had none: the manager's and two people's
+without an account. Either way works:
+
+- **The office:** Employees → Directory → the person → **Kiosk PIN** → 4 digits → Set PIN.
+- **The coach** (since the fourth meeting's B2): signed in on the website, Profile → **Kiosk PIN**, typed twice; in the
+  phone app, More → Kiosk PIN, once the next update is out. Five tries a day.
+
+PINs are unique, and kept only as fingerprints. The tablet picks a new PIN up within a minute, then that person can
 clock in.
+
+### The public email
+
+The website, the phone app's contact buttons, the contract's pages and PDF, new progress reports and the reply address
+of invites all show Settings → Academy → **Email**. On 2026-11-10 it still held the manager's Gmail; the academy wants
+`info@skyarcacademy.com` there (the fourth meeting's B5). Change it once and every place follows. Reports made before
+keep the address they were made with.
 
 ### Google Search Console
 
@@ -57,7 +71,7 @@ it to Claude Code.
 
 ## The manager
 
-### His signature for the contract
+### The signature for the contract
 
 The contract's academy line shows the manager's typed name until a signature is set (`docs/DECISIONS.md` §35). Either:
 
@@ -65,7 +79,8 @@ The contract's academy line shows the manager's typed name until a signature is 
 - **On paper:** sign with a black pen on white paper, and Goo sends Claude Code a photo, taken flat and in good light.
   Claude Code makes the file, and it goes in on the same page.
 
-His title (Director, Head coach…) is optional.
+The title (Director, Head coach…) is optional. At the fourth meeting the owner said she'd send a better signature
+with her final wording of the contract.
 
 ### Website content
 
