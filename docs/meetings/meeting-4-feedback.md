@@ -96,11 +96,11 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     hash, in the audit log. A taken PIN is refused, which tells the person someone has it, so each person gets five
     tries a day. The website's Profile → Kiosk PIN and the phone's More → Kiosk PIN, typed twice. The office still sets
     or removes anyone's. The website's part is live once merged; the phone's comes with the next app update.
-- [ ] **B3. No closing banner.** Remove the black "Ready to find your focus?" banner at the end of every page.
+- ✅ **B3. No closing banner.** Remove the black "Ready to find your focus?" banner at the end of every page. (#147)
   - *Plan:* **small change.** It's one component (`FinalCta`) at the end of every page, with its own photo spot in
     Settings → Website ("The closing banner"), which goes with it. The header's Book button and the Contact page stay.
-- [ ] **B4. No placeholders.** A spot with nothing in it shows nothing; what the academy adds appears in its place and
-  fits, one item or many.
+- ✅ **B4. No placeholders.** A spot with nothing in it shows nothing; what the academy adds appears in its place and
+  fits, one item or many. (#147)
   - *Plan:* **small change.** Today: the coaches' portraits (none of the four has a photo, so every coach card says
     "Placeholder"), the Gallery (8 photos, padded to 12 with placeholder tiles), and any page photo left empty (all are
     chosen today). A coach without a portrait gets a card without one; when some coaches have portraits, the others show

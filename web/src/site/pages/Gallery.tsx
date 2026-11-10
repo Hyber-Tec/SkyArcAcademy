@@ -5,18 +5,16 @@ import { type SitePhoto, useSiteData } from '@/site/data'
 import { GALLERY, type GalleryCategory, UI } from '@/site/kit/content'
 import { Lightbox } from '@/site/kit/Lightbox'
 import { Reveal } from '@/site/kit/motion'
-import { Photo, Placeholder } from '@/site/kit/Photo'
+import { Photo } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
 import { Container } from '../components/bits'
-import { FinalCta, PageHero, crmLang } from '../components/blocks'
+import { PageHero, crmLang } from '../components/blocks'
 import { T } from '../i18n'
 
 type Album = 'all' | GalleryCategory
 
 /** How many photos show at first; more appear as the reader nears the end. */
 const PAGE = 24
-/** While the gallery is this short, marked spots show the photos still to come. */
-const SHORT = 12
 
 /** Albums (a card per album with its cover and count) above the chosen album's photos; a photo opens full screen. */
 export function Gallery() {
@@ -34,7 +32,6 @@ export function Gallery() {
   const albumLabel = GALLERY.categories.find((c) => c.id === album)?.label ?? GALLERY.categories[0].label
   const visible = items.slice(0, shown)
   const more = items.length > visible.length
-  const todo = album === 'all' && ready && photos.length < SHORT ? GALLERY.todo.slice(0, Math.max(0, SHORT - photos.length)) : []
 
   // More photos as the reader nears the end of the list (no button to press).
   const sentinel = useRef<HTMLDivElement>(null)
@@ -121,11 +118,6 @@ export function Gallery() {
                 </button>
               </Reveal>
             ))}
-            {todo.map((label, i) => (
-              <Reveal key={label.en} delay={(i % 3) * 0.05} className="break-inside-avoid">
-                <Placeholder label={label} className={cn('w-full rounded-[22px] border-ink/20 bg-warm text-stone', i % 2 ? 'aspect-[4/5]' : 'aspect-[4/3]')} />
-              </Reveal>
-            ))}
           </div>
           {more ? (
             <div ref={sentinel} role="status" className="flex items-center justify-center gap-2 py-8 text-[14px] text-stone">
@@ -147,7 +139,6 @@ export function Gallery() {
           />
         </Container>
       </section>
-      <FinalCta />
     </>
   )
 }

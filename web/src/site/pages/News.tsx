@@ -9,7 +9,7 @@ import { Reveal } from '@/site/kit/motion'
 import { Photo } from '@/site/kit/Photo'
 import { A, useSite } from '@/site/kit/site'
 import { Container, btnOutline } from '../components/bits'
-import { FinalCta, NewsCard, PageHero, crmLang, formatDate } from '../components/blocks'
+import { NewsCard, PageHero, crmLang, formatDate } from '../components/blocks'
 import { T } from '../i18n'
 import { NotFound } from './NotFound'
 
@@ -90,7 +90,6 @@ export function News() {
           ) : null}
         </Container>
       </section>
-      <FinalCta />
     </>
   )
 }
