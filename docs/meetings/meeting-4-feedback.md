@@ -181,6 +181,12 @@ The owner's first notes after reading the website page by page (more will come i
 - [ ] **W2. The coaches' backgrounds, worded exactly:** "Every phrase matters, and their experience and qualifications
   must be presented accurately, without ambiguity. For the main page, please use the designation 'Elite Military Rifle
   Marksman.'"
+  - *2026-11-10:* every sentence about the coaches checked against their own cards (Settings → Website). The homepage now
+    says exactly what the cards say, with the designation: "Coached by an NCAA National Championship competitor and an
+    Elite Military Rifle Marksman"; "NCAA National Championship and Junior Olympic competition experience, NRA Level 1
+    Certified Instructors and an Elite Military Rifle Marksman"; "elite military rifle marksmanship" for "military
+    leadership", which no card says (#154). The cards themselves are the academy's words: one still has "Elite military
+    rifle marksman" in small letters (Settings → Website → Coaches). The owner's full review comes in Google Drive.
 
 ## 5. On hold
 
