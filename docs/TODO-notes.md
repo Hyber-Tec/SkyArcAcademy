@@ -57,20 +57,6 @@ it to Claude Code.
 
 ## The manager
 
-### An app password for info@skyarcacademy.com
-
-The academy's email is Google Workspace. Sending the app's email from info@ with an app password passes SPF, DKIM and
-DMARC, which the domain already publishes, so mail stops landing in spam. On a computer:
-
-1. Sign in to Google as **info@skyarcacademy.com**, then go to **myaccount.google.com** → **Security**.
-2. **2-Step Verification:** turn it on if it's off (a phone number is enough).
-3. Search for **App passwords** at the top of the page (or open myaccount.google.com/apppasswords) → name it
-   **Sky Arc** → **Create**.
-4. Give Goo the 16 letters in person or in a private message: not by email, and not in a chat with others.
-
-If Google says app passwords aren't available, the academy's Workspace admin allows 2-Step Verification first:
-admin.google.com → Security → Authentication → 2-Step Verification → **Allow users to turn on 2-Step Verification**.
-
 ### His signature for the contract
 
 The contract's academy line shows the manager's typed name until a signature is set (`docs/DECISIONS.md` §35). Either:
@@ -117,21 +103,9 @@ contact section (Settings → Academy). The policy is in effect with its name, e
 
 ## Soon
 
-### Email from info@
-
-The second meeting's `E1`, the third's `DM3`. Once the manager has made the app password (The manager, above):
-
-1. **Goo:** Google Cloud console → Security → **Secret Manager** → `GMAIL_APP_PASSWORD` → **New version** → paste the
-   16 letters → **Add new version**. Never in a chat or a file. The functions keep using the old version until
-   they're redeployed, so nothing breaks in between.
-2. **Claude Code:** in a pull request, `SENDER_EMAIL` in `shared/src/brand.ts` becomes `info@skyarcacademy.com`.
-   Merging it redeploys the functions that send mail, and they use the new password.
-
-Replies already go to the academy's email. Copies of what the app sends will show in info@'s Sent folder.
-
 ### Invite the coaches
 
-The third meeting's `DM2`. After the email, so the invitations come from the academy's address. From the website:
+The third meeting's `DM2`. The invitations come from info@ (since 2026-11-09). From the website:
 each coach's page → **Access** → send the sign-in email. The real-data import gave nobody access yet
 ([DECISIONS.md](DECISIONS.md) §21).
 

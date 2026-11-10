@@ -7,9 +7,8 @@ import nodemailer from 'nodemailer'
 import { SENDER_EMAIL } from '@shared/brand'
 
 /**
- * The Google app password of the sending Gmail account (`SENDER_EMAIL`). Set it with
- * `firebase functions:secrets:set GMAIL_APP_PASSWORD`; until then it holds a
- * placeholder and nothing is sent (the invite shows "Email not set up").
+ * The Google app password of the sending account (`SENDER_EMAIL`, the academy's info@). docs/DEPLOY.md says how to
+ * change it. While it holds anything but an app password, nothing is sent (the invite shows "Email not set up").
  */
 export const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD')
 

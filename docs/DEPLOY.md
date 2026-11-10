@@ -167,19 +167,23 @@ Set up on 2026-10-15. HyberTec's organization shapes three things here:
   form, which checks what it gets, drops bots and limits each sender itself (`functions/src/website.ts`).
 
 The email app password is the Secret Manager secret **`GMAIL_APP_PASSWORD`**: the Google app password of the sending
-Gmail account (`SENDER_EMAIL` in `shared/src/brand.ts`). It was set on 2026-10-16, and Firebase manages the secret since
-then. While it holds anything but a 16-letter app password, the functions send nothing and the app says email isn't set
-up (an invite then shows its sign-in link to copy). The functions read the version that was current when they were
-deployed, so after changing it, deploy `main` again:
+account (`SENDER_EMAIL` in `shared/src/brand.ts`), the academy's **info@skyarcacademy.com** since 2026-11-09 (HyberTec's
+Gmail before; `docs/DECISIONS.md` §40). Firebase manages the secret. While it holds anything but a 16-letter app
+password, the functions send nothing and the app says email isn't set up (an invite then shows its sign-in link to
+copy). To change it:
 
-```bash
-firebase functions:secrets:set GMAIL_APP_PASSWORD --project skyarcacademy   # paste the 16-letter app password
-gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy
-```
+1. **The console:** Google Cloud console (project skyarcacademy) → Security → **Secret Manager** →
+   `GMAIL_APP_PASSWORD` → **Versions** → **New version** → paste the 16 letters (spaces don't matter) → leave
+   **Disable all past secret versions** unticked (the live functions still read the old one) → **Add new version**.
+2. **Deploy `main` again:** the functions read the version that was current when they were deployed. GitHub →
+   Actions → CI → **Run workflow** on `main`, or `gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy`. A run
+   started by hand deploys everything, so every function that sends mail picks the new password up.
 
-When the command offers to re-deploy the functions itself, answer **No**: production gets its functions from `main`.
-An app password is made at https://myaccount.google.com/apppasswords, signed in as the sending account, once its
-2-Step Verification is on.
+- **Making an app password:** signed in to Google as info@, at https://myaccount.google.com/apppasswords, once the
+  account's 2-Step Verification is on. If Google says app passwords aren't available, the academy's Workspace admin
+  allows 2-Step Verification first: admin.google.com → Security → Authentication → 2-Step Verification.
+- **Changing info@'s Google password revokes its app passwords:** the app's email stops (account emails fall back to
+  Firebase's own) until a new one is saved this way.
 
 How it was set up, to recreate or audit it:
 
@@ -306,9 +310,9 @@ breaks: the phone app 1.0 and 1.1, and emails already sent.
    - the docs.
    It also drops the home page's sample quotes, which had to be real or gone before the domain points here
    (`docs/DECISIONS.md` §18).
-7. **The email sender** (decided 2026-10-15 to wait for the domain): the academy's `info@` address sends, once its app
-   password is in the `GMAIL_APP_PASSWORD` secret and `SENDER_EMAIL` changes (`docs/TODO-notes.md`, "Email from
-   info@skyarcacademy.com"). The domain already publishes SPF, DKIM and DMARC for Google Workspace.
+7. **The email sender** (decided 2026-10-15 to wait for the domain): the academy's `info@` address sends since
+   2026-11-09, with its app password in the `GMAIL_APP_PASSWORD` secret (above). The domain publishes SPF, DKIM and
+   DMARC for Google Workspace.
 8. **After the move:**
    - Google Search Console: add the domain and send the sitemap.
    - The stores' addresses (`docs/publishing/store/listing.md`): Google Play's any time; the App Store's Support and Marketing URLs

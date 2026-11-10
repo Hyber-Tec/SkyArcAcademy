@@ -80,7 +80,7 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
   (§9).*
 - **Email:** from HyberTec's Gmail under the academy's name (Q5, §5). Until its app password is set, no email goes
   out: invites show a sign-in link to copy, and account emails fall back to Firebase's own. *The app password was
-  set on 2026-10-16 (§9).*
+  set on 2026-10-16 (§9). Changed: from the academy's info@ since 2026-11-09 (§40).*
 - **Cloud Functions** run as their own service account with only the roles they use. Callable functions are opened by
   turning off Cloud Run's invoker check, because HyberTec's organization doesn't allow `allUsers` in IAM policies
   (`docs/DEPLOY.md`).
@@ -94,7 +94,7 @@ Calls made while forking, within the confirmed plan. Goo can overrule any of the
 - **Q5. Email sender: HyberTec's Gmail for now.** The academy owns skyarcacademy.com, but moving the app there is
   the last step before launch, and mail from the academy's own domain is less likely to land in spam. Switching the
   sender is on the launch checklist (`docs/DEPLOY.md`, "Moving to skyarcacademy.com"), so it comes up when the domain
-  moves.
+  moves. *Changed: the academy's info@ sends since 2026-11-09 (§40).*
 - **Q7. Schedule rows: by coach, with time across**, as in HyberCRM. The academy's own sheets put time down and days
   across; Sky Arc keeps HyberCRM's layout.
 - **Q8. Students have a level and a program.** Both are lists the academy edits in Settings → Students. They start
@@ -1309,4 +1309,21 @@ and one for the phone app. The website advertises the app too.
   "Download" alone doesn't say what downloads. The address stays `/get-app`, which the sign's QR code opens.
 - **No phone build is needed.** The parent's side is the website, and the office's phone gets the request's notice;
   from the next build, tapping it opens the request on the website.
+
+## 40. The app's email from info@skyarcacademy.com (the manager and Goo, 2026-11-09)
+
+The academy's question A14, the second meeting's `E1` and the third's `DM3`.
+
+- **The academy's own address sends** the app's email since 2026-11-09: invites, account emails, contracts and their
+  signed copies, shared reports, and the website's trial requests and questions. The manager made info@'s Google app
+  password, Goo saved it as `GMAIL_APP_PASSWORD`, and `SENDER_EMAIL` changed (`docs/DEPLOY.md`). HyberTec's Gmail sent
+  before.
+- **Why:** mail from the academy's domain, which publishes SPF, DKIM and DMARC for Google Workspace, is less likely to
+  land in spam. What the app sends shows in info@'s Sent folder; replies went to the academy's address already.
+- **If info@'s Google password changes,** Google revokes its app passwords, and the app's email stops (account emails
+  fall back to Firebase's own) until a new app password is saved (`docs/DEPLOY.md`).
+- **The phone app's "confirm your email" screen** names the sender from its build: 1.1.0 names HyberTec's Gmail until
+  the next build.
+- **Apple's hidden addresses:** someone who signed in with Apple and hid their email gets the app's email only once
+  info@ is registered with Apple (`docs/publishing/apple/sign-in-with-apple.md`, section 5). Optional.
 

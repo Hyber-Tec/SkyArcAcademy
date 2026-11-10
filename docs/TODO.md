@@ -1,7 +1,7 @@
 # To-do
 
 Goo's list, short on purpose. The details for each line are in [TODO-notes.md](TODO-notes.md), under the same title.
-When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-08.
+When something is done, Claude Code ticks it, adds ✅ and the date, and moves it down to **Done**. Checked on 2026-11-09.
 
 ## Now
 
@@ -10,13 +10,11 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Coaches' kiosk PINs:** Employees → the coach → Kiosk PIN, and tell each coach. Nobody can clock in on the
   tablet until then
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
-- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-08): it goes
+- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still 1.0.0 in the store on 2026-11-09): it goes
   live by itself. If Google writes, send the message to Claude Code
 
 ## The manager
 
-- [ ] **An app password for info@skyarcacademy.com** (5 minutes), for Goo: the app's email then comes from the
-  academy and stops landing in spam
 - [ ] **His signature for the contract:** draw it in Settings → Enrollment contract, or sign on paper and Goo sends a
   photo. His title is optional
 - [ ] **Website content:** coach photos, real families' quotes (with their permission), trial length and price, the
@@ -27,8 +25,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Soon
 
-- [ ] **Email from info@:** Goo puts the manager's app password in, then Claude Code switches the sender
-- [ ] **Invite the coaches** from the website (after the email)
+- [ ] **Invite the coaches** from the website
 - [ ] **Clear the lead coach** from the seats (Claude Code, from 2026-11-13)
 - [ ] **The stores' links to skyarcacademy.com:** Google Play once 1.1.0 is approved, the App Store with the next version
 - [ ] **Google's sign-in window says skyarcacademy.com** (optional: one setting for Goo, then Claude Code)
@@ -71,6 +68,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-09 · The app's email comes from info@skyarcacademy.com, with the manager's app password
+  ([DECISIONS.md](DECISIONS.md) §40)
 - [x] ✅ 2026-11-08 · Contracts asked for from the academy's sign: the parent asks at /contract, the office sends it from
   the request, and it opens on their phone filled in ([DECISIONS.md](DECISIONS.md) §39)
 - [x] ✅ 2026-11-08 · The app on the website: /get-app, a band on the homepage, the stores' badges in the footer, and one
