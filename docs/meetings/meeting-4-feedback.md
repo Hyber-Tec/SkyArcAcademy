@@ -90,7 +90,7 @@ request's number. Each item's *Plan* says what the code had when the work starte
 
 In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
 
-- [ ] **B2. Coaches set and change their own kiosk PIN.** On the phone, and the website too.
+- ✅ **B2. Coaches set and change their own kiosk PIN.** On the phone, and the website too. (#146)
   - *Plan:* **new work, small.** The office's Employees page was the only way. A server function for one's own PIN,
     with the office's rules: the academy's length, unique (the tablet knows people by their PIN alone), stored only as a
     hash, in the audit log. A taken PIN is refused, which tells the person someone has it, so each person gets five

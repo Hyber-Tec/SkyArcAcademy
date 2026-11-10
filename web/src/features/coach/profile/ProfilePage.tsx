@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { LuBell, LuKeyRound, LuSunMoon, LuUserRound, LuWallet } from 'react-icons/lu'
+import { LuBell, LuKeyRound, LuRectangleEllipsis, LuSunMoon, LuUserRound, LuWallet } from 'react-icons/lu'
 import { formatDateKey } from '@shared/time'
 import type { Staff, WithId } from '@shared/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -24,6 +24,7 @@ interface Section {
 
 const SECTIONS: Section[] = [
   { to: 'account', label: 'Account details', icon: LuUserRound },
+  { to: 'kiosk-pin', label: 'Kiosk PIN', icon: LuRectangleEllipsis, value: ({ staff }) => (staff ? (staff.hasKioskPin ? 'Set' : 'Not set') : null) },
   {
     to: 'notifications',
     label: 'Notifications',
@@ -46,14 +47,14 @@ export function ProfilePage() {
   const { data: staff, loading } = useMyStaff()
   const { theme } = useTheme()
   const rows = SECTIONS.map((s) => ({ to: s.to, label: s.label, icon: s.icon, value: s.value?.({ staff, theme }) ?? null }))
-  const [account, notifications, security, appearance] = rows
+  const [account, kioskPin, notifications, security, appearance] = rows
   return (
     <ProfileLayout
       base="/coach/profile"
       header={<ProfileHeader staff={staff} loading={loading} />}
       sections={rows}
       groups={[
-        { title: 'Your account', rows: [account, { to: '/coach/payroll', label: 'Payroll', icon: LuWallet }] },
+        { title: 'Your account', rows: [account, kioskPin, { to: '/coach/payroll', label: 'Payroll', icon: LuWallet }] },
         { title: 'Settings', rows: [notifications, security, appearance] },
       ]}
     />

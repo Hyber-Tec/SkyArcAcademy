@@ -2,7 +2,7 @@ import { notificationsSummary } from "@shared/profile";
 import { ROLE_LABELS } from "@shared/roles";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Bell, ChartLine, Eye, FilePen, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
+import { Bell, ChartLine, Eye, FilePen, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, RectangleEllipsis, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
@@ -33,7 +33,7 @@ function Icon({ as: Picture, tone }: { as: typeof Globe; tone: Accent }) {
 /**
  * Everything beyond the tabs, kept short. Coaches (2026-10-18: "every ability … as a coach on the website … on the
  * phone too"): Students, News, the Drive, Reports and their Payroll; the office: the coaches with their contacts, News,
- * the Drive, Reports and the enrollment contract as parents see it (a preview). Then the account (the details, notifications and sign-in), the appearance, the website, help,
+ * the Drive, Reports and the enrollment contract as parents see it (a preview). Then the account (the details, notifications, sign-in, and the kiosk PIN for anyone with an employee record), the appearance, the website, help,
  * the privacy policy, which version this is, and signing out.
  */
 export default function MoreScreen() {
@@ -111,6 +111,16 @@ export default function MoreScreen() {
           testID="more-notifications"
         />
         <ListRow icon={<Icon as={KeyRound} tone="grey" />} title="Sign-in & security" subtitle="How you sign in, and your password" onPress={() => router.push("/more/security")} testID="more-security" />
+        {staff ? (
+          <ListRow
+            icon={<Icon as={RectangleEllipsis} tone="amber" />}
+            title="Kiosk PIN"
+            subtitle="To clock in and out at the front desk"
+            right={staff.hasKioskPin ? "Set" : "Not set"}
+            onPress={() => router.push("/more/kiosk-pin")}
+            testID="more-kiosk-pin"
+          />
+        ) : null}
       </ListSection>
 
       <ListSection title="Appearance">

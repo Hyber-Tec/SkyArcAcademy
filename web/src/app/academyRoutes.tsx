@@ -105,6 +105,7 @@ const coachRoutes: RouteObject[] = [
     children: [
       { index: true, lazy: page(() => import('@/features/coach/profile/ProfilePage'), 'ProfileIndex') },
       { path: 'account', lazy: page(() => import('@/features/coach/profile/AccountSection'), 'AccountSection') },
+      { path: 'kiosk-pin', lazy: page(() => import('@/features/coach/profile/KioskPinSection'), 'KioskPinSection') },
       { path: 'notifications', lazy: page(() => import('@/features/coach/profile/NotificationsSection'), 'NotificationsSection') },
       { path: 'security', lazy: page(() => import('@/features/profile/SecuritySection'), 'SecuritySection') },
       { path: 'appearance', lazy: page(() => import('@/features/profile/AppearanceSection'), 'AppearanceSection') },

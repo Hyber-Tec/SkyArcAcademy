@@ -11,7 +11,11 @@ the screen on and bright by itself.
 
 The same as every clock-in (`docs/DECISIONS.md` §23, the second meeting's `K1`–`K6`):
 
-- **One PIN per coach** (Employees → the coach → Kiosk PIN, 4 digits by default: Settings → Pay & time clock → Kiosk).
+- **One PIN per coach** (4 digits by default: Settings → Pay & time clock → Kiosk), unique in the academy, since the
+  tablet knows people by their PIN alone. **Coaches set and change their own** (the fourth meeting's B2): Profile →
+  Kiosk PIN on the website, More → Kiosk PIN in the phone app, typed twice (`setMyKioskPin`). A PIN that's taken is
+  refused, which says someone has it, so each person gets five tries a day. The office still sets or removes anyone's
+  in Employees → the coach → Kiosk PIN. A new PIN reaches the tablet at its next sync, within a minute.
   A tap on the big button clocks in, or out when they're in.
 - **Clock times stay as clocked.** Paid time starts 30 minutes before the coach's first class (never earlier) and
   ends at the end of their last class; anyone still clocked in at midnight is clocked out then, and Home lists them.

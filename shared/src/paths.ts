@@ -23,6 +23,8 @@ export const COL = {
   clockShifts: 'clockShifts',
   openShifts: 'openShifts',
   kioskPins: 'kioskPins',
+  /** Server-only: how often each person tried their own PIN today (functions' `setMyKioskPin`). */
+  kioskPinTries: 'kioskPinTries',
   /**
    * The kiosk tablet (shared/src/kiosk, functions/src/kiosk.ts): the tablets registered with the setup PIN
    * (`kioskDevices`, admins read them), and the server-only setup PIN (`kioskSetup/pin`; `kioskSetup/status` says when
