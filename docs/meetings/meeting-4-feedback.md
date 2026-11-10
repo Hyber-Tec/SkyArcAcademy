@@ -112,14 +112,15 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     the reply address of invites all read it. It still holds the manager's Gmail: changing it there changes them all
     (`docs/TODO.md`). No address is written into the code.
   - *2026-11-10:* waiting for the setting to change (Goo or the manager).
-- [ ] **B6. "One path, four levels": the scroll animation.** The coach saw something move the wrong way while scrolling.
+- ✅ **B6. "One path, four levels": the scroll animation.** The coach saw something move the wrong way while scrolling.
   - *Plan:* **analyze first.** As the page scrolls down, the section steps through the four levels. The likely
     cause: the highlight on its rank ladder (the highest rank at the top) climbs, against the scroll. Check this and
     anything else that moves against the scroll, show Goo the options with pictures, and change it once Goo picks.
   - *Options shown 2026-11-10:* confirmed: the marker climbs as the page goes down, and nothing else moves against the
     scroll. A, flip the ladder so the marker moves down with the page (recommended); B, the phones' horizontal bar on
     computers too; C, keep the ladder with a marker that jumps instead of sliding.
-  - *Goo, 2026-11-10:* **A.**
+  - *Goo, 2026-11-10:* **A.** Done: the ladder reads from Scout at the top to Expert at the bottom, so its marker goes
+    down as the page does; the NCAA Precision box stays above it. (#152)
 - ✅ **B1. A welcome tour in the phone app** after the first sign-in: per role (parent, student, coach, admin), short,
   skip and replay. (#149; phones get it with the next app update)
   - *Plan:* **new work, phone only.** The first step chooses the language for parents (English or Korean, which also

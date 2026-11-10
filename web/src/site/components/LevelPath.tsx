@@ -171,10 +171,13 @@ const AXIS_MIN = 125
 const AXIS_MAX = 300
 const pct = (v: number) => ((Math.min(AXIS_MAX, Math.max(AXIS_MIN, v)) - AXIS_MIN) / (AXIS_MAX - AXIS_MIN)) * 100
 
-/** The ranks standing up (Expert at the top), the level's ranks lit, a red marker at the group's 3×10 score. */
+/**
+ * The ranks from the first at the top to Expert at the bottom, the level's ranks lit, a red marker at the group's 3×10
+ * score: as the page scrolls down through the levels, the marker goes down with it (the fourth meeting's B6, option A).
+ */
 export function RankLadder({ level, active, className }: { level: MotionValue<number>; active: number; className?: string }) {
   const { t } = useSite()
-  const bottom = useTransform(level, (v) => `${pct(groupAt(v).match)}%`)
+  const top = useTransform(level, (v) => `${pct(groupAt(v).match)}%`)
   return (
     <div className={cn('flex flex-col', className)}>
       <div className={cn('mb-2 flex items-center justify-between gap-2 rounded-xl border border-dashed px-3 py-2 transition-[opacity,border-color,background-color] duration-500', active === 3 ? 'border-red/50 bg-red/[0.04] opacity-100' : 'border-ink/20 opacity-45')}>
@@ -185,13 +188,13 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
         {/* The axis */}
         <div className="relative w-7 shrink-0" aria-hidden="true">
           {[150, 175, 200, 225, 250, 275, 300].map((v) => (
-            <span key={v} className="absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none text-stone tabular-nums" style={{ bottom: `${pct(v)}%` }}>
+            <span key={v} className="absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none text-stone tabular-nums" style={{ top: `${pct(v)}%` }}>
               {v}
             </span>
           ))}
         </div>
         <div className="relative flex-1">
-          <ol className="absolute inset-0 flex flex-col-reverse gap-[3px]">
+          <ol className="absolute inset-0 flex flex-col gap-[3px]">
             {BANDS.map((b) => {
               const on = b.level === active
               return (
@@ -210,7 +213,7 @@ export function RankLadder({ level, active, className }: { level: MotionValue<nu
             })}
           </ol>
           {/* The marker: the drawn group's 3×10 score */}
-          <motion.div className="pointer-events-none absolute -left-2 h-0 w-4" style={{ bottom }} aria-hidden="true">
+          <motion.div className="pointer-events-none absolute -left-2 h-0 w-4" style={{ top }} aria-hidden="true">
             <div className="absolute top-0 left-0 size-3 -translate-y-1/2 rounded-full bg-red ring-2 ring-white" />
             <div className="absolute top-0 left-2 h-[2px] w-3 -translate-y-1/2 rounded-full bg-red" />
           </motion.div>
