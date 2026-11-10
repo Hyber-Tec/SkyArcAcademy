@@ -64,10 +64,20 @@ Sent on 2026-11-06, in the evening:
   review by itself.
 - **Order:** the form went first, so Google reviews the new version against the new answers.
 
-Google reviews an update in a few hours to a few days, and "up to a week, and in rare cases even longer". Our first
-review, a new app on a new account, took up to eight days. Once approved, it goes live by itself, and Android phones
-update on their own. If Google rejects it or asks something, it says so in the Play Console's inbox and by email: send
-it to Claude Code.
+**On 2026-11-10** it was still in review: Google Play's API showed 1.1.0 (12) submitted to all of production (nothing
+stuck as a draft), and the store page still said 1.0.0, updated Oct 26. Google gives no fixed time ("up to a week, and in
+rare cases even longer"); new accounts and apps used by children get more manual review, and our first review took
+about eight days. This update also adds sign-up in the app and new Data safety answers, which Google checks closely.
+
+- **Only Goo can see the review's state** (the API doesn't show it): Play Console → Publishing overview. "Changes
+  ready to publish" means managed publishing is on and it waits for Publish; "In review" means Google still has it.
+  Also the Inbox, and Policy status / App content: anything marked "Action required" can hold a review.
+- **Still in review after Nov 13** (a full week): Play Console → Help → Contact support.
+- **No new Android build meanwhile:** a new release replaces the one in review and puts it back in the queue. The next
+  phone build (the welcome tour, the coach's PIN screen) goes to Android once 1.1.0 is live.
+
+Once approved, it goes live by itself, and Android phones update on their own. If Google rejects it or asks something,
+it says so in the Play Console's inbox and by email: send it to Claude Code.
 
 ## The manager
 
@@ -161,6 +171,20 @@ sign-in (`authDomain`). It can say skyarcacademy.com. It's optional, and the pho
 
 ## Questions for Goo
 
+
+### The fourth meeting's picks
+
+From the round's review page (2026-11-10), each decided before anything is built:
+
+- **B6, "One path, four levels":** A, flip the ladder so the marker moves down with the page (recommended); B, the
+  phones' horizontal bar on computers too; C, the ladder kept, its marker jumping instead of sliding.
+- **R1, the results site:** go ahead with "paste a link → preview → save"? It needs a free Scopos application key,
+  applied for as HyberTec (support.scopos.tech, "X-API-Key"); free now, "however we will be charging for these
+  licenses soon".
+- **R2, SCATT:** ask the coaches for SCATT's print to PDF of a session and the other samples (a known calibration
+  shift, a 1–3 shot session, other students and positions, computer screenshots, the About screen, SCATT Expert?), and
+  SCATT for the format or an export. Claude Code can draft that email.
+- **R3, shot order:** mark the shots on a sheet result whose places may be swapped (same score in a series)?
 ### Students in the private notes
 
 The private notes ([CLAUDE.md](../CLAUDE.md), "Local files") keep no students' records: scores, target photos, SIUS

@@ -111,10 +111,14 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     Contact page and privacy policy, the app's contact buttons, the contract's pages and PDF, new progress reports, and
     the reply address of invites all read it. It still holds the manager's Gmail: changing it there changes them all
     (`docs/TODO.md`). No address is written into the code.
+  - *2026-11-10:* waiting for the setting to change (Goo or the manager).
 - [ ] **B6. "One path, four levels": the scroll animation.** The coach saw something move the wrong way while scrolling.
   - *Plan:* **analyze first.** As the page scrolls down, the section steps through the four levels. The likely
     cause: the highlight on its rank ladder (the highest rank at the top) climbs, against the scroll. Check this and
     anything else that moves against the scroll, show Goo the options with pictures, and change it once Goo picks.
+  - *Options shown 2026-11-10:* confirmed: the marker climbs as the page goes down, and nothing else moves against the
+    scroll. A, flip the ladder so the marker moves down with the page (recommended); B, the phones' horizontal bar on
+    computers too; C, keep the ladder with a marker that jumps instead of sliding. Waiting for Goo's pick.
 - ✅ **B1. A welcome tour in the phone app** after the first sign-in: per role (parent, student, coach, admin), short,
   skip and replay. (#149; phones get it with the next app update)
   - *Plan:* **new work, phone only.** The first step chooses the language for parents (English or Korean, which also
@@ -130,11 +134,26 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
   loads its data, what each shot carries (score, order, direction, position), only the academy's athletes (Precision
   and Sporter, across relays), matching them to students (competitions use legal names), avoiding duplicates, how
   automatic it can be, a PDF in the Drive or the data itself, what could break, and the missing Precision results.
+  - *Proposed 2026-11-10:* the site reads Scopos's documented public API (a key, no login; a server function must call
+    it). Each shot carries its firing order and exact place, so order and direction are certain. The academy's
+    athletes come from the team list; names fit the existing matcher, and each shooter keeps a competitor number.
+    Phase 1: paste a link → preview → save (one competition per position); phase 2: a nightly check of the hosts. Store
+    the data, not a PDF. Our own (free) Scopos application key first. Missing from the app: the Oct 31 Precision
+    match (8 results) and two results from Sep 26. Waiting for Goo's decision.
 - [ ] **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
+  - *Proposed 2026-11-10:* the export is a small database: sessions, shot times and aiming times read cleanly and match
+    the screen, but the trace itself is compressed and deliberately scrambled by SCATT, and no scores, impact points or
+    calibration are stored. Don't build on it yet: ask the coaches for SCATT's PDF printout and more samples, and SCATT
+    for the format or an export (and permission). Meanwhile a screen recording of a replay can go in the Drive. Waiting
+    for Goo's decision.
 - [ ] **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
+  - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is
+    found on the circle its score allows, so two shots with the same score in a series can have their places swapped.
+    SIUS and the results site are certain. Proposal: mark those shots ("≈") with a note, worked out from the saved
+    scores, old results included. Waiting for Goo's decision.
 
 ## 5. On hold
 
