@@ -12,6 +12,7 @@ export default function MoreLayout() {
       <Stack.Screen name="account" options={{ title: "Account", headerLargeTitle: false }} />
       <Stack.Screen name="notifications" options={{ title: "Notifications", headerLargeTitle: false }} />
       <Stack.Screen name="security" options={{ title: "Sign-in & security", headerLargeTitle: false }} />
+      <Stack.Screen name="kiosk-pin" options={{ title: "Kiosk PIN", headerLargeTitle: false }} />
       <Stack.Screen name="students" options={{ title: "Students", headerLargeTitle: false }} />
       <Stack.Screen name="payroll" options={{ title: "Payroll", headerLargeTitle: false }} />
       <Stack.Screen name="contract" options={{ title: "Enrollment contract", headerLargeTitle: false }} />

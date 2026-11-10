@@ -260,6 +260,17 @@ describe('kiosk tablets', () => {
       await assertFails(getDoc(doc(db, `branches/${A}/kioskOps/t1_op1`)))
     }
   })
+
+  it('a PIN’s owner and its tries stay on the server: nobody reads or resets them, the coach included', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `branches/${A}/kioskPinTries/staff-coach`), { count: 5, since: 'today' })
+    })
+    for (const db of [user('coach@a.test'), user('admin@a.test')]) {
+      await assertFails(getDoc(doc(db, `branches/${A}/kioskPinTries/staff-coach`)))
+      await assertFails(setDoc(doc(db, `branches/${A}/kioskPinTries/staff-coach`), { count: 0 }))
+      await assertFails(getDoc(doc(db, `branches/${A}/kioskPinOwners/staff-coach`)))
+    }
+  })
 })
 
 describe('sign-up requests', () => {

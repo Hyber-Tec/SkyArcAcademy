@@ -989,6 +989,11 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // How often each person tried their own kiosk PIN today (functions' setMyKioskPin).
+      match /kioskPinTries/{id} {
+        allow read, write: if false;
+      }
+
       match /websiteLimits/{key} {
         allow read, write: if false;
       }

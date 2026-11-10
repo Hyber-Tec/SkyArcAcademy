@@ -69,16 +69,13 @@ function audit(branchId: string, entry: Record<string, unknown>) {
 
 // ------------------------------------------------------------------- kiosk
 
-/** Admin sets (or clears) an employee's kiosk PIN. PINs are unique per branch. */
-export const setKioskPin = onCall(async (req) => {
-  const { branchId, staffId, pin } = (req.data ?? {}) as { branchId?: string; staffId?: string; pin?: string | null }
-  if (!branchId || !staffId) throw new HttpsError('invalid-argument', 'Missing academy or employee.')
-  const caller = await requireAdmin(branchId, req.auth)
-  const { settings } = await loadBranch(branchId)
+/**
+ * Saves (or clears, with `pin` null) an employee's kiosk PIN. The kiosk knows people by their PIN alone, so PINs are
+ * unique in the academy; only their hash is stored (`kioskPins/{hash}` → who, `kioskPinOwners/{staffId}` → their hash).
+ */
+async function writeKioskPin(branchId: string, staffId: string, pin: string | null, by: string): Promise<void> {
   const staffRef = db.doc(`${ROOT.branches}/${branchId}/${COL.staff}/${staffId}`)
   const ownerRef = db.doc(`${ROOT.branches}/${branchId}/kioskPinOwners/${staffId}`)
-  const len = settings.timeClock.kiosk.pinLength
-  if (pin != null && !new RegExp(`^\\d{${len}}$`).test(pin)) throw new HttpsError('invalid-argument', `The PIN must be ${len} digits.`)
   await db.runTransaction(async (tx) => {
     const [staff, owner] = await Promise.all([tx.get(staffRef), tx.get(ownerRef)])
     if (!staff.exists) throw new HttpsError('not-found', 'Employee not found.')
@@ -89,7 +86,7 @@ export const setKioskPin = onCall(async (req) => {
       if (existing.exists && existing.data()?.staffId !== staffId) throw new HttpsError('already-exists', 'That PIN is already in use. Choose a different one.')
       if (oldHash && oldHash !== hash) tx.delete(db.doc(`${ROOT.branches}/${branchId}/${COL.kioskPins}/${oldHash}`))
       tx.set(db.doc(`${ROOT.branches}/${branchId}/${COL.kioskPins}/${hash}`), { staffId, updatedAt: FieldValue.serverTimestamp() })
-      tx.set(ownerRef, { pinHash: hash, updatedAt: FieldValue.serverTimestamp(), updatedBy: caller.email })
+      tx.set(ownerRef, { pinHash: hash, updatedAt: FieldValue.serverTimestamp(), updatedBy: by })
       tx.update(staffRef, { hasKioskPin: true, updatedAt: FieldValue.serverTimestamp() })
     } else {
       if (oldHash) tx.delete(db.doc(`${ROOT.branches}/${branchId}/${COL.kioskPins}/${oldHash}`))
@@ -97,6 +94,18 @@ export const setKioskPin = onCall(async (req) => {
       tx.update(staffRef, { hasKioskPin: false, updatedAt: FieldValue.serverTimestamp() })
     }
   })
+}
+
+const pinPattern = (settings: BranchSettings) => new RegExp(`^\\d{${settings.timeClock.kiosk.pinLength}}$`)
+
+/** Admin sets (or clears) an employee's kiosk PIN, on the website (Employees → the person → Kiosk PIN). */
+export const setKioskPin = onCall(async (req) => {
+  const { branchId, staffId, pin } = (req.data ?? {}) as { branchId?: string; staffId?: string; pin?: string | null }
+  if (!branchId || !staffId) throw new HttpsError('invalid-argument', 'Missing academy or employee.')
+  const caller = await requireAdmin(branchId, req.auth)
+  const { settings } = await loadBranch(branchId)
+  if (pin != null && !pinPattern(settings).test(pin)) throw new HttpsError('invalid-argument', `The PIN must be ${settings.timeClock.kiosk.pinLength} digits.`)
+  await writeKioskPin(branchId, staffId, pin ?? null, caller.email)
   await audit(branchId, {
     actorUid: caller.uid,
     actorEmail: caller.email,
@@ -109,6 +118,63 @@ export const setKioskPin = onCall(async (req) => {
     entityId: staffId,
     coachId: staffId,
     summary: pin != null ? 'Set a kiosk PIN' : 'Removed a kiosk PIN',
+  })
+  return { ok: true }
+})
+
+/** Tries a person gets at their own PIN in a day: "already in use" tells them someone else has it. */
+const MY_PIN_TRIES = 5
+const MY_PIN_WINDOW_MS = 24 * 60 * 60_000
+
+/**
+ * Someone with an employee record (a coach, or an owner or admin who works classes) sets or changes their own kiosk PIN:
+ * from the phone app's More, or their Profile on the website (the fourth meeting's B2). The same PIN rules as
+ * `setKioskPin`. A PIN that's taken is refused, which says someone else has it, so each person gets five tries a day,
+ * counted in `kioskPinTries/{staffId}` (server-only). Removing a PIN stays the office's.
+ */
+export const setMyKioskPin = onCall(async (req) => {
+  const { branchId, pin, via } = (req.data ?? {}) as { branchId?: string; pin?: string; via?: string }
+  if (!branchId) throw new HttpsError('invalid-argument', 'Missing academy.')
+  const auth = req.auth
+  if (!auth || typeof auth.token.email !== 'string' || auth.token.email_verified !== true) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const email = auth.token.email.toLowerCase()
+  const m = (await db.doc(`${ROOT.branches}/${branchId}/${COL.members}/${email}`).get()).data() as Member | undefined
+  if (!m || m.status !== 'active' || (m.role !== 'coach' && m.role !== 'admin' && m.role !== 'owner')) {
+    throw new HttpsError('permission-denied', 'Only the academy’s staff have a kiosk PIN.')
+  }
+  const staffId = m.staffId
+  if (!staffId) throw new HttpsError('failed-precondition', 'Your employee record isn’t linked to your account yet. Ask an admin.')
+  const staff = await db.doc(`${ROOT.branches}/${branchId}/${COL.staff}/${staffId}`).get()
+  if (!staff.exists || (staff.data()!.status as StaffStatus) === 'finished') throw new HttpsError('failed-precondition', 'Your employee record isn’t active. Ask an admin.')
+  const { settings } = await loadBranch(branchId)
+  if (typeof pin !== 'string' || !pinPattern(settings).test(pin)) throw new HttpsError('invalid-argument', `The PIN must be ${settings.timeClock.kiosk.pinLength} digits.`)
+
+  const triesRef = db.doc(`${ROOT.branches}/${branchId}/${COL.kioskPinTries}/${staffId}`)
+  await db.runTransaction(async (tx) => {
+    const t = (await tx.get(triesRef)).data()
+    const since = (t?.since as Timestamp | undefined)?.toMillis() ?? 0
+    const fresh = Date.now() - since >= MY_PIN_WINDOW_MS
+    const count = fresh ? 0 : Number(t?.count ?? 0)
+    if (count >= MY_PIN_TRIES) throw new HttpsError('resource-exhausted', 'That’s five tries today. Try again tomorrow, or ask an admin to set your PIN.')
+    tx.set(triesRef, { count: count + 1, since: fresh ? Timestamp.now() : t!.since })
+  })
+
+  const had = staff.data()!.hasKioskPin === true
+  await writeKioskPin(branchId, staffId, pin, email)
+  const name = String(staff.data()!.name ?? '') || m.displayName || email
+  await audit(branchId, {
+    actorUid: auth.uid,
+    actorEmail: email,
+    actorName: name,
+    actorRole: m.role,
+    via: via === 'app' ? 'app' : 'web',
+    action: 'kiosk.pin_set',
+    category: 'pay',
+    entityType: 'staff',
+    entityId: staffId,
+    coachId: staffId,
+    coachName: name,
+    summary: had ? 'Changed their own kiosk PIN' : 'Set their own kiosk PIN',
   })
   return { ok: true }
 })
