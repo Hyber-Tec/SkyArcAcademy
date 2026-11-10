@@ -1,7 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react'
-import { LuFileText, LuMessageSquareQuote, LuScanSearch } from 'react-icons/lu'
+import { LuExternalLink, LuFileText, LuMessageSquareQuote, LuScanSearch } from 'react-icons/lu'
 import { type Evaluation, POSITION_COLORS, per10, POSITION_LABELS, SOURCE_LABELS } from '@shared/shooting/evaluation'
-import { replayShots, swapWords } from '@shared/shooting/replay'
+import { replayShots, showsTenths, swapWords } from '@shared/shooting/replay'
 import { offsetWords } from '@shared/shooting/target'
 import type { WithId } from '@shared/types'
 import { Badge } from '@/components/ui/badge'
@@ -62,15 +62,18 @@ export function FeaturedResult({
 }) {
   const color = POSITION_COLORS[e.position]
   const sius = e.source === 'sius'
+  // SIUS's and the results site's: series by series, every shot in its firing order; tenths when the match counts them.
+  const bySeries = sius || e.source === 'online'
+  const tenths = showsTenths(e)
   const shots = useMemo(() => replayShots(e), [e])
   const placed = placedShots(shots)
   const [step, setStep] = useState<number | null>(null)
   const [open, setOpen] = useState<number | null>(null)
   const view = dartView(shots)
   const whole = per10(e.wholeTotal, e.shots)
-  const decimal = sius ? per10(e.total, e.shots) : null
+  const decimal = tenths ? per10(e.total, e.shots) : null
   const where = offsetWords(e.mpi)
-  const notes = sius
+  const notes = bySeries
     ? [
         e.mpi ? `Average point ${where ? `${where}, ` : ''}X ${one(e.mpi.x)} mm, Y ${one(e.mpi.y)} mm` : '',
         e.sighters ? `${e.sighters} sighters (not counted)` : '',
@@ -98,6 +101,13 @@ export function FeaturedResult({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {/* The original, read-only: the SIUS printout, or the card (scanned: its picture with the bulls' scores on it). */}
+          {e.online?.url ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={e.online.url} target="_blank" rel="noreferrer" data-testid="view-online">
+                <LuExternalLink /> On the results site
+              </a>
+            </Button>
+          ) : null}
           {e.fileId && onOriginal ? (
             <Button variant="outline" size="sm" onClick={() => onOriginal(e)} data-testid="view-original">
               {sius ? <LuFileText /> : <LuScanSearch />} {sius ? 'View the PDF' : 'View the card'}
@@ -107,7 +117,7 @@ export function FeaturedResult({
       </div>
 
       <div className="flex justify-center [grid-area:replay] @2xl:block">
-        {placed.length ? <ShotReplay evaluation={e} color={color} size={340} highlightLast={sius} autoPlay={autoPlay} onStep={setStep} /> : <UnplacedTarget e={e} />}
+        {placed.length ? <ShotReplay evaluation={e} color={color} size={340} highlightLast={bySeries} autoPlay={autoPlay} onStep={setStep} /> : <UnplacedTarget e={e} />}
       </div>
 
       <div className="@container min-w-0 space-y-4 [grid-area:facts]">
@@ -117,8 +127,8 @@ export function FeaturedResult({
             value={whole !== null ? one(whole) : '—'}
             sub={decimal !== null ? `${one(decimal)} decimal` : 'whole numbers'}
           />
-          <Stat label="Total" value={sius ? e.total.toFixed(1) : String(e.total)} sub={`${e.shots} shots`} />
-          <Stat label="Inner tens" value={e.innerTens !== null ? String(e.innerTens) : '—'} sub={sius ? '10.2 or better' : null} />
+          <Stat label="Total" value={tenths ? e.total.toFixed(1) : String(e.total)} sub={`${e.shots} shots`} />
+          <Stat label="Inner tens" value={e.innerTens !== null ? String(e.innerTens) : '—'} sub={sius || (bySeries && tenths) ? '10.2 or better' : null} />
           <Stat label="Group" value={e.groupMm !== null ? `${one(e.groupMm)} mm` : '—'} sub={e.groupMm !== null ? 'smaller is tighter' : null} />
         </dl>
         {insight}
@@ -135,14 +145,14 @@ export function FeaturedResult({
 
       {e.series.length ? (
         <div className="@container min-w-0 space-y-4 [grid-area:shots]">
-          {sius ? (
+          {bySeries ? (
             e.series.map((s) => (
               <section key={s.n} aria-label={seriesText(s.n)}>
                 <div className="mb-1.5 flex items-baseline gap-2">
                   <h4 className="text-xs font-medium text-muted-foreground">{seriesText(s.n)}</h4>
-                  <span className="text-sm font-semibold tabular-nums">{s.total.toFixed(1)}</span>
+                  <span className="text-sm font-semibold tabular-nums">{tenths ? s.total.toFixed(1) : one(s.total)}</span>
                 </div>
-                <SeriesDarts shots={shots.filter((t) => t.series === s.n)} view={view} color={color} active={step} onOpen={setOpen} />
+                <SeriesDarts shots={shots.filter((t) => t.series === s.n)} view={view} color={color} active={step} onOpen={setOpen} whole={!tenths} />
               </section>
             ))
           ) : (
@@ -182,7 +192,7 @@ export function FeaturedResult({
         </div>
       ) : null}
 
-      {sius ? <ShotDialog shots={shots} shot={open} onShot={setOpen} color={color} description={`${POSITION_LABELS[e.position]} · ${formatDateKey(e.dateKey, 'medium')}`} /> : null}
+      {bySeries ? <ShotDialog shots={shots} shot={open} onShot={setOpen} color={color} whole={!tenths} description={`${POSITION_LABELS[e.position]} · ${formatDateKey(e.dateKey, 'medium')}`} /> : null}
     </div>
   )
 }

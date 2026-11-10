@@ -13,6 +13,10 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
 - [ ] **The public email:** Settings → Academy → Email → `info@skyarcacademy.com` (it still says the manager's Gmail).
   The website, the app and new reports change at once
+- [ ] **The results site's key:** Settings → Results site → paste Scopos's shared starter key (their support pages,
+  Developers → X-API-Key), then **Look back** a year and confirm the athletes it finds. After that it looks every night
+- [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
+  too. Until then the starter key works
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still in review on 2026-11-10): it goes live by
   itself. Check the Publishing overview and the Inbox; still in review after Nov 13 → contact Play support. No new

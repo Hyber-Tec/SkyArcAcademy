@@ -66,6 +66,17 @@ export const COL = {
    * then removed isn't linked again by itself (it asks the academy instead).
    */
   accessLinks: 'accessLinks',
+  /**
+   * Competition results brought in from the tournaments' results site (shared/src/scores/resultsSite.ts,
+   * functions/src/resultsSite): its status (`resultsSite/status`, admins read it), its key (`resultsSiteKey/main`,
+   * server only), each check of the site (`resultsSiteRuns`), the athletes found there (`onlineAthletes`, by their name's
+   * key) and the matches looked at (`onlineMatches`, by the site's match ID).
+   */
+  resultsSite: 'resultsSite',
+  resultsSiteKey: 'resultsSiteKey',
+  resultsSiteRuns: 'resultsSiteRuns',
+  onlineAthletes: 'onlineAthletes',
+  onlineMatches: 'onlineMatches',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]
@@ -86,6 +97,8 @@ export const DOC = {
   compensation: 'compensation', // staff/{id}/private/compensation
   staffNotes: 'notes', // staff/{id}/private/notes
   payrollState: 'state', // branches/{b}/payroll/state
+  resultsSiteStatus: 'status', // branches/{b}/resultsSite/status
+  resultsSiteKey: 'main', // branches/{b}/resultsSiteKey/main
 } as const
 
 export function emailKey(email: string): string {

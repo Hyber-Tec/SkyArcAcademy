@@ -1,6 +1,6 @@
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import type { Evaluation } from "@shared/shooting/evaluation";
-import { type ReplayShot, replayShots, swapWords } from "@shared/shooting/replay";
+import { type ReplayShot, replayShots, showsTenths, swapWords } from "@shared/shooting/replay";
 import { PELLET_MM, type ShotPoint, offsetWords, targetViewMm } from "@shared/shooting/target";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useMemo } from "react";
@@ -30,7 +30,8 @@ export function useShots(evaluation: Pick<Evaluation, "source" | "series">) {
   }, [evaluation]);
 }
 
-const fmtScore = (e: Pick<Evaluation, "source">, v: number) => (e.source === "sius" ? v.toFixed(1) : String(Math.round(v)));
+/** A shot's score as its result counts it: tenths for SIUS and a match that counts them, else whole numbers. */
+const fmtScore = (e: Pick<Evaluation, "source" | "series">, v: number) => (showsTenths(e) ? v.toFixed(1) : String(Math.round(v)));
 
 /**
  * A result's shots as darts, series by series: one small target per shot, in the order they were fired, with the shot

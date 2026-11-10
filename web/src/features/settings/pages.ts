@@ -8,7 +8,7 @@ import { OTHER_FINDS, SETTINGS_SECTIONS, type FieldDef } from './schema'
  */
 
 /** The parts of a page that aren't fields of the schema. */
-export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity' | 'ai' | 'kioskTablets'
+export type BlockKey = 'dateHours' | 'seats' | 'payRule' | 'profile' | 'signupShare' | 'website' | 'contract' | 'activity' | 'ai' | 'kioskTablets' | 'resultsSite'
 
 export type PageItem = { field: string } | { block: BlockKey }
 
@@ -124,6 +124,16 @@ export const PAGES: SettingsPageDef[] = [
     more: [],
   },
   { key: 'website', title: 'Website', description: 'The public website: its pages, photos, coaches and reviews, and the trial requests and questions it sends.', home: 'academy', groups: [{ items: [b('website')] }], more: [], wide: true, selfTitled: true },
+  {
+    key: 'results',
+    title: 'Results site',
+    description: 'Competition results brought in from the tournaments’ results site each night: the academy’s athletes there, their matches, and the site’s key.',
+    home: 'academy',
+    groups: [{ items: [b('resultsSite')] }, { title: 'Settings', items: [f('resultsSite.enabled'), f('resultsSite.teamNames')] }],
+    more: ['resultsSite.searchKm'],
+    wide: true,
+    keywords: 'rezults scopos orion competition match tournament import results athletes team',
+  },
   { key: 'contract', title: 'Enrollment contract', description: 'The contract each family fills in and signs in the app before using it, and who has signed.', home: 'academy', groups: [{ items: [b('contract')] }], more: [], selfTitled: true },
   { key: 'activity', title: 'Activity log', description: 'Every change to the settings, the schedule, people and pay: who made it and when.', home: 'academy', groups: [{ items: [b('activity')] }], more: [], wide: true, selfTitled: true, keywords: 'audit history' },
   {

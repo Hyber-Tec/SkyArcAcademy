@@ -274,6 +274,28 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { kind: 'text', path: 'signup.welcomeMessage', label: 'Welcome message', multiline: true, help: 'Shown at the top of the sign-up page.' },
     ],
   },
+  {
+    key: 'resultsSite',
+    title: 'Results site',
+    description: 'Competition results brought in from the tournaments’ results site each night.',
+    fields: [
+      {
+        kind: 'boolean',
+        path: 'resultsSite.enabled',
+        label: 'Bring in competition results each night',
+        keywords: 'rezults scopos orion competition match import',
+        help: 'Off, the nightly check stops; Check now and Look back still work.',
+      },
+      {
+        kind: 'list',
+        path: 'resultsSite.teamNames',
+        label: 'The academy’s team names on the results site',
+        keywords: 'team arc rezults',
+        help: 'One per line; * stands for anything ("ARC 10.9*" also finds "ARC 10.9 P"). Athletes on these teams are suggested to you to link to a student.',
+      },
+      { kind: 'number', path: 'resultsSite.searchKm', more: true, label: 'Look for matches within', keywords: 'distance radius km', min: 25, max: 1000, step: 25, suffix: 'km' },
+    ],
+  },
 ]
 
 /** Things on the Settings page that aren't fields of a section above, found by the search too. */

@@ -1,6 +1,6 @@
 import { type ReactNode, useId, useMemo, useState } from 'react'
 import { LuChevronDown, LuMessageSquareQuote, LuPencilLine } from 'react-icons/lu'
-import { type Evaluation, POSITION_COLORS, evaluationPoints, per10, totalWithTens, POSITION_LABELS, SOURCE_LABELS } from '@shared/shooting/evaluation'
+import { type Evaluation, POSITION_COLORS, evaluationPoints, isMatchSource, per10, totalWithTens, POSITION_LABELS, SOURCE_LABELS } from '@shared/shooting/evaluation'
 import { matchResults } from '@shared/scores/match'
 import type { WithId } from '@shared/types'
 import { Button } from '@/components/ui/button'
@@ -96,8 +96,8 @@ export function ResultsPanel({
               onOriginal={onOriginal}
               insight={insight?.(e)}
             />
-            {/* A competition from its sheet: the whole match, series by series. */}
-            {e.source === 'sheet' ? <MatchCard evaluation={e} results={matchResults(e, rows)} /> : null}
+            {/* A competition, from its sheet or the results site: the whole match, series by series. */}
+            {isMatchSource(e.source) ? <MatchCard evaluation={e} results={matchResults(e, rows)} /> : null}
           </ResultRow>
         ))}
       </ul>

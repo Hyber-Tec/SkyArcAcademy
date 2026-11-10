@@ -1,4 +1,4 @@
-import { type Evaluation, pointOf } from './evaluation'
+import { type Evaluation, isMatchSource, pointOf } from './evaluation'
 import type { ShotPoint } from './target'
 
 /**
@@ -66,11 +66,11 @@ export function swapWords(swapWith: readonly number[]): string {
 }
 
 /**
- * Whether a result's shots read in tenths: SIUS's, and a match sheet's printed with them ("8.9"); a paper card's are
- * whole numbers.
+ * Whether a result's shots read in tenths: SIUS's, and a match's printed with them ("8.9", on its sheet or on the
+ * results site for a decimal match); a paper card's are whole numbers.
  */
 export function showsTenths(e: Pick<Evaluation, 'source' | 'series'>): boolean {
-  return e.source === 'sius' || (e.source === 'sheet' && e.series.some((s) => s.shots.some((t) => !Number.isInteger(t.v))))
+  return e.source === 'sius' || (isMatchSource(e.source) && e.series.some((s) => s.shots.some((t) => !Number.isInteger(t.v))))
 }
 
 /** Whether a result has shots with a place on the target, so it can be played back. */

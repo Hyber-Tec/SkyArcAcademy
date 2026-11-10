@@ -15,8 +15,9 @@ export const scorePer10 = (e: Pick<Evaluation, "source" | "total" | "wholeTotal"
 
 /** What deleting a score does, for the question before it. */
 export function deleteScoreMessage(e: Pick<Evaluation, "studentName" | "position" | "source" | "dateKey" | "total" | "fileId">): string {
-  const what = `${e.studentName}’s ${POSITION_LABELS[e.position].toLowerCase()} ${e.source === "sius" ? "SIUS" : "paper"} score of ${formatDateKey(e.dateKey, "medium")} (${scoreTotal(e)})`;
-  return `${what} leaves their scores and reports.${e.fileId ? ` Its ${e.source === "sius" ? "PDF" : "photo"} stays in their Drive.` : ""}`;
+  const from = e.source === "sius" ? "SIUS" : e.source === "online" ? "results site" : e.source === "sheet" ? "competition" : "paper";
+  const what = `${e.studentName}’s ${POSITION_LABELS[e.position].toLowerCase()} ${from} score of ${formatDateKey(e.dateKey, "medium")} (${scoreTotal(e)})`;
+  return `${what} leaves their scores and reports.${e.fileId ? ` Its ${e.source === "sius" ? "PDF" : "photo"} stays in their Drive.` : ""}${e.source === "online" ? " The results site won’t bring it back." : ""}`;
 }
 
 /** How far from a student's usual a result is (per 10 shots) before its number shows green or amber. */

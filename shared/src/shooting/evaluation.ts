@@ -28,11 +28,32 @@ export function isPosition(value: unknown): value is Position {
 
 /**
  * Where scores come from: a SIUS result (decimal scores), a paper card (whole numbers, typed in or scanned by the phone
- * app), or a match's results sheet (a competition's totals, typed in or read from a photo of the sheet).
+ * app), a match's results sheet (a competition's totals, typed in or read from a photo of the sheet), or the
+ * tournaments' results site (a competition's every shot, at its place and in its firing order, brought in each night:
+ * shared/src/scores/scopos.ts).
  */
-export type EvaluationSource = 'sius' | 'paper' | 'sheet'
+export type EvaluationSource = 'sius' | 'paper' | 'sheet' | 'online'
 
-export const SOURCE_LABELS: Record<EvaluationSource, string> = { sius: 'SIUS', paper: 'Paper', sheet: 'Results sheet' }
+export const SOURCE_LABELS: Record<EvaluationSource, string> = { sius: 'SIUS', paper: 'Paper', sheet: 'Results sheet', online: 'Results site' }
+
+/** A competition's results, one per position, shown together as the match (a results sheet's, or the results site's). */
+export const isMatchSource = (source: EvaluationSource | string | undefined): boolean => source === 'sheet' || source === 'online'
+
+/** Where a result from the results site came from: its match, the athlete's result there, and how it stood then. */
+export interface OnlineRef {
+  matchId: string
+  /** The athlete's result in the match (Scopos's ResultCOF). */
+  resultCofId: string
+  /** Its page on the results site. */
+  url: string
+  /** FUTURE, INTERMEDIATE, UNOFFICIAL or OFFICIAL, as the site last gave it. */
+  status: string
+  /** The site's stamp of the result's last change, to bring it in again when it changes. */
+  lastUpdated: string | null
+  /** The team the athlete shot for, and who ran the match. */
+  team: string | null
+  host: string | null
+}
 
 /**
  * What a result was (the manager's second meeting, docs/DECISIONS.md §23): practice (the default), a competition (a
@@ -62,7 +83,15 @@ export interface EvalShot {
    * on cards scanned before holes were measured (taken at the pellet's size) and on SIUS shots (the pellet's).
    */
   r?: number | null
+  /**
+   * Whether the match counted it an inner ten: the results site marks each shot (in a whole-number match by the inner
+   * ring, not by tenths). Missing elsewhere, where 10.2 and better is one (`innerTenOf`).
+   */
+  inner?: boolean | null
 }
+
+/** Whether a shot is an inner ten: as its match counted it (the results site's), or 10.2 and better. */
+export const innerTenOf = (t: Pick<EvalShot, 'v' | 'inner'>): boolean => (typeof t.inner === 'boolean' ? t.inner : isInnerTen(t.v))
 
 /** Where a shot sits: measured on a scanned card, or rebuilt from its score and direction (SIUS). */
 export function pointOf(t: Pick<EvalShot, 'v' | 'a' | 'x' | 'y'>): ShotPoint | null {
@@ -123,6 +152,8 @@ export interface Evaluation extends AuditStamp {
   official?: { appTotal: number; by: string; at: TimestampLike } | null
   /** A competition's match, as its results sheet names it ("Lakeside Fall 3P", "3x20 Air Rifle"). */
   match?: { name: string; course: string } | null
+  /** A result from the results site: where it came from (source `online`). */
+  online?: OnlineRef | null
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
@@ -222,7 +253,7 @@ export function shotTotals(shots: readonly EvalShot[]): { total: number; wholeTo
   return {
     total: round1(shots.reduce((n, t) => n + t.v, 0)),
     wholeTotal: shots.reduce((n, t) => n + wholeScore(t.v), 0),
-    innerTens: shots.filter((t) => isInnerTen(t.v)).length,
+    innerTens: shots.filter(innerTenOf).length,
   }
 }
 

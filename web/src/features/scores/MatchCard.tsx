@@ -1,9 +1,8 @@
 import { type ReactNode, useState } from 'react'
-import { LuChevronDown, LuPencilLine, LuTrophy } from 'react-icons/lu'
+import { LuChevronDown, LuExternalLink, LuPencilLine, LuTrophy } from 'react-icons/lu'
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from '@shared/scores/match'
-import { POSITION_COLORS, evaluationPoints, POSITION_LABELS } from '@shared/shooting/evaluation'
+import { POSITION_COLORS, evaluationPoints, innerTenOf, POSITION_LABELS } from '@shared/shooting/evaluation'
 import { swappableShots } from '@shared/shooting/replay'
-import { isInnerTen } from '@shared/shooting/target'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { MiniTarget } from '@/features/scores/TargetPlot'
 import { cn } from '@/lib/utils'
@@ -31,7 +30,17 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold">{evaluation.match?.name?.trim() || 'Competition'}</h3>
-          <p className="truncate text-xs text-muted-foreground">{[formatDateKey(evaluation.dateKey, 'medium'), evaluation.match?.course?.trim()].filter(Boolean).join(' · ')}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {[formatDateKey(evaluation.dateKey, 'medium'), evaluation.match?.course?.trim()].filter(Boolean).join(' · ')}
+            {evaluation.online?.url ? (
+              <>
+                {' · '}
+                <a className="inline-flex items-center gap-0.5 underline-offset-2 hover:text-foreground hover:underline" href={evaluation.online.url} target="_blank" rel="noreferrer">
+                  On the results site <LuExternalLink className="size-3" aria-hidden />
+                </a>
+              </>
+            ) : null}
+          </p>
         </div>
         <div className="text-right">
           <div className="text-lg font-semibold tabular-nums">
@@ -104,12 +113,14 @@ export function MatchCard({ evaluation, results, aside, className = 'border-t px
             <ShotReplay key={shown.key} evaluation={{ source: shown.r.source, series: [shown.s] }} color={POSITION_COLORS[shown.r.position]} size={300} autoPlay />
           ) : (
             <p className="text-center text-xs text-balance text-muted-foreground">
-              The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.
+              {shown.r.source === 'online'
+                ? 'These shots were typed in by hand on the results site, so they have no places on the target.'
+                : 'The sheet’s picture of this series couldn’t be read, so its shots have no places on the target.'}
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-1.5">
             {shown.s.shots.map((t, k) => {
-              const x = isInnerTen(t.v)
+              const x = innerTenOf(t)
               const swap = (swaps.get(k + 1) ?? []).map((j) => shotLabel(shown.r.position, shown.s.n, j - 1))
               return (
                 <span

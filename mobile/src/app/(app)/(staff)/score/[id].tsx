@@ -1,13 +1,13 @@
-import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position } from "@shared/shooting/evaluation";
+import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isMatchSource } from "@shared/shooting/evaluation";
 import { canReplay } from "@shared/shooting/replay";
 import { type EditMode, FLAT_SIZE, cardEvaluation, editModeOf, savedReview } from "@shared/targets/flat";
 import { type CardReview, reviewTotals } from "@shared/targets/review";
 import { type DateKey, formatDateKey } from "@shared/time";
 import { Stack, router, useLocalSearchParams, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
-import { Calendar, FileImage, FileText, SearchX, Trash2 } from "lucide-react-native";
+import { Calendar, ExternalLink, FileImage, FileText, SearchX, Trash2 } from "lucide-react-native";
 import { useMemo, useRef, useState } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { Linking, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Button } from "@/components/Button";
 import { FooterBar } from "@/components/FooterBar";
 import { Card } from "@/components/Card";
@@ -216,10 +216,25 @@ export default function ScoreScreen() {
           facts={scoreFacts(preview, totals?.missing ?? 0)}
         />
 
-        {/* A competition from its sheet: the whole match, series by series, each played on its own. */}
-        {e.source === "sheet" ? <MatchCard evaluation={{ ...preview, id: e.id }} results={matchResults({ ...preview, id: e.id }, others.data)} testID="score-match" /> : null}
+        {/* A competition, from its sheet or the results site: the whole match, series by series, each played on its own. */}
+        {isMatchSource(e.source) ? <MatchCard evaluation={{ ...preview, id: e.id }} results={matchResults({ ...preview, id: e.id }, others.data)} testID="score-match" /> : null}
+        {e.online?.url ? (
+          <ListSection>
+            <ListRow
+              icon={
+                <RowIcon>
+                  <ExternalLink size={17} color={colors.foreground} />
+                </RowIcon>
+              }
+              title="On the results site"
+              subtitle={[e.online.team ? `Shot for ${e.online.team}` : null, e.online.status && e.online.status !== "OFFICIAL" ? "not official yet" : null].filter(Boolean).join(" · ") || undefined}
+              onPress={() => void Linking.openURL(e.online!.url)}
+              testID="score-online"
+            />
+          </ListSection>
+        ) : null}
 
-        {canReplay(preview) && e.source !== "sheet" ? (
+        {canReplay(preview) && !isMatchSource(e.source) ? (
           <Card style={styles.center}>
             <ShotReplay evaluation={preview} color={POSITION_COLORS[draft.position]} size={target} onStep={sius ? setCurrent : undefined} />
           </Card>

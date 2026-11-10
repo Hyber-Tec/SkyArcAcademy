@@ -1373,3 +1373,28 @@ likely make it even harder for [Americans] to engage." Goo: "So no Korean langua
 - **The stores:** the App Store and Google Play listings lose their Korean at the next submission (`docs/TODO.md`).
 - Replaces §36, and the Korean parts of §18 (the website's Korean pages) and §41.
 
+## 43. Competition results from the results site, every night (Goo, 2026-11-10)
+
+The fourth meeting's R1. Goo: the academy has no page of its own on the results site, and nobody should paste a link
+after each competition, whatever its format: "go around all the results website and figure out all … make the
+technology first, then consider the rules later."
+
+- **The app looks by itself, every night** (`functions/src/resultsSite`, the rules in
+  `shared/src/scores/resultsSite.ts`): the last two weeks' matches within 250 km of the academy (a setting), the
+  matches of the clubs and schools where its athletes shot before, and once a week the championships anywhere
+  (invitationals, nationals, championships, the Junior Olympics). **Look back** (3 months to 2 years) finds the older
+  ones, two weeks at a time over a few checks. Settings → Results site shows what it found, and **Check now**.
+- **Its athletes are confirmed once, by a person:** those on the academy's teams (Settings: "ARC 10.9*" and "ARC *" to
+  start; `*` stands for anything) and those named exactly like a student (their name, or another name they go by) are
+  suggested; an owner or admin links each to a student, or says they aren't the academy's. Nobody is linked on their
+  own (two athletes can share a name); a linked athlete's results come in from then on, wherever they shoot.
+- **A result comes in as the site has it:** a competition per position, every shot where it landed and in the order it
+  was fired, scored as the match counts (tenths in a decimal match, inner tens as the site marks them), with its match,
+  course and a link back to the site (source `online`, "Results site"). It's updated when the site corrects it or makes
+  it official; until then it says it isn't official yet. What people change (the note, the kind) stays.
+- **No duplicates:** a results sheet's result of the same competition (same student, day, position, shots and total)
+  is brought up to the site's instead. A result a person deletes isn't brought back.
+- **The site's key** (Scopos's API needs one) is pasted by an owner or admin in Settings → Results site and stays on the
+  server, as the AI keys do. The shared starter key works to start; Scopos licenses a key per application each year,
+  free for now, "charging soon" with no price published (the estimate is in the private notes).
+- Families hear of a new result as of any score (the last 7 days). The demo academy brings nothing in.

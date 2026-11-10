@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { LuBell, LuBuilding2, LuCalendarCheck, LuCalendarDays, LuClock, LuFilePenLine, LuGlobe, LuGraduationCap, LuHistory, LuSparkles, LuUserPlus, LuWallet } from 'react-icons/lu'
+import { LuBell, LuBuilding2, LuCalendarCheck, LuCalendarDays, LuClock, LuFilePenLine, LuGlobe, LuGraduationCap, LuHistory, LuSparkles, LuTrophy, LuUserPlus, LuWallet } from 'react-icons/lu'
 
 /** Each page's icon on its tile and at the top of the page. */
 export const PAGE_ICONS: Record<string, IconType> = {
@@ -12,6 +12,7 @@ export const PAGE_ICONS: Record<string, IconType> = {
   notices: LuBell,
   academy: LuBuilding2,
   website: LuGlobe,
+  results: LuTrophy,
   contract: LuFilePenLine,
   activity: LuHistory,
   ai: LuSparkles,

@@ -144,7 +144,7 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
 
 ## 4. Research and propose (no code until Goo decides)
 
-- [ ] **R1. Competition results from the results site** into each student's Competition scores: how the site works and
+- ✅ **R1. Competition results from the results site** into each student's Competition scores: how the site works and
   loads its data, what each shot carries (score, order, direction, position), only the academy's athletes (Precision
   and Sporter, across relays), matching them to students (competitions use legal names), avoiding duplicates, how
   automatic it can be, a PDF in the Drive or the data itself, what could break, and the missing Precision results.
@@ -158,6 +158,11 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     after each competition, whatever its format: find every match the academy's athletes shot, anywhere on the site.
     The academy will pay for Scopos's key if needed; Goo wants the estimated price first. "Make the technology first,
     then consider the rules later" (Goo takes the responsibility).
+  - *Built 2026-11-10 (#156):* the app looks every night, nearby, at the hosts the athletes shot at, and weekly at the
+    championships anywhere; the athletes on the academy's teams or named like a student are confirmed once in Settings
+    → Results site, and their results come in as competitions, shot by shot in firing order (`docs/DECISIONS.md` §43).
+    Tried on the practice copy against the real site: the first check read 152 nearby matches and found the 16 ARC 10.9
+    athletes in the two Walton matches of Oct 31.
 - [ ] **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
@@ -214,6 +219,6 @@ The owner's first notes after reading the website page by page (more will come i
 | Who | What | For |
 |---|---|---|
 | The coaches | More SCATT exports (other students, positions, longer sessions) | R2 |
-| The coaches | The results site's links for the Sporter relays | R1 |
+| ~~The coaches~~ | ~~The results site's links for the Sporter relays~~ (not needed: the app finds them) | R1 |
 | The owner | The contract's final wording, and her signature | Section 5 |
 | Every coach | Availability and kiosk PINs before Sunday | B2 |

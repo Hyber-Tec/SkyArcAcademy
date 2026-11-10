@@ -1,11 +1,11 @@
-import { POSITION_COLORS, POSITION_LABELS, inOrder, wholePer10 } from "@shared/shooting/evaluation";
+import { POSITION_COLORS, POSITION_LABELS, inOrder, isMatchSource, wholePer10 } from "@shared/shooting/evaluation";
 import { personalBestIds, positionProgress } from "@shared/shooting/progress";
 import { canReplay } from "@shared/shooting/replay";
 import { FLAT_SIZE, editModeOf, savedReview } from "@shared/targets/flat";
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, FileImage, FileText, MessageSquareQuote, SearchX, Trophy } from "lucide-react-native";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ExternalLink, FileImage, FileText, MessageSquareQuote, SearchX, Trophy } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -127,10 +127,25 @@ function ScoreBody({ e }: { e: EvaluationDoc }) {
           </View>
         </ScoreHead>
 
-        {/* A competition from its sheet: the whole match, series by series, each played on its own. */}
-        {e.source === "sheet" ? <MatchCard evaluation={e} results={matchResults(e, own.data)} testID="family-score-match" /> : null}
+        {/* A competition, from its sheet or the results site: the whole match, series by series, each played on its own. */}
+        {isMatchSource(e.source) ? <MatchCard evaluation={e} results={matchResults(e, own.data)} testID="family-score-match" /> : null}
+        {e.online?.url ? (
+          <ListSection>
+            <ListRow
+              icon={
+                <RowIcon>
+                  <ExternalLink size={17} color={colors.foreground} />
+                </RowIcon>
+              }
+              title="On the results site"
+              subtitle={e.online.team ? `Shot for ${e.online.team}` : undefined}
+              onPress={() => void Linking.openURL(e.online!.url)}
+              testID="family-score-online"
+            />
+          </ListSection>
+        ) : null}
 
-        {canReplay(e) && e.source !== "sheet" ? (
+        {canReplay(e) && !isMatchSource(e.source) ? (
           <Card style={styles.center} testID="family-score-replay">
             <ShotReplay evaluation={e} color={color} size={target} autoPlay={!reduced} onStep={sius ? setCurrent : undefined} />
           </Card>

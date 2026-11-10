@@ -1,5 +1,5 @@
-import { type EvalSeries, type Evaluation, POSITIONS, type Position, inOrder, per10 } from '../shooting/evaluation'
-import { isInnerTen, wholeScore } from '../shooting/target'
+import { type EvalSeries, type Evaluation, POSITIONS, type Position, inOrder, innerTenOf, isMatchSource, per10 } from '../shooting/evaluation'
+import { wholeScore } from '../shooting/target'
 
 /**
  * A competition as its results sheet has it (the owner, 2026-10-29: "in one competition we have six sections; tap one
@@ -8,7 +8,7 @@ import { isInnerTen, wholeScore } from '../shooting/target'
  * the same way.
  */
 
-export type MatchResult = Pick<Evaluation, 'source' | 'position' | 'dateKey' | 'total' | 'wholeTotal' | 'innerTens' | 'shots' | 'series' | 'match'> & {
+export type MatchResult = Pick<Evaluation, 'source' | 'position' | 'dateKey' | 'total' | 'wholeTotal' | 'innerTens' | 'shots' | 'series' | 'match' | 'online'> & {
   id: string
   /** Whose: a list of several students' results (the Scores page) keeps each student's sheet apart. */
   studentId?: string
@@ -20,11 +20,14 @@ export const MATCH_ORDER: readonly Position[] = ['kneeling', 'prone', 'standing'
 /** The sheet's letter for a position's shots ("K1", "P12", "S20"). */
 export const POSITION_LETTER: Record<Position, string> = { kneeling: 'K', prone: 'P', standing: 'S' }
 
-/** The results saved from one match's sheet: the same student, the same day, the same match, in the sheet's order. */
+/**
+ * The results saved from one match: the same student, the same day, the same match and the same source (its results
+ * sheet, or the results site), in the sheet's order.
+ */
 export function matchResults<E extends MatchResult>(e: E, all: readonly E[]): E[] {
   const name = e.match?.name ?? ''
   const sameStudent = (x: E) => !e.studentId || !x.studentId || x.studentId === e.studentId
-  const same = all.filter((x) => x.source === 'sheet' && x.dateKey === e.dateKey && (x.match?.name ?? '') === name && sameStudent(x))
+  const same = all.filter((x) => x.source === e.source && isMatchSource(x.source) && x.dateKey === e.dateKey && (x.match?.name ?? '') === name && sameStudent(x))
   const list = same.some((x) => x.id === e.id) ? same : [e, ...same]
   const order = (p: Position) => (MATCH_ORDER.includes(p) ? MATCH_ORDER.indexOf(p) : POSITIONS.indexOf(p))
   return [...list].sort((a, b) => order(a.position) - order(b.position))
@@ -43,8 +46,9 @@ export interface ResultRow<E> {
   match: boolean
 }
 
-/** The key of the row a results sheet's result is in: the student's (when known), the day's and the match's. */
-export const matchKey = (e: Pick<MatchResult, 'dateKey' | 'match' | 'studentId'>) => `sheet:${e.studentId ? `${e.studentId}:` : ''}${e.dateKey}:${e.match?.name ?? ''}`
+/** The key of the row a match's result is in: its source's, the student's (when known), the day's and the match's. */
+export const matchKey = (e: Pick<MatchResult, 'dateKey' | 'match' | 'studentId' | 'source'>) =>
+  `${e.source === 'online' ? 'online' : 'sheet'}:${e.studentId ? `${e.studentId}:` : ''}${e.dateKey}:${e.match?.name ?? ''}`
 
 /**
  * A student's results as their list shows them, newest first (by date, then time): each result a row of its own, but a
@@ -55,7 +59,7 @@ export function resultRows<E extends MatchResult & { timeMin?: number | null }>(
   const rows: ResultRow<E>[] = []
   const seen = new Set<string>()
   for (const e of inOrder(evaluations).reverse()) {
-    if (e.source !== 'sheet') {
+    if (!isMatchSource(e.source)) {
       rows.push({ key: e.id, results: [e], match: false })
       continue
     }
@@ -75,7 +79,7 @@ export function seriesTotalText(s: Pick<EvalSeries, 'total' | 'shots'>, whole: b
   return whole ? String(s.shots.reduce((n, t) => n + wholeScore(t.v), 0)) : s.total.toFixed(1)
 }
 
-export const seriesInnerTens = (s: Pick<EvalSeries, 'shots'>) => s.shots.filter((t) => isInnerTen(t.v)).length
+export const seriesInnerTens = (s: Pick<EvalSeries, 'shots'>) => s.shots.filter(innerTenOf).length
 
 /** "K1–K10", "P11–P20": the shots a series holds, as the sheet numbers them. */
 export function seriesLabel(position: Position, s: Pick<EvalSeries, 'n' | 'shots'>): string {

@@ -52,12 +52,14 @@ export function averagePointWords(p: ShotPoint): string {
 
 /** Why a result has no shots on the target: typed in, or a results sheet without its pictures. */
 export function unplacedText(e: Pick<Evaluation, 'source' | 'series'>): string {
+  if (e.source === 'online') return 'From the results site: these shots were typed in there by hand, so where they landed isn’t known.'
   if (e.source === 'sheet') return e.series.length ? 'From the results sheet: every shot’s score, but not where it landed.' : 'From the results sheet: its total only.'
   return e.series.length ? 'Typed in from the paper card, so where the shots landed isn’t recorded.' : 'Only the card’s total was typed in.'
 }
 
 /** Under a student's name on the Scores page, where there's no time to give: how the result came. */
 export function noTimeWords(e: Pick<Evaluation, 'source' | 'series'>): string {
+  if (e.source === 'online') return 'From the results site'
   if (e.source === 'sheet') return 'From the sheet'
   return evaluationPoints(e).length ? 'Scanned card' : 'Typed in'
 }

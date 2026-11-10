@@ -128,6 +128,16 @@ export interface BranchSettings {
     roles: Role[]
     welcomeMessage: string
   }
+  /**
+   * Competition results brought in from the tournaments' results site each night (the fourth meeting's R1,
+   * shared/src/scores/resultsSite.ts): on or off, the team names the academy's athletes shoot under there (`*` stands
+   * for anything), and how far from the academy it looks for matches.
+   */
+  resultsSite: {
+    enabled: boolean
+    teamNames: string[]
+    searchKm: number
+  }
 }
 
 const open = (openMin: number, closeMin: number): DayHours => ({ isOpen: true, openMin, closeMin })
@@ -210,5 +220,12 @@ export const DEFAULT_SETTINGS: BranchSettings = {
     enabled: true,
     roles: ['coach', 'parent'],
     welcomeMessage: '',
+  },
+  // The academy's teams on the results site since August 2026 ("ARC 10.9", "ARC 10.9 P"), and the "ARC …" teams its
+  // athletes shot for before (the fourth meeting's R1 survey). Athletes on them are only suggested: a person links each.
+  resultsSite: {
+    enabled: true,
+    teamNames: ['ARC 10.9*', 'ARC *'],
+    searchKm: 250,
   },
 }
