@@ -2,7 +2,7 @@ import { notificationsSummary } from "@shared/profile";
 import { ROLE_LABELS } from "@shared/roles";
 import * as Application from "expo-application";
 import { router } from "expo-router";
-import { Bell, ChartLine, Eye, FilePen, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, RectangleEllipsis, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
+import { Bell, ChartLine, Compass, Eye, FilePen, Globe, HardDrive, KeyRound, LifeBuoy, LogOut, Megaphone, RectangleEllipsis, ShieldCheck, Users, UsersRound, Wallet } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
@@ -12,6 +12,7 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
 import { useUnreadNewsCount } from "@/features/announcements/staffNews";
+import { tourSignals } from "@/features/tour/state";
 import { env } from "@/lib/env";
 import { openWebsite } from "@/lib/links";
 import { type AppearancePref, useAppearance } from "@/state/AppearanceProvider";
@@ -139,6 +140,7 @@ export default function MoreScreen() {
       </ListSection>
 
       <ListSection title="About">
+        <ListRow icon={<Icon as={Compass} tone="violet" />} title="Take the tour" subtitle="How the app works, tab by tab" onPress={() => tourSignals.replay()} testID="more-tour" />
         <ListRow
           icon={<Icon as={LifeBuoy} tone="blue" />}
           title="Help"

@@ -115,8 +115,8 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
   - *Plan:* **analyze first.** As the page scrolls down, the section steps through the four levels. The likely
     cause: the highlight on its rank ladder (the highest rank at the top) climbs, against the scroll. Check this and
     anything else that moves against the scroll, show Goo the options with pictures, and change it once Goo picks.
-- [ ] **B1. A welcome tour in the phone app** after the first sign-in: per role (parent, student, coach, admin), short,
-  skip and replay.
+- ✅ **B1. A welcome tour in the phone app** after the first sign-in: per role (parent, student, coach, admin), short,
+  skip and replay. (#149; phones get it with the next app update)
   - *Plan:* **new work, phone only.** The first step chooses the language for parents (English or Korean, which also
     sets the app's); the staff's and students' screens are English (§36), so their tour is too. Each step opens the tab
     it explains behind a dimmed layer, with a card: what it's for and the one thing to do there (for parents: classes,

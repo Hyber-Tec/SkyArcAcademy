@@ -9,6 +9,7 @@ import { Button } from "@/components/Button";
 import { Dialog } from "@/components/Dialog";
 import { T } from "@/components/Text";
 import { useInbox } from "@/features/notifications/inbox";
+import { tourBehind, tourKindOf } from "@/features/tour/state";
 import { pushReason } from "@/features/notifications/PhoneNotifications";
 import { type PushOpen, dataOfNotification, firstTime, openFamilyNotice, openStaffNotice, pushOpenOf } from "@/features/notifications/pushOpen";
 import { isPush, notificationPermission, requestNotificationPermission, setAppBadge } from "@/lib/notify";
@@ -16,6 +17,7 @@ import { useLang, useT } from "@/lib/lang";
 import { onPushTokenChange, registerThisDevice } from "@/lib/push";
 import { toast } from "@/lib/toast";
 import { space } from "@/theme";
+import { useAuth } from "./AuthProvider";
 import { useBranch } from "./BranchProvider";
 
 /** Set once the person has answered the app's question (either way): it's asked once per install. */
@@ -37,7 +39,8 @@ const ASKED_KEY = "skyarc.push-asked";
  * opens or shows once.
  */
 export function PushProvider({ children }: { children: ReactNode }) {
-  const { branchId, isDemo, isStaff } = useBranch();
+  const { branchId, isDemo, isStaff, role, viewAs } = useBranch();
+  const uid = useAuth().user?.uid ?? null;
   const lang = useLang();
   const inbox = useInbox(!isDemo);
   const [asking, setAsking] = useState(false);
@@ -105,21 +108,24 @@ export function PushProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Once per install, a little after sign-in (the app settled first), while the phone hasn't been asked.
+  // Once per install, a little after sign-in (the app settled first), while the phone hasn't been asked: after the
+  // welcome tour on a first sign-in, so the two don't meet (features/tour).
   useEffect(() => {
     if (isDemo) return;
     let live = true;
     const t = setTimeout(() => {
       void (async () => {
         const asked = await AsyncStorage.getItem(ASKED_KEY).catch(() => "unknown");
-        if (live && !asked && (await notificationPermission()) === "prompt") setAsking(true);
+        if (!live || asked || (await notificationPermission()) !== "prompt") return;
+        if (uid && !viewAs) await tourBehind(uid, tourKindOf(role));
+        if (live) setAsking(true);
       })();
     }, 1500);
     return () => {
       live = false;
       clearTimeout(t);
     };
-  }, [isDemo]);
+  }, [isDemo, uid, role, viewAs]);
 
   const answer = async (turnOn: boolean) => {
     setAsking(false);
