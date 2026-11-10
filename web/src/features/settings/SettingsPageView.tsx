@@ -62,9 +62,10 @@ const EXAMPLES: Record<string, (s: BranchSettings, today: DateKey) => string> = 
 
 /** The AI page (super admins only): loaded only when it's opened. */
 const AiSettings = lazy(() => import('@/features/ai/AiSettings').then((m) => ({ default: m.AiSettings })))
+const ResultsSiteSettings = lazy(() => import('@/features/resultsSite/ResultsSiteSettings').then((m) => ({ default: m.ResultsSiteSettings })))
 
 /** Blocks that are cards of their own: they sit beside the page's card, and keep their own saving. */
-const CARD_BLOCKS: BlockKey[] = ['dateHours', 'signupShare', 'website', 'contract', 'activity', 'ai', 'kioskTablets']
+const CARD_BLOCKS: BlockKey[] = ['dateHours', 'signupShare', 'website', 'contract', 'activity', 'ai', 'kioskTablets', 'resultsSite']
 /** Where the search's `?find=` marks a block. */
 const BLOCK_ANCHOR: Partial<Record<BlockKey, string>> = { dateHours: 'date-hours', seats: 'seats', payRule: 'pay-rule', profile: 'profile', signupShare: 'signup-share' }
 
@@ -241,6 +242,13 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
         return wrap(<AuditLogSection />, true)
       case 'kioskTablets':
         return wrap(<KioskTabletsCard />, true)
+      case 'resultsSite':
+        return wrap(
+          <Suspense fallback={<Skeleton className="h-72 max-w-4xl rounded-xl" />}>
+            <ResultsSiteSettings />
+          </Suspense>,
+          true,
+        )
       case 'ai':
         return wrap(
           <Suspense fallback={<Skeleton className="h-72 max-w-4xl rounded-xl" />}>

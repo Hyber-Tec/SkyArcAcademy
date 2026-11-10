@@ -47,7 +47,7 @@ export function repeatOf<T extends ResultPrint>(r: ResultPrint, saved: readonly 
   return saved.find((s) => sameResult(r, s)) ?? null
 }
 
-const WHAT: Record<EvaluationSource, string> = { sius: 'SIUS result', paper: 'paper card', sheet: 'competition result' }
+const WHAT: Record<EvaluationSource, string> = { sius: 'SIUS result', paper: 'paper card', sheet: 'competition result', online: 'competition result' }
 
 /** "the prone paper card of Nov 2 (85)": a saved result, as a warning names it. */
 export function resultWords(e: Pick<Evaluation, 'position' | 'source' | 'dateKey' | 'total'>): string {

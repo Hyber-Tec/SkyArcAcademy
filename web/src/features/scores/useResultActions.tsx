@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react'
-import { LuFileText, LuPencil, LuScanSearch, LuTrash2 } from 'react-icons/lu'
+import { LuExternalLink, LuFileText, LuPencil, LuScanSearch, LuTrash2 } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type { ResultRow } from '@shared/scores/match'
@@ -36,13 +36,13 @@ export function useResultActions(mode: 'admin' | 'coach'): { entriesOf: (row: Re
       match && results.length > 1
         ? {
             title: 'Delete this match?',
-            description: `The ${results.length} results of ${name} (${formatDateKey(e.dateKey, 'medium')}) leave ${e.studentName}'s scores. ${results.some((r) => r.fileId) ? 'The sheet stays in the Drive, and reports' : 'Reports'} already made keep their figures.`,
+            description: `The ${results.length} results of ${name} (${formatDateKey(e.dateKey, 'medium')}) leave ${e.studentName}'s scores. ${results.some((r) => r.fileId) ? 'The sheet stays in the Drive, and reports' : 'Reports'} already made keep their figures.${results.some((r) => r.source === 'online') ? ' The results site won’t bring them back.' : ''}`,
             confirmLabel: 'Delete',
             destructive: true,
           }
         : {
             title: 'Delete these scores?',
-            description: `The ${POSITION_LABELS[e.position].toLowerCase()} result of ${formatDateKey(e.dateKey, 'medium')} leaves ${e.studentName}'s scores. ${e.fileId ? 'Its file stays in the Drive, and reports' : 'Reports'} already made keep their figures.`,
+            description: `The ${POSITION_LABELS[e.position].toLowerCase()} result of ${formatDateKey(e.dateKey, 'medium')} leaves ${e.studentName}'s scores. ${e.fileId ? 'Its file stays in the Drive, and reports' : 'Reports'} already made keep their figures.${e.source === 'online' ? ' The results site won’t bring it back.' : ''}`,
             confirmLabel: 'Delete',
             destructive: true,
           },
@@ -59,7 +59,9 @@ export function useResultActions(mode: 'admin' | 'coach'): { entriesOf: (row: Re
   const entriesOf = (row: ResultRow<Result>): MenuEntry[] => {
     if (row.match) {
       const sheet = row.results.find((r) => r.fileId)?.fileId ?? null
+      const online = row.results.find((r) => r.online?.url)?.online?.url ?? null
       return menu(
+        !!online && { label: 'Open it on the results site', icon: LuExternalLink, onSelect: () => void window.open(online, '_blank', 'noopener') },
         !!sheet && { label: 'Open the sheet in the Drive', icon: LuFileText, onSelect: () => navigate(`/${mode}/drive/file/${sheet}`) },
         row.results.length === 1
           ? { label: 'Edit position or note', icon: LuPencil, separatorBefore: !!sheet, onSelect: () => setEditing(row.results[0]) }
@@ -86,7 +88,7 @@ export function useResultActions(mode: 'admin' | 'coach'): { entriesOf: (row: Re
   const element = (
     <>
       {editing?.source === 'paper' ? <PaperScoreDialog open onOpenChange={(o) => !o && setEditing(null)} existing={editing} /> : null}
-      {editing?.source === 'sius' || editing?.source === 'sheet' ? <SiusEditDialog evaluation={editing} onClose={() => setEditing(null)} /> : null}
+      {editing?.source === 'sius' || editing?.source === 'sheet' || editing?.source === 'online' ? <SiusEditDialog evaluation={editing} onClose={() => setEditing(null)} /> : null}
       {dialog}
     </>
   )

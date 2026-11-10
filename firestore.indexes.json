@@ -203,6 +203,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "evaluations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "studentId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateKey",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

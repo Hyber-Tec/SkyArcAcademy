@@ -1,7 +1,6 @@
 import { type MatchResult, isWholeResult, matchTotal, seriesInnerTens, seriesLabel, seriesTotalText, shotLabel } from "@shared/scores/match";
-import { POSITION_COLORS, evaluationPoints } from "@shared/shooting/evaluation";
+import { POSITION_COLORS, evaluationPoints, innerTenOf } from "@shared/shooting/evaluation";
 import { swappableShots } from "@shared/shooting/replay";
-import { isInnerTen } from "@shared/shooting/target";
 import { ChevronDown, ChevronRight, Trophy } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
@@ -107,7 +106,7 @@ export function MatchCard({ evaluation, results, testID }: { evaluation: MatchRe
                     {placed ? <ShotReplay evaluation={{ source: r.source, series: [s] }} color={POSITION_COLORS[r.position]} size={size} autoPlay /> : null}
                     <View style={styles.shots}>
                       {s.shots.map((shot, k) => {
-                        const x = isInnerTen(shot.v);
+                        const x = innerTenOf(shot);
                         const swap = (swaps.get(k + 1) ?? []).map((j) => shotLabel(r.position, s.n, j - 1));
                         return (
                           <View

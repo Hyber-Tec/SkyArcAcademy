@@ -174,8 +174,8 @@ export function ResultRow({
   const shots = match ? match.shots : e.shots
   const problems = row.results.some((r) => r.problems?.length)
   const note = row.results.some((r) => r.note)
-  const where = match ? `${e.match?.name?.trim() || 'Competition'} · ${SOURCE_LABELS.sheet}` : `${POSITION_LABELS[e.position]} · ${e.match?.name || SOURCE_LABELS[e.source]}${typedIn(e) ? ', typed in' : ''}`
-  const label = `${student ? `${student.name}, ` : ''}${formatDateKey(e.dateKey, 'medium')}, ${match ? `${e.match?.name || 'a competition'}, from its results sheet` : `${POSITION_LABELS[e.position]}, ${SOURCE_LABELS[e.source]}`}: ${value !== null ? one(value) : 'no score'} per 10 shots${best ? ', a new personal best' : ''}${problems ? ', something to check' : ''}${note ? ', with a coach’s note' : ''}. ${open ? 'Close it' : 'Open it here'}`
+  const where = match ? `${e.match?.name?.trim() || 'Competition'} · ${SOURCE_LABELS[e.source]}` : `${POSITION_LABELS[e.position]} · ${e.match?.name || SOURCE_LABELS[e.source]}${typedIn(e) ? ', typed in' : ''}`
+  const label = `${student ? `${student.name}, ` : ''}${formatDateKey(e.dateKey, 'medium')}, ${match ? `${e.match?.name || 'a competition'}, ${e.source === 'online' ? 'from the results site' : 'from its results sheet'}` : `${POSITION_LABELS[e.position]}, ${SOURCE_LABELS[e.source]}`}: ${value !== null ? one(value) : 'no score'} per 10 shots${best ? ', a new personal best' : ''}${problems ? ', something to check' : ''}${note ? ', with a coach’s note' : ''}. ${open ? 'Close it' : 'Open it here'}`
   const official =
     e.official && !match ? (
       <span className="shrink-0 text-[10px] font-medium" title={`The written score is official; the app read ${e.official.appTotal}.`}>
@@ -189,7 +189,7 @@ export function ResultRow({
     // Every student's results: whose, what, the marks, the score and the total, each in its column.
     const time = e.timeMin !== null && !match ? formatMinutes(e.timeMin) : noTimeWords(e)
     const what = match ? e.match?.name?.trim() || 'Competition' : POSITION_LABELS[e.position]
-    const from = match ? SOURCE_LABELS.sheet : e.match?.name?.trim() || SOURCE_LABELS[e.source]
+    const from = match ? SOURCE_LABELS[e.source] : e.match?.name?.trim() || SOURCE_LABELS[e.source]
     const dots = (
       <span className="flex shrink-0 items-center gap-0.5" title={(match ? row.results : [e]).map((r) => POSITION_LABELS[r.position]).join(', ')} aria-hidden>
         {(match ? row.results : [e]).map((r) => (

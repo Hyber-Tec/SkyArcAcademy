@@ -20,6 +20,27 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
 sizes, with a picture of each. Since 2026-11-10 they're in English only (§42): make them again before printing.
 
+### The results site's key
+
+The app brings the academy's competition results in from the results site by itself, every night
+([DECISIONS.md](DECISIONS.md) §43), once it has the site's key:
+
+1. On Scopos's support pages, **Developers → X-API-Key**, copy the shared starter key (public, for everyone to start
+   with).
+2. Settings → **Results site** → paste it → **Save the key**. The app tries it at once and says if the site refuses it.
+3. **Look back** → *The last year* → Look back. It goes two weeks at a time, over several checks of a few minutes each;
+   the page shows how far it got.
+4. Under **Athletes to confirm**, link each one to their student (the student named like them is offered first), or
+   say **Not ours**. Their results come in at once, and every night after.
+
+The first checks read many matches, to find the academy's teams once; after that a night is a few dozen requests.
+
+### Scopos's own key for the app
+
+The shared starter key is "rate limited, shared and open to the public"; Scopos licenses one key per application each
+year, free today and "charging soon", with no price published. The email to apply, and the price estimate Goo asked
+for, are in the private notes (`docs/internal/`). Once Scopos sends the key: Settings → Results site → Replace the key.
+
 ### Kiosk PINs before Sunday, November 15
 
 Everyone starts clocking in on the kiosk after Sunday, November 15 (the fourth meeting). On 2026-11-10 the two coaches

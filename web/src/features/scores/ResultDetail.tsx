@@ -1,7 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react'
-import { LuCrosshair, LuTrophy } from 'react-icons/lu'
+import { LuCrosshair, LuExternalLink, LuTrophy } from 'react-icons/lu'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, per10, totalWithTens } from '@shared/shooting/evaluation'
-import { replayShots } from '@shared/shooting/replay'
+import { replayShots, showsTenths } from '@shared/shooting/replay'
 import { formatDateKey } from '@shared/time'
 import type { WithId } from '@shared/types'
 import { ItemMenuButton, type MenuEntry } from '@/components/app/ItemMenu'
@@ -42,13 +42,16 @@ function Figure({ label, value, unit }: { label: string; value: string; unit?: s
 export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluation>; mode: 'admin' | 'coach'; entries: MenuEntry[]; footer?: ReactNode }) {
   const color = POSITION_COLORS[e.position]
   const sius = e.source === 'sius'
+  // SIUS's and the results site's: series by series, every shot in its firing order; tenths when the match counts them.
+  const bySeries = sius || e.source === 'online'
+  const tenths = showsTenths(e)
   const shots = useMemo(() => replayShots(e), [e])
   const placed = placedShots(shots)
   const [step, setStep] = useState<number | null>(null)
   const [open, setOpen] = useState<number | null>(null)
   const view = dartView(shots)
   const whole = per10(e.wholeTotal, e.shots)
-  const decimal = sius ? per10(e.total, e.shots) : null
+  const decimal = tenths ? per10(e.total, e.shots) : null
   const facts = [
     e.mpi ? { icon: LuCrosshair, text: `Average point ${averagePointWords(e.mpi)}` } : null,
     e.sighters ? { icon: null, text: `${e.sighters} ${e.sighters === 1 ? 'sighter' : 'sighters'}, not counted` } : null,
@@ -61,7 +64,7 @@ export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluatio
     <div className="@container border-t bg-muted/30 px-4 pt-4 pb-5 @[35rem]:px-5 @[35rem]:pt-5" data-testid="result-detail">
       <div className={AREAS}>
         <div className="flex min-w-0 justify-center [grid-area:replay]">
-          {placed.length ? <ShotReplay evaluation={e} color={color} size={280} highlightLast={sius} autoPlay onStep={setStep} /> : <UnplacedTarget e={e} className="max-w-[13rem] p-8 text-[13px]" />}
+          {placed.length ? <ShotReplay evaluation={e} color={color} size={280} highlightLast={bySeries} autoPlay onStep={setStep} /> : <UnplacedTarget e={e} className="max-w-[13rem] p-8 text-[13px]" />}
         </div>
 
         <div className="flex min-w-0 items-start gap-3 [grid-area:head]">
@@ -86,6 +89,11 @@ export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluatio
               ))}
             </p>
           ) : null}
+          {e.online?.url ? (
+            <a className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href={e.online.url} target="_blank" rel="noreferrer">
+              <LuExternalLink className="size-3.5" aria-hidden /> On the results site{e.online.team ? `, shot for ${e.online.team}` : ''}
+            </a>
+          ) : null}
           <ResultNotes results={[e]} mode={mode} />
           {footer}
         </div>
@@ -94,19 +102,19 @@ export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluatio
           <div className="@container min-w-0 space-y-3 [grid-area:shots]">
             {placed.length ? (
               e.series.map((s) => (
-                <section key={s.n} aria-label={sius ? `Series ${s.n}` : 'The bulls'}>
+                <section key={s.n} aria-label={bySeries ? `Series ${s.n}` : 'The bulls'}>
                   <div className="mb-1.5 flex items-baseline gap-2">
-                    <h4 className="text-xs text-muted-foreground">{sius ? `Series ${s.n}` : 'Bulls'}</h4>
-                    <span className="text-sm font-semibold tabular-nums">{sius ? s.total.toFixed(1) : one(s.total)}</span>
+                    <h4 className="text-xs text-muted-foreground">{bySeries ? `Series ${s.n}` : 'Bulls'}</h4>
+                    <span className="text-sm font-semibold tabular-nums">{tenths ? s.total.toFixed(1) : one(s.total)}</span>
                   </div>
-                  <SeriesDarts shots={shots.filter((t) => (sius ? t.series === s.n : true))} view={view} color={color} active={step} onOpen={setOpen} whole={!sius} />
+                  <SeriesDarts shots={shots.filter((t) => (bySeries ? t.series === s.n : true))} view={view} color={color} active={step} onOpen={setOpen} whole={!tenths} />
                 </section>
               ))
             ) : (
               // Typed in: each bull's score, without a place.
               <section aria-label="The bulls">
                 <div className="mb-1.5 flex items-baseline gap-2">
-                  <h4 className="text-xs text-muted-foreground">{e.source === 'sheet' ? 'Shots' : 'Bulls'}</h4>
+                  <h4 className="text-xs text-muted-foreground">{e.source === 'sheet' || e.source === 'online' ? 'Shots' : 'Bulls'}</h4>
                   <span className="text-sm font-semibold tabular-nums">{totalWithTens(e)}</span>
                 </div>
                 <ol className="flex flex-wrap gap-1.5">
@@ -131,7 +139,7 @@ export function ResultDetail({ e, mode, entries, footer }: { e: WithId<Evaluatio
         ) : null}
       </div>
 
-      {placed.length ? <ShotDialog shots={shots} shot={open} onShot={setOpen} color={color} whole={!sius} description={`${POSITION_LABELS[e.position]} · ${formatDateKey(e.dateKey, 'medium')}`} /> : null}
+      {placed.length ? <ShotDialog shots={shots} shot={open} onShot={setOpen} color={color} whole={!tenths} description={`${POSITION_LABELS[e.position]} · ${formatDateKey(e.dateKey, 'medium')}`} /> : null}
     </div>
   )
 }

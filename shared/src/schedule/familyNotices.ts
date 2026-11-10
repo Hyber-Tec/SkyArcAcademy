@@ -189,7 +189,7 @@ export function scoreAddedNotice(e: {
   match?: { name: string } | null
 }): Notice {
   const pos = e.position ? `${e.position[0].toUpperCase()}${e.position.slice(1)}, ` : ''
-  const whole = e.source === 'paper' || (e.source === 'sheet' && Number.isInteger(e.total))
+  const whole = e.source === 'paper' || ((e.source === 'sheet' || e.source === 'online') && Number.isInteger(e.total))
   const total = whole ? String(e.wholeTotal ?? Math.round(e.total)) : Number(e.total).toFixed(1)
   const tens = e.kind === 'competition' && e.innerTens != null ? `-${e.innerTens}` : ''
   const match = e.kind === 'competition' ? `${e.match?.name || 'A competition'}, ` : ''
