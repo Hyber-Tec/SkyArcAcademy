@@ -1,5 +1,5 @@
 import { Timestamp, collection, doc, limit, orderBy, query, where } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useMemo } from 'react'
 import { type ResolvedAiConfig, resolveAiConfig } from '@shared/ai/config'
 import { AI_COL, AI_DOC } from '@shared/ai/paths'

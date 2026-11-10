@@ -1,5 +1,5 @@
 import { doc } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ACADEMY_ID } from '@shared/academy'

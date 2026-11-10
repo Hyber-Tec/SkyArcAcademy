@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useEffect, useMemo, useState } from 'react'
 import { LuCircleCheck, LuDownload, LuMail, LuPhone, LuRotateCw, LuSmartphone } from 'react-icons/lu'
 import { useParams, useSearchParams } from 'react-router'

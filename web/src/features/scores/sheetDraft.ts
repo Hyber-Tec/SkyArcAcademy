@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { type SheetReading, courseRows } from '@shared/scores/sheet'
 import { readSheetShots } from '@shared/scores/sheetRead'
 import { type SheetPlaces, placedSeries, placesByPosition, sheetSeriesOf } from '@shared/scores/sheetSave'

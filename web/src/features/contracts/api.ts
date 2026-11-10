@@ -1,5 +1,5 @@
 import { doc, query, serverTimestamp, where, writeBatch } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { useMemo } from 'react'
 import {
   ACADEMY_SIGNER_ID,

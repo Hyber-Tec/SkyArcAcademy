@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import { LuMail, LuMailCheck, LuMailX } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { signInUrl } from '@shared/brand'

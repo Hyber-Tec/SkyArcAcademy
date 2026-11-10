@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions'
+import { httpsCallable } from '@/lib/callable'
 import type { ClassRequestKind } from '@shared/schedule/requests'
 import { functions } from '@/lib/firebase'
 
