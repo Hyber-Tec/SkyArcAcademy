@@ -121,9 +121,10 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        period chooser), drive (also the staff's Drive: its index, actions, photos added to a folder),
                        reports (also the staff's list, a report's staff card and sharing), account (also a coach's
                        details, notification switches and the sign-in methods, SignInSecurity, for every role; and
-                       KioskPin, the PIN a person clocks in with), tour (the welcome tour after the first sign-in: one
-                       step a tab per kind of person; More's "Take the tour"
-                       plays it again; the notifications question waits for it)
+                       KioskPin, the PIN a person clocks in with), tour (the welcome tour after the first sign-in:
+                       the app dimmed, one part lit at a time with what it does, "Tap here" on what opens something,
+                       per kind of person (steps.ts, by test ID); More's "Take the tour" plays it again; the
+                       notifications question waits for it)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, ChoiceRow (one of a few choices), Skeleton, Screen,
                        TabHeader, SectionTitle, SectionHeading (a part of a page in its colour),
@@ -204,6 +205,10 @@ src/theme/             the website's neutral palette in light and dark with Sky 
 - **Never name the AI model or provider** (permanent rule): it is always "AI".
 - Every route loads its record by ID (links and the back gesture always work). Every interactive element gets an
   `accessibilityLabel` when it has no text, and screens and key controls a `testID` (the Maestro flows use them).
+  The welcome tour points at parts by their `testID` too: Card, ListRow, ListSection, Button, IconButton,
+  SegmentedControl, FilterChips and SearchField register themselves (`useTourTarget`, src/lib/tourTargets.ts), with
+  what tapping them does; a new kind of part the tour should light calls `useTourTarget(testID, onPress)` on its outer
+  view. A scrolling page shares its scrolling with the tour (`usePageScroll`, as Screen does).
 - **Accounts in the app** (docs/DECISIONS.md §31): anyone makes one (Create an account: Google, Apple on an iPhone, or
   an email and a password that confirms its email first), and access still follows the email: the server links an
   email on a student's record (`linkMyAccount`), and anyone else asks the academy, which approves on the website. Sign

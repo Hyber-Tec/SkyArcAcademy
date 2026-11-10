@@ -1,7 +1,7 @@
 import { effectiveRanges } from "@shared/availability";
 import { takesSeat } from "@shared/schedule/classes";
 import { type DateKey, addDays } from "@shared/time";
-import { router } from "expo-router";
+import { router, useIsFocused } from "expo-router";
 import { CalendarCheck, CalendarDays, Camera, ChevronRight, Coffee, Target } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
@@ -24,6 +24,7 @@ import { clock, longDay, plural, shortDay, timeRange } from "@/features/schedule
 import { useStaffLook } from "@/features/schedule/parts";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useAccents, useColors } from "@/theme";
+import { PageScrollContext, usePageScroll } from "@/lib/tourTargets";
 
 function greeting(nowMin: number): string {
   if (nowMin < 12 * 60) return "Good morning";
@@ -239,9 +240,15 @@ function Stat({ value, label }: { value: number; label: string }) {
 function TodayScroll({ children, contentStyle }: { children: ReactNode; contentStyle?: { paddingTop: number } }) {
   const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
+  // The welcome tour scrolls the page to what it points at (lib/tourTargets.ts).
+  const { scrollRef, onScroll, page } = usePageScroll(useIsFocused());
   return (
     <View style={styles.fill}>
+      <PageScrollContext.Provider value={page}>
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={64}
         testID="today-screen"
         style={[styles.fill, { backgroundColor: colors.grouped }]}
         contentInsetAdjustmentBehavior="automatic"
@@ -258,6 +265,7 @@ function TodayScroll({ children, contentStyle }: { children: ReactNode; contentS
       >
         {children}
       </ScrollView>
+      </PageScrollContext.Provider>
       <StatusBarScrim color={colors.grouped} />
     </View>
   );

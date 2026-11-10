@@ -22,6 +22,7 @@ import { useAvailabilityRules, useAvailabilityStanding, useAvailabilityWindow } 
 import { toast } from "@/lib/toast";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 const ROW_HEIGHT = 58;
 
@@ -48,6 +49,7 @@ function dayList(days: DateKey[], max = 3): string {
  * (`/availability-day?date=…`), which Home's to-do opens directly too.
  */
 export default function AvailabilityScreen() {
+  const gapsTour = useTourTarget("availability-gaps");
   const { branchId, actor, settings, timezone, staffId, staff } = useBranch();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -219,7 +221,7 @@ export default function AvailabilityScreen() {
           {rule}
         </T>
         {gaps.length ? (
-          <View style={[styles.gaps, { backgroundColor: colors.warningTint }]} testID="availability-gaps">
+          <View ref={gapsTour} style={[styles.gaps, { backgroundColor: colors.warningTint }]} testID="availability-gaps">
             <View style={styles.gapsText}>
               <CalendarClock size={18} color={colors.warning} />
               <T variant="small" style={[styles.grow, { color: colors.foreground }]}>

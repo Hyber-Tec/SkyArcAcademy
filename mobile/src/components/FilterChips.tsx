@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { radius, space, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * A row of filter pills that scrolls sideways (All · Unread · General · Updates), as the website's pills: the chosen
@@ -21,7 +22,10 @@ export function FilterChips<V extends string>({
   testID?: string;
 }) {
   const colors = useColors();
+  const tour = useTourTarget(testID);
   return (
+    // The welcome tour points at the chips as one (lib/tourTargets.ts).
+    <View ref={tour} collapsable={false}>
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -58,6 +62,7 @@ export function FilterChips<V extends string>({
         );
       })}
     </ScrollView>
+    </View>
   );
 }
 

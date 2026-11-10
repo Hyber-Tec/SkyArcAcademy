@@ -2,13 +2,15 @@ import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
 import { radius, useColors, useIsDark } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /** A few mutually exclusive choices in a row (Day / Week, All / Unread). Each choice's test id is `{testID}-{value}`. */
 export function SegmentedControl<V extends string>({ value, options, onChange, testID }: { value: V; options: { value: V; label: string }[]; onChange: (v: V) => void; testID?: string }) {
   const colors = useColors();
   const dark = useIsDark();
+  const tour = useTourTarget(testID);
   return (
-    <View style={[styles.wrap, { backgroundColor: colors.secondary }]} testID={testID} accessibilityRole="tablist">
+    <View ref={tour} style={[styles.wrap, { backgroundColor: colors.secondary }]} testID={testID} accessibilityRole="tablist">
       {options.map((o) => {
         const on = o.value === value;
         return (

@@ -6,6 +6,7 @@ import { TrendChip } from "@/features/reports/TrendChip";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 import type { ReportDoc } from "./data";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /** "NEW", on a report nobody in the family has opened yet. */
 export function NewBadge() {
@@ -48,8 +49,10 @@ export function ReportRow({
   const title = r.customName || "Progress report";
   const period = periodText(r.period);
   const detail = [name, shared ? `Shared ${shared}` : null].filter(Boolean).join(" · ");
+  const tour = useTourTarget(testID, onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={[title, period, name, isNew ? "New" : null, average !== null ? `average ${one(average)} per 10 shots` : null].filter(Boolean).join(", ")}

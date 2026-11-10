@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from "react";
+import { type Ref, createContext, useContext, useMemo } from "react";
 import { ScrollView, type ScrollViewProps } from "react-native";
 import { Gesture, GestureDetector, type NativeGesture } from "react-native-gesture-handler";
 
@@ -15,12 +15,14 @@ export function useScrollGesture(): NativeGesture | null {
  * zoomed one never scrolls the page, and a finger that moves on a picture that isn't zoomed in scrolls the page a
  * moment later (unless a second finger lands first and makes it a pinch).
  */
-export function ZoomScrollView({ children, ...props }: ScrollViewProps) {
+export function ZoomScrollView({ children, ref, ...props }: ScrollViewProps & { ref?: Ref<ScrollView> }) {
   const gesture = useMemo(() => Gesture.Native(), []);
   return (
     <ScrollGesture.Provider value={gesture}>
       <GestureDetector gesture={gesture}>
-        <ScrollView {...props}>{children}</ScrollView>
+        <ScrollView ref={ref} {...props}>
+          {children}
+        </ScrollView>
       </GestureDetector>
     </ScrollGesture.Provider>
   );

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "@/components/Text";
 import { radius, useColors } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /** A round icon button (a header's bell, a sheet's close), with an optional count badge. */
 export function IconButton({
@@ -23,8 +24,10 @@ export function IconButton({
   testID?: string;
 }) {
   const colors = useColors();
+  const tour = useTourTarget(testID, onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={badge ? `${accessibilityLabel}, ${badge} unread` : accessibilityLabel}

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBarScrim, TabHeader } from "./TabHeader";
 import { ZoomScrollView } from "./ZoomScrollView";
 import { space, useColors } from "@/theme";
+import { PageScrollContext, usePageScroll } from "@/lib/tourTargets";
 
 /**
  * A tab's or a page's scrolling body. A page opened over the tabs sits under its native header (which blurs what
@@ -52,12 +53,18 @@ export function Screen({
   const follow = typing && focused;
   const Scroll = zoomable ? ZoomScrollView : ScrollView;
   const page = grouped ? colors.grouped : colors.background;
+  // The welcome tour scrolls the page to what it points at (lib/tourTargets.ts).
+  const { scrollRef, onScroll, page: pageScroll } = usePageScroll(focused);
   // Without a header, Android doesn't keep the page clear of the status bar by itself (the iPhone does).
   const top = tab && Platform.OS === "android" ? { paddingTop: insets.top + space.lg } : null;
   return (
     // Not collapsed away, so the native tabs find the scroll view under it (tapping the tab again scrolls to the top).
     <View collapsable={false} style={[styles.fill, { backgroundColor: page }]}>
+      <PageScrollContext.Provider value={pageScroll}>
       <Scroll
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={64}
         style={styles.fill}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -85,6 +92,7 @@ export function Screen({
         {title ? <TabHeader title={title} right={titleRight} testID={testID ? `${testID}-title` : undefined} /> : null}
         {children}
       </Scroll>
+      </PageScrollContext.Provider>
       {tab ? <StatusBarScrim color={page} /> : null}
       {footer}
     </View>

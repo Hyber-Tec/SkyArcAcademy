@@ -8,6 +8,7 @@ import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 import type { NewsPost } from "./news";
 import { NewBadge } from "./ReportRow";
+import { useTourTarget } from "@/lib/tourTargets";
 
 /**
  * One of the academy's posts in a list (Home's "From the academy", the News page; the staff's News too), as the website
@@ -42,8 +43,10 @@ export function NewsRow({
   const holds = postHolds(a);
   const talk = comments > 0 ? (comments === 1 ? "1 comment" : `${comments} comments`) : null;
   const label = [a.title, isNew ? "New" : null, a.pinned ? "Pinned" : null, category, day, holds.pictures, holds.files, talk, preview].filter(Boolean).join(", ");
+  const tour = useTourTarget(testID, onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}

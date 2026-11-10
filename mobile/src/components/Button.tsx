@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { keepWordsIn, lineBreakProps } from "@/lib/lineBreaks";
 import { radius, useColors, useIsDark } from "@/theme";
+import { useTourTarget } from "@/lib/tourTargets";
 
 export type ButtonVariant = "default" | "outline" | "secondary" | "ghost" | "destructive" | "link";
 type Size = "default" | "lg" | "sm";
@@ -50,8 +51,10 @@ export function Button({
   const fg = buttonForeground(colors, variant);
   const height = size === "lg" ? 52 : size === "sm" ? 36 : 46;
   const off = disabled || busy;
+  const tour = useTourTarget(testID, off ? undefined : onPress);
   return (
     <Pressable
+      ref={tour}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
