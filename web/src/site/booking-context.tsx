@@ -21,10 +21,10 @@ interface BookingApi {
 const Ctx = createContext<BookingApi | null>(null)
 
 export function BookingProvider({ children }: { children: ReactNode }) {
-  const { lang, t } = useSite()
+  const { t } = useSite()
   const [open, setOpen] = useState(false)
   const phone = useMedia('(max-width: 767px)')
-  const wizard = useWizard(lang)
+  const wizard = useWizard()
 
   useEffect(() => {
     const timer = setTimeout(() => void loadWizard().catch(() => undefined), 2500)
@@ -32,9 +32,9 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const openBooking = useCallback(() => {
-    if (wizard.state.step === 'done') wizard.dispatch({ type: 'reset', language: lang, keepParent: true })
+    if (wizard.state.step === 'done') wizard.dispatch({ type: 'reset', keepParent: true })
     setOpen(true)
-  }, [wizard, lang])
+  }, [wizard])
   const api = useMemo(() => ({ openBooking }), [openBooking])
 
   return (

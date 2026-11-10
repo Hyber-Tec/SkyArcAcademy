@@ -8,15 +8,11 @@
  *
  * With --signer (and --title), it also sets who signs for the academy (§35): their name is typed on the academy's line
  * of every contract signed from then on, until the office uploads or draws the signature in Settings, which it keeps.
- *
- * With --ko-file, it adds the academy's Korean translation to the contract (§36: parents read it, the English counts),
- * once the academy approved it: the same markers in the same order as the English, checked to line up part by part
- * (shared/src/contracts/translation.ts). It goes with the version the --file makes, or the current one.
+ * The contract is English only (docs/DECISIONS.md §42).
  *
  *   npx tsx scripts/contract.ts --academy skyarc --file docs/internal/contract/enrollment-contract.txt          # what it would do
  *   npx tsx scripts/contract.ts --academy skyarc --file docs/internal/contract/enrollment-contract.txt --apply  # do it
  *   npx tsx scripts/contract.ts --academy skyarc --signer "Full Name" --title "Director" --apply               # who signs
- *   npx tsx scripts/contract.ts --academy demo --ko-file docs/internal/contract/enrollment-contract.ko.txt --apply
  *
  * Once for each academy: skyarc, then demo. Uses the developer's gcloud login (scripts/lib/firestore-rest.ts);
  * SKYARC_PROJECT and FIRESTORE_EMULATOR_HOST as the other scripts (the practice copy: SKYARC_PROJECT=demo-skyarc
@@ -27,7 +23,6 @@ import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { ACADEMY_ID, DEMO_ACADEMY_ID } from '../shared/src/academy'
 import { dollarsText, parseContract, pricedChoice, withPrices } from '../shared/src/contracts/document'
-import { translationProblems } from '../shared/src/contracts/translation'
 import { ACADEMY_SIGNER_ID, type AcademySigner, CONTRACT_TEXT_MAX, type ContractTemplate } from '../shared/src/contracts/types'
 import type { DriveActor } from '../shared/src/drive/types'
 import { COL, ROOT } from '../shared/src/paths'
@@ -41,7 +36,6 @@ const { values } = parseArgs({
     'file-prices': { type: 'boolean', default: false },
     signer: { type: 'string' },
     title: { type: 'string' },
-    'ko-file': { type: 'string' },
   },
 })
 const BY: DriveActor = { uid: 'contract-script', email: '', name: 'HyberTec' }
@@ -71,8 +65,8 @@ const audit = (at: Date, action: string, entityType: string, entityId: string, s
 async function main() {
   const academyId = values.academy
   if (academyId !== ACADEMY_ID && academyId !== DEMO_ACADEMY_ID) throw new Error(`Say which academy: --academy ${ACADEMY_ID} or --academy ${DEMO_ACADEMY_ID}.`)
-  if (!values.file && !values.signer && !values['ko-file']) {
-    throw new Error('Say what to set up: --file docs/internal/contract/enrollment-contract.txt (the contract), --ko-file …ko.txt (its Korean), --signer "Full Name" (who signs for the academy).')
+  if (!values.file && !values.signer) {
+    throw new Error('Say what to set up: --file docs/internal/contract/enrollment-contract.txt (the contract), --signer "Full Name" (who signs for the academy).')
   }
   const base = `${ROOT.branches}/${academyId}`
   console.log(`The enrollment contract, in ${PROJECT_ID} (${base})${values.apply ? '' : ': a dry run, nothing is written (add --apply to do it)'}`)
@@ -81,7 +75,6 @@ async function main() {
   const made = values.file ? await contract(base, values.file, at) : { writes: [], version: null }
   const writes = [
     ...made.writes,
-    ...(values['ko-file'] ? await translation(base, values['ko-file'], at, made.version) : []),
     ...(values.signer ? await signer(base, values.signer, values.title ?? '', at) : []),
   ]
   if (!values.apply || !writes.length) return
@@ -89,7 +82,7 @@ async function main() {
   console.log('Done.')
 }
 
-/** The version a write makes (its document and text), for the Korean to go with it. */
+/** The version a write makes (its document and text). */
 type Made = { path: string; text: string; data: Record<string, unknown> }
 
 /** The contract in the file, as the current version (a new one, unless it's the same text). */
@@ -123,14 +116,8 @@ async function contract(base: string, file: string, at: Date): Promise<{ writes:
   if (choice) for (const o of pricedChoice(parseContract(text).doc)?.options ?? []) console.log(`  ${o.title}: ${o.price}`)
 
   const id = randomBytes(15).toString('base64url').slice(0, 20)
-  const template: Omit<ContractTemplate, 'publishedAt' | 'ko'> & { publishedAt: Date } = { title: doc.title, text, sha256, version, current: true, publishedAt: at, publishedBy: BY }
+  const template: Omit<ContractTemplate, 'publishedAt'> & { publishedAt: Date } = { title: doc.title, text, sha256, version, current: true, publishedAt: at, publishedBy: BY }
   const data: Record<string, unknown> = { ...template }
-  // The Korean of the version before stays while it still lines up with the new text.
-  if (current?.t.ko?.text) {
-    if (translationProblems(parseContract(text).doc, parseContract(current.t.ko.text, { anyText: true }).doc).length) {
-      console.log('  The Korean translation of the version before doesn’t line up with this one: add the new one with --ko-file.')
-    } else data.ko = current.t.ko
-  }
   const path = `${base}/${COL.contractTemplates}/${id}`
   const writes: BatchWrite[] = []
   if (current) writes.push({ patch: `${base}/${COL.contractTemplates}/${current.id}`, fields: { current: false, replacedAt: at, replacedBy: BY } })
@@ -140,37 +127,6 @@ async function contract(base: string, file: string, at: Date): Promise<{ writes:
     data: audit(at, 'contract.publish', 'contractTemplate', id, `Set up the enrollment contract, version ${version} (“${doc.title}”): the office sends it to each family from the student’s page`),
   })
   return { writes, version: { path, text, data } }
-}
-
-/** The academy's Korean translation (§36), with the version the --file makes, or the current one. */
-async function translation(base: string, file: string, at: Date, made: Made | null): Promise<BatchWrite[]> {
-  const text = readFileSync(file, 'utf8').replace(/\r\n?/g, '\n').trim()
-  if (text.length > CONTRACT_TEXT_MAX) throw new Error('The translation is too long.')
-  const { doc: ko, problems } = parseContract(text, { anyText: true })
-  if (problems.length) throw new Error(`Fix the translation first:\n${problems.map((p) => `  line ${p.line}: ${p.message}`).join('\n')}`)
-  const current = made ? null : (await listDocuments(`${base}/${COL.contractTemplates}`)).find((d) => d.data.current === true)
-  if (!made && !current) throw new Error('There’s no contract to translate yet: put it in with --file (the two can go together).')
-  const en = made ? made.text : String(current?.data.text ?? '')
-  const off = translationProblems(parseContract(en).doc, ko)
-  if (off.length) throw new Error(`The Korean doesn’t line up with the English:\n${off.map((m) => `  ${m}`).join('\n')}`)
-  const sha256 = createHash('sha256').update(text).digest('hex')
-  if ((current?.data.ko as ContractTemplate['ko'])?.sha256 === sha256) {
-    console.log('It’s the current translation already: nothing to do.')
-    return []
-  }
-  console.log(`The Korean translation, “${ko.title}”: ${ko.blocks.length} parts, lining up with the English.`)
-  const value = { text, sha256, updatedAt: at, updatedBy: BY }
-  if (made) {
-    made.data.ko = value
-    return []
-  }
-  return [
-    { patch: current!.path, fields: { ko: value } },
-    {
-      set: `${base}/${COL.auditLog}/contract-ko-${at.getTime()}`,
-      data: audit(at, 'contract.translation', 'contractTemplate', current!.id, `Added the Korean translation of the enrollment contract (version ${String(current!.data.version)}), for parents who read Korean; the English stays the contract`),
-    },
-  ]
 }
 
 /** Who signs for the academy: their name, typed on its line, keeping a signature image the office set in Settings. */

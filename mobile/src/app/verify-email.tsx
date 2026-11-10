@@ -7,7 +7,6 @@ import { CenteredCard } from "@/components/CenteredCard";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
 import { T } from "@/components/Text";
 import { authErrorText } from "@/lib/authText";
-import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/state/AuthProvider";
 import { radius, space, useColors } from "@/theme";
@@ -20,8 +19,6 @@ import { radius, space, useColors } from "@/theme";
 export default function VerifyEmailScreen() {
   const { user, sendVerification, checkVerified, signOut } = useAuth();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const [checking, setChecking] = useState(false);
   const [sending, setSending] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -35,15 +32,15 @@ export default function VerifyEmailScreen() {
       if (!quiet) setChecking(true);
       try {
         const ok = await checkVerified();
-        if (!ok && !quiet) toast.info(t("Not confirmed yet", "아직 확인되지 않았어요"), { description: t("Open the link in the email, then try again.", "이메일의 링크를 연 뒤 다시 눌러 주세요.") });
+        if (!ok && !quiet) toast.info("Not confirmed yet", { description: "Open the link in the email, then try again." });
       } catch (e) {
-        if (!quiet) toast.error(authErrorText((e as { code?: string }).code, "verify", lang));
+        if (!quiet) toast.error(authErrorText((e as { code?: string }).code, "verify"));
       } finally {
         busy.current = false;
         if (!quiet) setChecking(false);
       }
     },
-    [checkVerified, t, lang],
+    [checkVerified],
   );
 
   useEffect(() => {
@@ -67,12 +64,12 @@ export default function VerifyEmailScreen() {
     try {
       const r = await sendVerification();
       if (r === "verified") return void check(false);
-      if (r === "throttled") toast.info(t("Already sent", "이미 보냈어요"), { description: t("Give it a minute, and check your spam folder too.", "1분쯤 기다려 보고, 스팸함도 확인해 주세요.") });
-      else toast.success(t("Email sent", "이메일을 보냈어요"), { description: t(`Check ${user?.email}.`, `${user?.email} 메일함을 확인해 주세요.`) });
+      if (r === "throttled") toast.info("Already sent", { description: "Give it a minute, and check your spam folder too." });
+      else toast.success("Email sent", { description: `Check ${user?.email}.` });
       setNow(Date.now());
       setCooldownUntil(Date.now() + 60_000);
     } catch (e) {
-      toast.error(authErrorText((e as { code?: string }).code, "verify", lang));
+      toast.error(authErrorText((e as { code?: string }).code, "verify"));
     } finally {
       setSending(false);
     }
@@ -86,35 +83,29 @@ export default function VerifyEmailScreen() {
         </View>
       </View>
       <T variant="title" style={styles.center}>
-        {t("Confirm your email", "이메일 주소를 확인해 주세요")}
+        Confirm your email
       </T>
       <T tone="muted" style={styles.center}>
-        {t(
-          `We sent a link to ${user?.email}. Open it to confirm the address; this screen moves on by itself once you have.`,
-          `${user?.email} 메일함으로 확인 링크를 보냈어요. 링크를 열어 주소를 확인하면 이 화면은 저절로 넘어가요.`,
-        )}
+        {`We sent a link to ${user?.email}. Open it to confirm the address; this screen moves on by itself once you have.`}
       </T>
       <View style={styles.buttons}>
         {Platform.OS === "ios" ? (
           <Button size="lg" onPress={() => void Linking.openURL("message://").catch(() => undefined)} testID="open-mail">
-            {t("Open Mail", "메일 앱 열기")}
+            Open Mail
           </Button>
         ) : null}
         <Button size="lg" variant={Platform.OS === "ios" ? "outline" : "default"} onPress={() => void check(false)} busy={checking} testID="check-verified">
-          {t("I've confirmed it", "확인했어요")}
+          {"I've confirmed it"}
         </Button>
         <Button variant="outline" onPress={() => void resend()} busy={sending} disabled={cooldown > 0} testID="resend">
-          {cooldown > 0 ? t(`Send again in ${cooldown}s`, `${cooldown}초 후 다시 보내기`) : t("Send the email again", "이메일 다시 보내기")}
+          {cooldown > 0 ? `Send again in ${cooldown}s` : "Send the email again"}
         </Button>
       </View>
       <T variant="small" tone="muted" style={styles.center}>
-        {t(
-          `The email comes from Sky Arc (${SENDER_EMAIL}). Not there after a minute? Check your spam folder.`,
-          `이메일은 Sky Arc(${SENDER_EMAIL})에서 보내요. 1분이 지나도 오지 않으면 스팸함을 확인해 주세요.`,
-        )}
+        {`The email comes from Sky Arc (${SENDER_EMAIL}). Not there after a minute? Check your spam folder.`}
       </T>
       <Button variant="link" onPress={() => void signOut()} testID="use-another">
-        {t("Use another account", "다른 계정 사용하기")}
+        Use another account
       </Button>
       <DeleteAccountLink />
     </CenteredCard>

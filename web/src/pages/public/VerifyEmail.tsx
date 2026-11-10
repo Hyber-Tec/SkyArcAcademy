@@ -7,9 +7,8 @@ import { useAuth } from '@/auth/AuthProvider'
 import { FullPageSpinner } from '@/components/app/FullPage'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { useLang, useT } from '@/lib/lang'
 import { AuthShell, useCooldown, useNext } from './authParts'
-import { authErrorIn } from './authText'
+import { authErrorMessage } from "@shared/auth";
 
 /**
  * "Check your email": a new password account waits here until its address is confirmed. It checks by itself every
@@ -23,12 +22,9 @@ export function VerifyEmail() {
   const [sending, setSending] = useState(false)
   const [cooldown, startCooldown] = useCooldown()
   const busy = useRef(false)
-  const lang = useLang()
-  const t = useT()
-
   useEffect(() => {
-    document.title = lang === 'ko' ? `이메일 인증 | ${ACADEMY_NAME}` : `Confirm your email | ${ACADEMY_NAME}`
-  }, [lang])
+    document.title = `Confirm your email | ${ACADEMY_NAME}`
+  }, [])
 
   const check = useCallback(
     async (quiet: boolean) => {
@@ -38,15 +34,15 @@ export function VerifyEmail() {
       try {
         const ok = await checkVerified()
         if (ok) navigate(target, { replace: true })
-        else if (!quiet) toast.info(t('Not confirmed yet', '아직 인증되지 않았어요'), { description: t('Open the link in the email, then try again.', '이메일의 링크를 연 뒤 다시 시도해 주세요.') })
+        else if (!quiet) toast.info('Not confirmed yet', { description: 'Open the link in the email, then try again.' })
       } catch (e) {
-        if (!quiet) toast.error(authErrorIn((e as { code?: string }).code, 'verify', lang))
+        if (!quiet) toast.error(authErrorMessage((e as { code?: string }).code, 'verify'))
       } finally {
         busy.current = false
         if (!quiet) setChecking(false)
       }
     },
-    [checkVerified, navigate, target, t, lang],
+    [checkVerified, navigate, target],
   )
 
   useEffect(() => {
@@ -69,11 +65,11 @@ export function VerifyEmail() {
     try {
       const r = await sendVerification(target)
       if (r === 'verified') return void check(false)
-      if (r === 'throttled') toast.info(t('Already sent', '이미 보냈어요'), { description: t('Give it a minute, and check your spam folder too.', '잠시 기다려 주세요. 스팸 메일함도 확인해 주세요.') })
-      else toast.success(t('Email sent', '이메일을 보냈어요'), { description: t(`Check ${user?.email}.`, `${user?.email} 메일함을 확인해 주세요.`) })
+      if (r === 'throttled') toast.info('Already sent', { description: 'Give it a minute, and check your spam folder too.' })
+      else toast.success('Email sent', { description: `Check ${user?.email}.` })
       startCooldown(60)
     } catch (e) {
-      toast.error(authErrorIn((e as { code?: string }).code, 'verify', lang))
+      toast.error(authErrorMessage((e as { code?: string }).code, 'verify'))
     } finally {
       setSending(false)
     }
@@ -81,30 +77,20 @@ export function VerifyEmail() {
 
   return (
     <AuthShell
-      title={t('Confirm your email', '이메일을 인증해 주세요')}
+      title="Confirm your email"
       description={
-        lang === 'ko' ? (
-          <>
-            <span className="font-medium wrap-anywhere text-foreground">{user?.email}</span> 주소로 링크를 보냈어요. 링크를 열어 이메일을 인증해 주세요. 인증하면
-            이 페이지가 자동으로 넘어가요.
-          </>
-        ) : (
-          <>
-            We sent a link to <span className="font-medium wrap-anywhere text-foreground">{user?.email}</span>. Open it to confirm the address. This page
-            moves on by itself once you have.
-          </>
-        )
+        <>
+          We sent a link to <span className="font-medium wrap-anywhere text-foreground">{user?.email}</span>. Open it to confirm the address. This page
+          moves on by itself once you have.
+        </>
       }
       footer={
         <>
           <p>
-            {t(
-              `The email comes from ${ACADEMY_NAME} (${SENDER_EMAIL}). Not there after a minute? Check your spam folder, or send it again.`,
-              `이메일은 ${ACADEMY_NAME}(${SENDER_EMAIL})에서 보내요. 1분이 지나도 오지 않으면 스팸 메일함을 확인하거나 다시 보내 주세요.`,
-            )}
+            {`The email comes from ${ACADEMY_NAME} (${SENDER_EMAIL}). Not there after a minute? Check your spam folder, or send it again.`}
           </p>
           <p>
-            {t('Wrong email?', '이메일이 틀렸나요?')}{' '}
+            Wrong email?{' '}
             <button
               type="button"
               className="font-medium text-foreground underline underline-offset-2"
@@ -113,9 +99,9 @@ export function VerifyEmail() {
                 navigate('/signup', { replace: true })
               }}
             >
-              {t('Start over with another one', '다른 이메일로 다시 시작하기')}
+              Start over with another one
             </button>
-            {lang === 'ko' ? null : '.'}
+            .
           </p>
         </>
       }
@@ -128,11 +114,11 @@ export function VerifyEmail() {
       <div className="grid gap-2">
         <Button onClick={() => void check(false)} disabled={checking}>
           {checking ? <Spinner /> : null}
-          {t('I’ve confirmed it', '인증했어요')}
+          I’ve confirmed it
         </Button>
         <Button variant="outline" onClick={() => void resend()} disabled={sending || cooldown > 0}>
           {sending ? <Spinner /> : null}
-          {cooldown > 0 ? t(`Send again in ${cooldown}s`, `${cooldown}초 후 다시 보내기`) : t('Send the email again', '이메일 다시 보내기')}
+          {cooldown > 0 ? `Send again in ${cooldown}s` : 'Send the email again'}
         </Button>
       </div>
     </AuthShell>

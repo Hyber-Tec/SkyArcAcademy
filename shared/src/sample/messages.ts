@@ -7,7 +7,7 @@ interface Draft {
   key: string
   hoursAgo: number
   done?: boolean
-  message: Omit<WebsiteMessage, 'status' | 'createdAt' | 'doneAt' | 'doneBy' | 'lang'> & { lang?: WebsiteMessage['lang'] }
+  message: Omit<WebsiteMessage, 'status' | 'createdAt' | 'doneAt' | 'doneBy'>
 }
 
 /** Phone numbers in 555-0100…0199, which exist nowhere. */
@@ -48,12 +48,11 @@ const DRAFTS: Draft[] = [
     hoursAgo: 30,
     message: {
       kind: 'trial',
-      lang: 'ko',
       name: 'Soyeon Kim',
       email: email('Soyeon Kim'),
       phone: phone(73),
       topic: '',
-      message: '딸이 공기소총을 배워 보고 싶어 합니다. 체험 수업이 가능한 시간이 궁금합니다.',
+      message: 'My daughter would like to try air rifle. Which times are open for a trial class?',
       athlete: { firstName: 'Yuna', lastName: 'Kim', grade: '9', experience: 'some' },
       days: ['Tuesday', 'Thursday', 'Sunday'],
     },
@@ -98,7 +97,6 @@ export function buildSampleMessages(opts: { academyId: string; now: Date; manage
   return DRAFTS.map((d) => {
     const at = new Date(opts.now.getTime() - d.hoursAgo * 3_600_000)
     const data: WebsiteMessage = {
-      lang: 'en',
       ...d.message,
       status: d.done ? 'done' : 'new',
       createdAt: at as unknown as WebsiteMessage['createdAt'],

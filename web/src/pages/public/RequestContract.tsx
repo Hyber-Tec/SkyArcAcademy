@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { functions } from '@/lib/firebase'
-import { useLang, useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 import { Card, Shell } from './ContractFrame'
 
@@ -55,13 +54,11 @@ type Child = { firstName: string; lastName: string; dob: string }
 const blank = (): Child => ({ firstName: '', lastName: '', dob: '' })
 
 export function RequestContractPage() {
-  const lang = useLang()
-  const t = useT()
   const [kept, setKept] = useState<Kept | null>(() => readKept())
   const [asking, setAsking] = useState(() => !readKept())
   useEffect(() => {
-    document.title = lang === 'ko' ? '등록 계약서 요청' : 'Ask for the enrollment contract'
-  }, [lang])
+    document.title = 'Ask for the enrollment contract'
+  }, [])
   if (!asking && kept?.requests.length) {
     return (
       <Waiting
@@ -85,14 +82,12 @@ export function RequestContractPage() {
         setAsking(false)
       }}
       onBack={kept?.requests.length ? () => setAsking(false) : null}
-      t={t}
     />
   )
 }
 
 /** The form: each child, then the parent. Names in English letters, as the contract takes them. */
-function Ask({ parent, onAsked, onBack, t }: { parent: Kept['parent'] | null; onAsked: (k: Omit<Kept, 'at'>) => void; onBack: (() => void) | null; t: ReturnType<typeof useT> }) {
-  const lang = useLang()
+function Ask({ parent, onAsked, onBack }: { parent: Kept['parent'] | null; onAsked: (k: Omit<Kept, 'at'>) => void; onBack: (() => void) | null }) {
   const [children, setChildren] = useState<Child[]>([blank()])
   const [name, setName] = useState(parent?.name ?? '')
   const [email, setEmail] = useState(parent?.email ?? '')
@@ -109,15 +104,15 @@ function Ask({ parent, onAsked, onBack, t }: { parent: Kept['parent'] | null; on
     setBusy(true)
     setProblem(null)
     try {
-      const r = (await askCall({ children, parentName: name, email, phone, lang, website })).data
+      const r = (await askCall({ children, parentName: name, email, phone, website })).data
       onAsked({ requests: r.requests.map((x) => ({ token: x.token, firstName: x.firstName })), parent: { name, email, phone } })
     } catch (err) {
       const f = err as { code?: string; details?: { errors?: Record<string, string> }; message?: string }
       if (f.details?.errors) {
         setErrors(f.details.errors)
-        setProblem(t('Some parts need another look.', '다시 확인할 항목이 있어요.'))
-      } else if (f.code === 'functions/resource-exhausted') setProblem(t('Too many requests just now. Please ask at the front desk.', '요청이 너무 많았어요. 데스크에 문의해 주세요.'))
-      else setProblem(t('The request didn’t go. Check your connection and try again.', '요청을 보내지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.'))
+        setProblem('Some parts need another look.')
+      } else if (f.code === 'functions/resource-exhausted') setProblem('Too many requests just now. Please ask at the front desk.')
+      else setProblem('The request didn’t go. Check your connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -126,60 +121,54 @@ function Ask({ parent, onAsked, onBack, t }: { parent: Kept['parent'] | null; on
   return (
     <Shell>
       <Card>
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">{t('Enrollment contract', '등록 계약서')}</h1>
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">Enrollment contract</h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          {t(
-            'Tell us whose contract it is. The academy gets it ready, and it opens here for you to sign. We’ll email it to you too.',
-            '누구의 계약서인지 알려 주세요. 아카데미가 준비하면 이 화면에서 바로 서명할 수 있어요. 이메일로도 보내 드려요.',
-          )}
+          Tell us whose contract it is. The academy gets it ready, and it opens here for you to sign. We’ll email it to you too.
         </p>
         <form onSubmit={(e) => void submit(e)} className="mt-6 space-y-6" noValidate data-testid="contract-request-form">
           {children.map((c, i) => (
             <fieldset key={i} className="space-y-3 rounded-xl border p-4">
               <legend className="flex w-full items-center justify-between px-1 text-sm font-semibold">
-                {children.length > 1 ? t(`Child ${i + 1}`, `자녀 ${i + 1}`) : t('Your child', '자녀')}
+                {children.length > 1 ? `Child ${i + 1}` : 'Your child'}
               </legend>
               <div className="grid grid-cols-2 gap-3">
-                <TextField id={`c${i}-first`} label={t('First name', '이름 (영문)')} value={c.firstName} onChange={(v) => setChild(i, { firstName: v })} error={err(`children.${i}.firstName`)} autoComplete="off" />
-                <TextField id={`c${i}-last`} label={t('Last name', '성 (영문)')} value={c.lastName} onChange={(v) => setChild(i, { lastName: v })} error={err(`children.${i}.lastName`)} autoComplete="off" />
+                <TextField id={`c${i}-first`} label="First name" value={c.firstName} onChange={(v) => setChild(i, { firstName: v })} error={err(`children.${i}.firstName`)} autoComplete="off" />
+                <TextField id={`c${i}-last`} label="Last name" value={c.lastName} onChange={(v) => setChild(i, { lastName: v })} error={err(`children.${i}.lastName`)} autoComplete="off" />
               </div>
-              <TextField id={`c${i}-dob`} label={t('Date of birth (optional)', '생년월일 (선택)')} value={c.dob} onChange={(v) => setChild(i, { dob: v })} error={err(`children.${i}.dob`)} type="date" />
+              <TextField id={`c${i}-dob`} label="Date of birth (optional)" value={c.dob} onChange={(v) => setChild(i, { dob: v })} error={err(`children.${i}.dob`)} type="date" />
               {children.length > 1 ? (
                 <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setChildren((list) => list.filter((_, j) => j !== i))}>
-                  <LuTrash2 /> {t('Remove', '삭제')}
+                  <LuTrash2 /> Remove
                 </Button>
               ) : null}
             </fieldset>
           ))}
           {children.length < REQUEST_CHILDREN_MAX ? (
             <Button type="button" variant="outline" className="w-full" onClick={() => setChildren((list) => [...list, { ...blank(), lastName: list[0]?.lastName ?? '' }])} data-testid="add-child">
-              <LuPlus /> {t('Add another child', '자녀 추가')}
+              <LuPlus /> Add another child
             </Button>
           ) : null}
           {err('children') ? <p className="text-sm text-destructive">{err('children')}</p> : null}
 
           <fieldset className="space-y-3 rounded-xl border p-4">
-            <legend className="px-1 text-sm font-semibold">{t('Parent or guardian', '부모 또는 보호자')}</legend>
-            <TextField id="parent-name" label={t('Your full name', '이름과 성 (영문)')} value={name} onChange={setName} error={err('parentName')} autoComplete="name" />
-            <TextField id="parent-email" label={t('Email', '이메일')} value={email} onChange={setEmail} error={err('email')} type="email" autoComplete="email" />
-            <TextField id="parent-phone" label={t('Phone', '전화번호')} value={phone} onChange={setPhone} error={err('phone')} type="tel" autoComplete="tel" />
+            <legend className="px-1 text-sm font-semibold">Parent or guardian</legend>
+            <TextField id="parent-name" label="Your full name" value={name} onChange={setName} error={err('parentName')} autoComplete="name" />
+            <TextField id="parent-email" label="Email" value={email} onChange={setEmail} error={err('email')} type="email" autoComplete="email" />
+            <TextField id="parent-phone" label="Phone" value={phone} onChange={setPhone} error={err('phone')} type="tel" autoComplete="tel" />
           </fieldset>
           {/* People never see this box: a script filling in every box fills it too. */}
           <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
 
           <p className="text-xs text-muted-foreground">
-            {t(
-              'Type names in English letters, as the contract writes them. What you type here fills in the contract, and you can still change it there.',
-              '이름은 계약서에 적히는 대로 영문으로 입력해 주세요. 여기 적은 내용은 계약서에 미리 채워지고, 서명하기 전에 고칠 수 있어요.',
-            )}
+            Type names in English letters, as the contract writes them. What you type here fills in the contract, and you can still change it there.
           </p>
           {problem ? <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{problem}</p> : null}
           <Button type="submit" size="lg" className="w-full" disabled={busy} data-testid="ask-contract">
-            {busy ? <Spinner /> : null} {t('Ask for the contract', '계약서 요청하기')}
+            {busy ? <Spinner /> : null} Ask for the contract
           </Button>
           {onBack ? (
             <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
-              {t('Back to your request', '요청 화면으로 돌아가기')}
+              Back to your request
             </Button>
           ) : null}
         </form>
@@ -205,8 +194,6 @@ const POLL_MS = 4000
  * it opens their contract as soon as it's sent; with more, each has its button.
  */
 function Waiting({ kept, onAnother, onClear }: { kept: Kept; onAnother: () => void; onClear: () => void }) {
-  const lang = useLang()
-  const t = useT()
   const navigate = useNavigate()
   const [states, setStates] = useState<ContractRequestState[] | null>(null)
   const [offline, setOffline] = useState(false)
@@ -232,7 +219,7 @@ function Waiting({ kept, onAnother, onClear }: { kept: Kept; onAnother: () => vo
       // One child, sent: their contract opens by itself (once).
       if (alive && r && r.length === 1 && r[0].state === 'ready' && !opened.current) {
         opened.current = true
-        navigate(`${r[0].path}?lang=${lang}&from=request`)
+        navigate(`${r[0].path}?from=request`)
       }
     }
     void tick()
@@ -244,7 +231,7 @@ function Waiting({ kept, onAnother, onClear }: { kept: Kept; onAnother: () => vo
       clearInterval(timer)
       document.removeEventListener('visibilitychange', onShow)
     }
-  }, [check, navigate, lang])
+  }, [check, navigate])
 
   const rows = kept.requests.map((r, i) => ({ firstName: r.firstName, s: states?.[i] ?? null }))
   const allDone = !!states && states.every((s) => s.state === 'signed' || s.state === 'closed' || s.state === 'unknown')
@@ -252,15 +239,12 @@ function Waiting({ kept, onAnother, onClear }: { kept: Kept; onAnother: () => vo
     <Shell>
       <Card>
         <h1 className="text-center text-xl font-semibold tracking-tight text-balance">
-          {allDone ? t('All done', '모두 마쳤어요') : t('Your request is with the academy', '아카데미에 요청을 보냈어요')}
+          {allDone ? 'All done' : 'Your request is with the academy'}
         </h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
           {allDone
-            ? t('Thank you. The academy has your signed contract, and your copy is in your email.', '감사합니다. 서명한 계약서는 아카데미에 전달됐고, 사본은 이메일로 보내 드렸어요.')
-            : t(
-                `Keep this page open: each contract opens here as soon as the academy sends it. It’s emailed to ${kept.parent.email} too.`,
-                `이 화면을 열어 두세요. 아카데미가 계약서를 보내면 여기서 바로 열려요. ${kept.parent.email} 주소로도 보내 드려요.`,
-              )}
+            ? 'Thank you. The academy has your signed contract, and your copy is in your email.'
+            : `Keep this page open: each contract opens here as soon as the academy sends it. It’s emailed to ${kept.parent.email} too.`}
         </p>
         <ul className="mt-6 space-y-2" data-testid="request-states">
           {rows.map(({ firstName, s }, i) => (
@@ -273,33 +257,33 @@ function Waiting({ kept, onAnother, onClear }: { kept: Kept; onAnother: () => vo
                 <Spinner className="size-5 shrink-0 text-muted-foreground" />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block font-medium">{t(`${firstName}’s contract`, `${firstName} 학생 계약서`)}</span>
+                <span className="block font-medium">{`${firstName}’s contract`}</span>
                 <span className="block text-xs text-muted-foreground">
                   {!s || s.state === 'waiting'
-                    ? t('The academy is getting it ready…', '아카데미가 준비하고 있어요…')
+                    ? 'The academy is getting it ready…'
                     : s.state === 'ready'
-                      ? t('Ready to sign', '서명할 수 있어요')
+                      ? 'Ready to sign'
                       : s.state === 'signed'
-                        ? t('Signed', '서명했어요')
-                        : t('Please ask at the front desk.', '데스크에 문의해 주세요.')}
+                        ? 'Signed'
+                        : 'Please ask at the front desk.'}
                 </span>
               </span>
               {s?.state === 'ready' ? (
-                <Button size="sm" onClick={() => navigate(`${s.path}?lang=${lang}&from=request`)} data-testid={`sign-${i}`}>
-                  {t('Sign', '서명하기')}
+                <Button size="sm" onClick={() => navigate(`${s.path}?from=request`)} data-testid={`sign-${i}`}>
+                  Sign
                 </Button>
               ) : null}
             </li>
           ))}
         </ul>
-        {offline ? <p className="mt-3 text-center text-xs text-muted-foreground">{t('Checking again as soon as you’re back online…', '인터넷에 다시 연결되면 바로 확인할게요…')}</p> : null}
+        {offline ? <p className="mt-3 text-center text-xs text-muted-foreground">Checking again as soon as you’re back online…</p> : null}
         <div className="mt-6 grid gap-2">
           <Button variant="outline" onClick={onAnother} data-testid="ask-another">
-            <LuPlus /> {t('Ask for another child’s contract', '다른 자녀 계약서 요청하기')}
+            <LuPlus /> Ask for another child’s contract
           </Button>
           {allDone ? (
             <Button variant="ghost" onClick={onClear}>
-              {t('Start over', '처음부터 다시')}
+              Start over
             </Button>
           ) : null}
         </div>

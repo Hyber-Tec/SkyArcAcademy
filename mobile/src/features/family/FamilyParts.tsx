@@ -4,7 +4,6 @@ import { ContactButtons } from "@/components/ContactButtons";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterChips } from "@/components/FilterChips";
 import { ListRow, ListSection, RowIcon } from "@/components/List";
-import { useLang, useT } from "@/lib/lang";
 import { openMap, openUrl, webLink } from "@/lib/links";
 import { useBranch } from "@/state/BranchProvider";
 import { useColors } from "@/theme";
@@ -27,8 +26,6 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
   const contact = useAcademyContact();
   const { name } = useBranch();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const phone = contact?.phone?.trim();
   const email = contact?.email?.trim();
   // `reachOnly`: the phone and the email (asking for a change), without the address and website.
@@ -36,7 +33,7 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
   const website = reachOnly ? null : contact?.website?.trim();
   if (!phone && !email && !address && !website) return null;
   return (
-    <ListSection title={title ?? t("Contact the academy", "아카데미 연락처")} footer={footer} testID="family-contact">
+    <ListSection title={title ?? "Contact the academy"} footer={footer} testID="family-contact">
       {phone ? (
         <ListRow
           icon={
@@ -45,7 +42,7 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
             </RowIcon>
           }
           title={formatPhone(phone)}
-          subtitle={t("Call or text", "전화 또는 문자")}
+          subtitle="Call or text"
           right={<ContactButtons phone={phone} name={name} />}
           testID="family-contact-phone"
         />
@@ -58,7 +55,7 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
             </RowIcon>
           }
           title={email}
-          subtitle={t("Email", "이메일")}
+          subtitle="Email"
           right={<ContactButtons email={email} name={name} />}
           testID="family-contact-email"
         />
@@ -71,8 +68,8 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
             </RowIcon>
           }
           title={address}
-          subtitle={t("Open in Maps", "지도에서 열기")}
-          onPress={() => void openMap(address, lang)}
+          subtitle="Open in Maps"
+          onPress={() => void openMap(address)}
           testID="family-contact-address"
         />
       ) : null}
@@ -84,8 +81,8 @@ export function AcademyContact({ title, footer, reachOnly = false }: { title?: s
             </RowIcon>
           }
           title={website.replace(/^https?:\/\//i, "").replace(/\/$/, "")}
-          subtitle={t("Website", "웹사이트")}
-          onPress={() => void openUrl(webLink(website), lang)}
+          subtitle="Website"
+          onPress={() => void openUrl(webLink(website))}
           testID="family-contact-website"
         />
       ) : null}
@@ -98,22 +95,15 @@ export function NotLinked({ testID }: { testID?: string }) {
   const { who } = useFamily();
   const { name } = useBranch();
   const colors = useColors();
-  const t = useT();
   return (
     <EmptyState
       testID={testID ?? "family-not-linked"}
       icon={<Link2Off size={26} color={colors.mutedForeground} />}
-      title={who === "parent" ? t("No children linked yet", "아직 연결된 자녀가 없어요") : t("Your account isn’t linked yet", "아직 계정이 연결되지 않았어요")}
+      title={who === "parent" ? "No children linked yet" : "Your account isn’t linked yet"}
       text={
         who === "parent"
-          ? t(
-              `Ask ${name} to link your child to your account. Their classes and reports show here once it does.`,
-              `${name}에 자녀 연결을 요청해 주세요. 연결되면 자녀의 수업과 리포트가 여기에 보여요.`,
-            )
-          : t(
-              `Ask ${name} to link your account to your student record. Your classes and reports show here once it does.`,
-              `${name}에 계정 연결을 요청해 주세요. 연결되면 수업과 리포트가 여기에 보여요.`,
-            )
+          ? `Ask ${name} to link your child to your account. Their classes and reports show here once it does.`
+          : `Ask ${name} to link your account to your student record. Your classes and reports show here once it does.`
       }
     />
   );

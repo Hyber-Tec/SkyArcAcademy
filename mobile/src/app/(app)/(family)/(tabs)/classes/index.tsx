@@ -24,7 +24,6 @@ import { RequestsPanel, useClassesToDo } from "@/features/family/RequestsPanel";
 import { type FamilyClass, familyClasses } from "@/features/family/classes";
 import { dayHeading, hasEnded } from "@/features/family/format";
 import { plural } from "@/features/schedule/format";
-import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors } from "@/theme";
 
@@ -36,10 +35,9 @@ const STEP_WEEKS = 8;
 const MAX_AHEAD_WEEKS = 26;
 const MAX_BACK_WEEKS = 52;
 
-/** "Your classes", "Jiwoo’s classes", "Your children’s classes" (Jiwoo의 수업, 자녀 수업). */
-function whoseClasses(family: FamilyState, lang: "en" | "ko"): string {
+/** "Your classes", "Jiwoo’s classes", "Your children’s classes". */
+function whoseClasses(family: FamilyState): string {
   if (family.who === "student") return "Your classes";
-  if (lang === "ko") return family.shown.length === 1 ? `${family.firstName(family.shown[0])}의 수업` : "자녀 수업";
   return family.shown.length === 1 ? `${family.firstName(family.shown[0])}’s classes` : "Your children’s classes";
 }
 
@@ -59,8 +57,6 @@ function whoseClasses(family: FamilyState, lang: "en" | "ko"): string {
 export default function FamilyClassesScreen() {
   const family = useFamily();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const insets = useSafeAreaInsets();
   const { settings } = useBranch();
   const { today, nowMin } = useAcademyNow();
@@ -104,7 +100,6 @@ export default function FamilyClassesScreen() {
     else setBack((w) => Math.min(MAX_BACK_WEEKS, w + STEP_WEEKS));
   };
   const span = upcoming ? `in the next ${weeks} weeks` : `in the last ${weeks} weeks`;
-  const spanKo = upcoming ? `앞으로 ${weeks}주 동안` : `지난 ${weeks}주 동안`;
   const linked = family.ids.length > 0;
   const header = <ClassesHeader mode={mode} onMode={setMode} linked={linked} />;
 
@@ -124,18 +119,18 @@ export default function FamilyClassesScreen() {
             <Pressable
               onPress={() => setMode("list")}
               accessibilityRole="button"
-              accessibilityHint={t("Shows it in the list, to answer it", "목록에서 보고 답할 수 있어요")}
+              accessibilityHint="Shows it in the list, to answer it"
               style={({ pressed }) => [styles.strip, { backgroundColor: colors.infoTint, borderColor: `${colors.info}55` }, pressed && styles.pressed]}
               testID="family-month-needs-answer"
             >
               <MessageCircleQuestionMark size={18} color={colors.info} />
               <T variant="label" style={[styles.grow, { color: colors.info }]}>
                 {todo.offers.length === 1
-                  ? t("The academy suggests another time", "아카데미에서 다른 시간을 제안했어요")
-                  : t(`The academy suggests ${todo.offers.length} other times`, `아카데미에서 다른 시간 ${todo.offers.length}개를 제안했어요`)}
+                  ? "The academy suggests another time"
+                  : `The academy suggests ${todo.offers.length} other times`}
               </T>
               <T variant="small" style={[styles.answer, { color: colors.info }]}>
-                {t("Answer", "답하기")}
+                Answer
               </T>
               <ChevronRight size={16} color={colors.info} />
             </Pressable>
@@ -159,7 +154,7 @@ export default function FamilyClassesScreen() {
           <View style={[styles.controls, todo.any && styles.after]}>
             {todo.any ? (
               <SectionHeading
-                title={whoseClasses(family, lang)}
+                title={whoseClasses(family)}
                 icon={<CalendarDays size={16} color={colors.brand} />}
                 color={colors.brandText}
                 tint={colors.brandTint}
@@ -170,14 +165,14 @@ export default function FamilyClassesScreen() {
               value={show}
               onChange={setShow}
               options={[
-                { value: "upcoming", label: t("Upcoming", "예정") },
-                { value: "past", label: t("Past", "지난 수업") },
+                { value: "upcoming", label: "Upcoming" },
+                { value: "past", label: "Past" },
               ]}
               testID="family-classes-show"
             />
             {!sessions.loading && count ? (
               <T variant="small" tone="muted" style={styles.summary} testID="family-classes-count">
-                {t(`${plural(count, "class", "classes")} ${span}`, `${spanKo} 수업 ${count}개`)}
+                {`${plural(count, "class", "classes")} ${span}`}
               </T>
             ) : null}
           </View>
@@ -186,15 +181,15 @@ export default function FamilyClassesScreen() {
             <SkeletonCards count={4} height={72} />
           ) : sessions.error ? (
             <Card>
-              <T variant="label">{t("Couldn’t load the classes", "수업을 불러오지 못했어요")}</T>
+              <T variant="label">Couldn’t load the classes</T>
               <T variant="small" tone="muted">
-                {t("Check your connection, then pull down to try again.", "인터넷 연결을 확인한 뒤 화면을 아래로 당겨 다시 시도해 주세요.")}
+                Check your connection, then pull down to try again.
               </T>
             </Card>
           ) : days.length ? (
             <View style={styles.days} testID="family-classes-list">
               {days.map(([day, list]) => (
-                <ListSection key={day} title={dayHeading(day, today, lang)} testID={`family-classes-day-${day}`}>
+                <ListSection key={day} title={dayHeading(day, today)} testID={`family-classes-day-${day}`}>
                   {list.map((g) => (
                     <FamilyClassRow
                       key={g.id}
@@ -211,25 +206,22 @@ export default function FamilyClassesScreen() {
             <EmptyState
               testID="family-classes-empty"
               icon={upcoming ? <CalendarX2 size={26} color={colors.mutedForeground} /> : <History size={26} color={colors.mutedForeground} />}
-              title={upcoming ? t("Nothing booked", "예정된 수업이 없어요") : t("No past classes", "지난 수업이 없어요")}
+              title={upcoming ? "Nothing booked" : "No past classes"}
               text={
                 upcoming
-                  ? t(
-                      `No classes ${span}. The academy books them, and they show here. To ask for one, tap Ask at the top.`,
-                      `${spanKo} 잡힌 수업이 없어요. 아카데미에서 수업을 잡으면 여기에 보여요. 수업을 신청하려면 위의 신청을 눌러 주세요.`,
-                    )
-                  : t(`No classes ${span}.`, `${spanKo} 수업이 없어요.`)
+                  ? `No classes ${span}. The academy books them, and they show here. To ask for one, tap Ask at the top.`
+                  : `No classes ${span}.`
               }
             />
           )}
 
           {canMore && (!sessions.loading || extending) ? (
             <Button variant="ghost" wrap onPress={more} busy={extending} testID="family-classes-more">
-              {upcoming ? t(`Show ${STEP_WEEKS} more weeks`, `${STEP_WEEKS}주 더 보기`) : t("Show earlier classes", "이전 수업 더 보기")}
+              {upcoming ? `Show ${STEP_WEEKS} more weeks` : "Show earlier classes"}
             </Button>
           ) : noMore && count ? (
             <T variant="small" tone="muted" style={styles.end} testID="family-classes-end">
-              {upcoming ? t("Nothing else is booked yet.", "더 잡힌 수업이 없어요.") : t("No earlier classes.", "이전 수업이 없어요.")}
+              {upcoming ? "Nothing else is booked yet." : "No earlier classes."}
             </T>
           ) : null}
         </>

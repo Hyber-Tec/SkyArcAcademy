@@ -6,9 +6,6 @@ import type { AuditStamp, TimestampLike } from '../types'
  * an email address, or anything else that isn't meant for the whole internet.
  */
 
-/** The website's languages: English, and Korean as a draft the owner reviews (docs/TODO.md). */
-export type SiteLang = 'en' | 'ko'
-
 /** The gallery's albums, and `pages`: a photo shown only where it's chosen (a banner, a portrait), not in the gallery. */
 export const WEBSITE_ALBUMS = ['training', 'coaching', 'competition', 'community', 'pages'] as const
 export type WebsiteAlbum = (typeof WEBSITE_ALBUMS)[number]
@@ -166,8 +163,6 @@ export type WebsiteMessageStatus = 'new' | 'done'
 export interface WebsiteMessage {
   kind: WebsiteMessageKind
   status: WebsiteMessageStatus
-  /** The page's language when it was sent: the language to reply in. */
-  lang: SiteLang
   name: string
   email: string
   phone: string

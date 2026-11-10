@@ -3,7 +3,6 @@ import { LuChevronLeft, LuChevronRight, LuLogOut } from 'react-icons/lu'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useT } from '@/lib/lang'
 import { cn } from '@/lib/utils'
 
 export interface ProfileRow {
@@ -37,7 +36,6 @@ export function ProfileLayout({
   groups: { title: string; rows: ProfileRow[] }[]
 }) {
   const isMobile = useIsMobile()
-  const t = useT()
   const { pathname } = useLocation()
   const atIndex = pathname.replace(/\/$/, '') === base
   const current = sections.find((s) => pathname.startsWith(href(base, s.to)))
@@ -54,7 +52,7 @@ export function ProfileLayout({
     return (
       <div className="mx-auto w-full max-w-lg">
         <Link to={base} className="-ml-1 mb-3 inline-flex items-center gap-0.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-          <LuChevronLeft className="size-4" /> {t('Profile', '프로필')}
+          <LuChevronLeft className="size-4" /> Profile
         </Link>
         <Outlet />
       </div>
@@ -66,7 +64,7 @@ export function ProfileLayout({
       {header}
       {/* Computers: the sections in a side list. Tablets: a row of tabs above the section. */}
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-12">
-        <nav aria-label={t('Profile', '프로필')} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
+        <nav aria-label="Profile" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
           {sections.map((s) => {
             const active = current ? current.to === s.to : s === sections[0]
             return (
@@ -97,7 +95,6 @@ export function ProfileLayout({
 function ProfileList({ base, groups }: { base: string; groups: { title: string; rows: ProfileRow[] }[] }) {
   const { signOut } = useAuth()
   const navigate = useNavigate()
-  const t = useT()
   return (
     <div className="mt-6 space-y-6">
       {groups.map((g) => (
@@ -127,7 +124,7 @@ function ProfileList({ base, groups }: { base: string; groups: { title: string; 
         }}
         className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border bg-card text-[15px] font-medium text-red-600 active:bg-muted/70 dark:text-red-400"
       >
-        <LuLogOut className="size-4" /> {t('Sign out', '로그아웃')}
+        <LuLogOut className="size-4" /> Sign out
       </button>
     </div>
   )

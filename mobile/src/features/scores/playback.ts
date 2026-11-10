@@ -1,4 +1,3 @@
-import type { Lang } from "@shared/i18n";
 import type { EvaluationPoint } from "@shared/reports/types";
 import { type Evaluation, pointOf } from "@shared/shooting/evaluation";
 import { replayShots, showsTenths } from "@shared/shooting/replay";
@@ -19,7 +18,7 @@ export interface PlayShot {
   point: ShotPoint | null;
   /** How many shots its result has ("Shot 7 of 20"). */
   of: number;
-  /** What it belongs to: "Series 2" ("2시리즈", SIUS), or its result's date when several results play together. */
+  /** What it belongs to: "Series 2", or its result's date when several results play together. */
   context: string | null;
   /** The total so far on its result, this shot included; null when several results play together. */
   running: number | null;
@@ -28,7 +27,7 @@ export interface PlayShot {
 }
 
 /** One result's shots (SIUS series by series, a paper card bull by bull), with the running total. */
-export function evaluationShots(e: Pick<Evaluation, "source" | "series">, lang: Lang = "en"): PlayShot[] {
+export function evaluationShots(e: Pick<Evaluation, "source" | "series">): PlayShot[] {
   const decimal = showsTenths(e);
   const shots = replayShots(e);
   return shots.map((s) => ({
@@ -37,7 +36,7 @@ export function evaluationShots(e: Pick<Evaluation, "source" | "series">, lang: 
     value: s.value,
     point: s.point,
     of: shots.length,
-    context: s.series !== null ? (lang === "ko" ? `${s.series}시리즈` : `Series ${s.series}`) : null,
+    context: s.series !== null ? `Series ${s.series}` : null,
     running: s.running,
     decimal,
   }));
@@ -47,7 +46,7 @@ export function evaluationShots(e: Pick<Evaluation, "source" | "series">, lang: 
  * A report's results (oldest first), each one's shots in the order they were fired. One result plays as itself (a
  * report keeps no series, so none are named); several play one after another under their dates.
  */
-export function playPoints(points: readonly EvaluationPoint[], lang: Lang = "en"): PlayShot[] {
+export function playPoints(points: readonly EvaluationPoint[]): PlayShot[] {
   const several = points.length > 1;
   const out: PlayShot[] = [];
   for (const p of points) {
@@ -61,7 +60,7 @@ export function playPoints(points: readonly EvaluationPoint[], lang: Lang = "en"
         value: m.v,
         point: pointOf(m),
         of: p.marks.length,
-        context: several ? monthDay(p.dateKey, lang) : null,
+        context: several ? monthDay(p.dateKey) : null,
         running: several ? null : running,
         decimal,
       });

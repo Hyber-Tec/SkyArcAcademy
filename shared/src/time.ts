@@ -286,6 +286,12 @@ export function formatTimeRange(startMin: number, endMin: number): string {
   return `${formatMinutes(startMin)} – ${formatMinutes(endMin)}`
 }
 
+/** A time range with AM/PM written once when both ends share it: "4:30 – 8:00 PM", "11:00 AM – 1:00 PM". */
+export function formatTimeSpan(startMin: number, endMin: number): string {
+  const [a, b] = [formatMinutes(startMin), formatMinutes(endMin)]
+  return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)} – ${b}` : `${a} – ${b}`
+}
+
 /** "16:30" → 990. Returns NaN for malformed input. */
 export function parseHHMM(value: string): number {
   const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
@@ -311,6 +317,7 @@ export type DateKeyStyle =
   | 'monthYear' // September 2026
   | 'monthDay' // Sep 30
   | 'monthDayLong' // September 30
+  | 'dayLong' // Wednesday, September 30
   | 'weekday' // Wednesday
 
 const dateKeyFormats: Record<DateKeyStyle, Intl.DateTimeFormatOptions> = {
@@ -323,6 +330,7 @@ const dateKeyFormats: Record<DateKeyStyle, Intl.DateTimeFormatOptions> = {
   monthYear: { month: 'long', year: 'numeric' },
   monthDay: { month: 'short', day: 'numeric' },
   monthDayLong: { month: 'long', day: 'numeric' },
+  dayLong: { weekday: 'long', month: 'long', day: 'numeric' },
   weekday: { weekday: 'long' },
 }
 

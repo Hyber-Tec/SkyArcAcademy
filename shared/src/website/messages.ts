@@ -1,4 +1,4 @@
-import type { SiteLang, WebsiteMessageKind } from './types'
+import type { WebsiteMessageKind } from './types'
 
 /**
  * Trial requests and questions sent from the website (the `websiteMessage` function). The website checks a form with
@@ -35,8 +35,6 @@ export const MESSAGE_LIMITS = { name: 120, email: 254, phone: 40, message: 4000,
 /** What the website sends. `website` is a field people never see: only bots fill it in. */
 export interface WebsiteMessageInput {
   kind: WebsiteMessageKind
-  /** The language to reply in. */
-  lang: SiteLang
   name: string
   email: string
   phone: string
@@ -59,7 +57,6 @@ export type MessageError = 'required' | 'email' | 'tooLong' | 'invalid'
 
 export interface CleanMessage {
   kind: WebsiteMessageKind
-  lang: SiteLang
   name: string
   email: string
   phone: string
@@ -84,7 +81,6 @@ function text(value: unknown): string {
 export function checkWebsiteMessage(input: WebsiteMessageInput): { ok: true; value: CleanMessage } | { ok: false; errors: Partial<Record<MessageField, MessageError>> } {
   const errors: Partial<Record<MessageField, MessageError>> = {}
   const kind: WebsiteMessageKind = input?.kind === 'trial' ? 'trial' : 'contact'
-  const lang: SiteLang = input?.lang === 'ko' ? 'ko' : 'en'
   const name = text(input?.name)
   const email = text(input?.email).toLowerCase()
   const phone = text(input?.phone)
@@ -129,7 +125,7 @@ export function checkWebsiteMessage(input: WebsiteMessageInput): { ok: true; val
   if (Object.keys(errors).length) return { ok: false, errors }
   return {
     ok: true,
-    value: { kind, lang, name, email, phone, topic, message: student ? `Student: ${student}\n\n${message}` : message, athlete, days },
+    value: { kind, name, email, phone, topic, message: student ? `Student: ${student}\n\n${message}` : message, athlete, days },
   }
 }
 

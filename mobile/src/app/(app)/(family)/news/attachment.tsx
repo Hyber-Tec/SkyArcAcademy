@@ -3,7 +3,6 @@ import { attachmentCategory, attachmentKind } from "@/features/announcements/for
 import { fileName, useStorageCopy } from "@/features/drive/download";
 import { FileViewer } from "@/features/drive/FileView";
 import { useNewsPost } from "@/features/family/news";
-import { useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 
 /**
@@ -15,7 +14,6 @@ import { useBranch } from "@/state/BranchProvider";
 export default function NewsAttachmentScreen() {
   const { id, path } = useLocalSearchParams<{ id: string; path: string }>();
   const { name } = useBranch();
-  const t = useT();
   const { post, loading } = useNewsPost(id ?? null);
   const f = post?.attachments?.find((x) => x.path === path) ?? null;
   // Kept in a folder of its own, under its name on the post.
@@ -29,8 +27,8 @@ export default function NewsAttachmentScreen() {
         f
           ? null
           : {
-              title: t("This file isn’t available", "이 파일을 볼 수 없어요"),
-              text: t(`It may have been taken off the news. Ask ${name} if you need it.`, "소식에서 내려갔을 수 있어요. 필요하면 아카데미에 문의해 주세요."),
+              title: "This file isn’t available",
+              text: `It may have been taken off the news. Ask ${name} if you need it.`,
             }
       }
       copy={copy}

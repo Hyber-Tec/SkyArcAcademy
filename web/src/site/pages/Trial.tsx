@@ -22,7 +22,7 @@ function TrialTwo() {
           <p className="mt-4 text-[16.5px] leading-relaxed text-white/70">{t(TRIAL.two.text)}</p>
           <ol className="mt-8 space-y-4">
             {TRIAL.two.items.map((it, i) => (
-              <li key={it.title.en} className="flex gap-4">
+              <li key={it.title} className="flex gap-4">
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 font-mono text-[13px]">{String(i + 1).padStart(2, '0')}</span>
                 <span>
                   <span className="block text-[17px] font-semibold">{t(it.title)}</span>
@@ -48,10 +48,10 @@ function TrialTwo() {
 }
 
 export function Trial() {
-  const { t, lang } = useSite()
-  const wizard = useWizard(lang)
+  const { t } = useSite()
+  const wizard = useWizard()
   const facts = [
-    ...(TRIAL.kinds.one.minutes ? [{ icon: LuClock, text: mins(TRIAL.kinds.one.minutes, lang) }] : []),
+    ...(TRIAL.kinds.one.minutes ? [{ icon: LuClock, text: mins(TRIAL.kinds.one.minutes) }] : []),
     { icon: LuShieldCheck, text: t(T.noShooting) },
     { icon: LuCheck, text: t(T.arriveEarly) },
   ]
@@ -80,7 +80,7 @@ export function Trial() {
                 <h2 className="mt-2 text-[24px] font-semibold tracking-tight text-ink">{t(TRIAL.covers.title)}</h2>
                 <ul className="mt-5 space-y-4">
                   {TRIAL.covers.items.map((c, i) => (
-                    <li key={c.title.en} className="flex gap-4">
+                    <li key={c.title} className="flex gap-4">
                       <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-[12px] text-white">{String(i + 1).padStart(2, '0')}</span>
                       <span>
                         <span className="block text-[16px] font-semibold text-ink">{t(c.title)}</span>
@@ -107,7 +107,7 @@ export function Trial() {
                 <h2 className="text-[18px] font-semibold text-ink">{t(HOME.trial.bringTitle)}</h2>
                 <ul className="mt-4 space-y-2.5">
                   {HOME.trial.bring.map((b) => (
-                    <li key={b.en} className="flex gap-2.5 text-[15px] text-ink/85">
+                    <li key={b} className="flex gap-2.5 text-[15px] text-ink/85">
                       <LuCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {t(b)}
                     </li>
                   ))}

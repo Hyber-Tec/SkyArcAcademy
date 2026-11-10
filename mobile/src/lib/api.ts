@@ -1,5 +1,4 @@
 import { HttpsError, httpsCallable } from "@react-native-firebase/functions";
-import type { Lang } from "@shared/i18n";
 import { functions } from "./firebase";
 
 /** A Cloud Function the website also calls (functions/src), with its answer typed. */
@@ -19,14 +18,14 @@ const SPOKEN_CODES = new Set(["invalid-argument", "failed-precondition", "not-fo
  * An error in words a person can act on. Functions send their own message; everything else gets a generic line, in the
  * screen's language (`fallback` is given in it).
  */
-export function errorMessage(e: unknown, fallback = "Something went wrong. Try again.", lang: Lang = "en"): string {
+export function errorMessage(e: unknown, fallback = "Something went wrong. Try again."): string {
   if (e && typeof e === "object") {
     const code = "code" in e ? String((e as { code: unknown }).code) : "";
     const message = "message" in e ? String((e as { message: unknown }).message ?? "") : "";
     const fromFunction = e instanceof HttpsError || code.startsWith("functions/");
     if (fromFunction && message && SPOKEN_CODES.has(code.replace(/^functions\//, "")) && !/INTERNAL/.test(message)) return message.replace(/^\[[^\]]+\]\s*/, "");
-    if (/network|unavailable|deadline-exceeded/i.test(code) || /network/i.test(message)) return lang === "ko" ? "인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요." : "No connection. Check your internet and try again.";
-    if (/permission-denied/.test(code)) return lang === "ko" ? "이 작업을 할 권한이 없어요." : "You don’t have access to do that.";
+    if (/network|unavailable|deadline-exceeded/i.test(code) || /network/i.test(message)) return "No connection. Check your internet and try again.";
+    if (/permission-denied/.test(code)) return "You don’t have access to do that.";
   }
   return fallback;
 }

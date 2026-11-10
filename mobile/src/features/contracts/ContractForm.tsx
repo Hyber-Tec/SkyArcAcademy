@@ -15,7 +15,6 @@ import {
   usDate,
 } from "@shared/contracts/fill";
 import type { ShownSigner, SignerRelation } from "@shared/contracts/types";
-import { dateText } from "@shared/i18n";
 import * as Haptics from "expo-haptics";
 import { Check, Eraser } from "lucide-react-native";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
@@ -27,7 +26,6 @@ import { ChoiceRow } from "@/components/ChoiceRow";
 import { Field } from "@/components/Field";
 import { ListSection } from "@/components/List";
 import { T } from "@/components/Text";
-import { useLang, useT } from "@/lib/lang";
 import { radius, space, useColors } from "@/theme";
 import { SignaturePad, type SignaturePadHandle } from "./SignaturePad";
 
@@ -164,14 +162,12 @@ function SignPart({
   pad: RefObject<SignaturePadHandle | null>;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   return (
     <View style={styles.signPart}>
       {label ? <T variant="label">{label}</T> : null}
       {needsName ? (
         <Field
-          label={t("Your full name", "성명")}
+          label="Your full name"
           value={sign.name}
           onChangeText={(v) => onSign({ name: v }, SIGN_KEYS.name)}
           autoCapitalize="words"
@@ -182,29 +178,29 @@ function SignPart({
           testID="signer-name"
         />
       ) : null}
-      <ListSection title={t(`You are ${firstName}’s`, `${firstName} 학생과의 관계`)} testID="signer-relation">
+      <ListSection title={`You are ${firstName}’s`} testID="signer-relation">
         {(Object.keys(RELATION_LABELS) as SignerRelation[]).map((r) => (
-          <ChoiceRow key={r} title={relationLabel(r, lang)} selected={sign.relation === r} onPress={() => onSign({ relation: r }, SIGN_KEYS.relation)} testID={`signer-${r}`} />
+          <ChoiceRow key={r} title={relationLabel(r)} selected={sign.relation === r} onPress={() => onSign({ relation: r }, SIGN_KEYS.relation)} testID={`signer-${r}`} />
         ))}
       </ListSection>
       <Problem text={errors[SIGN_KEYS.relation]} />
       <View style={styles.padHead}>
-        <T variant="label">{t("Your signature", "서명")}</T>
+        <T variant="label">Your signature</T>
         <Button size="sm" variant="ghost" icon={<Eraser size={16} color={colors.foreground} />} onPress={() => pad.current?.clear()} testID="signature-clear">
-          {t("Clear", "지우기")}
+          Clear
         </Button>
       </View>
       <SignaturePad ref={pad} invalid={!!errors[SIGN_KEYS.signature]} onChange={(ink) => ink && onSign({}, SIGN_KEYS.signature)} testID="signature-pad" />
       <Problem text={errors[SIGN_KEYS.signature]} />
       <T variant="small" tone="muted">
-        {t(`Date: ${usDate(today)}`, `날짜: ${dateText(today, "long", "ko")}`)}
+        {`Date: ${usDate(today)}`}
       </T>
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: sign.agree }} onPress={() => onSign({ agree: !sign.agree }, SIGN_KEYS.agree)} style={styles.checkRow} testID="signer-agree">
         <Box on={sign.agree} invalid={!!errors[SIGN_KEYS.agree]} />
         <View style={styles.grow}>
-          <T variant="label">{t("I agree to sign this contract electronically", "이 계약서에 전자 서명하는 데 동의합니다")}</T>
+          <T variant="label">I agree to sign this contract electronically</T>
           <T variant="small" tone="muted">
-            {t("My typed name and the signature I drew are my signature on it.", "입력한 이름과 직접 그린 서명을 이 계약서의 제 서명으로 합니다.")}
+            My typed name and the signature I drew are my signature on it.
           </T>
         </View>
       </Pressable>
@@ -234,8 +230,6 @@ function Block({
   today: string;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   switch (block.kind) {
     case "heading":
       return (
@@ -301,7 +295,7 @@ function Block({
         const option = choice ? (values[choice.id] as string | undefined) : undefined;
         return (
           <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]} testID="contract-academy-check">
-            <Bar title={block.label} academy note={t("Set by the academy", "아카데미가 정함")} />
+            <Bar title={block.label} academy note="Set by the academy" />
             {block.options.map((o, i) => {
               const on = list.includes(o.id);
               const left = on && !!option && o.except.includes(option);
@@ -312,7 +306,7 @@ function Block({
                     <T tone={on ? "default" : "muted"}>{o.text}</T>
                     {left ? (
                       <T variant="small" tone="muted">
-                        {t("Doesn’t apply to the program chosen.", "고른 프로그램에는 적용되지 않아요.")}
+                        Doesn’t apply to the program chosen.
                       </T>
                     ) : null}
                   </View>
@@ -326,9 +320,7 @@ function Block({
             })}
             <View style={[styles.sectionFoot, { borderTopColor: colors.border, backgroundColor: colors.cardMuted }]}>
               <T variant="small" tone="muted">
-                {lang === "ko"
-                  ? `${list.length ? "아카데미가 적용한 할인이에요." : "적용한 할인이 없어요."} 바꿔야 할 항목이 있으면 아카데미에 문의해 주세요.`
-                  : `${list.length ? "The academy applied these." : "None applied."} Ask the academy if one should change.`}
+                {`${list.length ? "The academy applied these." : "None applied."} Ask the academy if one should change.`}
               </T>
             </View>
           </View>
@@ -338,7 +330,7 @@ function Block({
         <View style={styles.part}>
           <T variant="label">{block.label}</T>
           <T variant="small" tone="muted">
-            {t("Check any that apply.", "해당하는 항목을 모두 체크해 주세요.")}
+            Check any that apply.
           </T>
           <View style={[styles.group, { borderColor: colors.border, backgroundColor: colors.card }]}>
             {block.options.map((o, i) => {
@@ -401,7 +393,7 @@ function Block({
           <Bar title={block.title} academy />
           <View style={styles.sectionBody}>
             <T variant="small" tone="muted">
-              {t("Filled in by the academy.", "아카데미가 작성해요.")}
+              Filled in by the academy.
             </T>
             {block.fields.map((f) => (
               <View key={f.id} style={styles.readRow}>
@@ -425,7 +417,7 @@ function Block({
                 source={{ uri: offer.academySigner.image }}
                 style={styles.academyImage}
                 resizeMode="contain"
-                accessibilityLabel={t(`${offer.academySigner.name}’s signature`, `${offer.academySigner.name} 서명`)}
+                accessibilityLabel={`${offer.academySigner.name}’s signature`}
               />
             </View>
           ) : offer.academySigner ? (
@@ -440,11 +432,8 @@ function Block({
           </T>
           <T variant="small" tone="muted">
             {offer.academySigner
-              ? t(
-                  `Signed for the academy by ${[offer.academySigner.name, offer.academySigner.title].filter(Boolean).join(", ")}, as you sign. Date: ${usDate(today)}`,
-                  `아카데미 대표 서명: ${[offer.academySigner.name, offer.academySigner.title].filter(Boolean).join(", ")}. 학부모님이 서명할 때 함께 들어가요. 날짜: ${dateText(today, "long", "ko")}`,
-                )
-              : t("Signed by the academy, with the date.", "아카데미가 날짜와 함께 서명해요.")}
+              ? `Signed for the academy by ${[offer.academySigner.name, offer.academySigner.title].filter(Boolean).join(", ")}, as you sign. Date: ${usDate(today)}`
+              : "Signed by the academy, with the date."}
           </T>
         </View>
       );
@@ -473,8 +462,6 @@ function Choose({
   suggested: string | null;
 }) {
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const chosen = block.options.find((o) => o.id === values[block.id]);
   const priced = pricedChoice(doc) === block;
   const prices = priced ? optionPrices(doc, values) : null;
@@ -483,7 +470,7 @@ function Choose({
     <View style={styles.part}>
       <T variant="label">{block.label}</T>
       <T variant="small" tone="muted">
-        {t("Choose one. Tap a program to see what it includes.", "하나를 골라 주세요. 프로그램을 누르면 포함된 내용을 볼 수 있어요.")}
+        Choose one. Tap a program to see what it includes.
       </T>
       {block.options.map((o) => {
         const on = chosen?.id === o.id;
@@ -494,7 +481,7 @@ function Choose({
             key={o.id}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
-            accessibilityLabel={`${o.title}, ${price ? `${price.now} ${price.per}` : o.price}${suggested === o.id ? t(", suggested by the academy", ", 아카데미 추천") : ""}`}
+            accessibilityLabel={`${o.title}, ${price ? `${price.now} ${price.per}` : o.price}${suggested === o.id ? ", suggested by the academy" : ""}`}
             onPress={() => {
               if (on) return;
               void Haptics.selectionAsync().catch(() => undefined);
@@ -542,7 +529,7 @@ function Choose({
             {suggested === o.id ? (
               <View style={[styles.suggested, { backgroundColor: colors.brandTint }]} testID="contract-suggested">
                 <T variant="tiny" style={[styles.suggestedText, { color: colors.brandText }]}>
-                  {t("Suggested by the academy", "아카데미 추천")}
+                  Suggested by the academy
                 </T>
               </View>
             ) : null}
@@ -565,7 +552,7 @@ function Choose({
           </T>
           {block.priceLabel ? (
             <T variant="small">
-              <Text style={styles.bold}>{block.priceLabel}:</Text> {tuition ? tuitionText(tuition, lang) : chosen.price}
+              <Text style={styles.bold}>{block.priceLabel}:</Text> {tuition ? tuitionText(tuition) : chosen.price}
             </T>
           ) : null}
         </View>
@@ -673,8 +660,6 @@ export function ContractSheet({
 }) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const sig = prefill ? JSON.stringify(prefill) : "";
   const [values, setValues] = useState<ContractValues>(() => ({ ...prefill, ...initial }));
   const [merged, setMerged] = useState(sig);
@@ -703,7 +688,7 @@ export function ContractSheet({
     clear(clears);
   };
   const shown = Object.fromEntries(Object.entries(errors).filter(([, v]) => v));
-  const missing = missingParts(doc, shown, lang);
+  const missing = missingParts(doc, shown);
 
   const scrollTo = (id: string) => {
     const block = blockOfPart(doc, id);
@@ -713,7 +698,7 @@ export function ContractSheet({
 
   async function submit() {
     setProblem(null);
-    const checked = checkContractSigning(doc, { values, name: sign.name, relation: sign.relation ?? "", signature: pad.current?.toPng() ?? "", agree: sign.agree }, lang);
+    const checked = checkContractSigning(doc, { values, name: sign.name, relation: sign.relation ?? "", signature: pad.current?.toPng() ?? "", agree: sign.agree });
     if (!checked.ok) {
       setErrors(checked.errors);
       return;
@@ -746,7 +731,7 @@ export function ContractSheet({
       {missing.length ? (
         <View style={[styles.missing, { borderColor: colors.destructive, backgroundColor: colors.destructiveTint }]} testID="contract-missing">
           <T variant="label" tone="destructive">
-            {t("Still to fill in", "아직 작성하지 않은 항목")}
+            Still to fill in
           </T>
           {missing.map((m) => (
             <Pressable key={m.id} accessibilityRole="button" onPress={() => scrollTo(m.id)} style={styles.missingRow} testID={`contract-missing-${m.id}`}>
@@ -754,7 +739,7 @@ export function ContractSheet({
                 {m.label}
               </T>
               <T variant="small" tone="destructive">
-                {t("Show", "보기")}
+                Show
               </T>
             </Pressable>
           ))}

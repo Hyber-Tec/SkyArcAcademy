@@ -9,7 +9,6 @@ import { HelpLinks } from "@/components/AuthParts";
 import { SkyArcLogo } from "@/components/brand/SkyArc";
 import { Button } from "@/components/Button";
 import { ContactButtons } from "@/components/ContactButtons";
-import { LangSwitch } from "@/components/LangSwitch";
 import { Loading } from "@/components/Loading";
 import { T } from "@/components/Text";
 import { DeleteAccountLink } from "@/features/account/DeleteAccount";
@@ -17,7 +16,6 @@ import { useFamily } from "@/features/family/FamilyProvider";
 import { useAcademyContact, useWaitingContracts } from "@/features/family/data";
 import { callable, errorMessage } from "@/lib/api";
 import { env } from "@/lib/env";
-import { useLang, useT } from "@/lib/lang";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/state/AuthProvider";
 import { useBranch } from "@/state/BranchProvider";
@@ -73,7 +71,6 @@ function appInFront(): Promise<void> {
 export function ContractGate({ children }: { children: ReactNode }) {
   const { role, viewAs } = useBranch();
   const { ids, students, loading } = useFamily();
-  const t = useT();
   const waiting = useWaitingContracts(ids);
   const byStudent = useMemo(() => {
     const map = new Map<string, Waiting>();
@@ -83,7 +80,7 @@ export function ContractGate({ children }: { children: ReactNode }) {
   const gate = contractGate({ role, students: [...students.values()], waiting: new Set(byStudent.keys()) });
   useSignedNotice(gate.toSign, !loading && !waiting.loading && role === "parent");
   if (viewAs) return children;
-  if (loading || waiting.loading) return <Loading label={t("Opening Sky Arc", "Sky Arc를 여는 중…")} />;
+  if (loading || waiting.loading) return <Loading label="Opening Sky Arc" />;
   if (gate.open) return children;
   if (role === "student") return <WaitForParent />;
   return <SignOnWebsite toSign={gate.toSign} />;
@@ -94,7 +91,6 @@ export function ContractGate({ children }: { children: ReactNode }) {
  * parent is back in the app.
  */
 function useSignedNotice(toSign: GateStudent[], ready: boolean) {
-  const t = useT();
   const before = useRef<GateStudent[] | null>(null);
   const key = toSign.map((k) => k.id).join(",");
   useEffect(() => {
@@ -105,8 +101,8 @@ function useSignedNotice(toSign: GateStudent[], ready: boolean) {
       if (toSign.some((k) => k.id === kid.id)) continue;
       const first = firstNameOf(kid.name);
       void (backFromPage ?? Promise.resolve()).then(() =>
-        toast.success(t(`${first}’s contract is signed`, `${first} 학생 계약서에 서명했어요`), {
-          description: t("Your copy is under More → Enrollment contract.", "사본은 더보기 → 등록 계약서에서 볼 수 있어요."),
+        toast.success(`${first}’s contract is signed`, {
+          description: "Your copy is under More → Enrollment contract.",
         }),
       );
     }
@@ -155,8 +151,6 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
   const contact = useAcademyContact();
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const t = useT();
-  const lang = useLang();
   const [opening, setOpening] = useState<string | null>(null);
   const one = toSign.length === 1;
   const first = firstNameOf(toSign[0]?.name ?? "");
@@ -166,7 +160,7 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
     const back = pageOpen();
     try {
       const { path } = await linkCall({ branchId, studentId: kid.id });
-      await WebBrowser.openBrowserAsync(`${env.webUrl}${path}?lang=${lang}&from=app`, {
+      await WebBrowser.openBrowserAsync(`${env.webUrl}${path}?from=app`, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
         controlsColor: "#0A0A0A",
         dismissButtonStyle: "done",
@@ -176,7 +170,7 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
       else back();
     } catch (e) {
       back();
-      toast.error(errorMessage(e, t("The contract couldn’t be opened. Check your connection and try again.", "계약서를 열지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."), lang));
+      toast.error(errorMessage(e, "The contract couldn’t be opened. Check your connection and try again."));
     } finally {
       setOpening(null);
     }
@@ -184,22 +178,15 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.grouped }} contentContainerStyle={[styles.page, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]} testID="contract-sign">
-      <LangSwitch />
       <View style={styles.head}>
         <SkyArcLogo height={56} />
         <T variant="title" style={styles.center} testID="contract-child-title">
-          {one ? t(`Please sign ${first}’s enrollment contract`, `${first} 학생 등록 계약서에 서명해 주세요`) : t("Please sign your children’s enrollment contracts", "자녀 등록 계약서에 서명해 주세요")}
+          {one ? `Please sign ${first}’s enrollment contract` : "Please sign your children’s enrollment contracts"}
         </T>
         <T tone="muted" style={styles.center}>
           {one
-            ? t(
-                `${academy} sent you ${first}’s contract. It opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once it’s signed.`,
-                `${academy}에서 ${first} 학생 계약서를 보냈어요. 아카데미 웹사이트에서 계약서를 읽고 작성한 뒤 서명해 주세요. 몇 분이면 끝나고, 서명하면 앱이 바로 열려요.`,
-              )
-            : t(
-                `${academy} sent you a contract for each child. Each opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once they’re all signed.`,
-                `${academy}에서 자녀마다 계약서를 보냈어요. 아카데미 웹사이트에서 하나씩 읽고 작성한 뒤 서명해 주세요. 몇 분이면 끝나고, 모두 서명하면 앱이 바로 열려요.`,
-              )}
+            ? `${academy} sent you ${first}’s contract. It opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once it’s signed.`
+            : `${academy} sent you a contract for each child. Each opens on the academy’s website: read it, fill it in and sign it there. It takes a few minutes, and the app opens once they’re all signed.`}
         </T>
       </View>
       <View style={styles.list}>
@@ -208,24 +195,21 @@ function SignOnWebsite({ toSign }: { toSign: GateStudent[] }) {
             <View style={styles.cardHead}>
               <FileSignature size={20} color={colors.foreground} />
               <T variant="label" style={styles.fill}>
-                {t(`${firstNameOf(kid.name)}’s enrollment contract`, `${firstNameOf(kid.name)} 학생 등록 계약서`)}
+                {`${firstNameOf(kid.name)}’s enrollment contract`}
               </T>
             </View>
             <Button size="lg" wrap busy={opening === kid.id} disabled={opening !== null && opening !== kid.id} onPress={() => void open(kid)} testID={`contract-open-${kid.id}`}>
-              {t("Read and sign", "읽고 서명하기")}
+              Read and sign
             </Button>
           </View>
         ))}
       </View>
       <T variant="small" tone="muted" style={styles.center}>
-        {t(
-          "Once it’s signed, your copy comes by email, and it stays under More → Enrollment contract.",
-          "서명하면 사본이 이메일로 오고, 더보기 → 등록 계약서에서도 언제든 볼 수 있어요.",
-        )}
+        Once it’s signed, your copy comes by email, and it stays under More → Enrollment contract.
       </T>
       {contact && (contact.phone || contact.email) ? <ContactButtons phone={contact.phone} email={contact.email} name={academy} /> : null}
       <Button size="lg" variant="outline" onPress={() => void signOut()} testID="contract-sign-out">
-        {t("Sign out", "로그아웃")}
+        Sign out
       </Button>
       <DeleteAccountLink academyName={academy} />
       <HelpLinks />

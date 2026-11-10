@@ -3,8 +3,7 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    /* Korean falls back to each system's own Hangul font. */
-    --font-sans: 'Geist Variable', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+    --font-sans: 'Geist Variable', sans-serif;
     --color-brand: var(--brand);
     --color-brand-solid: var(--brand-solid);
     --color-brand-text: var(--brand-text);

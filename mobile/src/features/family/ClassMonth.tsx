@@ -1,5 +1,4 @@
 import { dayHours } from "@shared/availability";
-import { dateText } from "@shared/i18n";
 import { type DateKey, addDays, addMonths, endOfMonth, formatDateKey, startOfMonth } from "@shared/time";
 import * as Haptics from "expo-haptics";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -9,7 +8,6 @@ import { MonthScroller, type MonthScrollerHandle, WeekdayHeader } from "@/compon
 import { T } from "@/components/Text";
 import { type SessionDoc, useDayConfigs } from "@/features/data/hooks";
 import { clock, plural } from "@/features/schedule/format";
-import { useLang, useT } from "@/lib/lang";
 import { useBranch } from "@/state/BranchProvider";
 import { radius, space, useColors, useIsDark } from "@/theme";
 import { useFamilySessions } from "./data";
@@ -53,8 +51,6 @@ export function FamilyClassMonth({
 }) {
   const family = useFamily();
   const { settings } = useBranch();
-  const lang = useLang();
-  const t = useT();
   const dark = useIsDark();
   const markColor = useMarkColor();
   const { height } = useWindowDimensions();
@@ -91,15 +87,14 @@ export function FamilyClassMonth({
   const labelOf = useCallback(
     (d: DateKey) => {
       const list = byDay.get(d) ?? [];
-      const ko = lang === "ko";
       const items = list
-        .map((s) => [family.several ? family.firstName(s.studentId, s.studentName) : null, clock(s.startMin, hour12, lang), s.status === "canceled" ? (ko ? "취소됨" : "canceled") : null].filter(Boolean).join(" "))
+        .map((s) => [family.several ? family.firstName(s.studentId, s.studentName) : null, clock(s.startMin, hour12), s.status === "canceled" ? "canceled" : null].filter(Boolean).join(" "))
         .join(", ");
-      const what = list.length ? (ko ? `수업 ${list.length}개: ${items}` : `${plural(list.length, "class", "classes")}: ${items}`) : ko ? "수업 없음" : "no classes";
-      const day = ko ? dateText(d, "weekdayLong", "ko") : formatDateKey(d, "weekdayLong");
-      return `${[day, d === today ? (ko ? "오늘" : "today") : null, closed(d) ? (ko ? "휴무" : "the academy is closed") : null].filter(Boolean).join(", ")}: ${what}`;
+      const what = list.length ? `${plural(list.length, "class", "classes")}: ${items}` : "no classes";
+      const day = formatDateKey(d, "weekdayLong");
+      return `${[day, d === today ? "today" : null, closed(d) ? "the academy is closed" : null].filter(Boolean).join(", ")}: ${what}`;
     },
-    [byDay, family, hour12, today, closed, lang],
+    [byDay, family, hour12, today, closed],
   );
 
   const open = useCallback(
@@ -121,7 +116,7 @@ export function FamilyClassMonth({
     (month: DateKey) => {
       const key = month.slice(0, 7);
       const days = Number(endOfMonth(month).slice(8));
-      let sig = `${dark ? "d" : "l"}|${lang}|${selected?.startsWith(key) ? selected : ""}|${today.startsWith(key) ? today : ""}|${hour12 ? 12 : 24}`;
+      let sig = `${dark ? "d" : "l"}|${selected?.startsWith(key) ? selected : ""}|${today.startsWith(key) ? today : ""}|${hour12 ? 12 : 24}`;
       for (let i = 0; i < days; i++) {
         const d = addDays(month, i);
         sig += `;${closed(d) ? 1 : 0}`;
@@ -129,7 +124,7 @@ export function FamilyClassMonth({
       }
       return sig;
     },
-    [dark, lang, selected, today, hour12, closed, marksOf],
+    [dark, selected, today, hour12, closed, marksOf],
   );
 
   const todayAway = !!onScreen && (today < onScreen.from || today > onScreen.to);
@@ -140,7 +135,7 @@ export function FamilyClassMonth({
         <Legend />
         {todayAway ? (
           <Button variant="outline" size="sm" onPress={() => scroller.current?.scrollToDate(today)} testID="family-month-today">
-            {t("Today", "오늘")}
+            Today
           </Button>
         ) : null}
       </View>
@@ -185,7 +180,6 @@ function MonthDay({
   onPress: (date: DateKey) => void;
 }) {
   const colors = useColors();
-  const t = useT();
   const circle = Math.max(26, Math.min(34, height - 18, width - 8));
   const fill = on ? (isToday ? colors.brandSolid : colors.primary) : "transparent";
   const fg = on ? (isToday ? "#ffffff" : colors.primaryForeground) : isToday ? colors.brandText : closed ? colors.mutedForeground : colors.foreground;
@@ -196,7 +190,7 @@ function MonthDay({
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       accessibilityLabel={label}
-      accessibilityHint={t("Shows the day’s classes", "그날의 수업을 보여 줘요")}
+      accessibilityHint="Shows the day’s classes"
       testID={`family-month-day-${date}`}
       style={({ pressed }) => [styles.cell, { width, height }, pressed && !on && styles.pressed]}
     >
@@ -224,9 +218,8 @@ function MonthDay({
 function Legend() {
   const { several, shown, firstName } = useFamily();
   const colors = useColors();
-  const t = useT();
   const markColor = useMarkColor();
-  const items = several ? shown.map((id) => ({ key: id, label: firstName(id), color: markColor(id) })) : [{ key: "class", label: t("Class", "수업"), color: markColor("") }];
+  const items = several ? shown.map((id) => ({ key: id, label: firstName(id), color: markColor(id) })) : [{ key: "class", label: "Class", color: markColor("") }];
   return (
     <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" testID="family-month-legend">
       {items.map((i) => (
@@ -240,7 +233,7 @@ function Legend() {
       <View style={styles.legendItem}>
         <View style={[styles.mark, { borderWidth: 1.5, borderColor: colors.mutedForeground }]} />
         <T variant="small" tone="muted">
-          {t("Canceled", "취소됨")}
+          Canceled
         </T>
       </View>
     </View>

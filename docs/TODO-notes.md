@@ -18,7 +18,7 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
   phone to Google Play.
 
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
-sizes, with a picture of each.
+sizes, with a picture of each. Since 2026-11-10 they're in English only (§42): make them again before printing.
 
 ### Kiosk PINs before Sunday, November 15
 
@@ -99,7 +99,7 @@ The manager's list of 2026-10-20 (the academy's question A13). The site leaves o
 - Coach portraits.
 - Real families' quotes, with their permission. The website shows its quotes section only once one is added (#119).
 - Trial length and price, and the youngest starting age.
-- The range's safety rules, and whether coaching happens in Korean.
+- The range's safety rules.
 - Tuition rates or a guide.
 - More photos (the range, the equipment, a first trial, the team, results day), and a larger match-day photo (630 px
   wide now).
@@ -157,6 +157,13 @@ The old addresses keep working, so this can wait. [store/listing.md](publishing/
   Apple refused a change of the privacy link through its API on 2026-11-07: "can not be modified in the current
   state".
 
+### The stores in English only
+
+The app is English only since 2026-11-10 ([DECISIONS.md](DECISIONS.md) §42). Phone app 1.1 still has Korean for
+parents whose phone is set to Korean, and its iPhone build lists Korean among its languages, so the App Store shows
+"English, Korean" until the next build. At the next submission: no Korean in What's New or the release notes, and no
+Korean localization of the listing in App Store Connect or Google Play Console.
+
 ### Google's sign-in window
 
 Signing in with Google on the website says "to continue to skyarcacademy.firebaseapp.com", Firebase's address for
@@ -174,7 +181,9 @@ sign-in (`authDomain`). It can say skyarcacademy.com. It's optional, and the pho
 
 ### The fourth meeting's picks
 
-From the round's review page (2026-11-10), each decided before anything is built:
+From the round's review page (2026-11-10), each decided before anything is built. *Goo's picks, the same day: B6 A;
+R1 build it, finding the academy's results by itself (with the key's estimated price first); R2 decode the file
+in-house, to see what comes out; R3 yes (`docs/meetings/meeting-4-feedback.md`).*
 
 - **B6, "One path, four levels":** A, flip the ladder so the marker moves down with the page (recommended); B, the
   phones' horizontal bar on computers too; C, the ladder kept, its marker jumping instead of sliding.
@@ -253,7 +262,7 @@ Kept so they aren't brought up again. Each was decided:
 
 - **Clocking in from a phone or by location:** turned down at the third meeting; the kiosk only.
 - **Events:** Goo, "I never asked for it; just get rid of it" ([DECISIONS.md](DECISIONS.md) §25).
-- **Other languages:** Korean for parents only (§36).
+- **Other languages:** English only, no Korean anywhere (the academy, 2026-11-10: [DECISIONS.md](DECISIONS.md) §42).
 - **A merch shop:** the second meeting's `W3`, not asked for.
 - **Automatic travel-hour pay:** `K7`, added by hand unless the manager asks.
 - **Several academies:** one academy, plus the demo (CLAUDE.md, "Single academy").

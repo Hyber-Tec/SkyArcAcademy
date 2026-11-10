@@ -6,13 +6,13 @@ import { A, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
 import { Container } from './bits'
-import { DIRECTIONS_URL, crmLang, instagramHandle } from './blocks'
+import { DIRECTIONS_URL, instagramHandle } from './blocks'
 import { StoreBadges } from './StoreBadges'
 
 const link = 'inline-flex min-h-9 items-center gap-1.5 text-[14.5px] text-ink/75 transition hover:text-ink focus-visible:underline focus-visible:outline-none'
 
 export function Footer() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { openBooking } = useBooking()
   const { contact, content } = useSiteData()
   return (
@@ -110,7 +110,7 @@ export function Footer() {
                 ) : null}
               </address>
               {content.hours.length ? (
-                <dl className="mt-4 grid gap-1 text-[13px] sm:max-w-80" lang={crmLang}>
+                <dl className="mt-4 grid gap-1 text-[13px] sm:max-w-80">
                   {content.hours.map((h) => (
                     <div key={h.id} className="flex justify-between gap-3">
                       <dt className="text-stone">{keepWhole(h.days)}</dt>
@@ -123,7 +123,6 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-12 grid gap-3 border-t border-ink/10 pt-6 text-[12.5px] leading-relaxed text-stone">
-          {lang !== 'en' ? <p>{t(FOOTER.languageNote)}</p> : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>{t(FOOTER.copyright)}</p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">

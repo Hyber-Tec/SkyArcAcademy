@@ -1,11 +1,6 @@
-/// <reference path="./vendor.d.ts" />
-import { readFileSync } from 'node:fs'
-import fontkit from '@pdf-lib/fontkit'
 import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, StandardFonts, degrees, rgb } from 'pdf-lib'
 import { type ContractBlock, type ContractDocument, type Run, pricedChoice } from '@shared/contracts/document'
 import { type ContractValues, shownValue, tuitionOf, tuitionText } from '@shared/contracts/fill'
-import { type Lang, pick } from '@shared/i18n'
-import subsetFont from 'subset-font'
 
 /**
  * The signed enrollment contract as a PDF (docs/DECISIONS.md §33 and §34): the academy's contract laid out page by
@@ -39,31 +34,6 @@ export interface ContractPdfInput {
   createdAt: Date
   /** The academy's logo over the first page (the email logo's PNG); none leaves the title alone. */
   logo?: Uint8Array | null
-  /**
-   * The Korean the family read (docs/DECISIONS.md §36): the contract in Korean (shared/src/contracts/translation.ts, the
-   * English's IDs), drawn after the English with a Korean font and marked a translation for reference; the English
-   * stays the contract. `relation` is the signer's, in Korean ("부모").
-   */
-  translation?: { doc: ContractDocument; relation: string } | null
-}
-
-/** Noto Sans KR (SIL Open Font License, assets/fonts/OFL.txt), every Hangul syllable and Latin: read once, when needed. */
-const KO_FONT_FILES = { regular: new URL('../assets/fonts/NotoSansKR-Regular.ttf', import.meta.url), bold: new URL('../assets/fonts/NotoSansKR-Bold.ttf', import.meta.url) }
-let koFontBytes: { regular: Uint8Array; bold: Uint8Array } | null = null
-const koFonts = () => (koFontBytes ??= { regular: readFileSync(KO_FONT_FILES.regular), bold: readFileSync(KO_FONT_FILES.bold) })
-
-/** The Korean section's own words (drawTranslation, drawBlock's in Korean): their characters go in its font. */
-const KO_WORDS = {
-  title: '한국어 번역본 (참고용)',
-  note: '이 번역은 이해를 돕기 위한 것이며, 계약의 효력은 앞의 영어 원문을 따릅니다. 아래는 서명한 계약을 작성한 내용과 함께 한국어로 옮긴 것입니다.',
-  checked: '아카데미에서 체크한 항목입니다.',
-  none: '체크한 항목이 없습니다.',
-  academyFills: '아카데미에서 작성합니다.',
-  date: '날짜',
-  signed: '전자 서명',
-  academySigned: '아카데미 서명:',
-  tuition: '정가 에서 할인 월',
-  fallbackTitle: '등록 계약서',
 }
 
 const W = 612
@@ -93,8 +63,6 @@ export function pdfText(s: string): string {
 interface Fonts {
   regular: PDFFont
   bold: PDFFont
-  /** A font with every script (the Korean one): text is drawn as it is, not narrowed to what the standard fonts print. */
-  unicode?: boolean
 }
 
 interface Seg {
@@ -112,7 +80,7 @@ function wrapRuns(runs: Run[], size: number, width: number, f: Fonts): TextLine[
   const tokens: Seg[] = []
   for (const r of runs) {
     const font = r.bold ? f.bold : f.regular
-    for (const part of (f.unicode ? r.text.replace(/[\r\n\t]+/g, ' ') : pdfText(r.text)).split(/(\s+)/)) if (part) tokens.push({ text: /^\s+$/.test(part) ? ' ' : part, font })
+    for (const part of pdfText(r.text).split(/(\s+)/)) if (part) tokens.push({ text: /^\s+$/.test(part) ? ' ' : part, font })
   }
   const lines: TextLine[] = []
   let cur: Seg[] = []
@@ -172,17 +140,11 @@ class Layout {
     readonly f: Fonts,
     readonly logo: PDFImage | null,
     readonly title: string,
-    readonly lang: Lang = 'en',
   ) {}
 
-  /** The words in the section's language: the English contract's, or the Korean translation's. */
-  say(en: string, ko: string): string {
-    return pick(this.lang, en, ko)
-  }
-
-  /** Text as this section's fonts can print it. */
+  /** Text as the standard fonts can print it. */
   clean(s: string): string {
-    return this.f.unicode ? (s ?? '').replace(/[\r\n\t]+/g, ' ') : pdfText(s)
+    return pdfText(s)
   }
 
   /** A new page: the first opens with the logo and the title, the others with a small header. */
@@ -355,7 +317,7 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
       const tuition = b === pricedChoice(input.doc) ? tuitionOf(input.doc, input.values) : null
       L.y -= 4
       valueRow(L, `${b.label}:`, picked?.title ?? '')
-      if (b.priceLabel) valueRow(L, `${b.priceLabel}:`, tuition ? tuitionText(tuition, L.lang) : (picked?.price ?? ''))
+      if (b.priceLabel) valueRow(L, `${b.priceLabel}:`, tuition ? tuitionText(tuition) : (picked?.price ?? ''))
       L.y -= 8
       return
     }
@@ -364,7 +326,7 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
       L.gap(2)
       L.need(30)
       L.flow(wrapRuns(plainRuns(`${b.label}:`, true), 9.5, WIDTH, f), M, 9.5, 14)
-      if (b.by === 'academy') L.flow(wrapRuns(plainRuns(L.say('Checked by the academy.', KO_WORDS.checked)), 7.5, WIDTH, f), M, 7.5, 11, MUTED)
+      if (b.by === 'academy') L.flow(wrapRuns(plainRuns('Checked by the academy.'), 7.5, WIDTH, f), M, 7.5, 11, MUTED)
       for (const o of b.options) {
         const lines = wrapRuns(plainRuns(o.text), 9.5, WIDTH - 22, f)
         L.need(lines.length * 12.6 + 2)
@@ -372,7 +334,7 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
         L.flow(lines, M + 20, 9.5, 12.6)
         L.y -= 3
       }
-      if (!list.length) L.flow(wrapRuns(plainRuns(L.say('None checked.', KO_WORDS.none)), 8.5, WIDTH, f), M + 20, 8.5, 12, MUTED)
+      if (!list.length) L.flow(wrapRuns(plainRuns('None checked.'), 8.5, WIDTH, f), M + 20, 8.5, 12, MUTED)
       L.y -= 6
       return
     }
@@ -398,7 +360,7 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
       for (const field of b.fields) valueRow(L, `${field.label}:`, b.by === 'family' ? shownValue(input.doc, field.id, input.values) : '')
       if (b.by === 'academy') {
         L.need(14)
-        L.flow(wrapRuns(plainRuns(L.say('Filled in by the academy.', KO_WORDS.academyFills)), 7.5, WIDTH, f), M + 8, 7.5, 11, MUTED)
+        L.flow(wrapRuns(plainRuns('Filled in by the academy.'), 7.5, WIDTH, f), M + 8, 7.5, 11, MUTED)
       }
       L.y -= 8
       return
@@ -432,14 +394,13 @@ function drawBlock(L: Layout, b: ContractBlock, input: ContractPdfInput) {
       if ((family || academy) && input.signedOn) L.page.drawText(L.clean(input.signedOn), { x: M + sigW + 32, y: lineY + 5, size: 10.5, font: f.regular, color: INK })
       const labels = wrapRuns(plainRuns(b.label), 8, sigW, f)
       labels.forEach((l, i) => L.text(l, M, lineY - 11 - i * 10, 8, MUTED))
-      L.page.drawText(L.say('Date', KO_WORDS.date), { x: M + sigW + 26, y: lineY - 11, size: 8, font: f.regular, color: MUTED })
+      L.page.drawText('Date', { x: M + sigW + 26, y: lineY - 11, size: 8, font: f.regular, color: MUTED })
       let y = lineY - 11 - labels.length * 10
-      const relation = L.lang === 'ko' ? (input.translation?.relation ?? input.relation) : input.relation
       const by =
         family && input.signerName
-          ? L.say(`Signed electronically by ${input.signerName} (${input.relation})`, `${input.signerName} (${relation}) ${KO_WORDS.signed}`)
+          ? `Signed electronically by ${input.signerName} (${input.relation})`
           : academy
-            ? L.say(`Signed for the academy by ${[academy.name, academy.title].filter(Boolean).join(', ')}`, `${KO_WORDS.academySigned} ${[academy.name, academy.title].filter(Boolean).join(', ')}`)
+            ? `Signed for the academy by ${[academy.name, academy.title].filter(Boolean).join(', ')}`
             : ''
       for (const l of by ? wrapRuns(plainRuns(by), 7.5, sigW, f) : []) {
         L.text(l, M, y - 1, 7.5, MUTED)
@@ -483,42 +444,6 @@ function drawRecord(L: Layout, record: NonNullable<ContractPdfInput['record']>) 
   L.flow(wrapRuns(plainRuns(record.footnote), 8, WIDTH, f), M, 8, 11, MUTED)
 }
 
-/**
- * The Korean the family read, after the English: its own pages, in a Korean font, opening with the note that it's a
- * translation for reference and the English above is the contract; then the contract as filled in, in Korean.
- */
-async function drawTranslation(L: Layout, input: ContractPdfInput, doc: ContractDocument) {
-  L.pdf.registerFontkit(fontkit)
-  // The font cut down to what this section draws, by HarfBuzz (pdf-lib's own subsetting drops some of this font's
-  // glyphs), then embedded whole: a few hundred kilobytes instead of the 2.4 MB fonts.
-  const used = [
-    JSON.stringify(doc),
-    JSON.stringify(input.values),
-    input.signerName,
-    input.signedOn,
-    input.translation?.relation ?? '',
-    input.academySigner ? `${input.academySigner.name} ${input.academySigner.title}` : '',
-    Object.values(KO_WORDS).join(' '),
-    // Every printable ASCII character, for what the values and the prices may hold.
-    Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join(''),
-  ].join('')
-  const bytes = koFonts()
-  const [regular, bold] = await Promise.all([subsetFont(bytes.regular, used, { targetFormat: 'truetype' }), subsetFont(bytes.bold, used, { targetFormat: 'truetype' })])
-  const kf: Fonts = { regular: await L.pdf.embedFont(regular), bold: await L.pdf.embedFont(bold), unicode: true }
-  const K = new Layout(L.pdf, kf, L.logo, doc.title || KO_WORDS.fallbackTitle, 'ko')
-  K.signature = L.signature
-  K.academySignature = L.academySignature
-  K.typed = L.typed
-  K.newPage()
-  const note = [
-    { text: KO_WORDS.title, bold: true },
-    { text: KO_WORDS.note, bold: false },
-  ]
-  drawBlock(K, { kind: 'box', lines: note.map((n) => [n]) }, input)
-  for (const b of doc.blocks) drawBlock(K, b, { ...input, doc })
-  L.pages.push(...K.pages)
-}
-
 /** The contract as filled in and signed (or a sample of it), then the record of its signing. */
 export async function buildContractPdf(input: ContractPdfInput): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
@@ -531,7 +456,6 @@ export async function buildContractPdf(input: ContractPdfInput): Promise<Uint8Ar
   else if (input.academySigner) L.typed = await pdf.embedFont(StandardFonts.TimesRomanItalic)
   L.newPage()
   for (const b of input.doc.blocks) drawBlock(L, b, input)
-  if (input.translation) await drawTranslation(L, input, input.translation.doc)
   if (input.record) drawRecord(L, input.record)
 
   // Each page's foot: its number, and the contract's own footer lines.

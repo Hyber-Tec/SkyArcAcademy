@@ -1,8 +1,6 @@
 import { type ReactNode, useId } from 'react'
 import { type EvalShot, pointOf } from '@shared/shooting/evaluation'
 import { type ShotPoint, BLACK_RADIUS_MM, PELLET_MM, meanPoint, ringRadiusMm, targetViewMm } from '@shared/shooting/target'
-import { useT } from '@/lib/lang'
-
 /** The last shot (and the newest one while a result plays back): amber, apart from every position's color. */
 export const LAST_SHOT_FILL = '#e8b100'
 export const LAST_SHOT_STROKE = '#b88a00'
@@ -44,8 +42,7 @@ export function TargetPlot({
   const points = shots.map(pointOf).filter((p): p is ShotPoint => p !== null)
   const view = targetViewMm(points, size, zoom)
   const mpi = showMpi && points.length >= 2 ? meanPoint(points) : null
-  const t = useT()
-  const label = title ?? (points.length ? t(`${points.length} shots on the target`, `표적 위 ${points.length}발`) : t('Target', '표적'))
+  const label = title ?? (points.length ? `${points.length} shots on the target` : 'Target')
   return (
     <TargetFace view={view} size={size} label={label} className={className}>
       {points.map((p, i) => (

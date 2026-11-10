@@ -97,7 +97,7 @@ If you're unsure whether something is low-risk, treat it as not low-risk and ask
   requests and questions sent from it) and announcements shown "On the website". Its pages talk to parents only (no
   notes on how the site works), never invent a fact or a testimonial (until real quotes exist it shows samples marked
   "Sample"; a fact the academy hasn't confirmed is left out, not marked), and never show a student's name, scores or
-  targets. Its Korean is a draft the owner reviews.
+  targets.
 - **Terminology:** Coach (not tutor), Class (not session), Academy (not branch), Position = Standing / Kneeling / Prone.
 - **Configurable, not hard-coded:** opening hours, closed dates, the cancellation rule, capacity, pay rates, pay period.
 - **Few rules.** Add a rule only when the academy needs one: makeups and trials are labels on a class, and levels
@@ -109,11 +109,9 @@ If you're unsure whether something is low-risk, treat it as not low-risk and ask
   for every card, not perfect on the samples. Tests use made-up cards and results.
 - **Minors' data:** parents see only their own children. Storage and database rules enforce it. No public file URLs for reports.
 - **Kiosk PINs** are stored hashed and never logged.
-- **Language:** parents read the portal, the phone app, the public website and the contract in Korean (their phone's or
-  browser's language, or their choice); students and staff read English (`docs/DECISIONS.md` §36). Every text a parent
-  sees is written in both, side by side in the code (`t('Home', '홈')`), the Korean written as
-  `.claude/skills/korean-ux-writing` says: use that skill before writing or reviewing any Korean. Emails stay English;
-  no other language for now.
+- **English only** (the academy, 2026-11-10, `docs/DECISIONS.md` §42): the website, the portal, the phone app, the
+  contract, notifications, emails and signs are in English, for everyone. No Korean anywhere in the project, in text or
+  in pictures, and no language switch; don't add another language unless the owner asks.
 
 ## Owner and production
 
@@ -128,7 +126,7 @@ If you're unsure whether something is low-risk, treat it as not low-risk and ask
 
 | Path | What |
 |---|---|
-| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/site/` is the public website (`/`, `/programs`, `/ko/…`, its addresses in `src/site/paths.ts`; the build writes each page's own HTML, the sitemap and robots.txt); `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports, `website/` Settings → Website), `components/ui/` shadcn components, `pages/public/` sign-in and the contract's public pages (`/contract`, where a family asks for it from the academy's sign; `/sign/{token}`, where it's signed); the privacy policy and Help are pages of the website. `public/` holds the brand files and icons. |
+| `web/` | The website (Vite, React 19, React Router 7, TypeScript, Tailwind v4 + shadcn/ui, react-icons). `index.html` + `src/site/` is the public website (`/`, `/programs`, its addresses in `src/site/paths.ts`; the build writes each page's own HTML, the sitemap and robots.txt); `app.html` + `src/main.tsx` is the app at every other address. In `src/`: `app/` routes and guards, `branch/` the academy context (`useBranch()`), `features/<area>/` pages with their Firestore code (`drive/` the Drive and its SIUS upload, `scores/` evaluations and the target picture, `reports/` progress reports, `website/` Settings → Website), `components/ui/` shadcn components, `pages/public/` sign-in and the contract's public pages (`/contract`, where a family asks for it from the academy's sign; `/sign/{token}`, where it's signed); the privacy policy and Help are pages of the website. `public/` holds the brand files and icons. |
 | `mobile/` | The phone app (Expo SDK 57, React Native, Expo Router, React Native Firebase), iPhone first: the staff's tabs (Home, Schedule, Scan, Students, More for owners and admins; Home, Schedule, Availability, Scan, More for coaches) and the family's (Home, Classes, Scores, Reports, More) for parents and students. How it's built and its rules: [`mobile/README.md`](mobile/README.md), [`mobile/AGENTS.md`](mobile/AGENTS.md). |
 | `kiosk/` | **Sky Arc Kiosk**, the front desk's time clock: an Expo app for the academy's Android tablet, installed from a file over USB (`npm run kiosk:build`, `npm run kiosk:install`), never from a store. Coaches clock in and out with their PIN; it works without the internet and sends what it recorded later (`docs/kiosk/README.md`; the rules in `shared/src/kiosk`, the server in `functions/src/kiosk.ts`). |
 | `shared/` | Pure TypeScript used by the website, the functions, the phone app and the kiosk app: time, settings and their defaults, roles, paths, schedule conflicts and notices, pay, email templates; `sius/` (reading SIUS result PDFs), `shooting/` (the target and evaluations), `targets/` (reading a photo of the academy's paper card: its bulls, the holes and their scores, and the review before saving; tested on made-up photos of the card), `drive/` (the Drive's index), `reports/` (a report's figures and standard text). Unit tests sit next to the code. |
@@ -188,9 +186,8 @@ Carried over from HyberCRM, adapted to one academy:
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
   Their weeks start on Sunday, as calendars do (`CALENDAR_WEEK_START`); the academy's week, the schedule's, runs Monday
   to Sunday (`settings.general.weekStartsOn`; `docs/DECISIONS.md` §21).
-- **Language:** English, and Korean for parents (`docs/DECISIONS.md` §36): `useT()` (`web/src/lib/lang.ts`,
-  `mobile/src/lib/lang.ts`) on every text a parent can see, Korean beside its English; staff-only screens stay English.
-  Dates, times and particles after names go through `shared/src/i18n.ts`. Keep text in the code, never in images.
+- **Language:** English only (`docs/DECISIONS.md` §42). Dates and times go through `shared/src/time.ts`
+  (`formatDateKey`, `formatMinutes`, `formatTimeSpan`…). Keep text in the code, never in images.
 - **Brand:** HyberCRM's black-and-white theme, plus Sky Arc red as the `brand`, `brand-solid` and `brand-text` color tokens. The logos are fixed in the code ("Brand and logos" below); Settings can't change them.
 - **Cloud Functions** run as `functions@skyarcacademy.iam.gserviceaccount.com` with only the roles they use (`docs/DEPLOY.md`). A function that needs another Google service needs that role added there first.
 - **Secrets:** the Firebase web config lives in `web/.env.local` (git-ignored) and in GitHub Actions secrets for the deploy. The email app password is the Secret Manager secret `GMAIL_APP_PASSWORD`.

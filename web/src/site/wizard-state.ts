@@ -1,13 +1,12 @@
 import { useCallback, useReducer } from 'react'
 import { type WebsiteMessageInput, checkWebsiteMessage, isEmailAddress } from '@shared/website/messages'
-import type { Lang } from '@/site/kit/content'
 import { CallError, callFunction } from './rest'
 
 /**
  * The trial request's state, kept outside its screens so the drawer remembers a half-filled request when it's closed
  * and reopened (and the trial page has its own). Booking a time online opens once the academy approves the privacy
  * policy (docs/DECISIONS.md §6, Q15): until then the family says which days suit them, and the office emails back.
- * Errors are codes; the screens word them in the page's language.
+ * Errors are codes; the screens word them.
  */
 export type Step = 'time' | 'details' | 'review' | 'done'
 export type ErrorCode = 'required' | 'email' | 'consent' | 'days'
@@ -20,7 +19,6 @@ export interface WizardForm {
   parentName: string
   email: string
   phone: string
-  language: Lang
   notes: string
   consent: boolean
   /** The field people never see; only bots fill it in. */
@@ -40,7 +38,7 @@ export interface WizardState {
   sentTo: string | null
 }
 
-const emptyForm = (language: Lang): WizardForm => ({
+const emptyForm = (): WizardForm => ({
   firstName: '',
   lastName: '',
   grade: '',
@@ -48,7 +46,6 @@ const emptyForm = (language: Lang): WizardForm => ({
   parentName: '',
   email: '',
   phone: '',
-  language,
   notes: '',
   consent: false,
   website: '',
@@ -62,7 +59,7 @@ type Action =
   | { type: 'submitting'; on: boolean }
   | { type: 'sent'; to: string }
   | { type: 'failed'; why: 'failed' | 'limited' }
-  | { type: 'reset'; language: Lang; keepParent?: boolean }
+  | { type: 'reset'; keepParent?: boolean }
 
 function reducer(s: WizardState, a: Action): WizardState {
   switch (a.type) {
@@ -89,17 +86,17 @@ function reducer(s: WizardState, a: Action): WizardState {
       return { ...s, submitting: false, sendError: a.why }
     case 'reset': {
       const parent = a.keepParent ? { parentName: s.form.parentName, email: s.form.email, phone: s.form.phone } : {}
-      return { ...initial(a.language), form: { ...emptyForm(a.language), ...parent } }
+      return { ...initial(), form: { ...emptyForm(), ...parent } }
     }
   }
 }
 
-function initial(language: Lang): WizardState {
-  return { step: 'time', days: [], form: emptyForm(language), errors: {}, submitting: false, sendError: null, sentTo: null }
+function initial(): WizardState {
+  return { step: 'time', days: [], form: emptyForm(), errors: {}, submitting: false, sendError: null, sentTo: null }
 }
 
-export function useWizard(language: Lang) {
-  const [state, dispatch] = useReducer(reducer, language, initial)
+export function useWizard() {
+  const [state, dispatch] = useReducer(reducer, undefined, initial)
 
   /** The days step's check. */
   const checkDays = useCallback((): boolean => {
@@ -129,7 +126,6 @@ export function useWizard(language: Lang) {
     const f = state.form
     const input: WebsiteMessageInput = {
       kind: 'trial',
-      lang: f.language,
       name: f.parentName,
       email: f.email,
       phone: f.phone,

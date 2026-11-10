@@ -5,7 +5,7 @@ import { nameIn, sheetStudent } from './sheetStudent'
 // Made-up students: one goes by an English name, her legal name among her other names.
 const students: DriveStudent[] = [
   { id: 'avery', name: 'Avery Rowan' },
-  { id: 'chloe', name: 'Chloe Park', otherNames: ['Seo-yeon Park', '박서연'] },
+  { id: 'chloe', name: 'Chloe Park', otherNames: ['Seo-yeon Park'] },
   { id: 'jun', name: 'Jun Park' },
   { id: 'sam', name: 'Sam Quill' },
   { id: 'sam2', name: 'Sam Ortiz' },

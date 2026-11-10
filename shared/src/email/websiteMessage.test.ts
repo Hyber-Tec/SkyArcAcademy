@@ -4,7 +4,6 @@ import { websiteMessageEmail, websiteMessageLines, websiteMessageTitle } from '.
 
 const trial: CleanMessage = {
   kind: 'trial',
-  lang: 'ko',
   name: 'Pat <Doe>',
   email: 'pat@example.com',
   phone: '555-0100',
@@ -22,9 +21,8 @@ describe('the office’s email for a website message', () => {
 
   it('lists what the family sent, in words', () => {
     const lines = websiteMessageLines(trial)
-    expect(lines.map((l) => l.label)).toEqual(['Athlete', 'Grade', 'Experience', 'Days that suit them', 'Parent or guardian', 'Email', 'Phone', 'Reply in', 'Notes'])
+    expect(lines.map((l) => l.label)).toEqual(['Athlete', 'Grade', 'Experience', 'Days that suit them', 'Parent or guardian', 'Email', 'Phone', 'Notes'])
     expect(lines.find((l) => l.label === 'Experience')?.value).toBe('New to shooting')
-    expect(lines.find((l) => l.label === 'Reply in')?.value).toBe('Korean')
   })
 
   it('escapes what the family typed', () => {

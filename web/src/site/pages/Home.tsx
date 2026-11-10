@@ -12,7 +12,7 @@ import { TestimonialsColumns } from '@/site/kit/ui'
 import { useIntroReady } from '../intro-context'
 import { useBooking } from '../booking-context'
 import { BookButton, Container, SectionHead, btnInk, btnOutline, linkArrow, mins } from '../components/bits'
-import { CoachCard, FaqList, NewsCard, VisitUs, crmLang, useAnyPortrait } from '../components/blocks'
+import { CoachCard, FaqList, NewsCard, VisitUs, useAnyPortrait } from '../components/blocks'
 import { LevelPath } from '../components/LevelPath'
 import { PhoneShots } from '../components/PhoneShots'
 import { ReportShowcase } from '../components/ReportShowcase'
@@ -24,7 +24,7 @@ const FACT_ICONS = [LuTarget, LuLayers, LuUserRound, LuActivity]
 
 /** The hero's card: how every athlete starts, and the way to ask for a first time. */
 function NextTrialCard({ className }: { className?: string }) {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { openBooking } = useBooking()
   return (
     <button
@@ -42,7 +42,7 @@ function NextTrialCard({ className }: { className?: string }) {
           {t(T.heroCardLabel)}
         </span>
         {TRIAL.kinds.one.minutes ? (
-          <span className="rounded-full bg-warm-2 px-2 py-0.5 text-[11.5px] font-medium text-ink tabular-nums">{mins(TRIAL.kinds.one.minutes, lang)}</span>
+          <span className="rounded-full bg-warm-2 px-2 py-0.5 text-[11.5px] font-medium text-ink tabular-nums">{mins(TRIAL.kinds.one.minutes)}</span>
         ) : null}
       </span>
       <span className="mt-2.5 block text-[20px] leading-tight font-semibold tracking-tight text-balance text-ink sm:text-[22px]">{t(T.heroCardTitle)}</span>
@@ -181,7 +181,7 @@ function Pillars() {
           {T.pillars.map((p, i) => {
             const Icon = PILLAR_ICONS[i]
             return (
-              <Reveal key={p.title.en} delay={i * 0.07} className="h-full">
+              <Reveal key={p.title} delay={i * 0.07} className="h-full">
                 <article className="flex h-full flex-col rounded-[26px] bg-white p-6 shadow-soft sm:p-7">
                   <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-ink text-white">
                     <Icon className="size-[22px]" aria-hidden="true" />
@@ -310,7 +310,7 @@ function Coaches() {
 const BRING_ICONS = [LuClock, LuShirt, LuWrench]
 
 function Trials() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const reduce = useReduced()
   const ref = useRef<HTMLOListElement>(null)
   const inView = useInView(ref, { once: true, amount: 0.4 })
@@ -327,7 +327,7 @@ function Trials() {
             transition={{ duration: 1.2, ease: EASE_OUT }}
           />
           {HOME.trial.steps.map((s, i) => (
-            <li key={s.title.en} className={cn('relative', i < 3 && 'max-sm:before:absolute max-sm:before:top-14 max-sm:before:-bottom-7 max-sm:before:left-6 max-sm:before:w-px max-sm:before:bg-ink/15')}>
+            <li key={s.title} className={cn('relative', i < 3 && 'max-sm:before:absolute max-sm:before:top-14 max-sm:before:-bottom-7 max-sm:before:left-6 max-sm:before:w-px max-sm:before:bg-ink/15')}>
               <Reveal delay={0.15 + i * 0.12} className="flex gap-5 sm:flex-col sm:gap-0 lg:items-center lg:text-center">
                 <span className={cn('relative z-10 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-[16px] font-semibold ring-8 ring-warm', i === 0 ? 'bg-red text-white' : 'border border-ink/15 bg-white text-ink')}>{i + 1}</span>
                 <div className="pt-2.5 sm:pt-0">
@@ -346,7 +346,7 @@ function Trials() {
                 {HOME.trial.bring.map((b, i) => {
                   const Icon = BRING_ICONS[i]
                   return (
-                    <li key={b.en} className="flex gap-3 sm:flex-col">
+                    <li key={b} className="flex gap-3 sm:flex-col">
                       <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-warm">
                         <Icon className="size-[18px] text-ink" aria-hidden="true" />
                       </span>
@@ -363,7 +363,7 @@ function Trials() {
                 <p className="text-[12px] font-semibold tracking-[0.14em] text-white/55 uppercase">{t(TRIAL.kinds.one.name)}</p>
                 <p className="mt-3 text-[24px] leading-tight font-semibold tracking-tight">{t(TRIAL.kinds.one.summary)}</p>
                 <p className="mt-2 text-[15px] text-white/65">
-                  {TRIAL.kinds.one.minutes ? `${mins(TRIAL.kinds.one.minutes, lang)} · ` : ''}
+                  {TRIAL.kinds.one.minutes ? `${mins(TRIAL.kinds.one.minutes)} · ` : ''}
                   {t(T.noShooting)}
                 </p>
               </div>
@@ -381,9 +381,9 @@ function Trials() {
   )
 }
 
-function Quote({ quote, who, lang }: { quote: string; who: string; lang?: string }) {
+function Quote({ quote, who }: { quote: string; who: string }) {
   return (
-    <figure className="rounded-[24px] border border-line bg-white p-6 shadow-soft" lang={lang}>
+    <figure className="rounded-[24px] border border-line bg-white p-6 shadow-soft">
       <LuQuote className="size-5 text-red" aria-hidden="true" />
       <blockquote className="accent mt-4 text-[20px] leading-snug text-ink">“{quote}”</blockquote>
       <figcaption className="mt-5 flex items-center gap-3">
@@ -405,7 +405,7 @@ function Testimonials() {
   const { ready, content } = useSiteData()
   const quotes = content.testimonials.filter((q) => q.quote.trim())
   if (!ready || quotes.length === 0) return null
-  const cards = quotes.map((q) => <Quote key={q.id} quote={q.quote} who={q.who} lang={crmLang} />)
+  const cards = quotes.map((q) => <Quote key={q.id} quote={q.quote} who={q.who} />)
   return (
     <section className="py-20 sm:py-28" aria-labelledby="testimonials-title">
       <Container>
@@ -481,7 +481,7 @@ function GalleryMosaic() {
             >
               <Photo photo={g} alt={g.alt} sizes={i === 0 ? '(min-width: 1024px) 620px, 100vw' : '(min-width: 1024px) 310px, 50vw'} className="size-full transition duration-700 ease-out group-hover:scale-[1.05]" />
               {g.caption ? (
-                <span lang={crmLang} className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-3.5 pt-10 text-left text-[13.5px] font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100 max-lg:opacity-100">
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-3.5 pt-10 text-left text-[13.5px] font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100 max-lg:opacity-100">
                   {g.caption}
                 </span>
               ) : null}

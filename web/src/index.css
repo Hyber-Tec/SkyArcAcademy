@@ -8,12 +8,6 @@
 /* The public website (src/site) has its own stylesheet. */
 @source not "./site";
 
-/* Korean breaks lines between words, as Korean is typeset (as on the public website); a long address still wraps. */
-html:lang(ko) {
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-
 /* Headings wrap into even lines, and a paragraph doesn't end on a lone word (a phone's narrow page). */
 @layer base {
   h1,

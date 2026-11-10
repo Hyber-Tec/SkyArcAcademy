@@ -137,14 +137,14 @@ describe('parseContract', () => {
   })
 
   it('says what to fix: the title, the signature, unknown parts, options missing, letters the PDF can’t print', () => {
-    const { problems } = parseContract('Some words\n[[pick: One]]\n[[choose: Level | Fee]]\n- Only a name\n[[check: Extras]]\n\n[[family: You]]\n- Name = nickname\n화살표 →')
+    const { problems } = parseContract('Some words\n[[pick: One]]\n[[choose: Level | Fee]]\n- Only a name\n[[check: Extras]]\n\n[[family: You]]\n- Name = nickname\nСтрелка →')
     expect(problems.map((p) => [p.line, p.message])).toEqual([
       [1, 'Start with the contract’s title, on a line starting with “# ”.'],
       [2, 'This [[…]] isn’t one the app knows: choose, check, academy check, initials, family, academy, sign, academy sign or footer.'],
       [4, 'Give this option its fee after a “|”.'],
       [5, 'Add its options below it, each on a line starting with “- ”.'],
       [8, '“= nickname” isn’t one the app knows: student, signer, date, phone or email.'],
-      [9, '“화” can’t be printed in the PDF. Use English letters and common signs.'],
+      [9, '“С” can’t be printed in the PDF. Use English letters and common signs.'],
       [9, 'Add [[sign: …]] where the family signs.'],
     ])
   })

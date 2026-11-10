@@ -1,7 +1,6 @@
 import { type ContractDocument, academyChecks, familyFields, pricedChoice } from '../contracts/document'
 import { type ContractValues, checkPreset, suggestedOption, usDate } from '../contracts/fill'
 import type { ContractLinkStatus, SignedVia, SignerRelation } from '../contracts/types'
-import type { Lang } from '../i18n'
 import { COL, DOC } from '../paths'
 import type { RgbaImage } from '../targets/image'
 import { type DateKey, addDays, toInstant } from '../time'
@@ -35,8 +34,6 @@ interface Plan {
   other?: boolean
   /** The office also checked the contract's other discount (not the one for one's own rifle). */
   extra?: boolean
-  /** The parent read it in Korean (docs/DECISIONS.md §36): its PDF has the Korean too, once the contract has it. */
-  ko?: boolean
   note?: string
 }
 
@@ -48,16 +45,16 @@ const PLAN: Plan[] = [
   { key: 'isla-quinn', state: 'sent', sent: 4, extra: true },
   { key: 'lucas-ortiz', state: 'sent', sent: 3, resent: true },
   { key: 'bella-vance', state: 'withdrawn', sent: 9 },
-  { key: 'seoyeon-lim', state: 'signed', sent: 20, signed: 19, via: 'app', ko: true },
+  { key: 'seoyeon-lim', state: 'signed', sent: 20, signed: 19, via: 'app' },
   { key: 'isaac-brooks', state: 'signed', sent: 18, signed: 18, via: 'web', other: true },
   { key: 'grace-ellis', state: 'signed', sent: 16, signed: 15, via: 'app' },
   { key: 'sophie-novak', state: 'signed', sent: 14, signed: 14, via: 'link' },
   { key: 'arin-tak', state: 'signed', sent: 12, signed: 11, via: 'app', extra: true },
   { key: 'theo-tak', state: 'signed', sent: 12, signed: 11, via: 'app', extra: true },
   { key: 'elijah-hayes', state: 'signed', sent: 10, signed: 10, via: 'link' },
-  { key: 'sua-jang', state: 'signed', sent: 9, signed: 7, via: 'web', ko: true },
-  { key: 'samuel-jang', state: 'signed', sent: 9, signed: 7, via: 'web', ko: true },
-  { key: 'haneul-moon', state: 'signed', sent: 6, signed: 6, via: 'link', ko: true },
+  { key: 'sua-jang', state: 'signed', sent: 9, signed: 7, via: 'web' },
+  { key: 'samuel-jang', state: 'signed', sent: 9, signed: 7, via: 'web' },
+  { key: 'haneul-moon', state: 'signed', sent: 6, signed: 6, via: 'link' },
   { key: 'yuna-chung', state: 'signed', sent: 5, signed: 3, via: 'link' },
   { key: 'wesley-hart', state: 'paper', sent: 13, signed: 13, note: 'Signed on paper at the front desk' },
 ]
@@ -78,8 +75,6 @@ export interface SampleSigning {
   relation: SignerRelation
   /** The account that signed (in the app or on the website), or none (the link). */
   signerEmail: string | null
-  /** The language they read it in. */
-  lang: Lang
   ip: string
   userAgent: string
 }
@@ -168,7 +163,6 @@ export function buildSampleContracts(input: SampleContractsInput): SampleContrac
           name: signer.name,
           relation: 'parent',
           signerEmail: via === 'link' ? null : signer.email,
-          lang: p.ko ? 'ko' : 'en',
           ip: `${where.ip}${10 + (hashSeed(studentId) % 200)}`,
           userAgent: where.userAgent,
         },

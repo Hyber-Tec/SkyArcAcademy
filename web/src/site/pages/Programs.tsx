@@ -46,11 +46,11 @@ function LevelText({ level, index }: { level: Level; index: number }) {
           { title: PROGRAMS.labels.focus, items: level.focus },
           { title: PROGRAMS.labels.experience, items: level.experience },
         ].map((b) => (
-          <div key={b.title.en}>
+          <div key={b.title}>
             <h4 className="text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">{t(b.title)}</h4>
             <ul className="mt-3 space-y-2.5">
               {b.items.map((x) => (
-                <li key={x.en} className="flex gap-2.5 text-[14.5px] leading-snug text-ink/85">
+                <li key={x} className="flex gap-2.5 text-[14.5px] leading-snug text-ink/85">
                   <span className="mt-0.5 inline-flex size-[18px] shrink-0 items-center justify-center rounded-full bg-ink text-white">
                     <LuCheck className="size-2.5" aria-hidden="true" />
                   </span>
@@ -64,9 +64,9 @@ function LevelText({ level, index }: { level: Level; index: number }) {
       <h4 className="mt-8 text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">{t(PROGRAMS.labels.ranks)}</h4>
       <div className="mt-3 flex flex-wrap gap-2">
         {level.ranks.map((r) => (
-          <span key={r.name.en} className={cn('inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-semibold', r.track?.en === 'Precision' ? 'border border-dashed border-ink/30 text-ink' : LEVEL_FILL[index])}>
+          <span key={r.name} className={cn('inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-semibold', r.track === 'Precision' ? 'border border-dashed border-ink/30 text-ink' : LEVEL_FILL[index])}>
             {t(r.name)}
-            <span className={cn('text-[12px] font-medium opacity-70', /\d/.test(r.range.en) && 'font-mono')}>{t(r.range)}</span>
+            <span className={cn('text-[12px] font-medium opacity-70', /\d/.test(r.range) && 'font-mono')}>{t(r.range)}</span>
           </span>
         ))}
       </div>
@@ -135,7 +135,7 @@ function SporterScale({ ranks }: { ranks: Rank[] }) {
       <ol className="mt-3 flex h-12 gap-[3px]">
         {ranks.map((r, k) => (
           <li
-            key={r.name.en}
+            key={r.name}
             className={cn('flex flex-1 items-center px-3.5 text-[14px] font-semibold sm:px-4', k === 0 ? 'rounded-l-2xl rounded-r-md bg-white text-ink ring-1 ring-ink/10 ring-inset' : 'rounded-l-md rounded-r-2xl bg-ink text-white')}
           >
             {t(r.name)}
@@ -163,7 +163,7 @@ function PrecisionLeads({ rank }: { rank: Rank | undefined }) {
         {PROGRAMS.pathways.leadsTo.map((x, k) => {
           const Icon = LEADS_TO_ICONS[k]
           return (
-            <li key={x.en} className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10 ring-inset lg:flex-col lg:items-start">
+            <li key={x} className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10 ring-inset lg:flex-col lg:items-start">
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
                 <Icon className="size-[18px]" aria-hidden="true" />
               </span>
@@ -185,8 +185,8 @@ const PATHWAY_ICONS = [LuTarget, LuCrosshair]
 
 function Pathways() {
   const { t } = useSite()
-  const sporter = LEVELS[3].ranks.filter((r) => r.track?.en === 'Sporter')
-  const precision = LEVELS[3].ranks.find((r) => r.track?.en === 'Precision')
+  const sporter = LEVELS[3].ranks.filter((r) => r.track === 'Sporter')
+  const precision = LEVELS[3].ranks.find((r) => r.track === 'Precision')
   return (
     <section id="pathways" className="pb-20 sm:pb-24" aria-labelledby="pathways-title">
       <Container>
@@ -195,7 +195,7 @@ function Pathways() {
           {PROGRAMS.pathways.items.map((p, i) => {
             const Icon = PATHWAY_ICONS[i]
             return (
-              <Reveal key={p.title.en} delay={i * 0.08} className="h-full">
+              <Reveal key={p.title} delay={i * 0.08} className="h-full">
                 <article className={cn('flex h-full flex-col rounded-[28px] p-7 sm:p-9', i === 0 ? 'bg-warm' : 'bg-ink text-white')}>
                   <div className="flex items-start justify-between gap-4">
                     <span className={cn('rounded-full px-3 py-1 text-[12px] font-semibold tracking-[0.1em] uppercase', i === 0 ? 'bg-white text-ink' : 'bg-white/10 text-white')}>
@@ -237,7 +237,7 @@ function Placement() {
           {steps.map((s, i) => {
             const Icon = STEP_ICONS[i]
             return (
-              <li key={s.title.en} className="relative h-full">
+              <li key={s.title} className="relative h-full">
                 <Reveal delay={i * 0.08} className="flex h-full flex-col rounded-[26px] bg-white p-7 shadow-soft">
                   <div className="flex items-center justify-between gap-4">
                     <span className={cn('inline-flex size-12 items-center justify-center rounded-2xl', i === steps.length - 1 ? 'bg-red text-white' : 'bg-ink text-white')}>
@@ -246,7 +246,7 @@ function Placement() {
                     {/* Where this step sits on the way: the steps before it done, this one lit. */}
                     <span className="flex items-center gap-1" aria-hidden="true">
                       {steps.map((x, k) => (
-                        <span key={x.title.en} className={cn('h-1.5 w-5 rounded-full', k < i ? 'bg-ink/80' : k === i ? 'bg-dot' : 'bg-line')} />
+                        <span key={x.title} className={cn('h-1.5 w-5 rounded-full', k < i ? 'bg-ink/80' : k === i ? 'bg-dot' : 'bg-line')} />
                       ))}
                     </span>
                   </div>
@@ -259,7 +259,7 @@ function Placement() {
                     {s.marks.map((m, k) => {
                       const Mark = MARK_ICONS[i][k]
                       return (
-                        <li key={m.en} className="flex items-center gap-3 text-[14.5px] font-medium text-ink">
+                        <li key={m} className="flex items-center gap-3 text-[14.5px] font-medium text-ink">
                           <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-warm">
                             <Mark className="size-4" aria-hidden="true" />
                           </span>
@@ -301,7 +301,7 @@ function Tuition() {
                 <h4 className={cn('mt-5 text-[12px] font-semibold tracking-[0.12em] uppercase', i === 3 ? 'text-white/60' : 'text-stone')}>{t(PROGRAMS.labels.includes)}</h4>
                 <ul className="mt-3 space-y-2.5">
                   {lv.includes.map((x) => (
-                    <li key={x.en} className={cn('flex gap-2.5 text-[14.5px] leading-snug', i === 3 ? 'text-white/85' : 'text-ink/85')}>
+                    <li key={x} className={cn('flex gap-2.5 text-[14.5px] leading-snug', i === 3 ? 'text-white/85' : 'text-ink/85')}>
                       <LuCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                       {t(x)}
                     </li>

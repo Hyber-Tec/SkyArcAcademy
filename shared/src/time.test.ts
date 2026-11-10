@@ -7,6 +7,7 @@ import {
   diffDays,
   formatDateKey,
   formatMinutes,
+  formatTimeSpan,
   isDateKey,
   minutesOf,
   monthGrid,
@@ -79,5 +80,12 @@ describe('calendar math', () => {
     expect(parseHHMM('16:30')).toBe(990)
     expect(Number.isNaN(parseHHMM('25:00'))).toBe(true)
     expect(formatDateKey('2026-09-30', 'weekdayLong')).toBe('Wednesday, September 30, 2026')
+    expect(formatDateKey('2026-09-30', 'dayLong')).toBe('Wednesday, September 30')
+  })
+
+  it('writes AM/PM once in a time span when both ends share it', () => {
+    expect(formatTimeSpan(990, 1200)).toBe('4:30 – 8:00 PM')
+    expect(formatTimeSpan(660, 780)).toBe('11:00 AM – 1:00 PM')
+    expect(formatTimeSpan(540, 600)).toBe('9:00 – 10:00 AM')
   })
 })

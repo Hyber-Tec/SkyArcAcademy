@@ -28,7 +28,7 @@ describe('news posts on the website', () => {
   it('makes a readable, unique address from the title', () => {
     expect(postSlug('Match day: proud of every athlete!', 'Ab12CdEf')).toBe('match-day-proud-of-every-athlete-ab12cd')
     expect(postSlug('Café & résumé', 'x1')).toBe('cafe-resume-x1')
-    expect(postSlug('추석 연휴 안내', 'Q9w8e7r6')).toBe('post-q9w8e7')
+    expect(postSlug('Праздник', 'Q9w8e7r6')).toBe('post-q9w8e7')
     expect(postSlug('a'.repeat(100), 'id')).toHaveLength(60 + 3)
   })
 
@@ -42,10 +42,9 @@ describe('news posts on the website', () => {
 })
 
 describe('messages from the website', () => {
-  const contact: WebsiteMessageInput = { kind: 'contact', lang: 'en', name: ' Pat Doe ', email: 'Pat@Example.com', phone: '', topic: 'tuition', message: 'How much?' }
+  const contact: WebsiteMessageInput = { kind: 'contact', name: ' Pat Doe ', email: 'Pat@Example.com', phone: '', topic: 'tuition', message: 'How much?' }
   const trial: WebsiteMessageInput = {
     kind: 'trial',
-    lang: 'ko',
     name: 'Pat Doe',
     email: 'pat@example.com',
     phone: '555-0100',
@@ -67,13 +66,12 @@ describe('messages from the website', () => {
     const r = checkWebsiteMessage(trial)
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.value.lang).toBe('ko')
     expect(r.value.days).toEqual(['Monday · 4:30–8 PM', 'Tuesday'])
     expect(r.value.athlete).toEqual({ firstName: 'Sam', lastName: 'Doe', grade: '6', experience: 'none' })
   })
 
   it('names each missing or wrong field', () => {
-    const r = checkWebsiteMessage({ kind: 'contact', lang: 'en', name: '', email: 'nope', phone: '', topic: 'x', message: '' })
+    const r = checkWebsiteMessage({ kind: 'contact', name: '', email: 'nope', phone: '', topic: 'x', message: '' })
     expect(r.ok).toBe(false)
     if (r.ok) return
     expect(r.errors).toEqual({ name: 'required', email: 'email', topic: 'required', message: 'required' })

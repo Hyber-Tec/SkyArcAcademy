@@ -60,7 +60,7 @@ function Page() {
 
 export function App() {
   const intro = useIntro('skyarc-intro')
-  const { path, lang } = useSite()
+  const { path } = useSite()
   const [ready, setReady] = useState(!intro.show)
   // The other pages, once this one has settled.
   useEffect(() => {
@@ -86,7 +86,7 @@ export function App() {
       <BookingProvider>
         <AcademyIntro show={intro.show} onDone={intro.done} />
         <Header />
-        <main id="main" tabIndex={-1} className="outline-none" key={`${path}-${lang}`}>
+        <main id="main" tabIndex={-1} className="outline-none" key={path}>
           <Suspense fallback={<div className="min-h-[80vh]" />}>
             <Page />
           </Suspense>

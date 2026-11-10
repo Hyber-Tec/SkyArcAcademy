@@ -4,7 +4,7 @@ import { nameWords } from '../drive/suggest'
 /**
  * Whose a results sheet is, from the shooter's name printed on it (the manager's third meeting, CP1: "read the
  * student's name from the sheet and pick the student"). A sheet prints the shooter's full name, often their legal one,
- * so a student is found by their name or one of their other names (legal, Korean, English: `Student.otherNames`), whole:
+ * so a student is found by their name or one of their other names (a legal name or one they go by: `Student.otherNames`), whole:
  * every word of it, in any order, a name's words written together counting too ("Seo-yeon" is "Seoyeon"). The phone's
  * competition scan and the website's Add a competition and Add scores pick the student this finds; whoever adds the
  * result still sees whose it is before saving.

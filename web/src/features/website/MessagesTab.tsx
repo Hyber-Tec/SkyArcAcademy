@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { IconType } from 'react-icons'
-import { LuCalendarDays, LuCheck, LuInbox, LuLanguages, LuMail, LuPhone, LuReply, LuRotateCcw, LuTag, LuTrash2, LuUserRound } from 'react-icons/lu'
+import { LuCalendarDays, LuCheck, LuInbox, LuMail, LuPhone, LuReply, LuRotateCcw, LuTag, LuTrash2, LuUserRound } from 'react-icons/lu'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import type { WithId } from '@shared/types'
@@ -20,7 +20,6 @@ import { deleteMessage, setMessageStatus } from './api'
 import { kindLabel, when } from './messageText'
 import { IconAction } from './parts'
 
-const LANGUAGES: Record<string, string> = { en: 'English', ko: 'Korean' }
 
 const isDone = (m: WebsiteMessage) => m.status === 'done'
 
@@ -176,9 +175,6 @@ function MessageCard({ m, focused, doneByName }: { m: WithId<WebsiteMessage>; fo
           ) : (
             <span className="text-muted-foreground">Not given</span>
           )}
-        </Detail>
-        <Detail icon={LuLanguages} label="Reply in">
-          {LANGUAGES[m.lang] ?? 'English'}
         </Detail>
         {trial ? null : (
           <Detail icon={LuTag} label="About">

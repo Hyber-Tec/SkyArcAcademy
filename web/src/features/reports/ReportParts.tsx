@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 import type { IconType } from 'react-icons'
 import { LuArrowDownRight, LuArrowRight, LuArrowUpRight } from 'react-icons/lu'
-import { type EvaluationPoint, type PositionFacts, TREND_LABELS_KO, type TrendLevel, trendLabel } from '@shared/reports/types'
-import { POSITION_COLORS } from '@shared/shooting/evaluation'
-import { dateText } from '@shared/i18n'
-import { useLang, useT } from '@/lib/lang'
-import { positionIn } from '@/features/family/familyText'
+import { type EvaluationPoint, type PositionFacts, type TrendLevel, trendLabel } from '@shared/reports/types'
+import { POSITION_COLORS, POSITION_LABELS } from '@shared/shooting/evaluation'
 import { playPoints } from '@/features/scores/playback'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { TargetPlot } from '@/features/scores/TargetPlot'
@@ -13,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { Sparkline } from './charts'
 import { TREND_STYLE, one, signed } from './model'
 import { INK } from './paper'
+import { formatDateKey } from '@shared/time'
 
 /** Pieces of the report document (ReportDocument.tsx), on its light paper. */
 
@@ -56,7 +54,6 @@ export function Heading({ icon: Icon, accent, children }: { icon: IconType; acce
 /** The trend, with an icon and words so it never relies on color. */
 export function TrendChip({ level, audience, size = 'md' }: { level: TrendLevel; audience: 'family' | 'staff'; size?: 'sm' | 'md' }) {
   const s = TREND_STYLE[level]
-  const lang = useLang()
   return (
     <span
       className={cn('inline-flex items-center gap-1.5 rounded-full font-semibold whitespace-nowrap', size === 'md' ? 'px-3 py-1.5 text-sm' : 'px-2 py-0.5 text-xs')}
@@ -64,7 +61,7 @@ export function TrendChip({ level, audience, size = 'md' }: { level: TrendLevel;
       data-testid="report-trend"
     >
       <s.icon className={size === 'md' ? 'size-4' : 'size-3.5'} />
-      {lang === 'ko' ? TREND_LABELS_KO[level] : trendLabel(level, audience)}
+      {trendLabel(level, audience)}
     </span>
   )
 }
@@ -73,29 +70,27 @@ const dash = <span style={{ color: INK.muted }}>—</span>
 
 /** Every position side by side: the table twin of the charts. Phones get a card per position instead of a wide table. */
 export function PositionTable({ positions }: { positions: PositionFacts[] }) {
-  const lang = useLang()
-  const t = useT()
   return (
     <div>
       <div className="space-y-3 sm:hidden print:hidden">
         {positions.map((p) => {
           const cells: [string, React.ReactNode][] = [
-            [t('Average', '평균'), p.average !== null ? <span key="average" className="font-semibold">{one(p.average)}</span> : dash],
-            [t('Decimal', '소수점'), p.decimal !== null ? one(p.decimal) : dash],
-            [t('Best', '최고'), p.best ? `${one(p.best.wholePer10)} · ${dateText(p.best.dateKey, 'monthDay', lang)}` : dash],
-            [t('Latest', '최근'), p.latest ? one(p.latest.wholePer10) : dash],
-            [t('Inner tens', '이너 텐'), p.innerTensPct !== null ? `${p.innerTensPct}%` : dash],
-            [t('Group', '탄착군'), p.groupMm !== null ? `${one(p.groupMm)} mm` : dash],
+            ['Average', p.average !== null ? <span key="average" className="font-semibold">{one(p.average)}</span> : dash],
+            ['Decimal', p.decimal !== null ? one(p.decimal) : dash],
+            ['Best', p.best ? `${one(p.best.wholePer10)} · ${formatDateKey(p.best.dateKey, 'monthDay')}` : dash],
+            ['Latest', p.latest ? one(p.latest.wholePer10) : dash],
+            ['Inner tens', p.innerTensPct !== null ? `${p.innerTensPct}%` : dash],
+            ['Group', p.groupMm !== null ? `${one(p.groupMm)} mm` : dash],
           ]
           return (
             <div key={p.position} className="rounded-xl border p-3.5" style={{ borderColor: INK.hairline }}>
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-2 text-[13px] font-semibold">
                   <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[p.position] }} />
-                  {positionIn(p.position, lang)}
+                  {POSITION_LABELS[p.position]}
                 </span>
                 <span className="text-[11px]" style={{ color: INK.muted }}>
-                  {lang === 'ko' ? `기록 ${p.evaluations}개` : `${p.evaluations} ${p.evaluations === 1 ? 'evaluation' : 'evaluations'}`}
+                  {`${p.evaluations} ${p.evaluations === 1 ? 'evaluation' : 'evaluations'}`}
                 </span>
               </div>
               <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5 text-[12.5px] tabular-nums">
@@ -116,14 +111,14 @@ export function PositionTable({ positions }: { positions: PositionFacts[] }) {
         <table className="w-full min-w-[520px] border-collapse text-[12.5px]">
           <thead>
             <tr className="text-left text-[11px]" style={{ color: INK.muted }}>
-              <th className="py-2 pr-3 font-medium">{t('Position', '자세')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Evaluations', '기록 수')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Average', '평균')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Decimal', '소수점')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Best', '최고')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Latest', '최근')}</th>
-              <th className="py-2 pr-3 text-right font-medium">{t('Inner tens', '이너 텐')}</th>
-              <th className="py-2 text-right font-medium">{t('Group', '탄착군')}</th>
+              <th className="py-2 pr-3 font-medium">Position</th>
+              <th className="py-2 pr-3 text-right font-medium">Evaluations</th>
+              <th className="py-2 pr-3 text-right font-medium">Average</th>
+              <th className="py-2 pr-3 text-right font-medium">Decimal</th>
+              <th className="py-2 pr-3 text-right font-medium">Best</th>
+              <th className="py-2 pr-3 text-right font-medium">Latest</th>
+              <th className="py-2 pr-3 text-right font-medium">Inner tens</th>
+              <th className="py-2 text-right font-medium">Group</th>
             </tr>
           </thead>
           <tbody className="tabular-nums">
@@ -132,7 +127,7 @@ export function PositionTable({ positions }: { positions: PositionFacts[] }) {
                 <td className="py-2.5 pr-3">
                   <span className="inline-flex items-center gap-2 font-medium">
                     <span className="size-2.5 rounded-full" style={{ background: POSITION_COLORS[p.position] }} />
-                    {positionIn(p.position, lang)}
+                    {POSITION_LABELS[p.position]}
                   </span>
                 </td>
                 <td className="py-2.5 pr-3 text-right">{p.evaluations}</td>
@@ -141,7 +136,7 @@ export function PositionTable({ positions }: { positions: PositionFacts[] }) {
                 <td className="py-2.5 pr-3 text-right">
                   {p.best ? (
                     <>
-                      {one(p.best.wholePer10)} <span style={{ color: INK.muted }}>{dateText(p.best.dateKey, 'monthDay', lang)}</span>
+                      {one(p.best.wholePer10)} <span style={{ color: INK.muted }}>{formatDateKey(p.best.dateKey, 'monthDay')}</span>
                     </>
                   ) : (
                     dash
@@ -156,17 +151,13 @@ export function PositionTable({ positions }: { positions: PositionFacts[] }) {
         </table>
       </div>
       <p className="mt-2 text-[11px]" style={{ color: INK.muted }}>
-        {t(
-          'Scores are per 10 shots: whole numbers out of 100 for every result, and decimals (out of 109) for SIUS results.',
-          '점수는 10발 기준이에요. 정수 점수(100점 만점)는 모든 기록에, 소수점 점수(109점 만점)는 SIUS 기록에만 있어요.',
-        )}
+        Scores are per 10 shots: whole numbers out of 100 for every result, and decimals (out of 109) for SIUS results.
       </p>
     </div>
   )
 }
 
 function Delta({ value, unit = '', goodWhenUp = true }: { value: number | null; unit?: string; goodWhenUp?: boolean }) {
-  const t = useT()
   if (value === null) return null
   const up = value > 0
   const good = value === 0 ? null : up === goodWhenUp
@@ -176,7 +167,7 @@ function Delta({ value, unit = '', goodWhenUp = true }: { value: number | null; 
       className={cn('inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', good === null ? 'bg-[#f1f0eb] text-[#52514e]' : good ? 'bg-[#0ca30c14] text-[#087a08]' : 'bg-[#d03b3b14] text-[#b42318]')}
     >
       <Arrow className="size-3" />
-      {value === 0 ? t('No change', '변화 없음') : `${signed(value)}${unit}`}
+      {value === 0 ? 'No change' : `${signed(value)}${unit}`}
     </span>
   )
 }
@@ -188,8 +179,7 @@ const pct = (p: EvaluationPoint) => (p.innerTens !== null && p.shots ? Math.roun
  * they were fired); printed and in the PDF, the still picture with every shot and the average point.
  */
 export function ReportTarget({ points, color, size, title, caption }: { points: readonly EvaluationPoint[]; color: string; size: number; title: string; caption?: string }) {
-  const lang = useLang()
-  const shots = useMemo(() => playPoints(points, lang), [points, lang])
+  const shots = useMemo(() => playPoints(points), [points])
   const marks = useMemo(() => points.flatMap((p) => p.marks), [points])
   return (
     <>
@@ -207,11 +197,11 @@ export function ReportTarget({ points, color, size, title, caption }: { points: 
 }
 
 /** A result's target (SIUS, or a paper card scanned with the phone app), or a note for a card typed in by hand. */
-function picture(p: EvaluationPoint, label: string, color: string, t: (en: string, ko: string) => string) {
-  if (p.marks.some((m) => m.a !== null)) return <ReportTarget points={[p]} size={150} color={color} title={t(`${label}: ${p.marks.length} shots`, `${label}: ${p.marks.length}발`)} />
+function picture(p: EvaluationPoint, label: string, color: string) {
+  if (p.marks.some((m) => m.a !== null)) return <ReportTarget points={[p]} size={150} color={color} title={`${label}: ${p.marks.length} shots`} />
   return (
     <div className="flex aspect-square w-full max-w-[150px] items-center justify-center self-start rounded-full border border-dashed p-5 text-center text-[11px] leading-snug" style={{ borderColor: INK.hairline, color: INK.muted }}>
-      {t('Paper card: where the shots landed isn’t recorded', '종이 표적지: 맞은 자리는 기록되지 않았어요')}
+      Paper card: where the shots landed isn’t recorded
     </div>
   )
 }
@@ -221,8 +211,6 @@ function picture(p: EvaluationPoint, label: string, color: string, t: (en: strin
  * by the report ("First vs latest") and the student's Scores tab (any two).
  */
 export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: EvaluationPoint; labelA: string; labelB: string }) {
-  const lang = useLang()
-  const t = useT()
   const color = POSITION_COLORS[b.position]
   const targets = a.marks.some((m) => m.a !== null) || b.marks.some((m) => m.a !== null)
   const change = Math.round((b.wholePer10 - a.wholePer10) * 10) / 10
@@ -234,11 +222,11 @@ export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: Ev
         {label}
       </div>
       <div className="text-[12px]" style={{ color: INK.secondary }}>
-        {dateText(p.dateKey, 'medium', lang)} · {p.source === 'sius' ? 'SIUS' : t('Paper', '종이 표적지')}
+        {formatDateKey(p.dateKey, 'medium')} · {p.source === 'sius' ? 'SIUS' : 'Paper'}
       </div>
       <div className="mt-1 text-[34px] leading-none font-semibold tracking-tight">{one(p.wholePer10)}</div>
       <div className="mt-1 text-[11.5px]" style={{ color: INK.secondary }}>
-        {lang === 'ko' ? `10발 평균${p.source === 'sius' ? ` · 소수점 ${one(p.per10)}` : ''}` : `per 10 shots${p.source === 'sius' ? ` · ${one(p.per10)} decimal` : ''}`}
+        {`per 10 shots${p.source === 'sius' ? ` · ${one(p.per10)} decimal` : ''}`}
       </div>
     </div>
   )
@@ -253,23 +241,23 @@ export function Comparison({ a, b, labelA, labelB }: { a: EvaluationPoint; b: Ev
       </div>
       {targets ? (
         <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="flex min-w-0 justify-center">{picture(a, labelA, color, t)}</div>
-          <div className="flex min-w-0 justify-center">{picture(b, labelB, color, t)}</div>
+          <div className="flex min-w-0 justify-center">{picture(a, labelA, color)}</div>
+          <div className="flex min-w-0 justify-center">{picture(b, labelB, color)}</div>
         </div>
       ) : null}
       {tens !== null || group !== null ? (
         <dl className="mt-4 grid gap-2 text-[12.5px] sm:grid-cols-2">
           {tens !== null ? (
             <div className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f6f2] px-3 py-2">
-              <dt style={{ color: INK.secondary }}>{t('Inner tens', '이너 텐')}</dt>
+              <dt style={{ color: INK.secondary }}>Inner tens</dt>
               <dd className="flex items-center gap-2 tabular-nums">
-                {pct(a)}% → {pct(b)}% <Delta value={tens} unit={t(' pts', '%p')} />
+                {pct(a)}% → {pct(b)}% <Delta value={tens} unit=" pts" />
               </dd>
             </div>
           ) : null}
           {group !== null ? (
             <div className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f6f2] px-3 py-2">
-              <dt style={{ color: INK.secondary }}>{t('Group size', '탄착군 크기')}</dt>
+              <dt style={{ color: INK.secondary }}>Group size</dt>
               <dd className="flex items-center gap-2 tabular-nums">
                 {one(a.groupMm as number)} → {one(b.groupMm as number)} mm <Delta value={group} unit=" mm" goodWhenUp={false} />
               </dd>

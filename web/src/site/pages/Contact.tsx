@@ -6,24 +6,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, CONTACT, type Lang, TRIAL, UI } from '@/site/kit/content'
+import { ACADEMY, CONTACT, TRIAL, UI } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { useSite } from '@/site/kit/site'
 import { CallError, callFunction } from '@/site/rest'
 import { BookButton, Container, btnInk, btnOutline } from '../components/bits'
 import { DIRECTIONS_URL, HoursTable, MapEmbed, PageHero, instagramHandle } from '../components/blocks'
-import { Field, Segmented, inputClass, selectTriggerClass } from '../components/fields'
+import { Field, inputClass, selectTriggerClass } from '../components/fields'
 import { T } from '../i18n'
 
 type Key = 'name' | 'email' | 'phone' | 'student' | 'topic' | 'message'
 
 
 export function Contact() {
-  const { t, lang, query } = useSite()
+  const { t, query } = useSite()
   const wanted = new URLSearchParams(query).get('topic')
   const form = useRef<HTMLFormElement>(null)
   const [v, setV] = useState<Record<Key, string>>({ name: '', email: '', phone: '', student: '', topic: CONTACT.topics.some((x) => x.id === wanted) ? (wanted as string) : '', message: '' })
-  const [reply, setReply] = useState<Lang>(lang)
   const [errors, setErrors] = useState<Partial<Record<Key, 'required' | 'email'>>>({})
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed' | 'limited'>('idle')
   // The field people never see: only bots fill it in.
@@ -49,7 +48,7 @@ export function Contact() {
       return
     }
     setState('sending')
-    const input: WebsiteMessageInput = { kind: 'contact', lang: reply, name: v.name, email: v.email, phone: v.phone, topic: v.topic, student: v.student, message: v.message, website }
+    const input: WebsiteMessageInput = { kind: 'contact', name: v.name, email: v.email, phone: v.phone, topic: v.topic, student: v.student, message: v.message, website }
     try {
       await callFunction('websiteMessage', input)
       setState('sent')
@@ -128,19 +127,6 @@ export function Contact() {
                       className="min-h-36 rounded-xl border-line bg-white px-3.5 py-3 text-[15px] md:text-[15px] focus-visible:border-ink focus-visible:ring-ink/10 aria-invalid:border-red-text"
                     />
                   </Field>
-                  <div className="grid gap-1.5 sm:col-span-2">
-                    <span className="text-[13px] font-medium text-ink">{t(CONTACT.fields.language)}</span>
-                    <Segmented
-                      label={t(CONTACT.fields.language)}
-                      value={reply}
-                      onChange={setReply}
-                      options={[
-                        { value: 'en', label: 'English' },
-                        { value: 'ko', label: '한국어' },
-                      ]}
-                      className="w-full sm:w-72"
-                    />
-                  </div>
                 </div>
                 {/* People never see this field; bots fill it in, and the server drops what they send. */}
                 <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">

@@ -1,4 +1,3 @@
-import type { Lang } from "@shared/i18n";
 import { OAuthProvider, reauthenticateWithCredential, revokeToken, signInWithCredential, updateProfile } from "@react-native-firebase/auth";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
@@ -40,12 +39,10 @@ async function appleCredential() {
  * What to say when Apple's own sign-in didn't finish (its errors are `ERR_…`; closing the sheet isn't one): mostly a
  * phone not signed in to an Apple Account. Null for any other error (Firebase's, said by `authErrorMessage`).
  */
-export function appleProblem(e: unknown, lang: Lang = "en"): string | null {
+export function appleProblem(e: unknown): string | null {
   const code = (e as { code?: unknown } | null)?.code;
   if (typeof code !== "string" || !code.startsWith("ERR_")) return null;
-  return lang === "ko"
-    ? "Apple 로그인을 마치지 못했어요. 이 iPhone이 Apple 계정에 로그인돼 있는지 설정에서 확인하거나, 다른 방법으로 로그인해 주세요."
-    : "Sign in with Apple didn’t finish. Check that this phone is signed in to an Apple Account (Settings), or use another way to sign in.";
+  return "Sign in with Apple didn’t finish. Check that this phone is signed in to an Apple Account (Settings), or use another way to sign in.";
 }
 
 /** Signs in (or makes the account) with Apple. False when the person closed Apple's sheet. */

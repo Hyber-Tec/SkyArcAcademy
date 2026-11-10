@@ -7,7 +7,7 @@ import { SkyArcReticle } from '@/components/app/SkyArcMark'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { type SitePost, usePhotoById, usePlaceShown, useSiteData } from '@/site/data'
-import { ACADEMY, FAQ, type FaqItem, type Lang, NEWS, UI, keepWhole } from '@/site/kit/content'
+import { ACADEMY, FAQ, type FaqItem, NEWS, UI, keepWhole } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { Photo, PlacePhoto } from '@/site/kit/Photo'
 import { useSite } from '@/site/kit/site'
@@ -18,12 +18,9 @@ import { Container, Kicker } from './bits'
 /** The academy's time zone, for dates and "today" (Settings → Academy has the same). */
 export const ACADEMY_TZ = 'America/New_York'
 
-export function formatDate(ms: number, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'ko' ? 'ko-KR' : 'en-US', { timeZone: ACADEMY_TZ, year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(ms))
+export function formatDate(ms: number): string {
+  return new Intl.DateTimeFormat('en-US', { timeZone: ACADEMY_TZ, year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(ms))
 }
-
-/** The academy's words from the CRM are in English: say so to screen readers and translators on Korean pages. */
-export const crmLang = 'en'
 
 /** "@arc_10.9" from "https://www.instagram.com/arc_10.9/". */
 export function instagramHandle(url: string): string {
@@ -47,7 +44,7 @@ export function BrandCover({ label, className }: { label: string; className?: st
 }
 
 export function NewsCard({ post, className, large = false }: { post: SitePost; className?: string; large?: boolean }) {
-  const { t, lang, href } = useSite()
+  const { t, href } = useSite()
   return (
     <article className={cn('group relative flex flex-col overflow-hidden rounded-[26px] border border-line bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift', large && 'lg:flex-row', className)}>
       <div className={cn('relative shrink-0 overflow-hidden bg-ink', large ? 'aspect-[16/9] lg:aspect-auto lg:min-h-[380px] lg:w-[58%]' : 'aspect-[16/10]')}>
@@ -69,15 +66,15 @@ export function NewsCard({ post, className, large = false }: { post: SitePost; c
         <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
           <span className="rounded-full bg-warm-2 px-2.5 py-1 font-medium text-ink">{t(NEWS.categories[post.category])}</span>
           <time className="text-stone" dateTime={new Date(post.publishedAt).toISOString()}>
-            {formatDate(post.publishedAt, lang)}
+            {formatDate(post.publishedAt)}
           </time>
         </div>
-        <h3 lang={crmLang} className={cn('mt-3 font-semibold tracking-tight text-ink', large ? 'text-[24px] leading-tight sm:text-[28px]' : 'text-[19px] leading-snug')}>
+        <h3 className={cn('mt-3 font-semibold tracking-tight text-ink', large ? 'text-[24px] leading-tight sm:text-[28px]' : 'text-[19px] leading-snug')}>
           <a href={href(`news/${post.slug}`)} className="after:absolute after:inset-0 after:rounded-[26px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ink/30">
             {post.title}
           </a>
         </h3>
-        <p lang={crmLang} className="mt-2 line-clamp-3 text-[14.5px] leading-relaxed text-stone">
+        <p className="mt-2 line-clamp-3 text-[14.5px] leading-relaxed text-stone">
           {post.excerpt}
         </p>
         <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-[14px] font-semibold text-ink">
@@ -125,7 +122,7 @@ export function FocusChips({ focus, className }: { focus: string; className?: st
     .map((x) => x.trim())
     .filter(Boolean)
   return (
-    <ul className={cn('flex flex-wrap gap-1.5', className)} lang={crmLang}>
+    <ul className={cn('flex flex-wrap gap-1.5', className)}>
       {parts.map((x) => (
         <li key={x} className="rounded-full bg-warm-2 px-2.5 py-1 text-[12.5px] leading-snug font-medium whitespace-nowrap text-ink/80">
           {x}
@@ -145,7 +142,7 @@ export function CoachCard({ person, index = 0, framed = false }: { person: Websi
       {/* Phones: the portrait beside the words; wider screens: above them. */}
       <article className="flex h-full gap-4 rounded-[26px] border border-line bg-white p-2.5 shadow-soft sm:flex-col sm:gap-0">
         <CoachPortrait person={person} compact initials={framed} className="aspect-[4/5] w-28 shrink-0 self-start rounded-[20px] sm:w-auto sm:self-stretch" />
-        <div className={cn('flex min-w-0 flex-1 flex-col py-1 pr-1 sm:px-3 sm:pt-4 sm:pb-3', !portrait && 'pt-2.5 pl-2.5 sm:pt-3')} lang={crmLang}>
+        <div className={cn('flex min-w-0 flex-1 flex-col py-1 pr-1 sm:px-3 sm:pt-4 sm:pb-3', !portrait && 'pt-2.5 pl-2.5 sm:pt-3')}>
           <h3 className="text-[19px] font-semibold tracking-tight text-ink sm:text-[21px]">{person.name}</h3>
           <p className="mt-0.5 text-[14px] text-balance text-stone sm:min-h-[2lh]">{person.role}</p>
           <ul className="mt-3 space-y-2 text-[13.5px] leading-snug text-ink/80 sm:mt-4">
@@ -167,7 +164,7 @@ export function CoachCard({ person, index = 0, framed = false }: { person: Websi
         <DialogContent className="max-h-[88dvh] overflow-y-auto rounded-[26px] p-0 sm:max-w-lg">
           <div className="flex items-center gap-4 border-b border-line p-6 pr-14">
             <CoachPortrait person={person} compact initials={framed} className="size-16 shrink-0 rounded-2xl" />
-            <div lang={crmLang}>
+            <div>
               <DialogTitle className="text-[22px] font-semibold tracking-tight text-ink">{person.name}</DialogTitle>
               <DialogDescription className="text-[14px] text-stone">{person.role}</DialogDescription>
             </div>
@@ -175,7 +172,7 @@ export function CoachCard({ person, index = 0, framed = false }: { person: Websi
           <div className="p-6 pt-5">
             {person.focus ? <FocusChips focus={person.focus} /> : null}
             <h4 className="mt-5 text-[12px] font-semibold tracking-[0.14em] text-stone uppercase">{t(T.allCredentials)}</h4>
-            <ul className="mt-3 space-y-2.5 text-[14.5px] leading-snug text-ink" lang={crmLang}>
+            <ul className="mt-3 space-y-2.5 text-[14.5px] leading-snug text-ink">
               {person.credentials.map((c) => (
                 <li key={c} className="flex gap-2.5">
                   <LuCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -207,10 +204,10 @@ export function FaqList({ items = FAQ, columns = 2, className }: { items?: FaqIt
       {groups.map((g, gi) => (
         <Accordion key={gi} type="single" collapsible className="w-full">
           {g.map((f, i) => (
-            <AccordionItem key={f.q.en} value={`${gi}-${i}`} className="border-ink/10">
+            <AccordionItem key={f.q} value={`${gi}-${i}`} className="border-ink/10">
               <AccordionTrigger className="min-h-14 py-5 text-[16.5px] font-semibold text-ink hover:no-underline [&>svg]:size-5 [&>svg]:text-ink">{t(f.q)}</AccordionTrigger>
               <AccordionContent className="pr-8 text-[15px] leading-relaxed text-stone">
-                {f.hours && content.hours.length ? <p lang={crmLang}>{hoursSentence(content.hours)}</p> : <p>{t(f.a)}</p>}
+                {f.hours && content.hours.length ? <p>{hoursSentence(content.hours)}</p> : <p>{t(f.a)}</p>}
               </AccordionContent>
             </AccordionItem>
           ))}
@@ -224,19 +221,18 @@ export function FaqList({ items = FAQ, columns = 2, className }: { items?: FaqIt
 
 /** The hours the Website page sets, with today marked (in the academy's time zone). */
 export function HoursTable({ className, compact = false }: { className?: string; compact?: boolean }) {
-  const { lang } = useSite()
   const { content } = useSiteData()
   const today = weekdayIn(ACADEMY_TZ)
   if (content.hours.length === 0) return null
   return (
-    <dl className={cn('divide-y divide-line', className)} lang={crmLang}>
+    <dl className={cn('divide-y divide-line', className)}>
       {content.hours.map((h) => (
         <div key={h.id} className={cn('flex items-baseline justify-between gap-4', compact ? 'py-2' : 'py-3')}>
           <dt className="flex items-center gap-2 text-[14.5px] text-ink">
             {keepWhole(h.days)}
             {weekdaysOf(h.days).includes(today) ? (
-              <span lang={lang} className="rounded-full bg-ink px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-white uppercase">
-                {lang === 'ko' ? '오늘' : 'Today'}
+              <span className="rounded-full bg-ink px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-white uppercase">
+                Today
               </span>
             ) : null}
           </dt>
@@ -372,13 +368,10 @@ export function PageHero({
   focus,
   children,
   aside,
-  textLang,
 }: {
   kicker: string
   title: string
   text: string
-  /** The lead's language, when it isn't the page's. */
-  textLang?: string
   photo?: WebsitePlace
   focus?: string
   children?: ReactNode
@@ -393,7 +386,7 @@ export function PageHero({
           <h1 id="page-title" className="mt-5 text-[42px] leading-[1] font-semibold tracking-[-0.04em] text-balance text-ink sm:text-[56px] lg:text-[64px]">
             {title}
           </h1>
-          <p lang={textLang} className="mt-5 max-w-xl text-[17px] leading-relaxed text-pretty text-stone sm:text-[19px]">{text}</p>
+          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-pretty text-stone sm:text-[19px]">{text}</p>
           {children}
         </Reveal>
         {photo && shown ? (

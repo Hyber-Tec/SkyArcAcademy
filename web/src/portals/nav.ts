@@ -13,15 +13,12 @@ import {
   LuUsers,
   LuWallet,
 } from 'react-icons/lu'
-import type { Lang } from '@shared/i18n'
 import type { Portal, RestrictablePage } from '@shared/roles'
 import { DriveIcon } from '@/components/app/DriveIcon'
 
 export interface NavLeaf {
   key: string
   label: string
-  /** The label in Korean, for a parent reading Korean (docs/DECISIONS.md §36). */
-  ko?: string
   /** Relative to the portal root, e.g. "employees/payroll". */
   to: string
   icon?: IconType
@@ -33,7 +30,6 @@ export interface NavLeaf {
 export interface NavGroup {
   key: string
   label: string
-  ko?: string
   icon: IconType
   children: NavLeaf[]
 }
@@ -115,19 +111,19 @@ export const COACH_NAV: PortalNav = {
  */
 export const FAMILY_NAV: PortalNav = {
   main: [
-    { key: 'home', label: 'Home', ko: '홈', to: 'home', icon: LuHouse },
-    { key: 'classes', label: 'Classes', ko: '수업', to: 'classes', icon: LuCalendarDays },
-    { key: 'scores', label: 'Scores', ko: '점수', to: 'scores', icon: LuTarget },
-    { key: 'reports', label: 'Reports', ko: '리포트', to: 'reports', icon: LuChartLine },
-    { key: 'news', label: 'News', ko: '소식', to: 'news', icon: LuMegaphone },
+    { key: 'home', label: 'Home', to: 'home', icon: LuHouse },
+    { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
+    { key: 'news', label: 'News', to: 'news', icon: LuMegaphone },
   ],
-  secondary: [{ key: 'profile', label: 'Profile', ko: '프로필', to: 'profile', icon: LuCircleUserRound }],
+  secondary: [{ key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound }],
   mobileTabs: [
-    { key: 'home', label: 'Home', ko: '홈', to: 'home', icon: LuHouse, alsoActive: ['news'] },
-    { key: 'classes', label: 'Classes', ko: '수업', to: 'classes', icon: LuCalendarDays },
-    { key: 'scores', label: 'Scores', ko: '점수', to: 'scores', icon: LuTarget },
-    { key: 'reports', label: 'Reports', ko: '리포트', to: 'reports', icon: LuChartLine },
-    { key: 'profile', label: 'Profile', ko: '프로필', to: 'profile', icon: LuCircleUserRound },
+    { key: 'home', label: 'Home', to: 'home', icon: LuHouse, alsoActive: ['news'] },
+    { key: 'classes', label: 'Classes', to: 'classes', icon: LuCalendarDays },
+    { key: 'scores', label: 'Scores', to: 'scores', icon: LuTarget },
+    { key: 'reports', label: 'Reports', to: 'reports', icon: LuChartLine },
+    { key: 'profile', label: 'Profile', to: 'profile', icon: LuCircleUserRound },
   ],
 }
 
@@ -137,9 +133,6 @@ export const PORTAL_NAV: Record<Portal, PortalNav> = {
   parent: FAMILY_NAV,
   student: FAMILY_NAV,
 }
-
-/** An entry's label in the page's language (the Korean only where it has one: the families' portal). */
-export const navLabel = (item: { label: string; ko?: string }, lang: Lang): string => (lang === 'ko' && item.ko ? item.ko : item.label)
 
 /** Flattened leaves, for page titles and access checks. */
 export function navLeaves(nav: PortalNav): NavLeaf[] {

@@ -110,7 +110,7 @@ service cloud.firestore {
         allow create, update: if signedIn() && uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['token', 'email', 'platform', 'appVersion', 'label', 'lang', 'createdAt', 'updatedAt'])
           && request.resource.data.email == emailKey()
-          // The language of its notifications (docs/DECISIONS.md §36).
+          // `lang`: phone app 1.1 and older still save their phone's language; nothing reads it (docs/DECISIONS.md §42).
           && (!('lang' in request.resource.data) || request.resource.data.lang in ['en', 'ko'])
           && request.resource.data.token is string
           && request.resource.data.token.size() > 0

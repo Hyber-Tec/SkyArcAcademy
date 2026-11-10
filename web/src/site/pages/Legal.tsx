@@ -3,7 +3,7 @@ import { LuArrowRight, LuMail, LuPhone } from 'react-icons/lu'
 import { APP_DOMAIN, COMPANY_NAME } from '@shared/brand'
 import type { DateKey } from '@shared/time'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, type L, type Lang, l } from '@/site/kit/content'
+import { ACADEMY } from '@/site/kit/content'
 import { Reveal } from '@/site/kit/motion'
 import { A, useSite } from '@/site/kit/site'
 import { Container } from '../components/bits'
@@ -14,35 +14,29 @@ import { PageHero } from '../components/blocks'
  * and the Support URL; the phone app opens them too). The policy is the academy's, approved by it on 2026-10-20 (the
  * owner), and updated on 2026-11-03 for accounts made in the app, Sign in with Apple and the enrollment contract
  * (docs/DECISIONS.md §31), on 2026-11-04 for the details a family fills in on the contract (§33), and on 2026-11-05 for
- * the discounts the office sets and the signed copy emailed to whoever signs (§34, §35); its English is the text in
- * force, so the Korean page shows it in English under a note. Help
- * is translated like the rest of the site (a draft the owner reviews). The academy's email and phone come from
- * Settings → Academy.
+ * the discounts the office sets and the signed copy emailed to whoever signs (§34, §35), and on 2026-11-10 when the
+ * website and the app became English only (§42: the trial form no longer asks which language to reply in). The
+ * academy's email and phone come from Settings → Academy.
  */
-const UPDATED: DateKey = '2026-11-05'
+const UPDATED: DateKey = '2026-11-10'
 const EFFECTIVE: DateKey = '2026-10-20'
 
 const TEXT = {
-  privacyKicker: l('Privacy', '개인정보'),
-  privacyTitle: l('Privacy Policy', '개인정보 처리방침'),
-  inEffect: l('In effect from', '시행일'),
-  updated: l('Last updated', '최종 수정일'),
-  englishOnly: l('', '개인정보 처리방침은 영어 원문으로 제공하며, 효력도 영어 원문을 따릅니다.'),
-  termsKicker: l('Terms', '약관'),
-  termsTitle: l('Terms of Service', '이용약관'),
-  termsEnglishOnly: l('', '이용약관은 영어 원문으로 제공하며, 효력도 영어 원문을 따릅니다.'),
-  contents: l('On this page', '목차'),
-  message: l('Send a message from the website', '웹사이트에서 메시지 보내기'),
-  helpKicker: l('Help', '도움말'),
-  helpTitle: l('How can we help?', '무엇을 도와드릴까요?'),
-  helpLead: l(
-    'The website and Sky Arc, the academy’s phone app: whom to ask about what, signing in, and your account.',
-    '웹사이트와 아카데미 앱 Sky Arc 이용 안내예요. 누구에게 무엇을 물어보면 되는지, 로그인하는 법, 계정 관리까지 알려 드려요.',
-  ),
+  privacyKicker: 'Privacy',
+  privacyTitle: 'Privacy Policy',
+  inEffect: 'In effect from',
+  updated: 'Last updated',
+  termsKicker: 'Terms',
+  termsTitle: 'Terms of Service',
+  contents: 'On this page',
+  message: 'Send a message from the website',
+  helpKicker: 'Help',
+  helpTitle: 'How can we help?',
+  helpLead: 'The website and Sky Arc, the academy’s phone app: whom to ask about what, signing in, and your account.',
 }
 
-const dateIn = (key: DateKey, lang: Lang) =>
-  new Intl.DateTimeFormat(lang === 'ko' ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`))
+const dateIn = (key: DateKey) =>
+  new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`))
 
 interface Section {
   id: string
@@ -53,7 +47,7 @@ interface Section {
 const link = 'font-medium text-ink underline decoration-ink/30 underline-offset-[3px] transition hover:decoration-ink'
 
 /** A page to read: its sections with a list of them beside on wide screens, in the site's type. */
-function Document({ sections, lang: textLang }: { sections: Section[]; lang?: Lang }) {
+function Document({ sections }: { sections: Section[] }) {
   const { t } = useSite()
   return (
     <section className="py-14 sm:py-20">
@@ -64,7 +58,7 @@ function Document({ sections, lang: textLang }: { sections: Section[]; lang?: La
             <ol className="mt-4 grid gap-1 border-l border-line">
               {sections.map((s) => (
                 <li key={s.id}>
-                  <a href={`#${s.id}`} lang={textLang} className="-ml-px block border-l border-transparent py-1.5 pl-4 text-[14px] leading-snug text-stone transition hover:border-ink hover:text-ink">
+                  <a href={`#${s.id}`} className="-ml-px block border-l border-transparent py-1.5 pl-4 text-[14px] leading-snug text-stone transition hover:border-ink hover:text-ink">
                     {s.title}
                   </a>
                 </li>
@@ -72,7 +66,7 @@ function Document({ sections, lang: textLang }: { sections: Section[]; lang?: La
             </ol>
           </div>
         </nav>
-        <article lang={textLang} className="max-w-[720px] text-[16px] leading-[1.75] text-ink/85">
+        <article className="max-w-[720px] text-[16px] leading-[1.75] text-ink/85">
           {sections.map((s, i) => (
             <Reveal key={s.id} delay={i === 0 ? 0 : 0.02}>
               <section id={s.id} aria-labelledby={`${s.id}-title`} className="border-t border-line py-9 first:border-t-0 first:pt-0">
@@ -135,17 +129,17 @@ function ContactWays() {
 
 /** When a page's text took effect, and when it last changed (none yet: `updated` null). */
 function Dates({ effective = EFFECTIVE, updated = UPDATED }: { effective?: DateKey; updated?: DateKey | null }) {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   return (
     <p className="mt-6 text-[14px] text-stone">
-      {t(TEXT.inEffect)} {dateIn(effective, lang)}
-      {updated ? ` · ${t(TEXT.updated)} ${dateIn(updated, lang)}` : null}
+      {t(TEXT.inEffect)} {dateIn(effective)}
+      {updated ? ` · ${t(TEXT.updated)} ${dateIn(updated)}` : null}
     </p>
   )
 }
 
 export function Privacy() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { name } = useSiteData()
   const academy = name ?? ACADEMY.name
   const sections: Section[] = [
@@ -181,7 +175,7 @@ export function Privacy() {
             </>,
             <>
               <strong>Requests and questions sent from this website.</strong> When you ask for a trial or send us a question: your name, email address and phone number,
-              the student’s name, grade and experience, the days that suit you, the language you’d like our reply in, and your message. We use them to answer you and
+              the student’s name, grade and experience, the days that suit you, and your message. We use them to answer you and
               arrange the trial. To stop the forms being misused, we count requests by a scrambled form of the sender’s network address and email address.
             </>,
             <>
@@ -329,12 +323,10 @@ export function Privacy() {
         kicker={t(TEXT.privacyKicker)}
         title={t(TEXT.privacyTitle)}
         text={`${academy} (“the academy”, “we”) uses this website, at ${APP_DOMAIN}, and its phone app, Sky Arc, to schedule classes, keep attendance, record students’ results, pay its coaches and share students’ progress with their families. This policy explains what information we keep, why we keep it, who can see it and the choices you have.`}
-        textLang="en"
       >
         <Dates />
-        {lang === 'ko' ? <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-[14.5px] text-ink/80 shadow-soft">{t(TEXT.englishOnly)}</p> : null}
       </PageHero>
-      <Document sections={sections} lang="en" />
+      <Document sections={sections} />
     </>
   )
 }
@@ -342,13 +334,14 @@ export function Privacy() {
 /**
  * The terms of service, from the academy's earlier website's (in effect from 2026-08-27), rewritten for the website and
  * the phone app as they are now: accounts, the enrollment contract, families' requests, students' records and the
- * app's notices (Goo, 2026-11-07: docs/TODO.md). Like the privacy policy, its English is the text in force, so the
- * Korean page shows it in English under a note. `TERMS_EFFECTIVE` is the day they went live.
+ * app's notices (Goo, 2026-11-07: docs/TODO.md). `TERMS_EFFECTIVE` is the day they went live; `TERMS_UPDATED` the
+ * last change (2026-11-10: the contract has no Korean translation any more, §42).
  */
 const TERMS_EFFECTIVE: DateKey = '2026-11-08'
+const TERMS_UPDATED: DateKey = '2026-11-10'
 
 export function Terms() {
-  const { t, lang } = useSite()
+  const { t } = useSite()
   const { name } = useSiteData()
   const academy = name ?? ACADEMY.name
   const privacy = (
@@ -434,8 +427,7 @@ export function Terms() {
       body: (
         <p>
           Before using the app, a parent or guardian signs the academy’s enrollment contract for each child, in the app, on this website or from a link the academy
-          sends. The contract covers enrollment, tuition, training and the range; these Terms cover using the services. Where the two differ, the contract governs. The
-          contract’s English text is the one in force; its Korean translation is there to help families read it.
+          sends. The contract covers enrollment, tuition, training and the range; these Terms cover using the services. Where the two differ, the contract governs.
         </p>
       ),
     },
@@ -627,65 +619,45 @@ export function Terms() {
         kicker={t(TEXT.termsKicker)}
         title={t(TEXT.termsTitle)}
         text={`${academy} (“the academy”, “we”) runs this website, at ${APP_DOMAIN}, and its phone app, Sky Arc, for its families, students and staff. These are the rules for using them, beside our privacy policy and, for training at the academy, the enrollment contract.`}
-        textLang="en"
       >
-        <Dates effective={TERMS_EFFECTIVE} updated={null} />
-        {lang === 'ko' ? <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-[14.5px] text-ink/80 shadow-soft">{t(TEXT.termsEnglishOnly)}</p> : null}
+        <Dates effective={TERMS_EFFECTIVE} updated={TERMS_UPDATED} />
       </PageHero>
-      <Document sections={sections} lang="en" />
+      <Document sections={sections} />
     </>
   )
 }
 
 const HELP = {
   ask: {
-    title: l('Classes, your account, a student’s records', '수업, 계정, 학생 기록'),
-    text: l('The academy runs all of it, so ask the academy:', '모두 아카데미에서 관리해요. 아카데미에 문의해 주세요:'),
+    title: 'Classes, your account, a student’s records',
+    text: 'The academy runs all of it, so ask the academy:',
   },
   signIn: {
-    title: l('Signing in', '로그인'),
+    title: 'Signing in',
     items: [
-      l(
-        'Make your account, or sign in, with the email you gave the academy, with Google, Apple (on an iPhone) or a password: a parent or student whose email is on the academy’s records gets in right away.',
-        '아카데미에 알려 주신 이메일로 계정을 만들거나 로그인하세요. Google, Apple(iPhone), 비밀번호 중 편한 방법을 쓰면 돼요. 아카데미 기록에 이메일이 있는 학부모와 학생은 바로 들어갈 수 있어요.',
-      ),
-      l('Forgot your password?', '비밀번호를 잊으셨나요?'),
-      l(
-        '“This email isn’t on the academy’s records” means no student’s record has the email you signed in with: tap “Ask the academy”, or sign in with the email you gave it.',
-        '로그인했는데 아카데미 기록에 없는 이메일이라고 나오면, 그 이메일이 어느 학생 기록에도 없다는 뜻이에요. 화면에서 아카데미에 문의하거나, 아카데미에 알려 주신 이메일로 다시 로그인하세요.',
-      ),
-      l(
-        'A password account opens once its email is confirmed: look for the email from the academy, or ask for a new one from the sign-in page.',
-        '비밀번호로 만든 계정은 이메일 인증을 마쳐야 열려요. 아카데미에서 보낸 메일을 확인하거나, 로그인 화면에서 인증 메일을 다시 요청하세요.',
-      ),
-      l(
-        'Before using the app, a parent signs the academy’s enrollment contract for each child, in the app or on this website. One parent’s signature is enough.',
-        '앱을 쓰기 전에 학부모가 자녀마다 아카데미 등록 계약서에 서명해요. 앱이나 이 웹사이트에서 할 수 있고, 부모님 중 한 분만 서명하면 돼요.',
-      ),
+      'Make your account, or sign in, with the email you gave the academy, with Google, Apple (on an iPhone) or a password: a parent or student whose email is on the academy’s records gets in right away.',
+      'Forgot your password?',
+      '“This email isn’t on the academy’s records” means no student’s record has the email you signed in with: tap “Ask the academy”, or sign in with the email you gave it.',
+      'A password account opens once its email is confirmed: look for the email from the academy, or ask for a new one from the sign-in page.',
+      'Before using the app, a parent signs the academy’s enrollment contract for each child, in the app or on this website. One parent’s signature is enough.',
     ],
-    reset: l('Choose a new one', '새 비밀번호 만들기'),
+    reset: 'Choose a new one',
   },
   delete: {
-    title: l('Deleting your account', '계정 삭제'),
-    text: l(
-      'In the phone app: More → Delete my account. Or ask the academy, using the contact details above. What’s deleted and what the academy keeps is in the',
-      '앱에서는 더보기 → 계정 삭제에서 할 수 있어요. 위 연락처로 아카데미에 요청해도 돼요. 무엇이 삭제되고 아카데미가 무엇을 보관하는지는',
-    ),
-    policy: l('privacy policy', '개인정보 처리방침'),
-    after: l('.', '에 나와 있어요.'),
+    title: 'Deleting your account',
+    text: 'In the phone app: More → Delete my account. Or ask the academy, using the contact details above. What’s deleted and what the academy keeps is in the',
+    policy: 'privacy policy',
+    after: '.',
   },
   problem: {
-    title: l('A problem with the website or the app', '웹사이트나 앱에 문제가 있을 때'),
-    text: l(
-      'Something doesn’t work, or looks wrong? Tell the academy, using the contact details above: say what you were doing, on which phone or browser, and what happened.',
-      '안 되는 기능이나 이상해 보이는 화면이 있나요? 위 연락처로 아카데미에 알려 주세요. 무엇을 하던 중이었는지, 어떤 휴대폰이나 브라우저였는지, 어떤 일이 있었는지 같이 적어 주시면 좋아요.',
-    ),
+    title: 'A problem with the website or the app',
+    text: 'Something doesn’t work, or looks wrong? Tell the academy, using the contact details above: say what you were doing, on which phone or browser, and what happened.',
   },
 }
 
 export function Help() {
   const { t } = useSite()
-  const tr = (x: L) => t(x)
+  const tr = (x: string) => t(x)
   const sections: Section[] = [
     {
       id: 'ask',

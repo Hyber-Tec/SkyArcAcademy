@@ -2,7 +2,6 @@ import { doc } from 'firebase/firestore'
 import { Fragment, createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ACADEMY_ID, DEMO_ACADEMY_ID, showsDemo } from '@shared/academy'
 import { ACADEMY_NAME } from '@shared/brand'
-import { type Lang, pick } from '@shared/i18n'
 import { COL, ROOT } from '@shared/paths'
 import { type Portal, type RestrictablePage, type Role, isAdminRole, portalOf } from '@shared/roles'
 import { type BusinessRules, resolveBusinessRules } from '@shared/settings/businessRules'
@@ -15,8 +14,6 @@ import { NoBranchAccess } from './NoBranchAccess'
 import type { Actor } from '@/lib/audit'
 import { db } from '@/lib/firebase'
 import { useDoc } from '@/lib/firestore'
-import { useLang } from '@/lib/lang'
-
 /**
  * What an owner or admin is previewing ("View the app as"). It only changes what is shown: their access, and the
  * actor recorded in the audit log, stay their own.
@@ -85,9 +82,6 @@ function loadViewAs(): ViewAs | null {
 
 export function BranchProvider({ children }: { children: ReactNode }) {
   const { user, email, ready, signOut } = useAuth()
-  // Before the role is known, the page's language (a staff member's Korean browser included).
-  const lang = useLang()
-
   // The person's own member docs (theirs to read even while paused) in the academy and the demo academy. A member of
   // both picks one in the account menu; a member of the demo academy alone sees it.
   const realMember = useDoc<Member>(email ? doc(db, ROOT.branches, ACADEMY_ID, COL.members, email) : null)
@@ -174,19 +168,19 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   // Until the account check is done, nothing here is known: never guess.
   if (!ready || branchState.loading || realMember.loading || demoMember.loading) return <FullPageSpinner />
   // A paused member can't read the academy's document, so this comes first.
-  if (memberState.data && memberState.data.status !== 'active') return paused(email, branchState.data?.name ?? ACADEMY_NAME, signOut, lang)
+  if (memberState.data && memberState.data.status !== 'active') return paused(email, branchState.data?.name ?? ACADEMY_NAME, signOut)
   if (!value) {
     if (branchState.error?.code === 'permission-denied' || !branchState.data) return <NoBranchAccess />
     return (
       <FullPageMessage
-        title={pick(lang, 'The academy couldn’t be loaded', '아카데미 정보를 불러오지 못했어요')}
-        description={pick(lang, 'Check your connection and try again.', '인터넷 연결을 확인하고 다시 시도해 주세요.')}
+        title="The academy couldn’t be loaded"
+        description="Check your connection and try again."
       />
     )
   }
   if (blocked === 'none') return <NoBranchAccess />
   if (blocked === 'paused') {
-    return paused(email, value.branch.name, signOut, lang)
+    return paused(email, value.branch.name, signOut)
   }
   // Switching academies starts every page afresh, so nothing from the other one stays on screen.
   return (
@@ -197,16 +191,12 @@ export function BranchProvider({ children }: { children: ReactNode }) {
 }
 
 /** The page a paused member sees (their access turned off by the academy). */
-function paused(email: string | null, name: string, onSignOut: () => Promise<void> | void, lang: Lang) {
+function paused(email: string | null, name: string, onSignOut: () => Promise<void> | void) {
   return (
     <FullPageMessage
-      title={pick(lang, 'Your access is paused', '이용이 일시 중지됐어요')}
-      description={pick(
-        lang,
-        `The account ${email ?? ''} is paused at ${name}. Ask the academy to restore your access; this page opens by itself once it does.`,
-        `${name}에서 ${email ?? ''} 계정의 이용을 잠시 중지했어요. 아카데미에 다시 열어 달라고 요청해 주세요. 다시 열리면 이 페이지가 자동으로 열려요.`,
-      )}
-      actions={[{ label: pick(lang, 'Use another account', '다른 계정 사용'), variant: 'outline', onClick: () => void onSignOut() }]}
+      title="Your access is paused"
+      description={`The account ${email ?? ''} is paused at ${name}. Ask the academy to restore your access; this page opens by itself once it does.`}
+      actions={[{ label: 'Use another account', variant: 'outline', onClick: () => void onSignOut() }]}
     />
   )
 }

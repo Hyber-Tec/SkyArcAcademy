@@ -67,7 +67,6 @@ export const onAnnouncementWritten = onDocumentWritten({ document: POST, ...LIGH
       title: updated ? 'News updated' : 'News from the academy',
       body: after.title || 'There’s news from the academy.',
       // A parent reading Korean (docs/DECISIONS.md §36); the post's own title stays as the academy wrote it.
-      ko: { title: updated ? '소식이 수정됐어요' : '아카데미 새 소식', body: after.title || '아카데미에 새 소식이 있어요.' },
     },
     (p) => `${p.role === 'student' ? 'student' : 'parent'}/news/${announcementId}`,
     { announcementId },

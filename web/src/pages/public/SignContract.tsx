@@ -6,17 +6,14 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '@shared/brand'
 import { pricedChoice } from '@shared/contracts/document'
 import { type ContractValues, type Prefill, emailFieldIds, prefillValues, presetValues } from '@shared/contracts/fill'
 import type { ContractLinkSignedResult, ContractSignRequest, ShownSigner } from '@shared/contracts/types'
-import { type Lang, dateText } from '@shared/i18n'
 import { formatPhone } from '@shared/people'
 import { dateKeyOf, formatInstant } from '@shared/time'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { useContractRead } from '@/features/contracts/contractLang'
-import { ContractLanguageNote } from '@/features/contracts/ContractLanguageNote'
+import { useContractDoc } from '@/features/contracts/contractDoc'
 import { type SignOutcome, ContractSigning } from '@/features/contracts/ContractSigning'
 import { pdfBytes, savePdf } from '@/features/contracts/pdf'
 import { functions } from '@/lib/firebase'
-import { useLang, useT } from '@/lib/lang'
 import { useNow } from '@/lib/useNow'
 import { Card, Shell } from './ContractFrame'
 
@@ -44,8 +41,7 @@ type Loaded =
       academy: Academy
       firstName: string
       studentName: string
-      /** `ko`: the academy's Korean translation of this version, when it has one (docs/DECISIONS.md §36). */
-      contract: { title: string; text: string; version: number; ko?: string | null }
+      contract: { title: string; text: string; version: number }
       preset: ContractValues
       academySigner: ShownSigner | null
       /** Whether signing emails the signer their copy (every academy but the demo one). */
@@ -61,11 +57,9 @@ type Loaded =
 const getContract = httpsCallable<{ token: string; copy?: boolean }, Loaded>(functions, 'getContractForSigning')
 const sign = httpsCallable<{ token: string } & ContractSignRequest, ContractLinkSignedResult>(functions, 'signContract')
 
-/** "November 27, 2026" or "2026년 11월 27일", in the academy's time zone. */
-const longDate = (ms: number, academy: Academy, lang: Lang = 'en') =>
-  lang === 'ko'
-    ? dateText(dateKeyOf(ms, academy.timezone || 'America/New_York'), 'long', 'ko')
-    : formatInstant(ms, academy.timezone || 'America/New_York', { month: 'long', day: 'numeric', year: 'numeric' })
+/** "November 27, 2026", in the academy's time zone. */
+const longDate = (ms: number, academy: Academy) =>
+  formatInstant(ms, academy.timezone || 'America/New_York', { month: 'long', day: 'numeric', year: 'numeric' })
 
 function Contact({ academy, lead }: { academy: Academy; lead: string }) {
   if (!academy.phone && !academy.email) return null
@@ -90,13 +84,12 @@ function Contact({ academy, lead }: { academy: Academy; lead: string }) {
 }
 
 function Notice({ title, children, academy, lead }: { title: string; children: React.ReactNode; academy: Academy | null; lead?: string }) {
-  const t = useT()
   return (
     <Shell>
       <Card>
         <h1 className="text-xl font-semibold tracking-tight text-balance">{title}</h1>
         <div className="mt-2 space-y-3 text-sm text-muted-foreground">{children}</div>
-        {academy ? <Contact academy={academy} lead={lead ?? t('Questions? Contact the academy:', '궁금한 점은 아카데미에 문의해 주세요.')} /> : null}
+        {academy ? <Contact academy={academy} lead={lead ?? 'Questions? Contact the academy:'} /> : null}
       </Card>
     </Shell>
   )
@@ -107,8 +100,6 @@ function CopyButton({ token, until, academy }: { token: string; until: number; a
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const now = useNow()
-  const lang = useLang()
-  const t = useT()
   if (now > until) return null
   const download = async () => {
     setBusy(true)
@@ -126,10 +117,10 @@ function CopyButton({ token, until, academy }: { token: string; until: number; a
   return (
     <div className="space-y-2">
       <Button className="w-full" onClick={() => void download()} disabled={busy}>
-        {busy ? <Spinner /> : <LuDownload />} {t('Download your signed copy', '서명한 계약서 다운로드')}
+        {busy ? <Spinner /> : <LuDownload />} Download your signed copy
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        {failed ? t('The download didn’t work. Please try again.', '다운로드하지 못했어요. 다시 시도해 주세요.') : t(`This download works until ${longDate(until, academy)}.`, `${longDate(until, academy, lang)}까지 다운로드할 수 있어요.`)}
+        {failed ? 'The download didn’t work. Please try again.' : `This download works until ${longDate(until, academy)}.`}
       </p>
     </div>
   )
@@ -137,17 +128,13 @@ function CopyButton({ token, until, academy }: { token: string; until: number; a
 
 /** The academy's app, where a family signed in with the email they gave the academy finds the signed contract too. */
 function GetTheApp() {
-  const t = useT()
   return (
     <div className="mt-5 space-y-3 rounded-xl border p-4 text-sm" data-testid="get-the-app">
       <p className="flex items-start gap-2 font-medium">
-        <LuSmartphone className="mt-0.5 size-4 shrink-0" aria-hidden /> {t('Get the app', '앱 받기')}
+        <LuSmartphone className="mt-0.5 size-4 shrink-0" aria-hidden /> Get the app
       </p>
       <p className="text-muted-foreground">
-        {t(
-          'Sign in with the email you gave the academy to see classes and scores. Your signed contract is there too.',
-          '아카데미에 등록한 이메일로 로그인하면 수업과 점수를 볼 수 있어요. 서명한 계약서도 앱에 있어요.',
-        )}
+        Sign in with the email you gave the academy to see classes and scores. Your signed contract is there too.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" size="sm" asChild>
@@ -167,21 +154,19 @@ function GetTheApp() {
 
 /** Opened from the request page of the academy's sign (`?from=request`): back to it, for a brother's or sister's. */
 function BackToRequests() {
-  const t = useT()
   return (
     <Button variant="outline" className="mt-5 w-full" asChild data-testid="back-to-requests">
-      <a href="/contract">{t('Back to your request', '요청 화면으로 돌아가기')}</a>
+      <a href="/contract">Back to your request</a>
     </Button>
   )
 }
 
 /** Opened from the phone app (`?from=app`, its in-app browser): once signed, back to the app rather than to the stores. */
 function BackToApp() {
-  const t = useT()
   return (
     <div className="mt-5 flex items-start gap-2 rounded-xl border p-4 text-sm" data-testid="back-to-app">
       <LuSmartphone className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <p className="text-muted-foreground">{t('You can close this page now and go back to the app.', '이제 이 화면을 닫고 앱으로 돌아가 주세요.')}</p>
+      <p className="text-muted-foreground">You can close this page now and go back to the app.</p>
     </div>
   )
 }
@@ -195,12 +180,9 @@ export function SignContractPage() {
   const [failure, setFailure] = useState<'busy' | 'network' | null>(null)
   const [signed, setSigned] = useState<Signed | null>(null)
   const [attempt, setAttempt] = useState(0)
-  const lang = useLang()
-  const t = useT()
-
   useEffect(() => {
-    document.title = lang === 'ko' ? '등록 계약서' : 'Enrollment contract'
-  }, [lang])
+    document.title = 'Enrollment contract'
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -218,30 +200,15 @@ export function SignContractPage() {
         <Card>
           <div className="flex flex-col items-center text-center">
             <LuCircleCheck className="size-10 text-emerald-600" aria-hidden />
-            <h1 className="mt-3 text-xl font-semibold tracking-tight">{t(`Thank you, ${signed.name.split(' ')[0]}`, `${signed.name.split(' ')[0]}님, 감사합니다`)}</h1>
+            <h1 className="mt-3 text-xl font-semibold tracking-tight">{`Thank you, ${signed.name.split(' ')[0]}`}</h1>
             <p className="mt-2 text-sm text-muted-foreground" data-testid="signed-copy-note">
-              {lang === 'ko' ? (
+              {loaded.firstName}’s enrollment contract is signed, and the academy has its copy.{' '}
+              {signed.emailedTo.length ? (
                 <>
-                  {loaded.firstName} 학생의 등록 계약서에 서명했어요. 아카데미가 계약서를 보관해요.{' '}
-                  {signed.emailedTo.length ? (
-                    <>
-                      내 사본은 <span className="font-medium [overflow-wrap:anywhere] text-foreground">{signed.emailedTo.join(', ')}</span> 주소로 보냈어요. 지금 다운로드할까요?
-                    </>
-                  ) : (
-                    '내 사본도 다운로드할까요?'
-                  )}
+                  We’ve emailed yours to <span className="font-medium [overflow-wrap:anywhere] text-foreground">{signed.emailedTo.join(', ')}</span>. Would you like to download it too?
                 </>
               ) : (
-                <>
-                  {loaded.firstName}’s enrollment contract is signed, and the academy has its copy.{' '}
-                  {signed.emailedTo.length ? (
-                    <>
-                      We’ve emailed yours to <span className="font-medium [overflow-wrap:anywhere] text-foreground">{signed.emailedTo.join(', ')}</span>. Would you like to download it too?
-                    </>
-                  ) : (
-                    'Would you like to download yours?'
-                  )}
-                </>
+                'Would you like to download yours?'
               )}
             </p>
           </div>
@@ -250,15 +217,15 @@ export function SignContractPage() {
           </div>
           {fromRequest ? <BackToRequests /> : null}
           {fromApp ? <BackToApp /> : <GetTheApp />}
-          <Contact academy={loaded.academy} lead={t('Questions? Contact the academy:', '궁금한 점은 아카데미에 문의해 주세요.')} />
+          <Contact academy={loaded.academy} lead="Questions? Contact the academy:" />
         </Card>
       </Shell>
     )
   }
   if (failure) {
     return (
-      <Notice title={failure === 'busy' ? t('Too many tries just now', '시도가 너무 많았어요') : t('The contract didn’t load', '계약서를 불러오지 못했어요')} academy={null}>
-        <p>{failure === 'busy' ? t('Please wait a few minutes, then try again.', '몇 분 뒤에 다시 시도해 주세요.') : t('Check your connection, then try again.', '인터넷 연결을 확인하고 다시 시도해 주세요.')}</p>
+      <Notice title={failure === 'busy' ? 'Too many tries just now' : 'The contract didn’t load'} academy={null}>
+        <p>{failure === 'busy' ? 'Please wait a few minutes, then try again.' : 'Check your connection, then try again.'}</p>
         <Button
           variant="outline"
           onClick={() => {
@@ -266,7 +233,7 @@ export function SignContractPage() {
             setAttempt((n) => n + 1)
           }}
         >
-          <LuRotateCw /> {t('Try again', '다시 시도')}
+          <LuRotateCw /> Try again
         </Button>
       </Notice>
     )
@@ -277,7 +244,7 @@ export function SignContractPage() {
         <Card>
           <div className="flex flex-col items-center gap-3 py-6 text-sm text-muted-foreground">
             <Spinner className="size-6" />
-            {t('Opening the contract…', '계약서를 여는 중…')}
+            Opening the contract…
           </div>
         </Card>
       </Shell>
@@ -286,29 +253,23 @@ export function SignContractPage() {
   switch (loaded.state) {
     case 'invalid':
       return (
-        <Notice title={t('This link doesn’t work', '열 수 없는 링크예요')} academy={loaded.academy} lead={t('Contact the academy:', '아카데미 연락처')}>
-          <p>{t('Check that you opened the whole link from the message. If it still doesn’t work, ask the academy for a new one.', '메시지의 링크 전체를 열었는지 확인해 주세요. 그래도 안 되면 아카데미에 새 링크를 요청해 주세요.')}</p>
+        <Notice title="This link doesn’t work" academy={loaded.academy} lead="Contact the academy:">
+          <p>Check that you opened the whole link from the message. If it still doesn’t work, ask the academy for a new one.</p>
         </Notice>
       )
     case 'canceled':
       return (
-        <Notice title={t('This contract was withdrawn', '철회된 계약서예요')} academy={loaded.academy} lead={t('Contact the academy:', '아카데미 연락처')}>
+        <Notice title="This contract was withdrawn" academy={loaded.academy} lead="Contact the academy:">
           <p>
-            {t(
-              `The academy withdrew this enrollment contract for ${loaded.firstName}, so it can’t be signed any more. If they changed it, they’ll send you the new one.`,
-              `아카데미가 ${loaded.firstName} 학생의 등록 계약서를 철회해서 더 이상 서명할 수 없어요. 계약서가 바뀌었다면 새 계약서를 보내 드려요.`,
-            )}
+            {`The academy withdrew this enrollment contract for ${loaded.firstName}, so it can’t be signed any more. If they changed it, they’ll send you the new one.`}
           </p>
         </Notice>
       )
     case 'signed':
       return (
-        <Notice title={t('This contract is already signed', '이미 서명한 계약서예요')} academy={loaded.academy}>
+        <Notice title="This contract is already signed" academy={loaded.academy}>
           <p>
-            {t(
-              `${loaded.signerName || 'Someone'} signed ${loaded.firstName}’s enrollment contract on ${longDate(loaded.signedAt, loaded.academy)}. A contract is signed only once.`,
-              `${longDate(loaded.signedAt, loaded.academy, 'ko')}에 ${loaded.signerName ? `${loaded.signerName}님이` : '보호자가'} ${loaded.firstName} 학생의 등록 계약서에 서명했어요. 계약서는 한 번만 서명할 수 있어요.`,
-            )}
+            {`${loaded.signerName || 'Someone'} signed ${loaded.firstName}’s enrollment contract on ${longDate(loaded.signedAt, loaded.academy)}. A contract is signed only once.`}
           </p>
           <CopyButton token={token} until={loaded.copyUntil} academy={loaded.academy} />
         </Notice>
@@ -323,11 +284,7 @@ type Signed = { name: string; copyUntil: number; emailedTo: string[] }
 
 function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<Loaded, { state: 'ready' }>; onSigned: (s: Signed) => void }) {
   const now = useNow()
-  const lang = useLang()
-  const t = useT()
-  // The family reads `read.doc` (Korean when translated); the values follow the English, which has the same IDs.
-  const read = useContractRead(lang, loaded.contract.text, loaded.contract.ko)
-  const doc = read.en
+  const doc = useContractDoc(loaded.contract.text)
   // What the family typed on the academy's sign fills it in (they can change it, all but the email: §39).
   const initial = useMemo(
     () => ({ ...prefillValues(doc, loaded.prefill ?? { studentName: loaded.studentName }), ...presetValues(doc, loaded.preset ?? {}) }),
@@ -346,28 +303,24 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
       const f = err as { code?: string; details?: { errors?: Record<string, string>; state?: string } }
       if (f.details?.errors) return { errors: f.details.errors }
       if (f.code === 'functions/failed-precondition' || f.code === 'functions/not-found')
-        return { problem: t('This contract can’t be signed any more. Reload the page to see why.', '이 계약서는 이제 서명할 수 없어요. 페이지를 새로고침하면 이유를 볼 수 있어요.') }
-      if (f.code === 'functions/resource-exhausted') return { problem: t('Too many tries just now. Please wait a few minutes, then sign again.', '시도가 너무 많았어요. 몇 분 뒤에 다시 서명해 주세요.') }
-      return { problem: t('The contract couldn’t be signed just now. Check your connection and try again.', '지금은 계약서에 서명하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.') }
+        return { problem: 'This contract can’t be signed any more. Reload the page to see why.' }
+      if (f.code === 'functions/resource-exhausted') return { problem: 'Too many tries just now. Please wait a few minutes, then sign again.' }
+      return { problem: 'The contract couldn’t be signed just now. Check your connection and try again.' }
     }
   }
 
   return (
     <Shell wide>
       <Card>
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">{t(`Enrollment contract for ${loaded.firstName}`, `${loaded.firstName} 학생 등록 계약서`)}</h1>
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">{`Enrollment contract for ${loaded.firstName}`}</h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          {t(
-            `${loaded.academy.name} sent you this contract. Please read it, check the program, fill it in and sign at the bottom of this page. It takes a few minutes.`,
-            `${loaded.academy.name}에서 이 계약서를 보냈어요. 계약서를 읽고 프로그램을 확인한 뒤, 빈칸을 채우고 이 페이지 맨 아래에 서명해 주세요. 몇 분이면 끝나요.`,
-          )}
+          {`${loaded.academy.name} sent you this contract. Please read it, check the program, fill it in and sign at the bottom of this page. It takes a few minutes.`}
         </p>
       </Card>
 
-      <ContractLanguageNote translated={read.translated} original={read.original} onOriginal={read.setOriginal} />
 
       <ContractSigning
-        doc={read.doc}
+        doc={doc}
         studentFirst={loaded.firstName}
         initial={initial}
         today={dateKeyOf(now, loaded.academy.timezone || 'America/New_York')}
@@ -376,22 +329,14 @@ function SignForm({ token, loaded, onSigned }: { token: string; loaded: Extract<
         academySigner={loaded.academySigner}
         locked={locked}
         note={
-          lang === 'ko' ? (
-            <>
-              서명하면 입력한 내용과 서명이 담긴 계약서 PDF가 만들어져요. 이름, 날짜와 시간, 인터넷 주소(IP), 브라우저를 기록한 페이지도 함께 들어가요.{' '}
-              {read.translated ? '영어 원문 뒤에는 읽은 한국어 번역도 들어가요. ' : ''}
-              아카데미가 보관하고, {loaded.emailsCopy ? '내 사본은 위에 적은 이메일 주소로 받고 다운로드할 수도 있어요.' : '내 사본은 다운로드할 수 있어요.'}
-            </>
-          ) : (
-            <>
-              Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The academy keeps it,{' '}
-              {loaded.emailsCopy ? 'and you get your copy by email, at the address you give above, and can download it.' : 'and you can download your copy.'}
-            </>
-          )
+          <>
+            Signing makes a PDF of this contract as you filled it in, with your signature and a page recording your name, the date and time, your internet address and your browser. The academy keeps it,{' '}
+            {loaded.emailsCopy ? 'and you get your copy by email, at the address you give above, and can download it.' : 'and you can download your copy.'}
+          </>
         }
       />
 
-      <Contact academy={loaded.academy} lead={t('Questions about the contract? Contact the academy:', '계약서가 궁금하면 아카데미에 문의해 주세요.')} />
+      <Contact academy={loaded.academy} lead="Questions about the contract? Contact the academy:" />
     </Shell>
   )
 }

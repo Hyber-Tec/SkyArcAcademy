@@ -105,7 +105,7 @@ describe('checkContractSigning', () => {
   it('asks for the signer’s name when the contract has no field for it, in English letters', () => {
     const plain = parseContract('# T\n[[sign: Signature]]').doc
     expect(checkContractSigning(plain, { relation: 'guardian', signature: PNG, agree: true })).toMatchObject({ ok: false, errors: { '@name': 'Type your first and last name.' } })
-    expect(checkContractSigning(plain, { name: '김 지우', relation: 'guardian', signature: PNG, agree: true })).toMatchObject({ ok: false, errors: { '@name': 'Type the name in English letters.' } })
+    expect(checkContractSigning(plain, { name: 'Мия Ким', relation: 'guardian', signature: PNG, agree: true })).toMatchObject({ ok: false, errors: { '@name': 'Type the name in English letters.' } })
     expect(checkContractSigning(plain, { name: 'José O’Neil-Smith Jr.', relation: 'guardian', signature: PNG, agree: true })).toMatchObject({ ok: true, value: { name: 'José O’Neil-Smith Jr.' } })
   })
 

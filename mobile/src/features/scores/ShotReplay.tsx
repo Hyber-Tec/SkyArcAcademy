@@ -9,7 +9,6 @@ import { StyleSheet, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { IconButton } from "@/components/IconButton";
 import { T } from "@/components/Text";
-import { useLang } from "@/lib/lang";
 import { space, useColors } from "@/theme";
 import { type PlayShot, evaluationShots } from "./playback";
 import { ChosenShot, MpiMark, RingNumbers, ShotDot, TargetFace, toPoints, useTargetFont } from "./Target";
@@ -49,9 +48,7 @@ export function ShotReplay({
 }) {
   const colors = useColors();
   const reduced = useReducedMotion();
-  const lang = useLang();
-  const ko = lang === "ko";
-  const shots = useMemo(() => given ?? (evaluation ? evaluationShots(evaluation, lang) : []), [given, evaluation, lang]);
+  const shots = useMemo(() => given ?? (evaluation ? evaluationShots(evaluation) : []), [given, evaluation]);
   const placed = useMemo(() => shots.filter((s): s is Placed => s.point !== null), [shots]);
   const count = shots.length;
   /** The shot shown as the newest (1…n); null shows them all. */
@@ -122,36 +119,21 @@ export function ShotReplay({
   };
 
   const readout = current
-    ? (ko
-        ? [
-            current.context,
-            `${current.of}발 중 ${current.number}번째`,
-            `${fmt(current, current.value)}${current.point ? "" : " (표적 위치 없음)"}`,
-            current.running !== null ? `누적 ${fmt(current, current.running)}` : null,
-          ]
-        : [
-            current.context,
-            `Shot ${current.number} of ${current.of}`,
-            `${fmt(current, current.value)}${current.point ? "" : " (no place on the target)"}`,
-            current.running !== null ? `total ${fmt(current, current.running)}` : null,
-          ]
-      )
+    ? [
+        current.context,
+        `Shot ${current.number} of ${current.of}`,
+        `${fmt(current, current.value)}${current.point ? "" : " (no place on the target)"}`,
+        current.running !== null ? `total ${fmt(current, current.running)}` : null,
+      ]
         .filter(Boolean)
         .join(" · ")
     : (caption ??
-      (ko
-        ? [`${count}발`, last.running !== null ? `총점 ${fmt(last, last.running)}` : null, placed.length < count ? `위치 없는 ${count - placed.length}발` : null]
-        : [`${count} shots`, last.running !== null ? `total ${fmt(last, last.running)}` : null, placed.length < count ? `${count - placed.length} without a place` : null]
-      )
+      [`${count} shots`, last.running !== null ? `total ${fmt(last, last.running)}` : null, placed.length < count ? `${count - placed.length} without a place` : null]
         .filter(Boolean)
         .join(" · "));
-  const said = ko
-    ? current
-      ? [current.context, `${current.of}발 중 ${current.number}번째: ${fmt(current, current.value)}`].filter(Boolean).join(", ")
-      : `표적 위 ${placed.length}발`
-    : current
-      ? [current.context, `Shot ${current.number} of ${current.of}: ${fmt(current, current.value)}`].filter(Boolean).join(", ")
-      : `${placed.length} shots on the target`;
+  const said = current
+    ? [current.context, `Shot ${current.number} of ${current.of}: ${fmt(current, current.value)}`].filter(Boolean).join(", ")
+    : `${placed.length} shots on the target`;
 
   return (
     <View style={styles.wrap} testID="replay">
@@ -173,17 +155,17 @@ export function ShotReplay({
         />
       </Canvas>
       <View style={styles.controls}>
-        <IconButton icon={<RotateCcw size={19} color={colors.foreground} />} accessibilityLabel={ko ? "처음부터 다시 재생" : "Play again from the first shot"} onPress={restart} testID="replay-restart" />
-        <IconButton icon={<ChevronLeft size={22} color={at === 1 ? colors.mutedForeground : colors.foreground} />} accessibilityLabel={ko ? "이전 발" : "Previous shot"} onPress={back} testID="replay-back" />
+        <IconButton icon={<RotateCcw size={19} color={colors.foreground} />} accessibilityLabel="Play again from the first shot" onPress={restart} testID="replay-restart" />
+        <IconButton icon={<ChevronLeft size={22} color={at === 1 ? colors.mutedForeground : colors.foreground} />} accessibilityLabel="Previous shot" onPress={back} testID="replay-back" />
         <IconButton
           icon={playing ? <Pause size={22} color={colors.foreground} /> : <Play size={22} color={colors.foreground} />}
-          accessibilityLabel={ko ? (playing ? "일시정지" : "한 발씩 재생") : playing ? "Pause" : "Play the shots one by one"}
+          accessibilityLabel={playing ? "Pause" : "Play the shots one by one"}
           onPress={play}
           size={52}
           filled
           testID="replay-play"
         />
-        <IconButton icon={<ChevronRight size={22} color={colors.foreground} />} accessibilityLabel={ko ? "다음 발" : "Next shot"} onPress={forward} testID="replay-next" />
+        <IconButton icon={<ChevronRight size={22} color={colors.foreground} />} accessibilityLabel="Next shot" onPress={forward} testID="replay-next" />
         <View style={styles.spacer} />
       </View>
       <T variant="small" tone="muted" style={styles.readout} testID="replay-readout">

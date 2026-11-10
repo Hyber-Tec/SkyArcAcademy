@@ -2,7 +2,6 @@ import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ContractGate } from "@/features/contracts/SignContract";
 import { FamilyProvider } from "@/features/family/FamilyProvider";
-import { useT } from "@/lib/lang";
 import { useColors } from "@/theme";
 
 /**
@@ -20,7 +19,6 @@ export const unstable_settings = { anchor: "(tabs)" };
  */
 export default function FamilyLayout() {
   const colors = useColors();
-  const t = useT();
   const sheet = { presentation: "formSheet", sheetGrabberVisible: true, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } } as const;
   const page = {
     headerShown: true,
@@ -44,15 +42,15 @@ export default function FamilyLayout() {
           {/* A day tapped on Classes' months, and a class: sheets sized to what they hold. */}
           <Stack.Screen name="day" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
           <Stack.Screen name="session/[id]" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
-          <Stack.Screen name="ask" options={{ ...page, title: t("Ask for a class", "수업 신청") }} />
-          <Stack.Screen name="another" options={{ ...page, title: t("Ask for another time", "다른 시간 요청") }} />
+          <Stack.Screen name="ask" options={{ ...page, title: "Ask for a class" }} />
+          <Stack.Screen name="another" options={{ ...page, title: "Ask for another time" }} />
           <Stack.Screen name="score/[id]" options={page} />
           <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
-          <Stack.Screen name="report/[id]" options={{ ...page, title: t("Progress report", "성장 리포트") }} />
-          <Stack.Screen name="news/index" options={{ ...page, title: t("News", "소식") }} />
+          <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
+          <Stack.Screen name="news/index" options={{ ...page, title: "News" }} />
           <Stack.Screen name="news/[id]" options={page} />
           <Stack.Screen name="news/attachment" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
-          <Stack.Screen name="inbox" options={{ ...page, title: t("Notifications", "알림함") }} />
+          <Stack.Screen name="inbox" options={{ ...page, title: "Notifications" }} />
         </Stack>
       </ContractGate>
     </FamilyProvider>

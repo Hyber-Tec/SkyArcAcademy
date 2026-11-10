@@ -91,9 +91,9 @@ html.reduce-motion ::view-transition-new(root) {
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  --font-heading: 'Geist Variable', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
-  --font-serif: 'Instrument Serif', 'Pretendard Variable', Pretendard, Georgia, serif;
+  --font-sans: 'Geist Variable', -apple-system, sans-serif;
+  --font-heading: 'Geist Variable', -apple-system, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
 }
 
@@ -152,36 +152,12 @@ body {
   scroll-margin-top: 104px;
 }
 
-/* The serif accent (Instrument Serif has no Hangul): in Korean the accent stays upright and a little heavier. */
+/* The serif accent. */
 .accent {
   font-family: var(--font-serif);
   font-style: italic;
   font-weight: 400;
   letter-spacing: -0.01em;
-}
-html.lang-ko .accent {
-  font-family: var(--font-sans);
-  font-style: normal;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-html.lang-ko .kicker {
-  font-family: var(--font-sans);
-  font-style: normal;
-  font-size: 0.95em;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-html.lang-ko {
-  word-break: keep-all;
-}
-/* Korean isn't spaced out like small capitals. */
-html.lang-ko .uppercase {
-  letter-spacing: 0.02em;
-}
-html.lang-ko .accent-hero {
-  font-weight: 300;
-  letter-spacing: -0.04em;
 }
 
 /* A faint drawing grid behind the "visit us" reticle. */
