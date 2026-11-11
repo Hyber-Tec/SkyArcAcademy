@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { dateInName } from '@shared/drive/exif'
 import { tsMs } from '@shared/drive/model'
 import { type DriveFile, studentFolderId } from '@shared/drive/types'
+import { otherNamesText } from '@shared/names'
 import { studentLabel } from '@shared/people'
 import { printOf, repeatOf, resultWords, sameResult } from '@shared/scores/duplicates'
 import { type Position, wholePer10 } from '@shared/shooting/evaluation'
@@ -442,7 +443,7 @@ function ChooseFirst() {
 
 /** The student, when the dialog didn't open on theirs (the Drive's own folders). */
 function StudentChoice({ value, onChange, students }: { value: string | null; onChange: (id: string) => void; students: { id: string; name: string; grade?: string | null; status?: string }[] }) {
-  const options = useMemo(() => students.filter((s) => s.status !== 'finished' || s.id === value).map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade) })), [students, value])
+  const options = useMemo(() => students.filter((s) => s.status !== 'finished' || s.id === value).map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), keywords: otherNamesText(s) })), [students, value])
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <span className="text-sm font-medium">Student</span>

@@ -9,6 +9,7 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { db } from '../app'
 import { isScattKind } from '@shared/drive/files'
 import { type DriveFile, driveObjectPath } from '@shared/drive/types'
+import { nameFormsOf } from '@shared/names'
 import { COL, ROOT } from '@shared/paths'
 import { type ScattSession, buildSession, scattSessionId } from '@shared/scatt/session'
 import { nameKey } from '@shared/scores/scopos'
@@ -73,8 +74,9 @@ async function importFile(branchId: string, fileId: string, f: DriveFile, dir: s
     await batch.commit()
   }
   const movedFrom = moved.length ? (moved[0].data() as ScattSession).studentName : null
-  // Whose sessions: all of them when the file holds one person; else only those named like the student.
-  const names = new Set([student.name, ...(student.otherNames ?? [])].map(nameKey).filter(Boolean))
+  // Whose sessions: all of them when the file holds one person; else only those named like the student (their name,
+  // another they go by, either way round: `nameFormsOf`).
+  const names = new Set(nameFormsOf(student).map(nameKey).filter(Boolean))
   const mine = file.persons.length <= 1 ? null : new Set(file.persons.filter((p) => names.has(nameKey(p.name))).map((p) => p.id))
   const tz = (branchSnap.data() as Branch | undefined)?.timezone || 'America/New_York'
   let added = 0

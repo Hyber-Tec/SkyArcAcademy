@@ -10,6 +10,8 @@ export interface PickerOption {
   value: string
   label: string
   hint?: string
+  /** More words the search finds it by, not shown (a student's other names: `otherNamesText`). */
+  keywords?: string
   disabled?: boolean
 }
 
@@ -64,7 +66,7 @@ export function OptionPicker({
               {options.map((o) => (
                 <CommandItem
                   key={o.value}
-                  value={`${o.label} ${o.hint ?? ''} ${o.value}`}
+                  value={`${o.label} ${o.keywords ?? ''} ${o.hint ?? ''} ${o.value}`}
                   disabled={o.disabled}
                   onSelect={() => {
                     onChange(o.value)
@@ -150,7 +152,7 @@ export function MultiOptionPicker({
               <CommandEmpty>Nothing found.</CommandEmpty>
               <CommandGroup>
                 {options.map((o) => (
-                  <CommandItem key={o.value} value={`${o.label} ${o.hint ?? ''} ${o.value}`} onSelect={() => toggle(o.value)}>
+                  <CommandItem key={o.value} value={`${o.label} ${o.keywords ?? ''} ${o.hint ?? ''} ${o.value}`} onSelect={() => toggle(o.value)}>
                     <LuCheck className={cn('size-4', value.includes(o.value) ? 'opacity-100' : 'opacity-0')} />
                     <span className="flex-1 truncate">{o.label}</span>
                     {o.hint ? <span className="text-xs text-muted-foreground">{o.hint}</span> : null}

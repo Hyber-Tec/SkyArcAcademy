@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { LuCircleAlert, LuFileChartColumn } from 'react-icons/lu'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { otherNamesText } from '@shared/names'
 import { COL } from '@shared/paths'
 import { studentLabel } from '@shared/people'
 import { PRESET_LABELS, periodLabel, presetPeriod } from '@shared/reports/period'
@@ -135,7 +136,7 @@ export function NewReportDialog({
               disabled={!!initialStudent}
               options={students
                 .filter((s) => s.status !== 'finished' || lastReportTo.has(s.id))
-                .map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), hint: lastReportTo.get(s.id) ? `last report to ${formatDateKey(lastReportTo.get(s.id)!, 'monthDay')}` : undefined }))}
+                .map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), keywords: otherNamesText(s), hint: lastReportTo.get(s.id) ? `last report to ${formatDateKey(lastReportTo.get(s.id)!, 'monthDay')}` : undefined }))}
             />
           </Field>
           <Field>

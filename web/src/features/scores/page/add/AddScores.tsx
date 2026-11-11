@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { LuCamera, LuCheck, LuCircleAlert, LuCircleCheck, LuFileSearch, LuFileX, LuLoaderCircle, LuScanSearch, LuTrophy, LuUpload } from 'react-icons/lu'
 import { toast } from 'sonner'
 import type { DriveStudent } from '@shared/drive/model'
+import { namesOf } from '@shared/names'
 import { dayWords } from '@shared/scores/feed'
 import { type Evaluation, POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, RESULT_KINDS, RESULT_KIND_LABELS, type ResultKind, isPosition, per10, wholePer10 } from '@shared/shooting/evaluation'
 import { reviewTotals } from '@shared/targets/review'
@@ -450,7 +451,7 @@ function StudentPick({ students, ladder, onPick, children }: { students: readonl
               {list.map((s) => (
                 <CommandItem
                   key={s.id}
-                  value={`${s.name} ${(s.otherNames ?? []).join(' ')} ${s.id}`}
+                  value={`${namesOf(s).join(' ')} ${s.id}`}
                   onSelect={() => {
                     onPick(s.id)
                     setOpen(false)
