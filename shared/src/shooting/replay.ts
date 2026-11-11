@@ -66,8 +66,9 @@ export function swapWords(swapWith: readonly number[]): string {
 }
 
 /**
- * Whether a result's shots read in tenths: SIUS's, and a match's printed with them ("8.9", on its sheet or on the
- * results site for a decimal match); a paper card's are whole numbers.
+ * Whether a result's shots read in tenths: SIUS's, and a match's printed or kept with them ("8.9": on its sheet, and on
+ * the results site, which measures every shot's tenths whether the match counts them or not); a paper card's are whole
+ * numbers.
  */
 export function showsTenths(e: Pick<Evaluation, 'source' | 'series'>): boolean {
   return e.source === 'sius' || (isMatchSource(e.source) && e.series.some((s) => s.shots.some((t) => !Number.isInteger(t.v))))

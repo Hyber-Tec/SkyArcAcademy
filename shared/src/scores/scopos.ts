@@ -150,10 +150,11 @@ export interface OnlineResult {
 const round1 = (n: number) => Math.round(n * 10) / 10
 
 /**
- * One athlete's result, by position: each series' shots in the order they were fired, at their places, scored as the
- * match scores them (tenths in a decimal match), with the totals and inner tens the site gives. Positions with no shots
- * (a 60-shot standing match has only standing) are left out, and so are stages that aren't positions (sitting, a
- * final's eliminations, a written test).
+ * One athlete's result, by position: each series' shots in the order they were fired, at their places, each with its
+ * tenths (the scoring system measures them in every match, as the results sheet prints them), and the totals as the
+ * match counts them (tenths in a decimal match, whole numbers in an integer one), with the inner tens the site gives.
+ * Positions with no shots (a 60-shot standing match has only standing) are left out, and so are stages that aren't
+ * positions (sitting, a final's eliminations, a written test).
  */
 export function onlineResults(cof: ScoposResultCof, timeZone: string): OnlineResult[] {
   const decimal = isDecimal(cof)
@@ -180,7 +181,7 @@ export function onlineResults(cof: ScoposResultCof, timeZone: string): OnlineRes
         const evalShots: EvalShot[] = ordered.map((s) => {
           const loc = s.Location && Number.isFinite(s.Location.X) && Number.isFinite(s.Location.Y) ? s.Location : null
           return {
-            v: decimal ? round1(s.Score.D) : s.Score.I,
+            v: Number.isFinite(s.Score.D) ? round1(s.Score.D) : s.Score.I,
             inner: (s.Score.X ?? 0) > 0,
             a: loc ? Math.round((((Math.atan2(loc.Y, loc.X) * 180) / Math.PI + 360) % 360) * 10) / 10 : null,
             ...(loc ? { x: Math.round(loc.X * 100) / 100, y: Math.round(loc.Y * 100) / 100, r: (s.BulletDiameter ?? 4.5) / 2 } : {}),
@@ -188,7 +189,7 @@ export function onlineResults(cof: ScoposResultCof, timeZone: string): OnlineRes
         })
         const label = `${Object.keys(PREFIXES).find((k) => PREFIXES[k] === position)} ${n}`
         const given = scores[label]?.Score
-        const sum = evalShots.reduce((t, x) => t + x.v, 0)
+        const sum = ordered.reduce((t, x) => t + (decimal && Number.isFinite(x.Score.D) ? x.Score.D : x.Score.I), 0)
         return { n, total: given ? round1(decimal ? given.D : given.I) : round1(sum), shots: evalShots, ...shotGroup(evalShots) }
       })
     const all = series.flatMap((s) => s.shots)

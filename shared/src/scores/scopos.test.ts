@@ -35,7 +35,7 @@ describe('results from the results site', () => {
     expect(seriesOf(undefined)).toBeNull()
   })
 
-  it('makes one result per position, each series in firing order, scored as the match scores', () => {
+  it('makes one result per position, each series in firing order, counted as the match counts', () => {
     const r = cof(
       [
         shot(3, 'KN 2', 9.6, { X: 0, Y: -3 }),
@@ -50,18 +50,21 @@ describe('results from the results site', () => {
     const out = onlineResults(r, 'America/New_York')
     expect(out.map((p) => p.position)).toEqual(['kneeling', 'prone', 'standing'])
     const kn = out[0]
-    // Whole numbers in an integer match, series in order, shots by their firing order.
+    // An integer match counts whole numbers; each shot keeps its tenths, as the sheet prints them. Series in order,
+    // shots by their firing order.
     expect(kn.decimal).toBe(false)
     expect(kn.series.map((s) => s.n)).toEqual([1, 2])
-    expect(kn.series[0].shots.map((s) => s.v)).toEqual([10, 8])
+    expect(kn.series[0].shots.map((s) => s.v)).toEqual([10.4, 8.7])
+    expect(kn.series[0].total).toBe(18)
     expect(kn.series[0].shots[0]).toMatchObject({ x: 0.5, y: 0.5, a: 45, r: 2.25, inner: true })
     // The stage's totals as the site gives them; the first shot's time in the academy's zone (13:20 UTC is 9:20 AM, before the clocks go back).
     expect(kn).toMatchObject({ total: 27, wholeTotal: 27, innerTens: 1, shots: 3, timeMin: 9 * 60 + 20, dateKey: '2026-10-31', problems: [] })
-    // Without the site's totals, the shots add up.
+    // Without the site's totals, the shots' whole scores add up.
     expect(out[1]).toMatchObject({ total: 10, wholeTotal: 10, innerTens: 0 })
+    expect(out[1].series[0]).toMatchObject({ total: 10, shots: [{ v: 10.1 }] })
     // A shot typed in by hand has no place.
     expect(out[2].problems).toEqual(['1 of 1 shots have no place on the target.'])
-    expect(out[2].series[0].shots[0]).toEqual({ v: 7, a: null, inner: false })
+    expect(out[2].series[0].shots[0]).toEqual({ v: 7.9, a: null, inner: false })
   })
 
   it('keeps tenths in a decimal match, and says when it isn’t official yet', () => {
