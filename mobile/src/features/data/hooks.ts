@@ -5,6 +5,7 @@ import { COL, DOC, ROOT } from "@shared/paths";
 import { classViews } from "@shared/schedule/classes";
 import { type ScheduleEvent, occursOn } from "@shared/schedule/events";
 import type { Evaluation } from "@shared/shooting/evaluation";
+import type { ScattSession } from "@shared/scatt/session";
 import type { DayHours } from "@shared/settings/defaults";
 import { type DateKey, addDays, nowMinutes, todayKey } from "@shared/time";
 import type { AcademyClass, Availability, ClockShift, DayConfig, Session, Staff, Student, StudentPrivateProfile } from "@shared/types";
@@ -184,6 +185,14 @@ export function useStudentEvaluations(studentId: string | null) {
   const { branchId } = useBranch();
   const state = useQuery<Evaluation>(studentId ? `evaluations-${branchId}-${studentId}` : null, () => query(col(branchId, COL.evaluations), where("studentId", "==", studentId)));
   const data = useMemo(() => state.data.slice().sort((a, b) => b.dateKey.localeCompare(a.dateKey) || (b.timeMin ?? 0) - (a.timeMin ?? 0) || a.id.localeCompare(b.id)), [state.data]);
+  return { ...state, data };
+}
+
+/** A student's SCATT sessions (staff), newest first. */
+export function useStudentScatt(studentId: string | null) {
+  const { branchId } = useBranch();
+  const state = useQuery<ScattSession>(studentId ? `scatt-${branchId}-${studentId}` : null, () => query(col(branchId, COL.scattSessions), where("studentId", "==", studentId)));
+  const data = useMemo(() => state.data.slice().sort((a, b) => b.dateKey.localeCompare(a.dateKey) || b.timeMin - a.timeMin), [state.data]);
   return { ...state, data };
 }
 

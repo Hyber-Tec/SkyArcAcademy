@@ -7,13 +7,14 @@ import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import { ListSection } from "@/components/List";
+import { formatDateKey } from "@shared/time";
+import { ListRow, ListSection } from "@/components/List";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
 import { Skeleton, SkeletonCards } from "@/components/Skeleton";
 import { T } from "@/components/Text";
 import { type EvaluationDoc, useAcademyNow } from "@/features/data/hooks";
-import { useFamilyEvaluations } from "@/features/family/data";
+import { useFamilyEvaluations, useFamilyScatt } from "@/features/family/data";
 import { ChildSwitcher, NotLinked } from "@/features/family/FamilyParts";
 import { ResultKindFilter } from "@/features/scores/kinds";
 import { useFamily } from "@/features/family/FamilyProvider";
@@ -40,6 +41,7 @@ export default function FamilyScoresScreen() {
   const { today } = useAcademyNow();
   const { width } = useWindowDimensions();
   const scores = useFamilyEvaluations(family.ids);
+  const scatt = useFamilyScatt(family.ids);
   const [count, setCount] = useState(PAGE);
   const [kind, setKind] = useState<ResultKind | "all">("all");
 
@@ -68,6 +70,10 @@ export default function FamilyScoresScreen() {
     }
     return [...byMonth.entries()].map(([month, rows]) => ({ month, rows, total: all.get(month) ?? rows.length }));
   }, [list, count]);
+  const scattShown = useMemo(() => {
+    const shown = new Set(family.shown);
+    return scatt.data.filter((x) => shown.has(x.studentId));
+  }, [scatt.data, family.shown]);
   const single = family.shown.length === 1;
   const showNames = family.several && family.child === "all";
   const target = Math.min(width - space.lg * 4, 340);
@@ -141,6 +147,19 @@ export default function FamilyScoresScreen() {
                   );
                 })
               )}
+              {scattShown.length ? (
+                <ListSection title="SCATT training" detail={plural(scattShown.length, "session")} footer="Each shot of a training session on SCATT: how the aim moved before it and where it went." testID="family-scatt">
+                  {scattShown.map((x) => (
+                    <ListRow
+                      key={x.id}
+                      title={`${showNames ? `${family.firstName(x.studentId, x.studentName)} · ` : ""}${formatDateKey(x.dateKey, "medium")}`}
+                      subtitle={`${x.matchShots} shots${x.total !== null ? ` · total ${x.total.toFixed(1)}` : ""}`}
+                      onPress={() => router.push({ pathname: "/scatt/[id]", params: { id: x.id } })}
+                      testID={`family-scatt-${x.id}`}
+                    />
+                  ))}
+                </ListSection>
+              ) : null}
               {months.map(({ month, rows, total }) => (
                 <ListSection key={month} title={monthYear(`${month}-01`)} detail={plural(total, "result")} testID={`family-scores-month-${month}`}>
                   {rows.map((e) => (

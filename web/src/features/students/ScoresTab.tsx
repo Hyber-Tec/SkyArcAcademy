@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LuChartLine, LuFilePlus, LuFileText, LuGitCompareArrows, LuPlus, LuTrophy, LuUpload } from 'react-icons/lu'
+import { LuActivity, LuChartLine, LuFilePlus, LuFileText, LuGitCompareArrows, LuPlus, LuTrophy, LuUpload } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { toPoint } from '@shared/reports/facts'
@@ -34,6 +34,8 @@ import { CompareCard } from './scores/CompareCard'
 import { FoldedSection } from './scores/FoldedSection'
 import { PositionTiles } from './scores/PositionTiles'
 import { useOpenSections } from './scores/sections'
+import { useScattSessions } from '@/features/scatt/api'
+import { ScattSessions } from '@/features/scatt/ScattSessions'
 
 const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`
 
@@ -54,7 +56,8 @@ function showRow(keys: string | readonly string[], smooth: boolean) {
  * coaches add, correct and delete scores alike; admins make reports.
  */
 export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: 'admin' | 'coach' }) {
-  const { timezone } = useBranch()
+  const { timezone, branchId } = useBranch()
+  const scatt = useScattSessions(branchId, student.id)
   const navigate = useNavigate()
   const admin = mode === 'admin'
   const today = todayKey(timezone)
@@ -207,6 +210,23 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             </div>
           ) : (
             <p className="py-4 text-sm text-muted-foreground">Two results are needed to draw a line.</p>
+          )}
+        </FoldedSection>
+        <FoldedSection
+          icon={LuActivity}
+          title="SCATT sessions"
+          sub={scatt.data.length ? `${scatt.data.length} session${scatt.data.length === 1 ? '' : 's'} · each shot’s aim, played back` : 'None yet · drop a SCATT file in the student’s Drive folder'}
+          open={sections.has('scatt')}
+          onToggle={() => toggleSection('scatt')}
+          testId="scatt-section"
+        >
+          {scatt.data.length || scatt.loading ? (
+            <ScattSessions sessions={scatt.data} loading={scatt.loading} canDelete />
+          ) : (
+            <p className="py-2 text-sm text-muted-foreground">
+              Export the session from SCATT (a .scatt-basic file) and drop it in {student.name}’s folder in the Drive: each session comes in here once, with
+              every shot’s aim to play back. The family watches them in their app too.
+            </p>
           )}
         </FoldedSection>
         <FoldedSection icon={LuGitCompareArrows} title="Compare" sub="Two results of a position side by side" open={sections.has('compare')} onToggle={() => toggleSection('compare')} testId="compare-section">

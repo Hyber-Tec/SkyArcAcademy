@@ -163,7 +163,7 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     → Results site, and their results come in as competitions, shot by shot in firing order (`docs/DECISIONS.md` §43).
     Tried on the practice copy against the real site: the first check read 152 nearby matches and found the 16 ARC 10.9
     athletes in the two Walton matches of Oct 31.
-- [ ] **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
+- ✅ **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
   - *Proposed 2026-11-10:* the export is a small database: sessions, shot times and aiming times read cleanly and match
@@ -173,6 +173,10 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
   - *Goo, 2026-11-10:* **try decoding it in-house**, to see whether everything they want can come out (not for the live
     app yet; the coaches said SCATT can't export a PDF, only this file). What they want is the trace as a video or an
     animation on the website.
+  - *Built 2026-11-10 (#159), Goo: "yes, but they should be able to see only, not uploading":* coaches drop the
+    `.scatt-basic` file in the student's Drive folder; each session comes in once, and staff and the family watch every
+    shot's aim played back with SCATT's numbers, on the website and the phone (`docs/DECISIONS.md` §45). Checked on the
+    academy's sample file: all 85 shots' numbers match SCATT's screen.
 - ✅ **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
   - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is

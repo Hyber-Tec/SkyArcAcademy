@@ -45,6 +45,7 @@ export default function FamilyLayout() {
           <Stack.Screen name="ask" options={{ ...page, title: "Ask for a class" }} />
           <Stack.Screen name="another" options={{ ...page, title: "Ask for another time" }} />
           <Stack.Screen name="score/[id]" options={page} />
+          <Stack.Screen name="scatt/[id]" options={page} />
           <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
           <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
           <Stack.Screen name="news/index" options={{ ...page, title: "News" }} />

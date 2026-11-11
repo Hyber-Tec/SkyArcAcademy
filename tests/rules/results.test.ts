@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
-// The results site import (shared/src/scores/resultsSite.ts): owners and admins read what it found, nobody else does,
+// The results site import (shared/src/scores/resultsSite.ts), and SCATT sessions (shared/src/scatt/session.ts): owners and admins read what it found, nobody else does,
 // no client writes any of it (the server does, and a person's answers go through its callable), and its key is never
 // read by a client. Its results are evaluations with the source `online`, which staff may correct as any other.
 
@@ -110,5 +110,35 @@ describe('the results site import', () => {
     await assertSucceeds(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e2`), onlineResult({ position: 'prone' })))
     await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/evaluations/e3`), onlineResult({ source: 'website' })))
     await assertFails(updateDoc(doc(db('parent@a.test'), path), { note: 'Changed by a parent.' }))
+  })
+})
+
+describe('SCATT sessions', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (c) => {
+      const d = c.firestore()
+      await setDoc(doc(d, `branches/${A}/members/student@a.test`), member('student@a.test', 'student', { studentId: 's1' }))
+      await setDoc(doc(d, `branches/${A}/members/other@a.test`), member('other@a.test', 'parent', { studentIds: ['s2'] }))
+      await setDoc(doc(d, `branches/${A}/scattSessions/scatt-1`), { studentId: 's1', studentName: 'Student One', shots: [], dateKey: '2026-10-31' })
+      await setDoc(doc(d, `branches/${A}/scattTraces/scatt-1`), { studentId: 's1', rateHz: 50, shots: [] })
+    })
+  })
+
+  it('staff and the student’s family watch them; other families don’t', async () => {
+    for (const p of ['scattSessions/scatt-1', 'scattTraces/scatt-1']) {
+      for (const who of ['owner@a.test', 'coach@a.test', 'parent@a.test', 'student@a.test']) await assertSucceeds(getDoc(doc(db(who), `branches/${A}/${p}`)))
+      await assertFails(getDoc(doc(db('other@a.test'), `branches/${A}/${p}`)))
+    }
+    await assertSucceeds(getDocs(query(collection(db('parent@a.test'), `branches/${A}/scattSessions`), where('studentId', '==', 's1'))))
+    await assertFails(getDocs(query(collection(db('other@a.test'), `branches/${A}/scattSessions`), where('studentId', '==', 's1'))))
+  })
+
+  it('families only watch: nobody writes them from the app, and only staff delete one', async () => {
+    await assertFails(setDoc(doc(db('parent@a.test'), `branches/${A}/scattSessions/scatt-2`), { studentId: 's1' }))
+    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/scattSessions/scatt-2`), { studentId: 's1' }))
+    await assertFails(updateDoc(doc(db('owner@a.test'), `branches/${A}/scattSessions/scatt-1`), { studentId: 's2' }))
+    await assertFails(deleteDoc(doc(db('parent@a.test'), `branches/${A}/scattSessions/scatt-1`)))
+    await assertSucceeds(deleteDoc(doc(db('coach@a.test'), `branches/${A}/scattTraces/scatt-1`)))
+    await assertSucceeds(deleteDoc(doc(db('owner@a.test'), `branches/${A}/scattSessions/scatt-1`)))
   })
 })

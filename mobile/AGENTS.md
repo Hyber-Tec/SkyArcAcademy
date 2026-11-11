@@ -43,7 +43,8 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        availability-day sheets, the office's add-seat and move-seat (a student into a class's open seat,
                        or to another class), requests (every request from families: waiting on the office, on a
                        family's answer, decided) and request/[id] (one, to approve, decline or suggest another time,
-                       with its history), student/[id] and student/calendar, score/[id], file/[id], news/ the
+                       with its history), student/[id] and student/calendar, score/[id], scatt/[id] (a SCATT session to
+                       watch), file/[id], news/ the
                        academy's announcements (the list, news/[id] a post with its comments, news/attachment a post's
                        file), inbox the person's notifications (Home's bell), drive/ the Drive (the top, drive/[id] a
                        folder), reports/ every progress report and report/[id] one, with sharing a draft, and the Scan
@@ -55,7 +56,7 @@ src/app/               screens (Expo Router). Root gates: signed out → sign-in
                        Scores · Reports · More, and what opens over them (day a day's sheet from Classes' months: its
                        classes, or none, and "Ask for a class on this day"; session/[id] a class's sheet, with Cancel and
                        Move, ask asking for a class (a makeup, a move, an extra class; `date`, a day chosen on the
-                       months), score/[id] a score to look at,
+                       months), score/[id] a score to look at, scatt/[id] a SCATT session to watch,
                        file/[id] its original, report/[id] a progress report, news/ the academy's news: the list,
                        news/[id] a post, news/attachment a post's file, inbox their notifications (Home's bell));
                        FamilyProvider holds whose they are and the child a parent chose; ContractGate (src/features/
@@ -94,7 +95,8 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        scores (kinds.tsx, a result's kind chip and filter; a score's changes, its shots played
                        back, playback.ts; ScoreParts, what the staff's and the family's score screens both show;
                        CompareCard, a score side by side with another of its position; MiniTarget, a list's small
-                       target), access, account (deleting an account), contracts (the enrollment contract the office sent,
+                       target), scatt (a SCATT session played back shot by shot: ScattReplay, in SCATT's colours with
+                       its numbers, and ScattScreen, the staff's and the family's page; watch only), access, account (deleting an account), contracts (the enrollment contract the office sent,
                        before using the app: ContractGate, which opens each on the website; a PDF to read or save
                        (PdfSheet); the office's part on a student's screen (StudentContract, with its QR code:
                        ContractQr), and More's preview of the contract as a parent sees it (ContractForm,
