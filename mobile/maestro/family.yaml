@@ -431,6 +431,12 @@ appId: com.skyarcacademy.app
     id: "family-more-account"
 - assertVisible:
     id: "family-more-students"
+# The appearance is below the fold under the children and their contracts: brought to the middle, clear of the tab bar.
+- scrollUntilVisible:
+    element:
+      id: "family-more-appearance-dark"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "family-more-appearance-dark"
 - tapOn:

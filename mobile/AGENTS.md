@@ -126,7 +126,9 @@ src/features/<area>/   each area's data and components: data (live Firestore hoo
                        KioskPin, the PIN a person clocks in with), tour (the welcome tour after the first sign-in:
                        the app dimmed, one part lit at a time with what it does, "Tap here" on what opens something,
                        per kind of person (steps.ts, by test ID); More's "Take the tour" plays it again; the
-                       notifications question waits for it)
+                       notifications question waits for it. It's drawn from each part's layout, beside its Stack,
+                       never inside the tabs: on Android a page pushed over the tabs takes them off the screen, and
+                       a Modal taken off with them closes)
 src/components/        the shared building blocks (Text `T`, Button, Card, ListSection/ListRow, Field, Badge, Avatar,
                        EmptyState, SegmentedControl, FilterChips, ChoiceRow (one of a few choices), Skeleton, Screen,
                        TabHeader, SectionTitle, SectionHeading (a part of a page in its colour),

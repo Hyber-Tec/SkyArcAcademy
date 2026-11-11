@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ContractGate } from "@/features/contracts/SignContract";
-import { FamilyProvider } from "@/features/family/FamilyProvider";
+import { FamilyProvider, useFamily } from "@/features/family/FamilyProvider";
+import { WelcomeTour } from "@/features/tour/WelcomeTour";
 import { useColors } from "@/theme";
 
 /**
@@ -16,6 +17,10 @@ export const unstable_settings = { anchor: "(tabs)" };
  * and what opens over them (a day of the months' and a class's sheets, asking for a class, a score, its original file,
  * a progress report, the academy's news, a post and its attachments, and their notifications). Every screen loads its
  * record by ID, so links and the back gesture always work.
+ *
+ * The welcome tour sits beside the stack, not in the tabs: on Android a page opened over the tabs (the tour's "Open a
+ * result", a tapped notification) takes them off the screen, and a Modal taken off with them closes, which ended the
+ * tour unfinished, so it started again at every launch.
  */
 export default function FamilyLayout() {
   const colors = useColors();
@@ -53,7 +58,14 @@ export default function FamilyLayout() {
           <Stack.Screen name="news/attachment" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
           <Stack.Screen name="inbox" options={{ ...page, title: "Notifications" }} />
         </Stack>
+        <FamilyTour />
       </ContractGate>
     </FamilyProvider>
   );
+}
+
+/** The welcome tour for a parent (with how many children they have) or a student. */
+function FamilyTour() {
+  const family = useFamily();
+  return <WelcomeTour kind={family.who === "parent" ? "parent" : "student"} childCount={family.ids.length} />;
 }
