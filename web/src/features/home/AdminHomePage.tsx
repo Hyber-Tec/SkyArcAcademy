@@ -59,7 +59,7 @@ export function AdminHomePage() {
   const nextSlot = Math.ceil((nowMin + 1) / 30) * 30
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">{date}</p>

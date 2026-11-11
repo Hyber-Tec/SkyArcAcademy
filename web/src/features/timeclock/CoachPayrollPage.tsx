@@ -171,7 +171,7 @@ export function CoachPayrollPage() {
   if (!staffId) return <p className="text-sm text-muted-foreground">Your employee record isn’t linked yet. Ask an admin.</p>
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader
         title="Payroll"
         description="Your pay: the time you’re clocked in at the kiosk, and extra time an admin added, at your hourly rate."

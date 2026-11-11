@@ -180,6 +180,10 @@ Carried over from HyberCRM, adapted to one academy:
   with nothing set count as days to set (the reminders, Home's to-do); write through `shared/src/availabilityWrites.ts`.
 - **Confirmations** on the website use the app's dialog (`useConfirm`), never the browser's `window.confirm`, and say
   what will happen.
+- **Page widths** (Goo, 2026-11-11, `docs/DECISIONS.md` §46): a page that shows data (tables, lists, calendars, the
+  student page, Home) fills the window, so a wider window shows more; no `max-w-*` around it. Forms and text keep a
+  reading width. What would only grow bigger on a wide page (a target, a photo, a tile) gets its own limit, or more of
+  them fit in a row.
 - **Month calendars (permanent rule):** every monthly calendar scrolls vertically through months like the iOS Calendar app, built on the shared month scroller. Never static months with ‹ › arrows, including mini calendars and date pickers.
   Their weeks start on Sunday, as calendars do (`CALENDAR_WEEK_START`); the academy's week, the schedule's, runs Monday
   to Sunday (`settings.general.weekStartsOn`; `docs/DECISIONS.md` §21).

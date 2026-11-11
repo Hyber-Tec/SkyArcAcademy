@@ -74,7 +74,7 @@ export function ReportsPage({ portal = 'admin' }: { portal?: 'admin' | 'coach' }
   }
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <PageHeader
         title="Reports"
         description={admin ? 'Prepare progress reports from the students’ scores, review them, and share them with families.' : 'Every student’s progress reports. Share a draft with the family once it’s ready.'}

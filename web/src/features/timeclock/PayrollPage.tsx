@@ -201,7 +201,7 @@ export function PayrollPage() {
   const shaded = shadeByDate(pageRows)
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <PageHeader
         title="Payroll"
         description="Each employee’s pay: their time clocked in at the kiosk, and extra time an admin added, at their hourly rate."

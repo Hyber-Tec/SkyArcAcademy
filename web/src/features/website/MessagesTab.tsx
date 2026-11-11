@@ -44,7 +44,7 @@ export function MessagesTab({ messages, loading }: { messages: WithId<WebsiteMes
   const rows = messages.filter((m) => (show === 'done' ? isDone(m) : !isDone(m)))
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       <ToggleGroup type="single" variant="outline" size="sm" value={show} onValueChange={(v) => v && setShow(v as 'new' | 'done')} aria-label="Show">
         <ToggleGroupItem value="new" className="px-3">
           New <span className="ml-1 text-muted-foreground tabular-nums">{counts.new}</span>

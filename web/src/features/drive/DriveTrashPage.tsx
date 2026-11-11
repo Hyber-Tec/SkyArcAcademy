@@ -66,7 +66,7 @@ export function DriveTrashPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2.5">
         <Link to={`/${portal}/drive`}>
           <LuArrowLeft /> Drive

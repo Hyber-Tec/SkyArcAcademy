@@ -60,7 +60,7 @@ export function EmployeeCalendarPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader title="Employee Calendar" description="Each employee’s availability, scheduled hours and worked time by day." />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>

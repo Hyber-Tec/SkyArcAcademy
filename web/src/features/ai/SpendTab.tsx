@@ -39,7 +39,7 @@ export function SpendTab({
   const month = useMonthSpend(range.range === 'this_month' ? totals.costUsd : null)
 
   return (
-    <div className="max-w-6xl space-y-5" data-testid="ai-spend">
+    <div className="space-y-5" data-testid="ai-spend">
       <RangeBar range={range} onRange={onRange} />
       {rows.length >= USAGE_MAX ? (
         <Alert>

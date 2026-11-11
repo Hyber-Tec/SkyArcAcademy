@@ -315,7 +315,7 @@ export function SettingsPageView({ page }: { page: SettingsPageDef }) {
 
   const Icon = PAGE_ICONS[page.key]
   return (
-    <div className={cn('mx-auto pb-6', page.wide ? 'max-w-6xl' : 'max-w-3xl')} data-testid={`settings-page-${page.key}`}>
+    <div className={cn('mx-auto pb-6', !page.wide && 'max-w-3xl')} data-testid={`settings-page-${page.key}`}>
       <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
         <Link to="/admin/settings">
           <LuArrowLeft /> Settings

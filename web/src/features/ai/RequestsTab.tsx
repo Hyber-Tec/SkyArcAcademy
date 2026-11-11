@@ -25,7 +25,7 @@ export function RequestsTab({ range, onRange, rows, loading }: { range: RangeSta
   const list = useMemo(() => (only === 'failed' ? rows.filter((r) => !r.ok) : rows), [rows, only])
 
   return (
-    <div className="max-w-6xl space-y-5" data-testid="ai-requests">
+    <div className="space-y-5" data-testid="ai-requests">
       <RangeBar range={range} onRange={onRange} />
       <Card className={cn('gap-0 pb-0 transition-opacity', loading && 'opacity-60')}>
         <CardHeader className="flex flex-wrap items-start justify-between gap-3 pb-4">
