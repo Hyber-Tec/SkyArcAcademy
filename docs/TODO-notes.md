@@ -20,6 +20,13 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
 sizes, with a picture of each. Since 2026-11-10 they're in English only (§42): make them again before printing.
 
+### iPhone 1.2.0 on TestFlight
+
+Uploaded on 2026-11-10 from `main` as of #159: everything from the fourth meeting that the phone shows. Install it from
+TestFlight on your iPhone. When it's good, Claude Code makes the App Store version (1.2.0), writes What's New, picks build
+13 and sends it for review; nothing goes to the App Store before you say so. Android follows once Google Play has
+finished reviewing 1.1.0.
+
 ### The results site's key
 
 The app brings the academy's competition results in from the results site by itself, every night
