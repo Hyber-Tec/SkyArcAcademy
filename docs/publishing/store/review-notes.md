@@ -6,6 +6,9 @@ steps 15–17), the replies to send if Apple answers with guideline 4.8 (sign-in
 the notes say. Checked on 2026-10-20 against Apple's list of what a complete review needs (who the app is for, the
 devices tested, the outside services, a login for each kind of account, regional differences).
 
+> **1.2.0** (submitted 2026-11-11) adds the paragraph "NEW IN 1.2.0" below, and its "TESTED ON" line no longer offers
+> Korean (English only since 2026-11-10, `DECISIONS.md` §42). The review login didn't change.
+>
 > **1.1.0** (submitted 2026-11-06) makes accounts in the app and has Sign in with Apple beside Google
 > ([`DECISIONS.md`](../../DECISIONS.md) §31): its notes below say so (the "Accounts" paragraph) instead of 1.0.0's
 > exception to guideline 4.8. The review login itself didn't change. 1.0.0's notes, in App Store Connect until then,
@@ -65,6 +68,9 @@ The camera and the photo picker are used only in Scan (staff), to photograph or 
 
 SERVICES THE APP USES
 Google Firebase (sign-in, database, file storage, server functions) and Google Sign-In. No payment or advertising services. Progress reports' text can be drafted on our server by an AI service, then checked by the academy's staff before families see it.
+
+NEW IN 1.2.0
+A student's Scores can show SCATT training sessions (each shot's aim, played back) and competition results from the online results site, once the academy has added them. A short tour after the first sign-in points at each button.
 
 TESTED ON
 iPhone 15 with iOS 27.0.1. The app is offered in the United States only, works the same for everyone, and is in English.

@@ -174,6 +174,16 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     minute later: the 24 results sheet scans of the Oct 31 3P match were brought up to the site's by themselves (all 24
     had the site's totals; 478 of 480 shots the same score, the places within 0.1 mm but for the swapped ones), and the
     Oct 31 60-shot match's 7 results, which the academy never had, came in new. Two Nov 5 results say "not published".
+  - *Goo's second try (2026-11-11):*
+    - **Each athlete opens on their results:** read from the site before they're linked, each opening on its target,
+      series and shots as on the Scores page.
+    - **Confirm all**, asking first who goes to whom.
+    - **Start over** in the gear: it removes what the site brought in and puts each changed results sheet scan back
+      exactly as it was. Goo resets it himself after trying it, before showing the manager.
+    - **The site's whole result is kept** for each result brought in: each shot's time, every field (#172).
+    - **The Settings tile** now says when it checks.
+    - Tried on the practice copy against the real site: Confirm all brought 6 athletes' results in. Start over put the
+      3 changed scans back field for field.
 - ✅ **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
@@ -192,6 +202,17 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     or insufficient permissions"), and its sessions sat folded at the bottom of the Scores tab (#163): fixed, and the
     sessions are their own card. A file moved to another student's folder takes its sessions with it. Tried on
     production on 2026-11-11, then cleared: dropped in the student's folder, the file's 3 sessions came in 9 seconds.
+  - *Goo's second try (2026-11-11):*
+    - **Rows:** the sessions are a folded section like the tab's others, a row per session like a result's, each
+      opening on its replay.
+    - **Thicker traces** on the website; the phone's stay as they are.
+    - **Jumping to the sessions:** after an upload, the page opens the student's Scores tab on the file's newest session.
+      A SCATT file can be dropped on the Scores tab too (#171).
+    - **The name in the file:** Goo asked how the app knows whose a file is. The file holds the name typed in SCATT (a
+      first name, in the academy's sample), the sessions' times, target, distance, caliber and shots, and SCATT's version
+      and sensor.
+      Until now the folder alone decided. Now the name must be one of the student's names, or the file brings nothing
+      in and says why (#170).
 - ✅ **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
   - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is
@@ -226,6 +247,9 @@ The owner's first notes after reading the website page by page (more will come i
   `/franchise`, linked at the very bottom of every page. What Sky Arc has built (only what the site already says), how
   it starts, and a form whose message reaches the academy as a website message ("Franchise opportunity"). No prices; a
   line says the page isn't an offer to sell a franchise (`docs/DECISIONS.md` §44).
+  - *2026-11-11, Goo: "try your best to make this page better", to show the owner:* a photo with the app at the top,
+    the model told with the levels, Trial One's safety, the coaches, SIUS and the academy's photos, the app's screens
+    for families, coaches and the office, and three steps beside the form (#169). Still only what the site already says.
 
 ## 5. On hold
 

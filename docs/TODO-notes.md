@@ -20,12 +20,13 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
 sizes, with a picture of each. Since 2026-11-10 they're in English only (§42): make them again before printing.
 
-### iPhone 1.2.0 on TestFlight
+### iPhone 1.2.0 is in Apple's review
 
-Uploaded on 2026-11-10 from `main` as of #159: everything from the fourth meeting that the phone shows. Install it from
-TestFlight on your iPhone. When it's good, Claude Code makes the App Store version (1.2.0), writes What's New, picks build
-13 and sends it for review; nothing goes to the App Store before you say so. Android follows once Google Play has
-finished reviewing 1.1.0.
+Built on 2026-11-10 from `main` as of #159, tried by Goo on TestFlight, and sent to the App Store's review on 2026-11-11.
+It's the version Goo tried, released by itself once approved, as 1.1.0 was. Its What's New and the review notes, without
+Korean, are in [publishing/store/](publishing/store/). With it, the store's support, marketing and privacy links moved
+to skyarcacademy.com. Changes merged after #159 that the phone shows (its search by other names, #164) come with the
+next build, when Goo asks for one. Android follows once Google Play has finished reviewing 1.1.0.
 
 ### The results site
 
@@ -34,12 +35,17 @@ site's key is saved (the shared starter key, 2026-11-10) and isn't on the page.
 
 1. Settings → **Results site** → **Check now**: the last month's matches, nearby and at the clubs and schools where
    the academy's athletes shot. A few minutes; the page shows it going.
-2. Under **Who are they?**, open a result on the site to be sure, then link each athlete to their student (the student
-   named like them is offered first, other names counting), or say **Not ours**. Their results come in at once.
+2. Under **To confirm**, open an athlete: their results are read from the site and shown as the scores will show them
+   (each opens on its target, series and shots, with its page on the site). Then link them to their student (the
+   student named like them is offered first, other names counting), or say **Not ours**. **Confirm all** links every
+   athlete to the student offered, after saying who goes to whom. Their results come in at once.
 3. **Results sheet scans to check**, when there are any: a scan of the same day and position with other numbers. Use the
    site's, or keep both. A scan with the same numbers is brought up to the site's by itself.
 4. The gear: the schedule (off until it's turned on: the days and an hour), how far back a check looks, the team names
    and the distance. **Look back** finds the months before, two weeks at a time over a few checks.
+5. The gear's **Start over** removes everything the site brought in (the athletes and who they are, the results it
+   added, the matches and checks) and puts each results sheet scan it changed back exactly as it was. It's for trying it,
+   then showing it from the beginning. The key and the settings stay, and families aren't told anything.
 
 The first check reads many matches, to find the academy's teams once; after that a check is a few dozen requests.
 

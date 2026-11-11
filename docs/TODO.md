@@ -11,17 +11,17 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
-- [ ] **iPhone 1.2.0 (build 13) on TestFlight:** install it and try it (English only, the detailed tour, coaches' own
-  PIN, the ≈ marks, results-site results, SCATT sessions). When it's good, Claude Code sends it to the App Store. No
-  Android build until Google Play's 1.1.0 is live
-- [ ] **The results site: your test, then Matt's.** Claude Code ran it on production and cleared it (2026-11-11). Settings →
-  Results site → **Check now** (the last month, about 9 minutes the first time), say who each athlete is (open a result
-  on the site to be sure), and their results come into their scores. The gear holds the schedule (off until you turn it
-  on). A result from the last 7 days tells the family, as any new score does. Then Claude Code clears it all, so you
-  can show Matt from the start
+- [ ] **iPhone 1.2.0 is in Apple's review** (build 13, the one you tried; sent 2026-11-11): it goes live by itself once
+  approved. If Apple writes, give Claude Code the message. The phone's search by other names comes with the next build.
+  No Android build until Google Play's 1.1.0 is live
+- [ ] **The results site: your test, then the manager's.** Settings → Results site → **Check now** (the last month, about 9 minutes
+  the first time). Open an athlete to see their results as the scores will show them, then link them, or **Confirm all**.
+  When you're done trying, the gear → **Start over** removes it all and puts the results sheet scans back as they were,
+  so you can show the manager from the start. A result from the last 7 days tells the family, as any new score does
 - [ ] **SCATT sessions:** ask the coaches to export a session from SCATT (a `.scatt-basic` file) and drop it in the
-  student's folder in the Drive; it shows on the student's Scores tab, for them and the family (tried on production and
-  cleared, 2026-11-11)
+  student's folder in the Drive, or on the student's Scores tab: the page then opens its sessions there, for them and
+  the family. The name typed in SCATT must be one of the student's names (a first name is enough); if not, the file says
+  so, and adding that name to the student's other names, then uploading the file again, brings the sessions in
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
   too. Until then the starter key works; a new key goes in with `npx tsx scripts/results-site-key.ts`
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
@@ -87,8 +87,10 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-11 · iPhone 1.2.0 (build 13) tried on TestFlight (Goo), and sent to the App Store's review
+- [x] ✅ 2026-11-11 · The franchise page made better, to show the owner (#169)
 - [x] ✅ 2026-11-10 · The results site's key saved (Goo)
-- [x] ✅ 2026-11-10 · Sunny's franchise page, at the very bottom of the website (#158)
+- [x] ✅ 2026-11-10 · The owner's franchise page, at the very bottom of the website (#158)
 - [x] ✅ 2026-11-10 · The public email is `info@skyarcacademy.com` (Goo, Settings → Academy → Email)
 - [x] ✅ 2026-11-10 · The coach card's "Elite Military Rifle Marksman", in capitals (Claude Code, at Goo's word)
 - [x] ✅ 2026-11-10 · The fourth meeting's picks: B6 A; R1 build it, automatic; R2 decode it in-house; R3 yes

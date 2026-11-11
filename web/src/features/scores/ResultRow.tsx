@@ -102,7 +102,7 @@ export interface RowStudent {
   level?: ReactNode
   /** Under the name: the time, or the day and time where the list isn't by day. */
   when?: ReactNode
-  /** The other name the search found them by ("also Chloe"). */
+  /** The other name the search found them by ("also Lianhua"). */
   also?: string | null
   /** What was searched: marked in the name. */
   highlight?: string
