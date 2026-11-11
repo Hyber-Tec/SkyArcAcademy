@@ -74,7 +74,7 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/parent@a.test`), member('parent@a.test', 'parent', { studentIds: ['s1'] }))
     await setDoc(doc(d, `branches/${A}/resultsSite/status`), { keyEnd: '1234', running: null, hosts: {} })
     await setDoc(doc(d, `branches/${A}/resultsSiteKey/main`), { key: 'made-up-key-not-real-1234' })
-    await setDoc(doc(d, `branches/${A}/resultsSiteRuns/r1`), { kind: 'nightly', state: 'done', log: [] })
+    await setDoc(doc(d, `branches/${A}/resultsSiteRuns/r1`), { kind: 'scheduled', state: 'done', log: [] })
     await setDoc(doc(d, `branches/${A}/onlineAthletes/averystone`), { name: 'Avery Stone', status: 'new', results: {} })
     await setDoc(doc(d, `branches/${A}/onlineMatches/m-1`), { name: 'Made-up October 3P', ours: 1 })
     await setDoc(doc(d, `branches/${A}/evaluations/online-r-1-standing`), onlineResult())

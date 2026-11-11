@@ -254,8 +254,8 @@ export function isAcademyTeam(team: string | undefined, patterns: readonly strin
 /** The team names the import looks for until the academy changes them: the academy's team on the results site. */
 export const DEFAULT_TEAM_PATTERNS: readonly string[] = ['ARC 10.9*', 'ARC *', 'ARC']
 
-/** The results site's own page for one athlete's result. */
-export const resultUrl = (resultCofId: string): string => `https://rezults.scopos.tech/ResultCOF/${encodeURIComponent(resultCofId)}`
+/** The results site's own page for one athlete's result (as its match page links it). */
+export const resultUrl = (resultCofId: string): string => `https://rezults.scopos.tech/resultcof/${encodeURIComponent(resultCofId)}/`
 
 /** The results site's page for a match. */
 export const matchUrl = (matchId: string): string => `https://rezults.scopos.tech/match/${encodeURIComponent(matchId)}/`
@@ -319,5 +319,5 @@ export function onlineEvaluation(
   }
 }
 
-/** The evaluation ID of one position of an online result: the same each night, so it's updated rather than added again. */
+/** The evaluation ID of one position of an online result: the same at every check, so it's updated rather than added again. */
 export const onlineEvaluationId = (resultCofId: string, position: Position): string => `online-${resultCofId.replace(/[^A-Za-z0-9-]/g, '')}-${position}`

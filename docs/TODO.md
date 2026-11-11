@@ -14,13 +14,14 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **iPhone 1.2.0 (build 13) on TestFlight:** install it and try it (English only, the detailed tour, coaches' own
   PIN, the ≈ marks, results-site results, SCATT sessions). When it's good, Claude Code sends it to the App Store. No
   Android build until Google Play's 1.1.0 is live
-- [ ] **The results site: your test, then Matt's.** The key is saved (2026-11-10). Try **Look back** in Settings →
-  Results site: it fills the page, not students' scores (only linking an athlete brings results in). Then Claude Code
-  clears it all, so you can show Matt from the start
+- [ ] **The results site: your test, then Matt's.** The page is simpler (2026-11-10): Settings → Results site → **Check
+  now** (the last month), say who each athlete is (open a result on the site to be sure), and their results come into
+  their scores. The gear holds the schedule (off until you turn it on). Then Claude Code clears it all, so you can show
+  Matt from the start
 - [ ] **SCATT sessions:** ask the coaches to export a session from SCATT (a `.scatt-basic` file) and drop it in the
   student's folder in the Drive; it shows under the student's Scores, for them and the family
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
-  too. Until then the starter key works
+  too. Until then the starter key works; a new key goes in with `npx tsx scripts/results-site-key.ts`
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
 - [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still in review on 2026-11-10): it goes live by
   itself. Check the Publishing overview and the Inbox; still in review after Nov 13 → contact Play support. No new

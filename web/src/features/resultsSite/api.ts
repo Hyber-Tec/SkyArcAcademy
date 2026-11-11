@@ -2,6 +2,7 @@ import { collection, doc, limit, orderBy, query, where } from 'firebase/firestor
 import { useMemo } from 'react'
 import { COL, DOC, ROOT } from '@shared/paths'
 import type { OnlineAthlete, OnlineMatch, ResultsSiteRun, ResultsSiteStatus } from '@shared/scores/resultsSite'
+import type { Evaluation, Position } from '@shared/shooting/evaluation'
 import { httpsCallable } from '@/lib/callable'
 import { db, functions } from '@/lib/firebase'
 import { useDoc, useQuery } from '@/lib/firestore'
@@ -18,15 +19,19 @@ export function useResultsSite(branchId: string) {
   const matches = useQuery<OnlineMatch>(matchesQ, `online-matches-${branchId}`)
   const runsQ = useMemo(() => query(collection(db, ROOT.branches, branchId, COL.resultsSiteRuns), orderBy('requestedAt', 'desc'), limit(12)), [branchId])
   const runs = useQuery<ResultsSiteRun>(runsQ, `results-site-runs-${branchId}`)
-  return { status, athletes, matches, runs }
+  // The results it brought into the scores (a results sheet's brought up to the site's among them), by ID.
+  const resultsQ = useMemo(() => query(collection(db, ROOT.branches, branchId, COL.evaluations), where('source', '==', 'online')), [branchId])
+  const results = useQuery<Evaluation>(resultsQ, `online-results-${branchId}`)
+  return { status, athletes, matches, runs, results }
 }
-
-export const saveResultsSiteKey = httpsCallable<{ branchId: string; key: string }, { ok: boolean; keyEnd: string | null }>(functions, 'resultsSiteKey', { timeout: 60_000 })
 
 export const checkResultsSite = httpsCallable<{ branchId: string; kind: 'check' | 'lookBack'; from?: string }, { runId: string }>(functions, 'resultsSiteCheck')
 
-/** A person's answer about an athlete; linking brings their results in, which takes a little while. */
+/**
+ * A person's answer about an athlete (linking brings their results in, which takes a little while), or about a result
+ * whose results sheet's scan has other numbers.
+ */
 export const answerAthlete = httpsCallable<
-  { branchId: string; key: string; action: 'link' | 'ignore' | 'undo'; studentId?: string },
+  { branchId: string; key: string; action: 'link' | 'ignore' | 'undo' | 'useSite' | 'keepBoth'; studentId?: string; resultCofId?: string; position?: Position },
   { ok: boolean; brought: number; waiting: number }
 >(functions, 'resultsSiteAthlete', { timeout: 300_000 })
