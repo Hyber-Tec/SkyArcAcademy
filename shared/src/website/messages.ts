@@ -5,8 +5,11 @@ import type { WebsiteMessageKind } from './types'
  * these rules before sending it, and the server checks it again, since anyone can call the function.
  */
 
-/** What a question can be about (the contact form's choices). */
-export const CONTACT_TOPICS = ['program', 'tuition', 'trial', 'competition', 'range', 'general'] as const
+/**
+ * What a question can be about: the contact form's choices, and the franchise page's own (`franchise`, from people
+ * who'd like to open an academy, not on the families' form).
+ */
+export const CONTACT_TOPICS = ['program', 'tuition', 'trial', 'competition', 'range', 'general', 'franchise'] as const
 export type ContactTopic = (typeof CONTACT_TOPICS)[number]
 
 export const CONTACT_TOPIC_LABELS: Record<ContactTopic, string> = {
@@ -16,6 +19,7 @@ export const CONTACT_TOPIC_LABELS: Record<ContactTopic, string> = {
   competition: 'Competition pathway',
   range: 'Open range or private coaching',
   general: 'General inquiry',
+  franchise: 'Franchise opportunity',
 }
 
 /** The trial form's grades: 1 to 12, or other. */
