@@ -19,7 +19,8 @@ import { ShotReplay } from './ShotReplay'
 const AREAS =
   "grid gap-x-7 gap-y-4 [grid-template-areas:'replay'_'head'_'facts'_'shots'] @[35rem]:grid-cols-[15.5rem_minmax(0,1fr)] @[35rem]:grid-rows-[auto_1fr_auto] @[35rem]:[grid-template-areas:'replay_head'_'replay_facts'_'shots_shots'] @[54rem]:grid-cols-[17.5rem_minmax(0,1fr)] @[54rem]:grid-rows-[auto_auto_1fr] @[54rem]:[grid-template-areas:'replay_head'_'replay_facts'_'replay_shots']"
 
-function Figure({ label, value, unit }: { label: string; value: string; unit?: string }) {
+/** One of an opened result's figures (a SCATT session's too): its label over its value. */
+export function Figure({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>

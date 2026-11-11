@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const KEY = 'skyarc:scores-sections'
 
 /**
- * Which of the Scores tab's folded sections are open on this device (the scores over time, the comparison, the
- * reports), remembered as the Drive remembers its layout. All folded at first.
+ * Which of the Scores tab's folded sections are open on this device (the SCATT sessions, the scores over time, the
+ * comparison, the reports), remembered as the Drive remembers its layout. All folded at first. `show` opens one (a link
+ * to it); it stays open, as if opened by hand.
  */
-export function useOpenSections(): [ReadonlySet<string>, (id: string) => void] {
+export function useOpenSections(): [ReadonlySet<string>, (id: string) => void, (id: string) => void] {
   const [open, setOpen] = useState<ReadonlySet<string>>(() => {
     try {
       const saved: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]')
@@ -29,5 +30,6 @@ export function useOpenSections(): [ReadonlySet<string>, (id: string) => void] {
       else next.add(id)
       return next
     })
-  return [open, toggle]
+  const show = useCallback((id: string) => setOpen((cur) => (cur.has(id) ? cur : new Set([...cur, id]))), [])
+  return [open, toggle, show]
 }

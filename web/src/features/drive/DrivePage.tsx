@@ -23,7 +23,7 @@ import {
 } from 'react-icons/lu'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isViewableImage } from '@shared/drive/files'
+import { MAX_FILES_PER_DROP, classifyFile, cleanFolderName, isScattKind, isViewableImage } from '@shared/drive/files'
 import { studentNamedIn } from '@shared/drive/suggest'
 import { DRIVE_DEFAULT_SORT, type DriveItem, countLabel, cycleDriveSort, formatBytes, itemDate, levelItems, moveAccessNote, moveRefusal, searchWithin, sortDriveItems, trailFrom } from '@shared/drive/model'
 import { scoreTotal, scoresByFile } from '@shared/drive/scores'
@@ -43,6 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useScattAfterUpload } from '@/features/scatt/afterUpload'
 import { scorePath } from '@/features/scores/card/parts'
 import { AddPaperScoresDialog } from '@/features/scores/photos/AddPaperScores'
 import { useStudentEvaluations } from '@/features/scores/hooks'
@@ -195,6 +196,9 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
   const selectedRows = rows.filter((r) => selected.has(r.id))
 
   // ------------------------------------------------------------ files in
+  // SCATT files uploaded to a student's folder: read by the server, then their sessions open on the student's Scores tab,
+  // unless something is open or being read here (it then waits in its toast).
+  const afterScatt = useScattAfterUpload(() => !!dialog || !!results || !!preview || !!reading)
   const refuseDrop = () => toast.error(rootMissing ? 'This student has finished, so their folder takes no new files.' : 'Only the academy’s staff can add files to the Drive.')
   const studentName = (id: string | null) => (id ? (index.students.find((s) => s.id === id)?.name ?? null) : null)
   /** PDFs being read (SIUS results are found among them), shown as a toast until the results open. */
@@ -282,8 +286,11 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
       })
       await writeRecords(branchId, actor, index, ups, chains.size ? [] : [baseId])
       const failures = await sendAll(branchId, ups)
+      // SCATT files: read in a student's folder (their own toast follows them); elsewhere, kept as they are.
+      const scatt = ups.filter((up) => isScattKind(up.record.kind))
+      const read = student ? scatt.map((up) => ({ fileId: up.fileId, name: up.record.name, studentId: student, studentName: studentName(student) ?? 'the student' })) : []
       if (failures.length) toast.error(failures.length === 1 ? 'One file didn’t upload' : `${failures.length} files didn’t upload`, { description: failures.slice(0, 3).join(' ') })
-      else {
+      else if (read.length < ups.length) {
         // A PDF that isn't a SIUS result is still kept, and whoever dropped it is told why it has no scores.
         const why = !notResults.length
           ? undefined
@@ -292,8 +299,11 @@ export function DriveBrowser({ base, rootId, embedded = false }: { base: string;
             : notResults.length === 1
               ? `“${notResults[0]}” isn’t a SIUS result, so it’s kept as a file, without scores.`
               : `${notResults.length} of the PDFs aren’t SIUS results, so they’re kept as files, without scores.`
-        toast.success(ups.length === 1 ? `Uploaded “${ups[0].record.name}”` : `Uploaded ${ups.length} files`, { description: why, duration: why ? 8000 : undefined })
+        const stray = student || !scatt.length ? undefined : `SCATT files are read in a student’s folder: move ${scatt.length === 1 ? 'it into one to bring its' : 'them into one to bring their'} sessions in.`
+        const description = [why, stray].filter(Boolean).join(' ') || undefined
+        toast.success(ups.length === 1 ? `Uploaded “${ups[0].record.name}”` : `Uploaded ${ups.length} files`, { description, duration: description ? 8000 : undefined })
       }
+      if (read.length) void afterScatt(read)
     } catch (e) {
       toast.error('Couldn’t upload', { description: (e as Error).message })
     }

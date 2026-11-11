@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { LuActivity, LuChartLine, LuFilePlus, LuFileText, LuGitCompareArrows, LuPlus, LuTrophy, LuUpload } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
+import { extOf, isScattKind } from '@shared/drive/files'
 import { toPoint } from '@shared/reports/facts'
 import { resultRows } from '@shared/scores/match'
 import { POSITIONS, RESULT_KIND_LABELS, type ResultKind, kindOf } from '@shared/shooting/evaluation'
@@ -34,7 +35,9 @@ import { CompareCard } from './scores/CompareCard'
 import { FoldedSection } from './scores/FoldedSection'
 import { PositionTiles } from './scores/PositionTiles'
 import { useOpenSections } from './scores/sections'
+import { useScattAfterUpload } from '@/features/scatt/afterUpload'
 import { useScattSessions } from '@/features/scatt/api'
+import { ScattFiling } from '@/features/scatt/ScattFiling'
 import { ScattSessions } from '@/features/scatt/ScattSessions'
 
 const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`
@@ -46,14 +49,31 @@ function showRow(keys: string | readonly string[], smooth: boolean) {
   el?.scrollIntoView({ block: 'start', behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto' })
 }
 
+/** How far below the window's top linked SCATT sessions land: clear of the toast that brought them. */
+const SCATT_ARRIVAL_GAP = 112
+
+/**
+ * Brings SCATT sessions into view: the section with its title and columns when the session is the list's first row
+ * (or none is named), else the session's row.
+ */
+function showScatt(sessionId: string | null) {
+  const row = sessionId ? document.querySelector<HTMLElement>(`[data-scatt-row="${sessionId}"]`) : null
+  const el = row?.previousElementSibling ? row : document.getElementById('scatt')
+  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - SCATT_ARRIVAL_GAP, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+}
+
+/** A SCATT session file, which goes to the student's Drive folder for the server to read. */
+const isScattFile = (f: File) => isScattKind(extOf(f.name))
+
 /**
  * Student page → Scores (Goo's pick, docs/DECISIONS.md §29): what the student shoots at a glance, then every result.
  * Each position's tile gives its average per 10 shots, which way it's going, a small line of its results, the best and
  * how many; the kind picked (practice, competitions, evaluations) filters the tiles and the list alike. Every result
  * is a row, newest first, that opens under itself to play its shots back (several at once; nothing scrolls), and a
  * link to one result (`?score=`, from Home and the Drive) opens it and brings it into view. Below, folded until opened
- * (remembered on this device): the scores over time, two results compared, and the progress reports. Admins and
- * coaches add, correct and delete scores alike; admins make reports.
+ * (remembered on this device): the SCATT sessions (rows like the results', each opening under itself to play it back),
+ * the scores over time, two results compared, and the progress reports. Admins and coaches add, correct and delete
+ * scores alike; admins make reports.
  */
 export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: 'admin' | 'coach' }) {
   const { timezone, branchId } = useBranch()
@@ -78,7 +98,9 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const actions = useResultActions(mode)
   const openRows = useOpenRows()
   const { show } = openRows
-  const [sections, toggleSection] = useOpenSections()
+  const scattRows = useOpenRows()
+  const showScattRow = scattRows.show
+  const [sections, toggleSection, showSection] = useOpenSections()
   const [adding, setAdding] = useState(false)
   const [competing, setCompeting] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -87,7 +109,20 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   const { data: students } = useStudentList()
   const known = useMemo(() => all.map((e) => scoreOf(e.id, e)), [all])
   const [dropped, setDropped] = useState<AddRequest | null>(null)
-  const drop = useFileDropZone({ canWrite: true, onFiles: (entries) => setDropped({ id: Date.now(), files: entries.map((e) => e.file) }), disabled: !!dropped || adding || competing })
+  // SCATT files dropped here go to the student's Drive folder, and their sessions open below once the server has read them.
+  const [scattDrop, setScattDrop] = useState<{ id: number; files: File[] } | null>(null)
+  const afterScatt = useScattAfterUpload()
+  const drop = useFileDropZone({
+    canWrite: true,
+    onFiles: (entries) => {
+      const files = entries.map((e) => e.file)
+      const scattFiles = files.filter(isScattFile)
+      const scores = files.filter((f) => !isScattFile(f))
+      if (scattFiles.length) setScattDrop({ id: Date.now(), files: scattFiles })
+      if (scores.length) setDropped({ id: Date.now(), files: scores })
+    },
+    disabled: !!dropped || adding || competing,
+  })
   const name = student.firstName || student.name
   // Results just added: marked "Just added" for a little while, and the first of them in the list (the newest) opens
   // as soon as the list has it.
@@ -132,19 +167,38 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
     setTimeout(() => showRow(row.key, false), 320)
   }, [loading, asked, allRows, show])
 
-  // The Drive's "Watch them in Scores" (`?scatt`): the SCATT sessions come into view, once.
-  const wantsScatt = params.has('scatt')
-  const scattShown = useRef(false)
+  // A link to SCATT sessions (`?scatt=<file IDs>`: the Drive's "Watch them in Scores", a SCATT file just uploaded): the
+  // section opens, and so do those files' sessions as soon as they're in (the list is live), brought into view; once for
+  // each link. `?scatt` alone opens the section.
+  const scattLink = params.get('scatt')
+  const scattFiles = useMemo(() => (scattLink ?? '').split(',').filter(Boolean), [scattLink])
+  const scattSectionFor = useRef<string | null>(null)
+  const scattRowsFor = useRef<string | null>(null)
   useEffect(() => {
-    if (!wantsScatt || loading || !scatt.data.length || scattShown.current) return
-    scattShown.current = true
-    setTimeout(() => document.getElementById('scatt')?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' }), 120)
-  }, [wantsScatt, loading, scatt.data.length])
+    if (scattLink === null || loading || scatt.loading) return
+    if (scattSectionFor.current !== scattLink) {
+      scattSectionFor.current = scattLink
+      showSection('scatt')
+      if (!scattFiles.length) setTimeout(() => showScatt(null), 120)
+    }
+    if (!scattFiles.length || scattRowsFor.current === scattLink) return
+    const theirs = scatt.data.filter((x) => scattFiles.includes(x.fileId))
+    if (!theirs.length) return
+    scattRowsFor.current = scattLink
+    for (const x of theirs) showScattRow(x.id)
+    // Once they've unfolded: the page is then long enough to bring the first (the newest) to the top.
+    setTimeout(() => showScatt(theirs[0].id), 320)
+  }, [scattLink, scattFiles, loading, scatt.loading, scatt.data, showSection, showScattRow])
 
   if (loading) return <Skeleton className="h-96 w-full rounded-xl" />
 
   const first = allRows.length ? allRows[allRows.length - 1].results[0].dateKey : null
   const drafts = reports.filter((r) => r.status === 'draft').length
+  const scattSub = scatt.loading
+    ? 'Loading…'
+    : scatt.data.length
+      ? `${plural(scatt.data.length, 'session')}, ${shortDate(scatt.data[scatt.data.length - 1].dateKey, today)}${scatt.data.length > 1 ? ` – ${shortDate(scatt.data[0].dateKey, today)}` : ''} · each shot’s aim played back · the family watches them too`
+      : 'None yet · drop a SCATT file here or in the student’s Drive folder'
   const reportsSub = reports.length ? [drafts ? `${drafts} ${drafts === 1 ? 'draft' : 'drafts'}` : '', reports.length - drafts ? `${reports.length - drafts} shared` : ''].filter(Boolean).join(' · ') : 'None yet'
 
   return (
@@ -154,7 +208,7 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
           <div className="max-w-sm rounded-xl border bg-card px-5 py-4 text-center shadow-lg">
             <LuUpload className="mx-auto size-6 text-muted-foreground" aria-hidden />
             <p className="mt-2 text-sm font-semibold">Drop to add {name}’s scores</p>
-            <p className="mt-1 text-xs text-muted-foreground">SIUS PDFs, photos of paper cards and results sheets are read, then checked before they’re saved.</p>
+            <p className="mt-1 text-xs text-muted-foreground">SIUS PDFs, photos of paper cards and results sheets are read, then checked before they’re saved. SCATT files go to {name}’s Drive folder, and their sessions open here.</p>
           </div>
         </div>
       ) : null}
@@ -204,22 +258,29 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
         )}
       </section>
 
-      {scatt.data.length ? (
-        <section id="scatt" className="@container scroll-mt-4 rounded-xl border bg-card p-4 @xl:p-5" aria-label="SCATT sessions" data-testid="scatt-section">
-          <div className="mb-4 flex items-start gap-3">
-            <LuActivity className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold">SCATT sessions</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {plural(scatt.data.length, 'session')} from SCATT files in {name}’s Drive folder · each shot’s aim before it went off, played back · the family watches them too
-              </p>
-            </div>
-          </div>
-          <ScattSessions sessions={scatt.data} loading={false} canDelete />
-        </section>
-      ) : null}
-
       <div className="@container overflow-hidden rounded-xl border bg-card">
+        {/* First, right under the scores (Goo's place for them), folded like the rest (Goo, 2026-11-11). */}
+        <FoldedSection
+          icon={LuActivity}
+          title="SCATT sessions"
+          sub={scattSub}
+          open={sections.has('scatt')}
+          onToggle={() => toggleSection('scatt')}
+          testId="scatt-section"
+          id="scatt"
+          flush={scatt.data.length > 0}
+        >
+          {scatt.data.length ? (
+            <ScattSessions sessions={scatt.data} staff rows={scattRows} />
+          ) : scatt.loading ? (
+            <Skeleton className="my-2 h-16 rounded-lg" />
+          ) : (
+            <p className="py-2 text-sm text-muted-foreground">
+              Export the session from SCATT (a .scatt-basic file) and drop it on this page or in {student.name}’s folder in the Drive: each session comes in
+              here once, with every shot’s aim to play back. The family watches them in their app too.
+            </p>
+          )}
+        </FoldedSection>
         <FoldedSection
           icon={LuChartLine}
           title="Scores over time"
@@ -236,14 +297,6 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             <p className="py-4 text-sm text-muted-foreground">Two results are needed to draw a line.</p>
           )}
         </FoldedSection>
-        {scatt.data.length || scatt.loading ? null : (
-          <FoldedSection icon={LuActivity} title="SCATT sessions" sub="None yet · drop a SCATT file in the student’s Drive folder" open={sections.has('scatt')} onToggle={() => toggleSection('scatt')} testId="scatt-how">
-            <p className="py-2 text-sm text-muted-foreground">
-              Export the session from SCATT (a .scatt-basic file) and drop it in {student.name}’s folder in the Drive: each session comes in here once, with
-              every shot’s aim to play back. The family watches them in their app too.
-            </p>
-          </FoldedSection>
-        )}
         <FoldedSection icon={LuGitCompareArrows} title="Compare" sub="Two results of a position side by side" open={sections.has('compare')} onToggle={() => toggleSection('compare')} testId="compare-section">
           <CompareCard evaluations={scored} bare />
         </FoldedSection>
@@ -281,6 +334,17 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
       <CompetitionDialog open={competing} onOpenChange={setCompeting} studentId={student.id} studentName={student.name} />
       <AddScoresDialog request={dropped} onClose={() => setDropped(null)} onSaved={(list) => added(list.filter((e) => e.studentId === student.id).map((e) => e.id))} students={students} known={known} student={student.id} />
       {creating ? <NewReportDialog open onOpenChange={setCreating} studentId={student.id} reports={reports} /> : null}
+      {scattDrop ? (
+        <ScattFiling
+          key={scattDrop.id}
+          files={scattDrop.files}
+          student={student}
+          onFiled={(uploaded, toastId) => {
+            setScattDrop(null)
+            if (uploaded.length) void afterScatt(uploaded, toastId)
+          }}
+        />
+      ) : null}
       {actions.element}
     </div>
   )
