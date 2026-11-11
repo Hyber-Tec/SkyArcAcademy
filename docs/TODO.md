@@ -11,8 +11,14 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
-- [ ] **The results site's key:** Settings → Results site → paste Scopos's shared starter key (their support pages,
-  Developers → X-API-Key), then **Look back** a year and confirm the athletes it finds. After that it looks every night
+- [ ] **iPhone 1.2.0 (build 13) on TestFlight:** install it and try it (English only, the detailed tour, coaches' own
+  PIN, the ≈ marks, results-site results, SCATT sessions). When it's good, Claude Code sends it to the App Store. No
+  Android build until Google Play's 1.1.0 is live
+- [ ] **The results site: your test, then Matt's.** The key is saved (2026-11-10). Try **Look back** in Settings →
+  Results site: it fills the page, not students' scores (only linking an athlete brings results in). Then Claude Code
+  clears it all, so you can show Matt from the start
+- [ ] **SCATT sessions:** ask the coaches to export a session from SCATT (a `.scatt-basic` file) and drop it in the
+  student's folder in the Drive; it shows under the student's Scores, for them and the family
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
   too. Until then the starter key works
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
@@ -78,6 +84,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-10 · The results site's key saved (Goo)
+- [x] ✅ 2026-11-10 · Sunny's franchise page, at the very bottom of the website (#158)
 - [x] ✅ 2026-11-10 · The public email is `info@skyarcacademy.com` (Goo, Settings → Academy → Email)
 - [x] ✅ 2026-11-10 · The coach card's "Elite Military Rifle Marksman", in capitals (Claude Code, at Goo's word)
 - [x] ✅ 2026-11-10 · The fourth meeting's picks: B6 A; R1 build it, automatic; R2 decode it in-house; R3 yes
