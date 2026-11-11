@@ -15,6 +15,12 @@ import { cn } from '@/lib/utils'
 
 const TARGET = Object.values(SCATT_TARGETS)[0]
 const COLORS = { aim: '#00e000', last: '#ffd400', after: '#ff2a2a' }
+/**
+ * The trace's width: a 210th of the target's, and never under 2.25 px on screen, so a small target draws it about as
+ * the phone app does (Goo, 2026-11-11: "a bit thicker … only on our website"; twice what it was on a computer's screen).
+ */
+const TRACE_SHARE = 1 / 210
+const TRACE_MIN_PX = 2.25
 const ARROW_GLYPH = ['•', '↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
 const SPEEDS = [0.5, 1, 2] as const
 const ZOOMS = [
@@ -224,7 +230,7 @@ export function ScattReplay({ session, traces, loading }: { session: ScattSessio
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-1">
-      <span className="h-0.5 w-4 rounded" style={{ background: color }} />
+      <span className="h-[3px] w-4 rounded" style={{ background: color }} />
       {label}
     </span>
   )
@@ -305,10 +311,12 @@ function draw(ctx: CanvasRenderingContext2D, size: number, half: number, shots: 
     const k = idxAt(t)
     const yellow = idxAt(-1000)
     const shotIdx = idxAt(0)
+    // In the canvas's pixels (the screen's times its pixel ratio, as the size is measured).
+    const traceWidth = Math.max(TRACE_MIN_PX * Math.min(window.devicePixelRatio || 1, 3), size * TRACE_SHARE)
     const stroke = (a: number, b: number, color: string) => {
       if (b <= a) return
       ctx.strokeStyle = color
-      ctx.lineWidth = Math.max(1.5, size / 420)
+      ctx.lineWidth = traceWidth
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
       ctx.beginPath()

@@ -11,6 +11,7 @@ import type { WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
 import { DriveIcon } from '@/components/app/DriveIcon'
 import { useStudentList } from '@/features/data/hooks'
+import { scattScoresPath } from '@/features/scatt/afterUpload'
 import { scorePath } from '@/features/scores/card/parts'
 import { ShotReplay } from '@/features/scores/ShotReplay'
 import { FileGlyph, FolderGlyph, PersonChip } from './parts'
@@ -163,8 +164,9 @@ export function DetailsPanel({
           ) : null}
         </dl>
         {isScattKind(f.kind) && f.scatt?.note && scattRead(f) ? <p className="text-xs text-amber-800 dark:text-amber-300">{f.scatt.note}</p> : null}
+        {/* Its sessions open on the student's Scores tab, in view. */}
         {isScattKind(f.kind) && f.studentId && f.scatt?.sessions && scattRead(f) ? (
-          <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={`/${portal}/students/${f.studentId}/scores?scatt`}>
+          <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={scattScoresPath(portal, f.studentId, [f.id])}>
             Watch them in Scores <LuArrowRight className="size-3.5" />
           </Link>
         ) : null}

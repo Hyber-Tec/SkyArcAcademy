@@ -207,10 +207,15 @@ export function FamilyScoresPage() {
             label={`${student ? 'Your' : `${name}’s`} scores per 10 shots over time`}
           />
           {scatt.data.length ? (
-            <section className="@container rounded-xl border bg-card p-5" aria-label="SCATT training" data-testid="family-scatt">
-              <h2 className="text-base font-semibold">SCATT training</h2>
-              <p className="mt-0.5 mb-4 text-sm text-muted-foreground">Each shot of a training session on SCATT: how the aim moved before it and where it went. Tap a shot to play it.</p>
-              <ScattSessions key={kid} sessions={scatt.data} loading={scatt.loading} canDelete={false} />
+            <section className="@container overflow-hidden rounded-xl border bg-card" aria-label="SCATT training" data-testid="family-scatt">
+              <div className="px-5 pt-5 pb-4">
+                <h2 className="text-base font-semibold">SCATT training</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {`${plural(scatt.data.length, 'session')} on SCATT, newest first. Open one to see how the aim moved before each shot and where it went.`}
+                </p>
+              </div>
+              {/* The rows of the staff's Scores tab, to watch only. */}
+              <ScattSessions key={kid} sessions={scatt.data} staff={false} />
             </section>
           ) : null}
           <ShotPattern key={`pattern-${kid}`} evaluations={mine} />
