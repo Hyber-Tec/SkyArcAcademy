@@ -11,9 +11,13 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
+- [ ] **Android 1.2.0 (build 14): try it on your Android phone.** Plug it into the Mac (USB debugging on). If Sky Arc
+  came from Google Play, delete it from the phone first. Then, in Terminal, in the Sky Arc folder: `npm run android`.
+  Once it looks right, tell Claude Code: it sends this build to Google Play's review, and it goes live by itself once
+  approved
 - [ ] **iPhone 1.2.0 is in Apple's review** (build 13, the one you tried; sent 2026-11-11): it goes live by itself once
-  approved. If Apple writes, give Claude Code the message. The phone's search by other names comes with the next build.
-  No Android build until Google Play's 1.1.0 is live
+  approved. If Apple writes, give Claude Code the message. The phone's search by other names, and the tour's fix for
+  Android (#175), come with the next iPhone build
 - [ ] **The results site: your test, then the manager's.** Settings → Results site → **Check now** (the last month, about 9 minutes
   the first time). Open an athlete to see their results as the scores will show them, then link them, or **Confirm all**.
   When you're done trying, the gear → **Start over** removes it all and puts the results sheet scans back as they were,
@@ -25,9 +29,6 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
   too. Until then the starter key works; a new key goes in with `npx tsx scripts/results-site-key.ts`
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
-- [ ] **Google Play 1.1.0 is in Google's review** (sent 2026-11-06; still in review on 2026-11-10): it goes live by
-  itself. Check the Publishing overview and the Inbox; still in review after Nov 13 → contact Play support. No new
-  Android build until it's live
 
 ## The manager
 
@@ -87,6 +88,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-11 · Google Play 1.1.0 (build 12) live, after 3 days 16 hours in Google's review
 - [x] ✅ 2026-11-11 · iPhone 1.2.0 (build 13) tried on TestFlight (Goo), and sent to the App Store's review
 - [x] ✅ 2026-11-11 · The franchise page made better, to show the owner (#169)
 - [x] ✅ 2026-11-10 · The results site's key saved (Goo)

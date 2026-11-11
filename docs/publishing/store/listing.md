@@ -122,6 +122,18 @@ And smaller fixes.
 • Many smaller fixes.
 ```
 
+For 1.2.0 (build 14), 494 characters, to send with it once Goo has tried it on his phone:
+
+```
+• A short tour after you first sign in shows what each button does.
+• The app is in English for everyone.
+• Scores: watch SCATT training sessions shot by shot; competition results from the online results site come in with each student's scores; results-sheet shots whose places may be swapped are marked (≈).
+• Coaches: set or change your kiosk PIN under More.
+• Classes show a student's own hours past the class, and who canceled.
+• Search finds students by their other names.
+• Smaller fixes.
+```
+
 The words "for kids" or "for children" stay out of every text: Apple keeps them for its Kids category (guideline
 2.3.8).
 
