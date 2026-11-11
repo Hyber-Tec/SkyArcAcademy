@@ -10,6 +10,7 @@ const students: DriveStudent[] = [
   { id: 'sam', name: 'Sam Quill' },
   { id: 'sam2', name: 'Sam Ortiz' },
   { id: 'old', name: 'Mina Lee', finished: true },
+  { id: 'ivy', name: 'Ivy Rowan', otherNames: ['Lianhua'] },
 ]
 
 describe('whose a results sheet is', () => {
@@ -22,6 +23,9 @@ describe('whose a results sheet is', () => {
     expect(sheetStudent({ name: 'Seoyeon Park' }, students).id).toBe('chloe')
     expect(sheetStudent({ name: 'Seo-Yeon Park' }, students).id).toBe('chloe')
     expect(sheetStudent({ name: 'Chloe Park' }, students).id).toBe('chloe')
+    // A one-word other name is a given name: with the family name, it's hers.
+    expect(sheetStudent({ name: 'Lianhua Rowan' }, students).id).toBe('ivy')
+    expect(sheetStudent({ name: 'ROWAN, LIANHUA' }, students).id).toBe('ivy')
   })
 
   it('never picks on a first name alone, and offers whoever shares a word of it', () => {

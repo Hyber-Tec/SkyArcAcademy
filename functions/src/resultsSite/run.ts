@@ -181,7 +181,7 @@ async function load(branchId: string, run: DocumentReference, started: number): 
     loadKey(branchId),
     statusRef(branchId).get(),
     athletesOf(branchId).get(),
-    db.collection(`${base(branchId)}/${COL.students}`).select('name', 'otherNames').get(),
+    db.collection(`${base(branchId)}/${COL.students}`).select('name', 'lastName', 'otherNames').get(),
   ])
   const branch = branchSnap.data() as Branch | undefined
   if (!key) throw new Problem('Add the results site’s key first.')
@@ -189,8 +189,8 @@ async function load(branchId: string, run: DocumentReference, started: number): 
   const tz = branch?.timezone || 'America/New_York'
   const today = todayKey(tz)
   const students: StudentName[] = studentsSnap.docs.map((d) => {
-    const s = d.data() as Pick<Student, 'name' | 'otherNames'>
-    return { id: d.id, name: s.name ?? '', otherNames: s.otherNames ?? [] }
+    const s = d.data() as Pick<Student, 'name' | 'lastName' | 'otherNames'>
+    return { id: d.id, name: s.name ?? '', lastName: s.lastName ?? null, otherNames: s.otherNames ?? [] }
   })
   const recent = await matchesOf(branchId).where('endDate', '>=', addDays(today, -RECHECK_DAYS)).get()
   return {

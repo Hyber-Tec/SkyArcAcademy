@@ -3,6 +3,7 @@ import { LuPlus } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { requestedStudents } from '@shared/access/requests'
 import { isReservedEmail } from '@shared/brand'
+import { otherNamesText } from '@shared/names'
 import { emailKey } from '@shared/paths'
 import { ROLES, ROLE_LABELS, type Role, isAdminRole, isStaffRole } from '@shared/roles'
 import { todayKey } from '@shared/time'
@@ -117,7 +118,7 @@ export function MemberDialog({ open, onOpenChange, member, request, members, sta
       disabled: linkedStaffIds.has(s.id),
     })),
   ]
-  const studentOptions = students.map((s) => ({ value: s.id, label: s.name, hint: s.grade ? gradeLabel(s.grade) : undefined }))
+  const studentOptions = students.map((s) => ({ value: s.id, label: s.name, keywords: otherNamesText(s), hint: s.grade ? gradeLabel(s.grade) : undefined }))
   // The children a parent's request names ("Ava Patel, Ben Patel", "Ava and Ben Patel", a nickname), matched to the
   // students they could be and offered to add with one click: the admin still chooses, as a parent's access to a child's
   // records is theirs to grant.

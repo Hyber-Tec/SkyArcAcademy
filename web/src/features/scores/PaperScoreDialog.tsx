@@ -1,6 +1,7 @@
 import { type Timestamp, serverTimestamp } from 'firebase/firestore'
 import { type ReactNode, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { otherNamesText } from '@shared/names'
 import { studentLabel } from '@shared/people'
 import { printOf } from '@shared/scores/duplicates'
 import { type Evaluation, POSITIONS, POSITION_LABELS, type Position, type ResultKind, isPosition, kindOf, paperEvaluation } from '@shared/shooting/evaluation'
@@ -104,7 +105,7 @@ export function PaperScoreForm({
   // The official score matters for a card read by the app (scanned): a typed card's own scores are the coach's already.
   const scanned = existingShots.some((t) => typeof t.x === 'number')
   const ready = !!studentId && !!student && !!position && !!dateKey && (mode === 'bulls' ? bullsOk && writtenOk : totalOk)
-  const options = useMemo(() => students.filter((s) => s.status !== 'finished' || s.id === studentId).map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade) })), [students, studentId])
+  const options = useMemo(() => students.filter((s) => s.status !== 'finished' || s.id === studentId).map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), keywords: otherNamesText(s) })), [students, studentId])
 
   async function save() {
     if (!ready || !student || !position) return

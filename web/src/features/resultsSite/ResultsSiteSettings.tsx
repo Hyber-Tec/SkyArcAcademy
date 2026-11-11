@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { LuCheck, LuChevronDown, LuExternalLink, LuKeyRound, LuRefreshCw, LuTrophy, LuUserCheck, LuUserX, LuUndo2 } from 'react-icons/lu'
 import { toast } from 'sonner'
 import { DEMO_ACADEMY_ID } from '@shared/academy'
+import { namesOf } from '@shared/names'
 import { type OnlineAthlete, type OnlineMatch, type ResultsSiteRun, RUN_KIND_LABELS, SEARCH_FROM, isUnderWay } from '@shared/scores/resultsSite'
 import { type DateKey, addMonths, formatDateKey, formatInstant, todayKey } from '@shared/time'
 import type { Student, TimestampLike, WithId } from '@shared/types'
@@ -473,7 +474,7 @@ function StudentPick({ students, onPick, children }: { students: readonly WithId
               {list.map((s) => (
                 <CommandItem
                   key={s.id}
-                  value={`${s.name} ${(s.otherNames ?? []).join(' ')} ${s.id}`}
+                  value={`${namesOf(s).join(' ')} ${s.id}`}
                   onSelect={() => {
                     onPick(s)
                     setOpen(false)

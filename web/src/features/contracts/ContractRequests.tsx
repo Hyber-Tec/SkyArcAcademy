@@ -7,6 +7,7 @@ import { isLinkable } from '@shared/access/onFile'
 import { childName } from '@shared/contracts/request'
 import type { ContractRequest } from '@shared/contracts/types'
 import { COL, DOC, ROOT, emailKey } from '@shared/paths'
+import { findStudent } from '@shared/studentList'
 import { formatDateKey, formatInstant, todayKey } from '@shared/time'
 import type { Student, StudentPrivateProfile, WithId } from '@shared/types'
 import { useBranch } from '@/branch/BranchProvider'
@@ -131,7 +132,7 @@ function RequestDialog({ request: r, onClose }: { request: WithId<ContractReques
   const onRecord = (priv.data?.parents ?? []).some((p) => emailKey(p.email ?? '') === emailKey(r.email))
   const needle = q.trim().toLowerCase()
   const found = useMemo(
-    () => (needle.length < 2 ? [] : students.data.filter((s) => isLinkable(s.status) && s.id !== r.matchedStudentId && s.nameLower.includes(needle)).slice(0, 6)),
+    () => (needle.length < 2 ? [] : students.data.filter((s) => isLinkable(s.status) && s.id !== r.matchedStudentId && findStudent(s, needle).found).slice(0, 6)),
     [needle, students.data, r.matchedStudentId],
   )
   const matched = r.matchedStudentId ? students.data.find((s) => s.id === r.matchedStudentId) : null

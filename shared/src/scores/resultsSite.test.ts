@@ -6,6 +6,8 @@ const students = studentIndex([
   { id: 's1', name: 'Avery Stone', otherNames: ['Ave Stone'] },
   { id: 's2', name: 'Jordan Lee' },
   { id: 's3', name: 'Jordan Lee' },
+  // Goes by a given name the results site lists her under, with her family name.
+  { id: 's4', name: 'Ivy Rowan', lastName: 'Rowan', otherNames: ['Lianhua'] },
 ])
 const teams = ['ARC 10.9*', 'ARC *']
 
@@ -25,6 +27,10 @@ describe('who is the academy’s', () => {
     expect(verdictFor({ key: 'avestone', team: 'Lakeside' }, none, students, teams)).toEqual({ kind: 'suggest', why: 'name', studentId: 's1' })
     // Two students share the name: the person picks.
     expect(verdictFor({ key: 'jordanlee', team: null }, none, students, teams)).toEqual({ kind: 'suggest', why: 'name', studentId: null })
+    // Another name she goes by, with her family name, either way round.
+    expect(verdictFor({ key: 'lianhuarowan', team: 'Lakeside' }, none, students, teams)).toEqual({ kind: 'suggest', why: 'name', studentId: 's4' })
+    expect(verdictFor({ key: 'rowanlianhua', team: null }, none, students, teams)).toEqual({ kind: 'suggest', why: 'name', studentId: 's4' })
+    expect(verdictFor({ key: 'stoneavery', team: null }, none, students, teams)).toEqual({ kind: 'suggest', why: 'name', studentId: 's1' })
     // A near spelling, or another team: nobody.
     expect(verdictFor({ key: 'averystones', team: 'Lakeside' }, none, students, teams)).toEqual({ kind: 'none' })
     expect(verdictFor({ key: 'riverbanks', team: 'Arcadia' }, none, students, teams)).toEqual({ kind: 'none' })

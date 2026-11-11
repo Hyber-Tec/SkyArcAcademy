@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LuArrowRight, LuCircleAlert, LuCopy, LuFileSearch, LuInfo, LuX } from 'react-icons/lu'
 import type { DriveStudent } from '@shared/drive/model'
+import { otherNamesText } from '@shared/names'
 import { type ResultPrint, repeatOf, sameResult } from '@shared/scores/duplicates'
 import { POSITIONS, POSITION_COLORS, POSITION_LABELS, type Position, isPosition, type ResultKind } from '@shared/shooting/evaluation'
 import { formatDateKey, formatMinutes } from '@shared/time'
@@ -103,7 +104,7 @@ export function AddResultsDialog({
   const [kind, setKind] = useState<ResultKind>('practice')
   const [busy, setBusy] = useState(false)
   // A finished student's folder can still take a result dropped into it.
-  const options = useMemo(() => students.filter((s) => !s.finished || s.id === fixedStudentId).map((s) => ({ value: s.id, label: s.name })), [students, fixedStudentId])
+  const options = useMemo(() => students.filter((s) => !s.finished || s.id === fixedStudentId).map((s) => ({ value: s.id, label: s.name, keywords: otherNamesText(s) })), [students, fixedStudentId])
   // Each student's saved results, read once their result's student is known, so a repeat shows at once (Goo,
   // 2026-11-03): it isn't added unless someone adds it anyway.
   const [saved, setSaved] = useState<Record<string, ResultPrint[] | 'failed'>>({})

@@ -1,3 +1,4 @@
+import { nameFormsOf } from '../names'
 import type { Position } from '../shooting/evaluation'
 import { type DateKey, addDays } from '../time'
 import type { TimestampLike } from '../types'
@@ -168,14 +169,19 @@ export function dueForRecheck(m: Pick<OnlineMatch, 'endDate' | 'ours' | 'status'
 export interface StudentName {
   id: string
   name: string
+  lastName?: string | null
   otherNames?: string[]
 }
 
-/** Each name key (a student's name and the other names they go by) with the students who have it. */
+/**
+ * Each name key with the students who have it: a student's name and the other names they go by, a given name with
+ * their family name, each family name first too (`nameFormsOf`: "Shengzhe Zhou" and "Zhou Shengzhe" for Remi Zhou, who
+ * goes by Shengzhe).
+ */
 export function studentIndex(students: readonly StudentName[]): Map<string, StudentName[]> {
   const out = new Map<string, StudentName[]>()
   for (const s of students) {
-    for (const n of [s.name, ...(s.otherNames ?? [])]) {
+    for (const n of nameFormsOf(s)) {
       const key = nameKey(n)
       if (!key) continue
       const list = out.get(key) ?? []

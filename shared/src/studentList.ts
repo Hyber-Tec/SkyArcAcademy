@@ -1,3 +1,4 @@
+import { searchFindsStudent } from './names'
 import { INACTIVE_STUDENT_STATUSES } from './people'
 import { type DateKey, WEEKDAY_SHORT, diffDays, formatDateKey, formatMinutes, weekdayOf } from './time'
 import type { Session, Student, StudentStatus } from './types'
@@ -24,13 +25,11 @@ export function inStudentTab(status: StudentStatus, tab: StudentTab): boolean {
 
 /**
  * Whether a search finds a student: by their name, or by one of the other names they go by (a nickname, the name on
- * their SIUS reports). `also` is that other name when only it matched, so the row can say why the student is there.
+ * their SIUS reports, a given name with their family name: `searchFindsStudent`). `also` is that other name when only
+ * it matched, so the row can say why the student is there.
  */
-export function findStudent(s: Pick<Student, 'name' | 'nameLower' | 'otherNames'>, query: string): { found: boolean; also: string | null } {
-  const q = query.trim().toLowerCase()
-  if (!q || (s.nameLower || s.name.toLowerCase()).includes(q)) return { found: true, also: null }
-  const also = (s.otherNames ?? []).find((n) => n.toLowerCase().includes(q)) ?? null
-  return { found: also !== null, also }
+export function findStudent(s: Pick<Student, 'name' | 'otherNames'> & Partial<Pick<Student, 'lastName' | 'nameLower'>>, query: string): { found: boolean; also: string | null } {
+  return searchFindsStudent(s, query)
 }
 
 // ------------------------------------------------------- next and last class

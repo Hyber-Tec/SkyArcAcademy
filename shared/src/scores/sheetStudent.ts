@@ -1,5 +1,6 @@
 import type { DriveStudent } from '../drive/model'
 import { nameWords } from '../drive/suggest'
+import { namesOf } from '../names'
 
 /**
  * Whose a results sheet is, from the shooter's name printed on it (the manager's third meeting, CP1: "read the
@@ -23,8 +24,11 @@ export function nameIn(name: readonly string[], words: ReadonlySet<string>): boo
   return true
 }
 
-/** A student's names as words: their name and each other name, those of two words or more (a first name alone isn't one). */
-const fullNames = (s: DriveStudent) => [s.name, ...(s.otherNames ?? [])].map(nameWords).filter((w) => w.length >= 2)
+/**
+ * A student's names as words: their name and each other name (a given name with their family name: `namesOf`), those
+ * of two words or more (a first name alone isn't one).
+ */
+const fullNames = (s: DriveStudent) => namesOf(s).map(nameWords).filter((w) => w.length >= 2)
 
 /** Whether a printed name is this student's: one of their names is all in it, or it is all in one of their names. */
 function isNamed(s: DriveStudent, printed: readonly string[]): boolean {
@@ -62,7 +66,7 @@ export function sheetStudent(reading: { name: string; header?: string }, student
   // Nobody has the whole name: those with a word of it in common (a last name shared by siblings), most words first.
   const words = new Set(printed)
   const scored = active
-    .map((s) => ({ s, hits: Math.max(0, ...[s.name, ...(s.otherNames ?? [])].map((n) => nameWords(n).filter((w) => words.has(w)).length)) }))
+    .map((s) => ({ s, hits: Math.max(0, ...namesOf(s).map((n) => nameWords(n).filter((w) => words.has(w)).length)) }))
     .filter((x) => x.hits > 0)
     .sort((a, b) => b.hits - a.hits || a.s.name.localeCompare(b.s.name))
   return { id: null, candidates: scored.slice(0, 3).map((x) => x.s.id) }

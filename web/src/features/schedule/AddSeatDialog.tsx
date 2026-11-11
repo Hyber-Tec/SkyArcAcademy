@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LuSearch } from 'react-icons/lu'
 import { isInactiveStudent } from '@shared/people'
 import { makeupLabel } from '@shared/schedule/classes'
+import { findStudent } from '@shared/studentList'
 import { formatDateKey, formatTimeRange } from '@shared/time'
 import type { Session, Student, WithId } from '@shared/types'
 import { TimeSelect } from '@/components/app/TimeSelect'
@@ -56,7 +57,7 @@ export function AddSeatDialog({
   const classLevels = new Set(v.seats.map((s) => students.find((x) => x.id === s.studentId)?.level).filter(Boolean))
   const needle = q.trim().toLowerCase()
   const list = students
-    .filter((s) => !here.has(s.id) && !isInactiveStudent(s.status) && (!needle || s.nameLower.includes(needle)))
+    .filter((s) => !here.has(s.id) && !isInactiveStudent(s.status) && findStudent(s, needle).found)
     .sort((a, b) => Number(classLevels.has(b.level)) - Number(classLevels.has(a.level)) || a.name.localeCompare(b.name))
   // Absences near this class first (a make-up can come before an absence planned ahead): five, then the rest on request.
   const away = (d: string) => Math.abs(new Date(`${d}T12:00:00Z`).getTime() - new Date(`${c.dateKey}T12:00:00Z`).getTime())

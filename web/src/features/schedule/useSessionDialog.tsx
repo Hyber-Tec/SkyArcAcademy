@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { dayHours } from '@shared/availability'
+import { otherNamesText } from '@shared/names'
 import { COL } from '@shared/paths'
 import { MAKEUP_LOOKBACK_DAYS, makeupLabel, makeupsOwed, takesSeat } from '@shared/schedule/classes'
 import { type DateKey, addDays, formatDateKey, formatTimeRange, todayKey } from '@shared/time'
@@ -104,7 +105,7 @@ export function useSessionDialog({ source = 'student_calendar', enabled = true }
                 id="book-student"
                 value={draft.studentId || null}
                 onChange={(v) => setDraft({ ...draft, studentId: v, label: '' })}
-                options={students.filter((s) => s.status !== 'finished').map((s) => ({ value: s.id, label: s.name, hint: s.level ?? undefined }))}
+                options={students.filter((s) => s.status !== 'finished').map((s) => ({ value: s.id, label: s.name, keywords: otherNamesText(s), hint: s.level ?? undefined }))}
                 placeholder="Choose a student"
                 searchPlaceholder="Search students"
               />

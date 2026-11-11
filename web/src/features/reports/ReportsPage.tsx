@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { LuChartLine, LuExternalLink, LuFilePlus, LuPlus, LuTrash2 } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
+import { otherNamesText } from '@shared/names'
 import { studentLabel } from '@shared/people'
 import { reportName } from '@shared/reports/compose'
 import { useBranch } from '@/branch/BranchProvider'
@@ -110,7 +111,7 @@ export function ReportsPage({ portal = 'admin' }: { portal?: 'admin' | 'coach' }
           className="w-full sm:w-64"
           value={studentId ?? 'all'}
           onChange={(v) => update({ student: v === 'all' ? null : v })}
-          options={[{ value: 'all', label: 'All students' }, ...students.map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade) }))]}
+          options={[{ value: 'all', label: 'All students' }, ...students.map((s) => ({ value: s.id, label: studentLabel(s.name, s.grade), keywords: otherNamesText(s) }))]}
         />
       </div>
 
