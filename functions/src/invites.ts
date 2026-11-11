@@ -88,7 +88,7 @@ export const onMemberWritten = onDocumentWritten(
 )
 
 /** An owner or admin emails someone their sign-in link again. */
-export const resendInvite = onCall({ secrets: [gmailAppPassword] }, async (req) => {
+export const resendInvite = onCall({ secrets: [gmailAppPassword], ...LIGHT }, async (req) => {
   const { branchId, email } = (req.data ?? {}) as { branchId?: string; email?: string }
   const token = req.auth?.token
   if (!token || typeof token.email !== 'string' || token.email_verified !== true) throw new HttpsError('unauthenticated', 'Sign in first.')
