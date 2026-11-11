@@ -168,8 +168,8 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
   }, [loading, asked, allRows, show])
 
   // A link to SCATT sessions (`?scatt=<file IDs>`: the Drive's "Watch them in Scores", a SCATT file just uploaded): the
-  // section opens, and so do those files' sessions as soon as they're in (the list is live), brought into view; once for
-  // each link. `?scatt` alone opens the section.
+  // section opens, and so does the newest of those files' sessions as soon as it's in (the list is live), brought into
+  // view, the others in the rows under it; once for each link. `?scatt` alone opens the section.
   const scattLink = params.get('scatt')
   const scattFiles = useMemo(() => (scattLink ?? '').split(',').filter(Boolean), [scattLink])
   const scattSectionFor = useRef<string | null>(null)
@@ -185,8 +185,8 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
     const theirs = scatt.data.filter((x) => scattFiles.includes(x.fileId))
     if (!theirs.length) return
     scattRowsFor.current = scattLink
-    for (const x of theirs) showScattRow(x.id)
-    // Once they've unfolded: the page is then long enough to bring the first (the newest) to the top.
+    showScattRow(theirs[0].id)
+    // Once it has unfolded: the page is then long enough to bring it to the top.
     setTimeout(() => showScatt(theirs[0].id), 320)
   }, [scattLink, scattFiles, loading, scatt.loading, scatt.data, showSection, showScattRow])
 
