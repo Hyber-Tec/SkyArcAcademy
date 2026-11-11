@@ -132,6 +132,15 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
     setTimeout(() => showRow(row.key, false), 320)
   }, [loading, asked, allRows, show])
 
+  // The Drive's "Watch them in Scores" (`?scatt`): the SCATT sessions come into view, once.
+  const wantsScatt = params.has('scatt')
+  const scattShown = useRef(false)
+  useEffect(() => {
+    if (!wantsScatt || loading || !scatt.data.length || scattShown.current) return
+    scattShown.current = true
+    setTimeout(() => document.getElementById('scatt')?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' }), 120)
+  }, [wantsScatt, loading, scatt.data.length])
+
   if (loading) return <Skeleton className="h-96 w-full rounded-xl" />
 
   const first = allRows.length ? allRows[allRows.length - 1].results[0].dateKey : null
@@ -195,6 +204,21 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
         )}
       </section>
 
+      {scatt.data.length ? (
+        <section id="scatt" className="@container scroll-mt-4 rounded-xl border bg-card p-4 @xl:p-5" aria-label="SCATT sessions" data-testid="scatt-section">
+          <div className="mb-4 flex items-start gap-3">
+            <LuActivity className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold">SCATT sessions</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {plural(scatt.data.length, 'session')} from SCATT files in {name}’s Drive folder · each shot’s aim before it went off, played back · the family watches them too
+              </p>
+            </div>
+          </div>
+          <ScattSessions sessions={scatt.data} loading={false} canDelete />
+        </section>
+      ) : null}
+
       <div className="@container overflow-hidden rounded-xl border bg-card">
         <FoldedSection
           icon={LuChartLine}
@@ -212,23 +236,14 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
             <p className="py-4 text-sm text-muted-foreground">Two results are needed to draw a line.</p>
           )}
         </FoldedSection>
-        <FoldedSection
-          icon={LuActivity}
-          title="SCATT sessions"
-          sub={scatt.data.length ? `${scatt.data.length} session${scatt.data.length === 1 ? '' : 's'} · each shot’s aim, played back` : 'None yet · drop a SCATT file in the student’s Drive folder'}
-          open={sections.has('scatt')}
-          onToggle={() => toggleSection('scatt')}
-          testId="scatt-section"
-        >
-          {scatt.data.length || scatt.loading ? (
-            <ScattSessions sessions={scatt.data} loading={scatt.loading} canDelete />
-          ) : (
+        {scatt.data.length || scatt.loading ? null : (
+          <FoldedSection icon={LuActivity} title="SCATT sessions" sub="None yet · drop a SCATT file in the student’s Drive folder" open={sections.has('scatt')} onToggle={() => toggleSection('scatt')} testId="scatt-how">
             <p className="py-2 text-sm text-muted-foreground">
               Export the session from SCATT (a .scatt-basic file) and drop it in {student.name}’s folder in the Drive: each session comes in here once, with
               every shot’s aim to play back. The family watches them in their app too.
             </p>
-          )}
-        </FoldedSection>
+          </FoldedSection>
+        )}
         <FoldedSection icon={LuGitCompareArrows} title="Compare" sub="Two results of a position side by side" open={sections.has('compare')} onToggle={() => toggleSection('compare')} testId="compare-section">
           <CompareCard evaluations={scored} bare />
         </FoldedSection>

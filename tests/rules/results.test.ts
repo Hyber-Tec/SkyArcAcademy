@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { type RulesTestEnvironment, assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 
 // The results site import (shared/src/scores/resultsSite.ts), and SCATT sessions (shared/src/scatt/session.ts): owners and admins read what it found, nobody else does,
@@ -140,5 +140,35 @@ describe('SCATT sessions', () => {
     await assertFails(deleteDoc(doc(db('parent@a.test'), `branches/${A}/scattSessions/scatt-1`)))
     await assertSucceeds(deleteDoc(doc(db('coach@a.test'), `branches/${A}/scattTraces/scatt-1`)))
     await assertSucceeds(deleteDoc(doc(db('owner@a.test'), `branches/${A}/scattSessions/scatt-1`)))
+  })
+
+  it('a SCATT file the server has read is still the staff’s to rename, move and trash; its note is the server’s', async () => {
+    const coach = { uid: 'coach', email: 'coach@a.test', name: 'coach' }
+    const scattFile = (extra: Record<string, unknown> = {}) => ({
+      name: 'Made-up.scatt-basic',
+      size: 4,
+      kind: 'scatt-basic',
+      mime: 'application/x-scatt',
+      status: 'uploading',
+      folderId: 'student-s1',
+      studentId: 's1',
+      uploadedAt: serverTimestamp(),
+      uploadedBy: coach,
+      ...extra,
+    })
+    await env.withSecurityRulesDisabled(async (c) => {
+      const d = c.firestore()
+      for (const s of ['s1', 's2']) await setDoc(doc(d, `branches/${A}/driveFolders/student-${s}`), { name: s, parentId: null, studentId: s, access: 'staff' })
+      await setDoc(doc(d, `branches/${A}/driveFiles/f1`), scattFile({ status: 'ready', scatt: { sessions: 3, skipped: 0, note: null, studentId: 's1', at: null } }))
+    })
+    const f1 = (who: string) => doc(db(who), `branches/${A}/driveFiles/f1`)
+    await assertSucceeds(updateDoc(f1('coach@a.test'), { name: 'Renamed.scatt-basic' }))
+    await assertSucceeds(updateDoc(f1('coach@a.test'), { folderId: 'student-s2', studentId: 's2' }))
+    await assertSucceeds(updateDoc(f1('coach@a.test'), { trashed: true, trashedAt: serverTimestamp(), trashedBy: coach }))
+    await assertFails(updateDoc(f1('owner@a.test'), { 'scatt.sessions': 0 }))
+    await assertFails(updateDoc(f1('owner@a.test'), { scatt: null }))
+    await assertFails(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f2`), scattFile({ scatt: { sessions: 0, skipped: 0, note: null, studentId: 's1', at: null } })))
+    await assertSucceeds(setDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f2`), scattFile()))
+    await assertFails(updateDoc(doc(db('coach@a.test'), `branches/${A}/driveFiles/f2`), { scatt: null }))
   })
 })

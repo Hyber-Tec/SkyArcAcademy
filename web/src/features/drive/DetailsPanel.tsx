@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { categoryOf, isScattKind } from '@shared/drive/files'
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
 import { scoreTotal } from '@shared/drive/scores'
-import { DRIVE_ACCESS_LABELS, type DriveAccess, accessOf, isFixedFolder } from '@shared/drive/types'
+import { DRIVE_ACCESS_LABELS, type DriveAccess, type DriveFile, accessOf, isFixedFolder } from '@shared/drive/types'
 import { type Evaluation, POSITION_COLORS, POSITION_LABELS, SOURCE_LABELS, per10, wholePer10 } from '@shared/shooting/evaluation'
 import { canReplay } from '@shared/shooting/replay'
 import { formatDateKey, formatInstant, formatMinutes } from '@shared/time'
@@ -16,6 +16,16 @@ import { ShotReplay } from '@/features/scores/ShotReplay'
 import { FileGlyph, FolderGlyph, PersonChip } from './parts'
 
 const CATEGORY: Record<string, string> = { pdf: 'PDF', image: 'Photo', document: 'Document', spreadsheet: 'Spreadsheet', presentation: 'Presentation', video: 'Video', text: 'Text', other: 'File' }
+
+/** Whether the server has read a SCATT file for the student whose folder it's in (a note from before names nobody). */
+const scattRead = (f: DriveFile) => !!f.scatt && !!f.studentId && (f.scatt.studentId === undefined || f.scatt.studentId === f.studentId)
+
+/** What a SCATT file brought in (functions/src/scatt): its sessions follow it to another student's folder. */
+function scattWords(f: DriveFile): string {
+  if (!f.studentId) return f.scatt?.sessions ? `${f.scatt.sessions} brought in for the student whose folder it was in; put it in a student’s folder to move them there` : 'Put it in a student’s folder to bring its sessions in.'
+  if (!scattRead(f)) return 'Reading…'
+  return [`${f.scatt!.sessions} brought in`, f.scatt!.skipped ? `${f.scatt!.skipped} not` : null].filter(Boolean).join(', ')
+}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   if (children === null || children === undefined || children === '') return null
@@ -149,18 +159,12 @@ export function DetailsPanel({
           <Row label="Uploaded">{[when(f.uploadedAt), f.uploadedBy?.name].filter(Boolean).join(' by ')}</Row>
           {f.originalName && f.originalName !== f.name ? <Row label="Original name">{f.originalName}</Row> : null}
           {isScattKind(f.kind) ? (
-            <Row label="SCATT sessions">
-              {!f.studentId
-                ? 'Put it in a student’s folder to bring its sessions in.'
-                : f.scatt
-                  ? [`${f.scatt.sessions} brought in`, f.scatt.skipped ? `${f.scatt.skipped} not` : null].filter(Boolean).join(', ')
-                  : 'Reading…'}
-            </Row>
+            <Row label="SCATT sessions">{scattWords(f)}</Row>
           ) : null}
         </dl>
-        {isScattKind(f.kind) && f.scatt?.note ? <p className="text-xs text-amber-800 dark:text-amber-300">{f.scatt.note}</p> : null}
-        {isScattKind(f.kind) && f.studentId && f.scatt?.sessions ? (
-          <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={`/${portal}/students/${f.studentId}/scores`}>
+        {isScattKind(f.kind) && f.scatt?.note && scattRead(f) ? <p className="text-xs text-amber-800 dark:text-amber-300">{f.scatt.note}</p> : null}
+        {isScattKind(f.kind) && f.studentId && f.scatt?.sessions && scattRead(f) ? (
+          <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={`/${portal}/students/${f.studentId}/scores?scatt`}>
             Watch them in Scores <LuArrowRight className="size-3.5" />
           </Link>
         ) : null}

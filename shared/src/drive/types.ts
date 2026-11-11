@@ -117,8 +117,11 @@ export interface DriveFile {
   evaluationId?: string | null
   /** Its name on the computer it came from, when the Drive renamed it (SIUS results are named by date). */
   originalName?: string | null
-  /** A SCATT file's import (functions/src/scatt): the sessions brought in, those left out, and why, when it says. */
-  scatt?: { sessions: number; skipped: number; note: string | null; at: TimestampLike | null } | null
+  /**
+   * A SCATT file's import (functions/src/scatt), the server's alone: the sessions brought in, those left out, why when
+   * it says, and for which student (the file read again in another student's folder; none on a note from before).
+   */
+  scatt?: { sessions: number; skipped: number; note: string | null; studentId?: string | null; at: TimestampLike | null } | null
   uploadedAt: TimestampLike | null
   uploadedBy: DriveActor | null
   updatedAt?: TimestampLike | null

@@ -720,10 +720,11 @@ service cloud.firestore {
         allow delete: if isAdmin(b) && resource.data.get('trashed', false) == true;
       }
 
+      // `scatt` is the server's note on a SCATT file it read (functions/src/scatt): no client writes or changes it.
       function validFile(d) {
         return d.keys().hasOnly(['name', 'size', 'kind', 'mime', 'status', 'error', 'folderId', 'studentId', 'evaluationId',
                                  'access', 'originalName', 'uploadedAt', 'uploadedBy', 'updatedAt', 'updatedBy', 'trashed',
-                                 'trashedAt', 'trashedBy'])
+                                 'trashedAt', 'trashedBy', 'scatt'])
           && d.name is string && d.name.size() > 0 && d.name.size() <= 200
           && d.size is int && d.size > 0 && d.size <= 100 * 1024 * 1024
           && d.kind is string && d.mime is string
@@ -748,6 +749,7 @@ service cloud.firestore {
         // The record comes first (status uploading), then the bytes (storage.rules checks the record).
         allow create: if isStaff(b) && validFile(request.resource.data)
           && request.resource.data.status == 'uploading'
+          && !('scatt' in request.resource.data)
           && request.resource.data.get('trashed', false) == false
           && byMe(request.resource.data.uploadedBy)
           && accessFits(request.resource.data, request.resource.data.folderId);
@@ -756,6 +758,7 @@ service cloud.firestore {
           && request.resource.data.kind == resource.data.kind
           && request.resource.data.mime == resource.data.mime
           && request.resource.data.uploadedBy == resource.data.uploadedBy
+          && request.resource.data.get('scatt', 'none') == resource.data.get('scatt', 'none')
           && (!changed().hasAny(['folderId', 'access']) || accessFits(request.resource.data, request.resource.data.folderId));
         allow delete: if (isAdmin(b) && resource.data.get('trashed', false) == true)
           || (isStaff(b) && seesDriveItem(resource.data) && resource.data.status == 'error');
