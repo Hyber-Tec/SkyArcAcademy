@@ -31,7 +31,9 @@ CPU per project per region") keeps serving its previous one. The CLI records it 
 deploys skip it as unchanged. `scripts/deploy.sh` checks for such services after the functions deploy (newest revision
 not the one serving) and deploys them again by name, which the CLI never skips, after a minute, then two, then four;
 the job fails if any is still behind (re-run it a little later). It happened twice on 2026-11-10 (#156: six of 62;
-#159: five of 63, still behind after one minute).
+#159: five of 63, still behind after one minute), and on 2026-11-11 (#165: `resendInvite`, a whole CPU doubled while
+it starts, still behind after four minutes; the re-run deployed it). So functions run light (`LIGHT`,
+`functions/src/app.ts`) unless they need more: the kiosk's, which check PINs, keep a whole CPU.
 
 ## What each deploy deploys
 

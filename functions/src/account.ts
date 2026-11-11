@@ -6,7 +6,7 @@ import { type AccountEmailKind, accountActionUrl, looksLikeEmail } from '@shared
 import { ACADEMY_NAME, APP_URL, isReservedEmail } from '@shared/brand'
 import { accountEmail } from '@shared/email/account'
 import { COL, ROOT, USER_COL } from '@shared/paths'
-import { db } from './app'
+import { db, LIGHT } from './app'
 import { gmailAppPassword, sendMail } from './email'
 
 /**
@@ -42,7 +42,7 @@ const safeNext = (next: unknown): string | null => (typeof next === 'string' && 
  * `{ sent: false, fallback: true }` tells the app to ask Firebase to send its own email instead (the sending
  * password isn't set, or Gmail refused), so nobody is ever left without the link.
  */
-export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstances: 5, timeoutSeconds: 30 }, async (req) => {
+export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstances: 5, timeoutSeconds: 30, ...LIGHT }, async (req) => {
   const { kind, email: rawEmail, next } = (req.data ?? {}) as { kind?: string; email?: string; next?: string }
   if (kind !== 'verify' && kind !== 'reset') throw new HttpsError('invalid-argument', 'Unknown email.')
   const auth = getAuth()
@@ -88,7 +88,7 @@ export const sendAccountEmail = onCall({ secrets: [gmailAppPassword], maxInstanc
  * the member doc (its access list) is only unlinked from the account, and employee, student, class and pay records
  * are untouched. Needs a sign-in within the last 10 minutes.
  */
-export const deleteMyAccount = onCall({ timeoutSeconds: 60 }, async (req) => {
+export const deleteMyAccount = onCall({ timeoutSeconds: 60, ...LIGHT }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
   const { uid, token } = req.auth
   const email = typeof token.email === 'string' ? token.email.toLowerCase() : null
