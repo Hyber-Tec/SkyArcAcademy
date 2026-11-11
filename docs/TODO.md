@@ -11,8 +11,6 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
-- [ ] **The public email:** Settings → Academy → Email → `info@skyarcacademy.com` (it still says the manager's Gmail).
-  The website, the app and new reports change at once
 - [ ] **The results site's key:** Settings → Results site → paste Scopos's shared starter key (their support pages,
   Developers → X-API-Key), then **Look back** a year and confirm the athletes it finds. After that it looks every night
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
@@ -80,6 +78,8 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-10 · The public email is `info@skyarcacademy.com` (Goo, Settings → Academy → Email)
+- [x] ✅ 2026-11-10 · The coach card's "Elite Military Rifle Marksman", in capitals (Claude Code, at Goo's word)
 - [x] ✅ 2026-11-10 · The fourth meeting's picks: B6 A; R1 build it, automatic; R2 decode it in-house; R3 yes
 - [x] ✅ 2026-11-09 · The app's email comes from info@skyarcacademy.com, with the manager's app password
   ([DECISIONS.md](DECISIONS.md) §40)

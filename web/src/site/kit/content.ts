@@ -673,7 +673,6 @@ export const CONTACT = {
     student: 'Student age or grade',
     topic: 'What can we help with?',
     message: 'Message',
-    language: 'Language for our reply',
   },
   topics: [
     { id: 'program', label: 'Program information' },
@@ -688,6 +687,49 @@ export const CONTACT = {
   sent: { title: 'Message sent.', text: 'Thanks. We’ll reply to', again: 'Send another message' },
   response: 'We’ll reply as soon as possible.',
   delivered: 'Your message goes straight to the academy.',
+}
+
+/**
+ * The franchise page (the owner's idea, 2026-11-10: "information about franchise opportunities … at the very
+ * bottom"): for people who'd like to open an academy on Sky Arc's model. No prices, and only what the site already
+ * says of the academy; the terms come later, in person.
+ */
+export const FRANCHISE = {
+  eyebrow: 'Franchise opportunity',
+  title: 'Bring Sky Arc to your community.',
+  text: 'Sky Arc Sports Academy is growing. If you’d like to open an air rifle academy built on the same program, coaching and tools, we’d like to hear from you.',
+  builtTitle: 'What Sky Arc has built',
+  built: [
+    {
+      title: 'A clear path for every athlete',
+      text: 'Four program levels, from bench-supported first shots to Sporter and NCAA Precision competition, with placement by readiness, not school grade.',
+    },
+    { title: 'Safety before the first shot', text: 'Every athlete starts with Trial One: safety, range commands and the rifle, before any shooting.' },
+    {
+      title: 'Coaching that has been there',
+      text: 'Coached by an NCAA National Championship competitor and an Elite Military Rifle Marksman, with NRA Level 1 Certified Instructors.',
+    },
+    { title: 'Electronic scoring', text: 'Shots scored on SIUS electronic targets, so every athlete sees where each shot went.' },
+    {
+      title: 'Its own app',
+      text: 'Families follow classes, scores, progress reports and news on the web and on their phones. Coaches and the office run the schedule, the front desk and the scores in the same system.',
+    },
+  ],
+  stepsTitle: 'How it starts',
+  steps: ['Tell us about yourself and where you’d like to open.', 'The academy gets in touch to talk it through.'],
+  fields: {
+    name: 'Your name',
+    email: 'Email',
+    phone: 'Phone (optional)',
+    area: 'Where would you like to open? (city and state)',
+    message: 'Tell us about yourself',
+    messageHint: 'Your background, why air rifle, and when you’re hoping to start.',
+  },
+  send: 'Send',
+  sending: 'Sending…',
+  sent: { title: 'Thank you.', text: 'The academy will reply to', again: 'Send another message' },
+  note: 'This page shares information only. It isn’t an offer to sell a franchise.',
+  link: 'Franchise opportunity',
 }
 
 export const PORTAL = {
@@ -735,7 +777,6 @@ export const APP = {
 export const FOOTER = {
   tagline: 'Focused athletes. Confident people.',
   text: 'Safe, disciplined training that builds strong fundamentals, resilience, and respect for the sport—from the first shot forward.',
-  languageNote: 'Translations support reading access. Coaching, safety commands, and academy communication are conducted in English.',
   copyright: `© ${new Date().getFullYear()} Sky Arc Sports Academy. All rights reserved.`,
   privacy: 'Privacy policy',
   terms: 'Terms of service',

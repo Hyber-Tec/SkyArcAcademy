@@ -106,12 +106,12 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     chosen today). A coach without a portrait gets a card without one; when some coaches have portraits, the others show
     their initials in the same frame, so the cards line up. The Gallery shows only its photos. An empty page photo
     leaves the text the full width, with nothing drawn while the content loads.
-- [ ] **B5. `info@skyarcacademy.com` as the public email, everywhere.**
+- ✅ **B5. `info@skyarcacademy.com` as the public email, everywhere.**
   - *Plan:* **already works, no code.** It's one setting, Settings → Academy → Email: the website's header, footer,
     Contact page and privacy policy, the app's contact buttons, the contract's pages and PDF, new progress reports, and
     the reply address of invites all read it. It still holds the manager's Gmail: changing it there changes them all
     (`docs/TODO.md`). No address is written into the code.
-  - *2026-11-10:* waiting for the setting to change (Goo or the manager).
+  - *2026-11-10:* set by Goo in Settings → Academy → Email (checked on production that evening): no code.
 - ✅ **B6. "One path, four levels": the scroll animation.** The coach saw something move the wrong way while scrolling.
   - *Plan:* **analyze first.** As the page scrolls down, the section steps through the four levels. The likely
     cause: the highlight on its rank ladder (the highest rank at the top) climbs, against the scroll. Check this and
@@ -190,7 +190,7 @@ The owner's first notes after reading the website page by page (more will come i
 - ✅ **W1. English only:** "Please remove all Korean-language content … an English-only website is appropriate for our
   audience", including Korean in photos. Goo: "no Korean language in this project. Please remove all." (§42, #151;
   phones get it with the next app update)
-- [ ] **W2. The coaches' backgrounds, worded exactly:** "Every phrase matters, and their experience and qualifications
+- ✅ **W2. The coaches' backgrounds, worded exactly:** "Every phrase matters, and their experience and qualifications
   must be presented accurately, without ambiguity. For the main page, please use the designation 'Elite Military Rifle
   Marksman.'"
   - *2026-11-10:* every sentence about the coaches checked against their own cards (Settings → Website). The homepage now
@@ -199,6 +199,14 @@ The owner's first notes after reading the website page by page (more will come i
     Certified Instructors and an Elite Military Rifle Marksman"; "elite military rifle marksmanship" for "military
     leadership", which no card says (#154). The cards themselves are the academy's words: one still has "Elite military
     rifle marksman" in small letters (Settings → Website → Coaches). The owner's full review comes in Google Drive.
+  - *2026-11-10, Goo: "you just do that":* that card now says "Elite Military Rifle Marksman" (production, with its
+    entry in the activity log). The owner's full notes haven't come yet.
+
+- ✅ **W3. A franchise page** (the owner's message to Goo, 2026-11-10: "add information about franchise opportunities
+  to the website … at the very bottom"; Goo: "you decide and make that page too … we don't mention price there"):
+  `/franchise`, linked at the very bottom of every page. What Sky Arc has built (only what the site already says), how
+  it starts, and a form whose message reaches the academy as a website message ("Franchise opportunity"). No prices; a
+  line says the page isn't an offer to sell a franchise (`docs/DECISIONS.md` §44).
 
 ## 5. On hold
 

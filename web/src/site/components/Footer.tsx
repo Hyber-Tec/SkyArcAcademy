@@ -1,7 +1,7 @@
 import { LuInstagram, LuMail, LuMapPin, LuPhone } from 'react-icons/lu'
 import { SkyArcLogo } from '@/components/app/SkyArcMark'
 import { useSiteData } from '@/site/data'
-import { ACADEMY, APP, FOOTER, UI, keepWhole } from '@/site/kit/content'
+import { ACADEMY, APP, FOOTER, FRANCHISE, UI, keepWhole } from '@/site/kit/content'
 import { A, useSite } from '@/site/kit/site'
 import { useBooking } from '../booking-context'
 import { T } from '../i18n'
@@ -134,6 +134,9 @@ export function Footer() {
               </A>
               <A to="help" className="inline-flex min-h-9 items-center hover:text-ink">
                 {t(FOOTER.help)}
+              </A>
+              <A to="franchise" className="inline-flex min-h-9 items-center hover:text-ink">
+                {t(FRANCHISE.link)}
               </A>
             </div>
           </div>

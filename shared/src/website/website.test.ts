@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { imageSrcSet, imageUrl, storageFileUrl, widthsFor } from './images'
-import { type WebsiteMessageInput, checkWebsiteMessage, isBotMessage } from './messages'
+import { CONTACT_TOPIC_LABELS, type WebsiteMessageInput, checkWebsiteMessage, isBotMessage } from './messages'
 import { postExcerpt, postSlug } from './posts'
 import type { WebsiteImage } from './types'
 
@@ -60,6 +60,14 @@ describe('messages from the website', () => {
     if (!r.ok) return
     expect(r.value).toMatchObject({ kind: 'contact', name: 'Pat Doe', email: 'pat@example.com', topic: 'tuition', athlete: null, days: [] })
     expect(r.value.message).toBe('Student: 11 years old\n\nHow much?')
+  })
+
+  it('takes a franchise inquiry from the franchise page, labeled for the office', () => {
+    const r = checkWebsiteMessage({ ...contact, topic: 'franchise', message: 'Where: Made-up Town, GA\n\nI coach a school team.' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toMatchObject({ kind: 'contact', topic: 'franchise', message: 'Where: Made-up Town, GA\n\nI coach a school team.' })
+    expect(CONTACT_TOPIC_LABELS.franchise).toBe('Franchise opportunity')
   })
 
   it('cleans a trial request', () => {

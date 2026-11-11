@@ -1398,3 +1398,18 @@ technology first, then consider the rules later."
   server, as the AI keys do. The shared starter key works to start; Scopos licenses a key per application each year,
   free for now, "charging soon" with no price published (the estimate is in the private notes).
 - Families hear of a new result as of any score (the last 7 days). The demo academy brings nothing in.
+
+## 44. A franchise page (the owner and Goo, 2026-11-10)
+
+The owner plans to franchise Sky Arc's model (the fourth meeting's business talk) and asked for "information about
+franchise opportunities … at the very bottom" of the website, as other franchises do. Goo: "you decide and make that
+page too … we don't mention price there."
+
+- **`/franchise`**, linked at the very bottom of every page (the footer's last row), for people who'd like to open an
+  academy on Sky Arc's model: what Sky Arc has built (the levels, Trial One's safety, the coaches, SIUS scoring, its own
+  app: only what the site already says), how it starts, and a short form.
+- **An inquiry is a website message** with the topic "Franchise opportunity": it reaches Settings → Website → Messages
+  and the academy's email like a family's question. The families' contact form doesn't offer the topic.
+- **No prices, and no terms:** those come in person. One line says the page shares information only and isn't an offer
+  to sell a franchise (a franchise is offered with the documents the law requires, never from a web page).
+
