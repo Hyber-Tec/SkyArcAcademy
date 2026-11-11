@@ -25,6 +25,13 @@ To redeploy `main` without a change: GitHub → Actions → CI → Run workflow 
 `gh workflow run CI --ref main --repo Hyber-Tec/SkyArcAcademy`. A run started by hand deploys everything (the
 Firebase CLI still skips a function whose code, settings and secrets' versions are unchanged).
 
+**Functions left behind.** A deploy of every function at once (a change to the shared code they all bundle) can run
+out of the region's Cloud Run CPU quota: a function whose new revision can't start ("Quota exceeded for total allowable
+CPU per project per region") keeps serving its previous one. The CLI records it as deployed all the same, so later
+deploys skip it as unchanged. `scripts/deploy.sh` checks for such services after the functions deploy (newest revision
+not the one serving), waits a minute and deploys them again by name, which the CLI never skips; the job fails if any is
+still behind. It happened on 2026-11-10 (#156: six of 62).
+
 ## What each deploy deploys
 
 `scripts/deploy-plan.ts` compares `main` with the commit production runs: the last run on `main` whose deploy job

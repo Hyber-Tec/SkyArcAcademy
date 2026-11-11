@@ -20,11 +20,32 @@ case $functions in
   all) only=functions ;;
   *) only=functions:${functions//,/,functions:} ;;
 esac
+# Functions whose newest revision didn't start, by name: a deploy of every function at once can run out of the
+# region's Cloud Run CPU quota ("Quota exceeded for total allowable CPU"), and such a function keeps serving the
+# revision before. The CLI records it as deployed all the same and skips it as unchanged from then on, unless a deploy
+# names it.
+left_behind() {
+  gcloud run services list --project skyarcacademy --region us-central1 --filter="metadata.labels.goog-managed-by=cloudfunctions" --format=json |
+    jq -r '[.[] | select(.status.latestCreatedRevisionName != .status.latestReadyRevisionName) | .metadata.annotations["cloudfunctions.googleapis.com/function-id"] // empty] | join(",")'
+}
+
 # The deploy that creates a callable function reports "set invoker" for it: the organization doesn't allow the
 # public binding the CLI adds (scripts/open-callables.sh). Opening the callables and deploying again settles it.
 if ! deploy "$only"; then
   echo "::warning::The functions deploy reported errors. Opening the callable functions and deploying once more."
   bash scripts/open-callables.sh
-  deploy "$only"
+  deploy "$only" || echo "::warning::The functions deploy reported errors again."
+fi
+# Then the functions left behind, by this deploy or an earlier one, once the old revisions have let go of their CPU.
+behind=$(left_behind)
+if [ -n "$behind" ]; then
+  echo "::warning::Deploying again the functions whose newest revision didn't start: $behind"
+  sleep 60
+  deploy "functions:${behind//,/,functions:}" || true
+  behind=$(left_behind)
 fi
 bash scripts/open-callables.sh
+if [ -n "$behind" ]; then
+  echo "::error::Still serving their previous revision: $behind"
+  exit 1
+fi
