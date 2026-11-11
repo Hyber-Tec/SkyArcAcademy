@@ -1,16 +1,18 @@
 import { nameFormsOf } from '../names'
 import type { Position } from '../shooting/evaluation'
-import { type DateKey, addDays } from '../time'
+import { type DateKey, addDays, formatMinutesShort, minutesOf, todayKey, weekdayIndex } from '../time'
 import type { TimestampLike } from '../types'
 import { athleteName, isAcademyTeam, nameKey, type ScoposParticipant } from './scopos'
 
 /**
  * The results site import (the fourth meeting's R1: "there is no page of our own such as ARC 10.9… go around all the
- * results site"): each night the server looks for the matches the academy's athletes shot, nearby, at the hosts they
- * shot at before and, once a week, the championships anywhere, and brings each linked athlete's results into their
- * student's scores (functions/src/resultsSite). Nobody pastes a link. An athlete is linked to a student once, by a
- * person: the import only suggests the athletes on the academy's teams and those named like a student. These are the
- * documents it keeps, and the decisions it makes, as pure functions.
+ * results site"): when someone presses Check now, or on the academy's schedule, the server looks for the matches the
+ * academy's athletes shot in the last month (`checkDays`), nearby, at the hosts they shot at before and, once a week,
+ * the championships anywhere, and brings each linked athlete's results into their student's scores
+ * (functions/src/resultsSite). Look back does the same for the months before. Nobody pastes a link. An athlete is
+ * linked to a student once, by a person: the import only suggests the athletes on the academy's teams and those named
+ * like a student. A results sheet's scan of the same result is brought up to the site's, or shown for a person to
+ * decide when its numbers differ. These are the documents it keeps, and the decisions it makes, as pure functions.
  */
 
 // ------------------------------------------------------------------ documents
@@ -36,6 +38,21 @@ export interface AthleteResult {
   error?: string | null
   /** How many checks asked for it without bringing it in (the site couldn't give it, or it had no shots yet). */
   tries?: number
+  /** A results sheet's scan of the same match in the student's scores, by position (`SheetTwin`). */
+  sheets?: Partial<Record<Position, SheetTwin>>
+}
+
+/**
+ * A results sheet's scan of a result the import found: the student's, the same day and position. With as many shots
+ * and the same whole total it's brought up to the site's ('upgraded': it keeps its ID, photo and note, and takes every
+ * shot's place and order); with other numbers both stay until a person decides ('differs': use the site's, or keep
+ * both, 'kept'). Its numbers are the scan's, as they were.
+ */
+export interface SheetTwin {
+  id: string
+  state: 'upgraded' | 'differs' | 'kept'
+  shots: number
+  wholeTotal: number
 }
 
 /** A result not brought in is asked for again by this many checks; after, only when its match's list changes. */
@@ -87,7 +104,7 @@ export interface OnlineMatch {
   checkedAt?: TimestampLike | null
 }
 
-export type RunKind = 'nightly' | 'check' | 'lookBack'
+export type RunKind = 'scheduled' | 'check' | 'lookBack'
 export type RunState = 'queued' | 'running' | 'done' | 'failed' | 'skipped'
 
 /** `branches/{b}/resultsSiteRuns/{id}`: one check of the site, as the page shows it. */
@@ -98,8 +115,11 @@ export interface ResultsSiteRun {
   requestedAt: TimestampLike | null
   startedAt: TimestampLike | null
   finishedAt: TimestampLike | null
-  /** A look-back's days, newest first: from `to` back to `from`. */
+  /** Its days, newest first: from `to` back to `from` (a check's month, a look-back's months). */
   window: { from: DateKey; to: DateKey } | null
+  /** Which part of its check it is (1, then 2… as it goes on), and the day this part starts from (null: `window.to`). */
+  part?: number
+  cursor?: DateKey | null
   requests: number
   /** Matches read, results brought in or changed, athletes found to confirm. */
   matches: number
@@ -111,16 +131,16 @@ export interface ResultsSiteRun {
 
 /** `branches/{b}/resultsSite/status`: what the page shows of the import, written by the server. */
 export interface ResultsSiteStatus {
-  /** The key's last four characters, and who set it. */
+  /** The key's last four characters, and who set it (scripts/results-site-key.ts). */
   keyEnd: string | null
   keySetAt: TimestampLike | null
   keySetBy: string | null
   /** The check under way (a lock: one at a time). */
   running: { runId: string; since: TimestampLike } | null
   lastRun: { runId: string; kind: RunKind; at: TimestampLike; ok: boolean; summary: string } | null
-  /** A look-back still going: the days from `from` to `cursor` are left. */
-  lookBack: { from: DateKey; cursor: DateKey } | null
-  /** Where the academy's athletes shot (the site's account IDs), searched each night. */
+  /** A check going on in the next one (its time ran out): its kind and days, the days from `from` to `cursor` left. */
+  going: { kind: RunKind; from: DateKey; to: DateKey; cursor: DateKey } | null
+  /** Where the academy's athletes shot (the site's account IDs), searched at every check. */
   hosts: Record<string, { name: string; lastSeen: DateKey }>
   /** The day of the last search for championships nationwide (weekly). */
   nationalAt: DateKey | null
@@ -128,11 +148,17 @@ export interface ResultsSiteStatus {
 
 // ------------------------------------------------------------------ the search
 
-/** The academy's town (its website: Suwanee, GA), the centre of the nightly search for matches nearby. */
+/** The academy's town (its website: Suwanee, GA), the centre of the search for matches nearby. */
 export const SEARCH_FROM = { latitude: 34.05, longitude: -84.07, place: 'Suwanee, GA' } as const
 
-/** How far back each night looks: matches end, results go up and are corrected over days. */
-export const NIGHTLY_DAYS = 14
+/** How far back a check can look (the academy's choice, `checkDays`: a month unless it changes it); past data is Look back's. */
+export const CHECK_DAYS_CHOICES = [7, 14, 30, 60] as const
+
+/** A check reads its days this many at a time, newest first, so one that runs out of time goes on from there. */
+export const PART_DAYS = 14
+
+/** The championships nationwide are searched again after this many days. */
+export const CHAMPIONSHIPS_EVERY_DAYS = 7
 
 /** How long a match with the academy's athletes is checked again for corrections and its official status. */
 export const RECHECK_DAYS = 60
@@ -144,8 +170,8 @@ export const RECHECK_DAYS = 60
  */
 export const CHAMPIONSHIP_WORDS = /\b(championships?|nationals?|junior olympics?|invitational|camp perry)\b/i
 
-/** A look-back's windows, newest first: `days` each, from `to` back to `from`. */
-export function windowsBack(from: DateKey, to: DateKey, days = NIGHTLY_DAYS): { from: DateKey; to: DateKey }[] {
+/** A check's parts, newest first: `days` each, from `to` back to `from`. */
+export function windowsBack(from: DateKey, to: DateKey, days = PART_DAYS): { from: DateKey; to: DateKey }[] {
   const out: { from: DateKey; to: DateKey }[] = []
   let end = to
   while (end >= from && out.length < 400) {
@@ -156,12 +182,12 @@ export function windowsBack(from: DateKey, to: DateKey, days = NIGHTLY_DAYS): { 
   return out
 }
 
-/** Whether a match with the academy's athletes is due a check for changes on `today` (daily at first, then weekly). */
-export function dueForRecheck(m: Pick<OnlineMatch, 'endDate' | 'ours' | 'status'>, today: DateKey, weekday: number): boolean {
-  if (m.ours <= 0) return false
-  if (m.endDate >= addDays(today, -NIGHTLY_DAYS)) return true
-  if (m.endDate < addDays(today, -RECHECK_DAYS)) return false
-  return (m.status ?? '').toUpperCase() !== 'OFFICIAL' || weekday === 0
+/**
+ * Whether a match with the academy's athletes, from before a check's days, is looked at again for corrections and its
+ * official status: for two months after it ends (one request when its list hasn't changed).
+ */
+export function dueForRecheck(m: Pick<OnlineMatch, 'endDate' | 'ours'>, today: DateKey): boolean {
+  return m.ours > 0 && m.endDate >= addDays(today, -RECHECK_DAYS)
 }
 
 // ------------------------------------------------------------------ who is the academy's
@@ -260,7 +286,7 @@ export function runSummary(r: Pick<ResultsSiteRun, 'matches' | 'results' | 'athl
   return `${parts.join(', ')} (${r.requests} request${r.requests === 1 ? '' : 's'} to the site).`
 }
 
-export const RUN_KIND_LABELS: Record<RunKind, string> = { nightly: 'Nightly check', check: 'Check now', lookBack: 'Look back' }
+export const RUN_KIND_LABELS: Record<RunKind, string> = { scheduled: 'Scheduled check', check: 'Check now', lookBack: 'Look back' }
 
 /** A check still queued or running after this long has stopped (its function ran out of time): it no longer counts. */
 export const RUN_STALE_MS = 20 * 60_000
@@ -270,4 +296,64 @@ export function isUnderWay(r: Pick<ResultsSiteRun, 'state' | 'requestedAt'>, now
   if (r.state !== 'queued' && r.state !== 'running') return false
   const at = r.requestedAt?.toMillis?.() ?? now
   return now - at < RUN_STALE_MS
+}
+
+// ------------------------------------------------------------------ when it checks on its own
+
+/** The academy's schedule (`settings.resultsSite.schedule`): on these days (0 Sunday to 6 Saturday), at this hour. */
+export interface CheckSchedule {
+  on: boolean
+  days: readonly number[]
+  hour: number
+}
+
+/** Whether the hour of `now`, in the academy's time, is one the schedule checks in. */
+export function isScheduledHour(s: CheckSchedule, now: Date | number, tz: string): boolean {
+  return s.on && s.days.includes(weekdayIndex(todayKey(tz, now))) && Math.floor(minutesOf(now, tz) / 60) === s.hour
+}
+
+/** The next check the schedule makes after `now`: its day and hour, in the academy's time. Null when it's off. */
+export function nextScheduled(s: CheckSchedule, now: Date | number, tz: string): { dateKey: DateKey; hour: number } | null {
+  if (!s.on || !s.days.length) return null
+  const today = todayKey(tz, now)
+  const hourNow = Math.floor(minutesOf(now, tz) / 60)
+  for (let i = 0; i <= 7; i++) {
+    const day = addDays(today, i)
+    if (s.days.includes(weekdayIndex(day)) && (i > 0 || s.hour > hourNow)) return { dateKey: day, hour: s.hour }
+  }
+  return null
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** "Every Sunday at 10 PM", "Mondays and Thursdays at 8 AM", "Every day at 10 PM"; "Off" when it's off. */
+export function scheduleWords(s: CheckSchedule): string {
+  const days = [...new Set(s.days)].filter((d) => d >= 0 && d <= 6).sort((a, b) => a - b)
+  if (!s.on || !days.length) return 'Off'
+  const at = formatMinutesShort(s.hour * 60)
+  if (days.length === 7) return `Every day at ${at}`
+  if (days.length === 1) return `Every ${DAY_NAMES[days[0]]} at ${at}`
+  const names = days.map((d) => `${DAY_NAMES[d]}s`)
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} at ${at}`
+}
+
+// ------------------------------------------------------------------ what became of a result
+
+/** One of an athlete's results, as the page tells it. */
+export type ResultState = 'in' | 'notPublished' | 'noShots' | 'waiting' | 'stopped'
+
+/** Where a result of a linked athlete is: in the scores, or why not yet. */
+export function resultState(r: Pick<AthleteResult, 'evaluations' | 'error' | 'tries'>): ResultState {
+  if (Object.keys(r.evaluations ?? {}).length) return 'in'
+  if ((r.tries ?? 0) >= MAX_TRIES) return 'stopped'
+  if (r.error) return 'notPublished'
+  return r.tries ? 'noShots' : 'waiting'
+}
+
+export const RESULT_STATE_WORDS: Record<ResultState, string> = {
+  in: 'In the scores',
+  notPublished: 'Not published on the results site: asked again at each check',
+  noShots: 'No shots on the results site yet: asked again at each check',
+  waiting: 'Comes in with the next check',
+  stopped: `Not on the results site after ${MAX_TRIES} checks: asked again if its match changes`,
 }

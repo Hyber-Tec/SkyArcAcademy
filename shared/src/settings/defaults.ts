@@ -129,12 +129,14 @@ export interface BranchSettings {
     welcomeMessage: string
   }
   /**
-   * Competition results brought in from the tournaments' results site each night (the fourth meeting's R1,
-   * shared/src/scores/resultsSite.ts): on or off, the team names the academy's athletes shoot under there (`*` stands
-   * for anything), and how far from the academy it looks for matches.
+   * Competition results brought in from the tournaments' results site (the fourth meeting's R1,
+   * shared/src/scores/resultsSite.ts): when it checks on its own (off until the academy turns it on: on these days, 0
+   * Sunday to 6 Saturday, at this hour of the academy's day), how many days back each check looks, the team names the
+   * academy's athletes shoot under there (`*` stands for anything), and how far from the academy it looks for matches.
    */
   resultsSite: {
-    enabled: boolean
+    schedule: { on: boolean; days: number[]; hour: number }
+    checkDays: number
     teamNames: string[]
     searchKm: number
   }
@@ -223,8 +225,11 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   },
   // The academy's teams on the results site since August 2026 ("ARC 10.9", "ARC 10.9 P"), and the "ARC …" teams its
   // athletes shot for before (the fourth meeting's R1 survey). Athletes on them are only suggested: a person links each.
+  // Checks only when someone presses Check now until the academy sets a schedule (Goo, 2026-11-10: "every Sunday 10
+  // p.m.", "Monday morning"); each looks back a month.
   resultsSite: {
-    enabled: true,
+    schedule: { on: false, days: [0], hour: 22 },
+    checkDays: 30,
     teamNames: ['ARC 10.9*', 'ARC *'],
     searchKm: 250,
   },

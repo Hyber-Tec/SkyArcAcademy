@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CHAMPIONSHIP_WORDS, dueForRecheck, entrantOf, newestFirst, runSummary, studentIndex, verdictFor, whyWords, windowsBack } from './resultsSite'
+import { CHAMPIONSHIP_WORDS, dueForRecheck, entrantOf, isScheduledHour, newestFirst, nextScheduled, resultState, runSummary, scheduleWords, studentIndex, verdictFor, whyWords, windowsBack } from './resultsSite'
 
 // Made-up athletes and students only.
 const students = studentIndex([
@@ -65,14 +65,11 @@ describe('when to look', () => {
     expect(windowsBack('2026-10-15', '2026-10-01')).toEqual([])
   })
 
-  it('checks a match again daily for two weeks, then weekly until it’s official, for two months', () => {
-    const m = { ours: 2, status: 'UNOFFICIAL' }
-    expect(dueForRecheck({ ...m, endDate: '2026-11-01' }, '2026-11-10', 3)).toBe(true)
-    expect(dueForRecheck({ ...m, endDate: '2026-10-01' }, '2026-11-10', 3)).toBe(true)
-    expect(dueForRecheck({ ...m, status: 'OFFICIAL', endDate: '2026-10-01' }, '2026-11-10', 3)).toBe(false)
-    expect(dueForRecheck({ ...m, status: 'OFFICIAL', endDate: '2026-10-01' }, '2026-11-10', 0)).toBe(true)
-    expect(dueForRecheck({ ...m, endDate: '2026-08-01' }, '2026-11-10', 0)).toBe(false)
-    expect(dueForRecheck({ ...m, ours: 0, endDate: '2026-11-09' }, '2026-11-10', 3)).toBe(false)
+  it('looks at a match of the academy’s athletes again for two months', () => {
+    expect(dueForRecheck({ ours: 2, endDate: '2026-11-01' }, '2026-11-10')).toBe(true)
+    expect(dueForRecheck({ ours: 2, endDate: '2026-09-12' }, '2026-11-10')).toBe(true)
+    expect(dueForRecheck({ ours: 2, endDate: '2026-08-01' }, '2026-11-10')).toBe(false)
+    expect(dueForRecheck({ ours: 0, endDate: '2026-11-09' }, '2026-11-10')).toBe(false)
   })
 
   it('says what a check did', () => {
@@ -86,5 +83,39 @@ describe('the championships searched nationwide', () => {
     for (const name of ['2025 Gary Anderson Invitational', 'Daisy Nationals Air Rifle 2026', 'GHSA State Championship 2026', 'GA Junior Olympics - Combined'])
       expect(CHAMPIONSHIP_WORDS.test(name)).toBe(true)
     for (const name of ['Walton October 3P', 'State Qualifier Postal', 'CMP 3PAR Postal', 'Match 31 Oct 2026']) expect(CHAMPIONSHIP_WORDS.test(name)).toBe(false)
+  })
+})
+
+describe('the schedule', () => {
+  const tz = 'America/New_York'
+  // Sunday, November 15, 2026, 10:05 PM in New York (03:05 UTC on the 16th).
+  const sundayNight = Date.UTC(2026, 10, 16, 3, 5)
+  const sunday10pm = { on: true, days: [0], hour: 22 }
+
+  it('checks in its hour, on its days, in the academy’s time', () => {
+    expect(isScheduledHour(sunday10pm, sundayNight, tz)).toBe(true)
+    expect(isScheduledHour(sunday10pm, sundayNight + 3600_000, tz)).toBe(false)
+    expect(isScheduledHour({ ...sunday10pm, days: [1] }, sundayNight, tz)).toBe(false)
+    expect(isScheduledHour({ ...sunday10pm, on: false }, sundayNight, tz)).toBe(false)
+  })
+
+  it('says when it checks next, and how it goes in words', () => {
+    expect(nextScheduled(sunday10pm, sundayNight, tz)).toEqual({ dateKey: '2026-11-22', hour: 22 })
+    expect(nextScheduled({ on: true, days: [1, 4], hour: 8 }, sundayNight, tz)).toEqual({ dateKey: '2026-11-16', hour: 8 })
+    expect(nextScheduled({ ...sunday10pm, on: false }, sundayNight, tz)).toBeNull()
+    expect(scheduleWords(sunday10pm)).toBe('Every Sunday at 10 PM')
+    expect(scheduleWords({ on: true, days: [4, 1], hour: 8 })).toBe('Mondays and Thursdays at 8 AM')
+    expect(scheduleWords({ on: true, days: [0, 1, 2, 3, 4, 5, 6], hour: 0 })).toBe('Every day at 12 AM')
+    expect(scheduleWords({ on: false, days: [0], hour: 22 })).toBe('Off')
+  })
+})
+
+describe('what became of a result', () => {
+  it('is in the scores, or says why not yet', () => {
+    expect(resultState({ evaluations: { standing: 'e1' } })).toBe('in')
+    expect(resultState({ evaluations: {}, error: 'The results site doesn’t give this result.', tries: 2 })).toBe('notPublished')
+    expect(resultState({ evaluations: {}, error: null, tries: 1 })).toBe('noShots')
+    expect(resultState({ evaluations: {} })).toBe('waiting')
+    expect(resultState({ evaluations: {}, error: 'x', tries: 10 })).toBe('stopped')
   })
 })

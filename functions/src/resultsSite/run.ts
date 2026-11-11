@@ -9,9 +9,10 @@ import {
   type OnlineMatch,
   type ResultsSiteRun,
   type ResultsSiteStatus,
+  type SheetTwin,
   type StudentName,
+  CHAMPIONSHIPS_EVERY_DAYS,
   CHAMPIONSHIP_WORDS,
-  NIGHTLY_DAYS,
   MAX_TRIES,
   RECHECK_DAYS,
   SEARCH_FROM,
@@ -41,15 +42,15 @@ import {
 import { type Evaluation, POSITION_LABELS, type Position, per10 } from '@shared/shooting/evaluation'
 import type { BranchSettings } from '@shared/settings/defaults'
 import { resolveSettings } from '@shared/settings/resolve'
-import { type DateKey, addDays, diffDays, formatDateKey, todayKey, weekdayIndex } from '@shared/time'
+import { type DateKey, addDays, diffDays, formatDateKey, todayKey } from '@shared/time'
 import type { Branch, Student } from '@shared/types'
 import { SiteClient, SiteError } from './client'
 
 /**
  * One check of the results site (shared/src/scores/resultsSite.ts says what it looks for): find the matches, read who
  * shot in them, note the academy's athletes, and bring each linked athlete's results into their student's scores. A
- * check stops starting new work after `WORK_MS` (its function has 9 minutes) or its budget of requests; a look-back
- * then goes on in a new check.
+ * check reads its days two weeks at a time, newest first; it stops starting new work after `WORK_MS` (its function has
+ * 9 minutes) or its budget of requests, and goes on from there in a new check.
  */
 
 const WORK_MS = 7 * 60_000
@@ -113,7 +114,7 @@ const note = (c: Ctx, line: string) => {
   if (c.log.length > 60) c.log.splice(0, c.log.length - 60)
 }
 
-const emptyStatus = (): ResultsSiteStatus => ({ keyEnd: null, keySetAt: null, keySetBy: null, running: null, lastRun: null, lookBack: null, hosts: {}, nationalAt: null })
+const emptyStatus = (): ResultsSiteStatus => ({ keyEnd: null, keySetAt: null, keySetBy: null, running: null, lastRun: null, going: null, hosts: {}, nationalAt: null })
 
 // ------------------------------------------------------------------ the lock: one check at a time
 
@@ -134,7 +135,18 @@ async function takeLock(branchId: string, runId: string): Promise<boolean> {
   return false
 }
 
-async function releaseLock(branchId: string, runId: string) {
+/** The lock at once, or false when a check holds it (a person's answer waits for no check). */
+export async function holdLock(branchId: string, runId: string): Promise<boolean> {
+  return db.runTransaction(async (tx) => {
+    const s = (await tx.get(statusRef(branchId))).data() as Partial<ResultsSiteStatus> | undefined
+    const since = (s?.running?.since as Timestamp | undefined)?.toMillis?.() ?? 0
+    if (s?.running && s.running.runId !== runId && Date.now() - since < LOCK_STALE_MS) return false
+    tx.set(statusRef(branchId), { running: { runId, since: FieldValue.serverTimestamp() } }, { merge: true })
+    return true
+  })
+}
+
+export async function releaseLock(branchId: string, runId: string) {
   await db.runTransaction(async (tx) => {
     const s = (await tx.get(statusRef(branchId))).data() as Partial<ResultsSiteStatus> | undefined
     if (s?.running?.runId === runId) tx.set(statusRef(branchId), { running: null }, { merge: true })
@@ -143,7 +155,7 @@ async function releaseLock(branchId: string, runId: string) {
 
 // ------------------------------------------------------------------ a check
 
-/** Runs the check `runId` (queued by the page, the nightly job, or a look-back going on). */
+/** Runs the check `runId` (queued by the page's buttons, the schedule, or a check going on). */
 export async function runCheck(branchId: string, runId: string): Promise<void> {
   const started = Date.now()
   const ref = runsOf(branchId).doc(runId)
@@ -157,8 +169,10 @@ export async function runCheck(branchId: string, runId: string): Promise<void> {
   try {
     await ref.update({ state: 'running', startedAt: FieldValue.serverTimestamp() })
     ctx = await load(branchId, ref, started)
-    if (run.kind === 'lookBack' && run.window) await lookBack(ctx, run.window, run.requestedBy)
-    else await nightly(ctx)
+    const window = run.window ?? { from: addDays(ctx.today, -ctx.settings.checkDays), to: ctx.today }
+    // Its days first (the nearby matches, newest first), then the academy's matches from before them and the
+    // championships (weekly), unless it's a look-back.
+    if ((await walk(ctx, run, window)) && run.kind !== 'lookBack') await afterTheDays(ctx, run, window)
     await refreshAnswers(ctx)
     await importPending(ctx)
     await finish(ctx, run, null)
@@ -172,8 +186,8 @@ export async function runCheck(branchId: string, runId: string): Promise<void> {
   }
 }
 
-/** A reason a check can't run that the page shows as it is. */
-class Problem extends Error {}
+/** A reason a check, or an answer, can't go on that the page shows as it is. */
+export class Problem extends Error {}
 
 async function load(branchId: string, run: DocumentReference, started: number): Promise<Ctx> {
   const [branchSnap, key, statusSnap, athletesSnap, studentsSnap] = await Promise.all([
@@ -244,7 +258,7 @@ async function finish(c: Ctx, run: ResultsSiteRun, error: string | null) {
       lastRun: { runId: c.run.id, kind: run.kind, at: FieldValue.serverTimestamp(), ok: !error, summary },
       hosts: c.status.hosts,
       nationalAt: c.status.nationalAt,
-      lookBack: c.status.lookBack,
+      going: c.status.going,
     },
     { merge: true },
   )
@@ -274,57 +288,67 @@ async function atHosts(c: Ctx, from: DateKey, to: DateKey): Promise<ScoposMatchI
   return out
 }
 
-/** Each night (and "Check now"): the last two weeks nearby and at the known hosts, championships weekly, then changes. */
-async function nightly(c: Ctx) {
-  const from = addDays(c.today, -NIGHTLY_DAYS)
-  const found = new Map<string, ScoposMatchItem>()
-  for (const m of await nearby(c, from, c.today, 8)) found.set(m.MatchID, m)
-  for (const m of await atHosts(c, from, c.today)) found.set(m.MatchID, m)
-  note(c, `${found.size} matches in the last ${NIGHTLY_DAYS} days nearby and at ${Object.keys(c.status.hosts).length} known hosts.`)
-  await readMatches(c, [...found.values()])
-  // Once a week, the championships anywhere (the academy's athletes travel to them); done only when all were read.
-  if (!timeUp(c) && (!c.status.nationalAt || c.status.nationalAt <= addDays(c.today, -7))) {
-    const { items } = await c.client.list<ScoposMatchItem>('/match/search', searchParams(from, c.today), 'MatchSearchList', 30)
-    const champs = items.filter((m) => CHAMPIONSHIP_WORDS.test(m.MatchName ?? '') && !found.has(m.MatchID))
-    note(c, `Championships nationwide: ${champs.length} of ${items.length} matches.`)
-    if (await readMatches(c, champs)) c.status.nationalAt = c.today
-  }
-  // The academy's matches from before the window: checked again for corrections and their official status.
-  const weekday = weekdayIndex(c.today)
-  for (const [id, m] of c.matches) {
-    if (timeUp(c)) break
-    if (!c.read.has(id) && dueForRecheck(m, c.today, weekday)) await recheck(c, id, m)
-  }
-}
-
-/** A look-back: two weeks at a time, newest first; when the check's time runs out, a new check goes on from there. */
-async function lookBack(c: Ctx, window: { from: DateKey; to: DateKey }, requestedBy: string) {
-  const going = c.status.lookBack && c.status.lookBack.from === window.from ? c.status.lookBack.cursor : window.to
-  for (const w of windowsBack(window.from, going)) {
-    if (timeUp(c)) return goOn(c, window, w.to, requestedBy)
+/**
+ * A check's days, two weeks at a time, newest first, nearby and at the known hosts: true once they're all read; false
+ * when its time ran out, and a new check goes on from there (`cursor`).
+ */
+async function walk(c: Ctx, run: ResultsSiteRun, window: { from: DateKey; to: DateKey }): Promise<boolean> {
+  const parts = windowsBack(window.from, run.cursor ?? window.to)
+  for (const w of parts) {
+    if (timeUp(c)) return goOn(c, run, window, w.to).then(() => false)
     const found = new Map<string, ScoposMatchItem>()
     for (const m of await nearby(c, w.from, w.to, 8)) found.set(m.MatchID, m)
     for (const m of await atHosts(c, w.from, w.to)) found.set(m.MatchID, m)
-    note(c, `${formatDateKey(w.from, 'medium')} to ${formatDateKey(w.to, 'medium')}: ${found.size} matches.`)
-    const done = await readMatches(c, [...found.values()])
-    if (!done) return goOn(c, window, w.to, requestedBy)
+    note(c, `${formatDateKey(w.from, 'medium')} to ${formatDateKey(w.to, 'medium')}: ${found.size} matches nearby and at ${Object.keys(c.status.hosts).length} known hosts.`)
+    if (!(await readMatches(c, [...found.values()]))) return goOn(c, run, window, w.to).then(() => false)
   }
-  c.status.lookBack = null
-  note(c, `Looked back to ${formatDateKey(window.from, 'medium')}.`)
+  c.status.going = null
+  if (parts.length) note(c, `Read every day back to ${formatDateKey(window.from, 'medium')}.`)
+  return true
 }
 
-/** A look-back's next part, as a new check from `cursor` (the trigger runs it once this one lets go). */
-async function goOn(c: Ctx, window: { from: DateKey; to: DateKey }, cursor: DateKey, requestedBy: string) {
-  c.status.lookBack = { from: window.from, cursor }
+/**
+ * After a check's days: the academy's matches from before them, again for corrections and their official status, and
+ * once a week the championships anywhere since the last search (the academy's athletes travel to them). When the time
+ * runs out, one more check finishes it; the rest waits for the next check after that.
+ */
+async function afterTheDays(c: Ctx, run: ResultsSiteRun, window: { from: DateKey; to: DateKey }) {
+  const finishing = !!run.cursor && run.cursor < window.from
+  const more = () => (finishing ? note(c, 'The rest waits for the next check.') : goOn(c, run, window, addDays(window.from, -1)))
+  for (const [id, m] of c.matches) {
+    if (c.read.has(id) || m.endDate >= window.from || !dueForRecheck(m, c.today)) continue
+    if (timeUp(c)) return more()
+    await recheck(c, id, m)
+  }
+  if (c.status.nationalAt && c.status.nationalAt > addDays(c.today, -CHAMPIONSHIPS_EVERY_DAYS)) return
+  if (timeUp(c)) return more()
+  const since = c.status.nationalAt ? addDays(c.status.nationalAt, -3) : window.from
+  const from = since > window.from ? since : window.from
+  const { items } = await c.client.list<ScoposMatchItem>('/match/search', searchParams(from, c.today), 'MatchSearchList', 60)
+  const champs = items.filter((m) => CHAMPIONSHIP_WORDS.test(m.MatchName ?? ''))
+  note(c, `Championships nationwide since ${formatDateKey(from, 'medium')}: ${champs.length} of ${items.length} matches.`)
+  if (await readMatches(c, champs)) c.status.nationalAt = c.today
+  else return more()
+}
+
+/** A check's next part, as a new check from `cursor` (the trigger runs it once this one lets go). */
+async function goOn(c: Ctx, run: ResultsSiteRun, window: { from: DateKey; to: DateKey }, cursor: DateKey) {
+  c.status.going = { kind: run.kind, from: window.from, to: window.to, cursor }
   note(c, `Going on from ${formatDateKey(cursor, 'medium')} in the next check.`)
   await saveAthletes(c)
-  await statusRef(c.branchId).set({ lookBack: c.status.lookBack, hosts: c.status.hosts }, { merge: true })
-  await runsOf(c.branchId).add(newRun('lookBack', requestedBy, window))
+  await statusRef(c.branchId).set({ going: c.status.going, hosts: c.status.hosts }, { merge: true })
+  await runsOf(c.branchId).add(newRun(run.kind, run.requestedBy, window, (run.part ?? 1) + 1, cursor))
 }
 
 /** A check to run, as its document is first written (the trigger runs it). */
-export function newRun(kind: ResultsSiteRun['kind'], requestedBy: string, window: ResultsSiteRun['window'] = null): Omit<ResultsSiteRun, 'requestedAt'> & { requestedAt: FieldValue } {
-  return { kind, state: 'queued', requestedBy, requestedAt: FieldValue.serverTimestamp(), startedAt: null, finishedAt: null, window, requests: 0, matches: 0, results: 0, athletes: 0, log: [], error: null }
+export function newRun(
+  kind: ResultsSiteRun['kind'],
+  requestedBy: string,
+  window: { from: DateKey; to: DateKey },
+  part = 1,
+  cursor: DateKey | null = null,
+): Omit<ResultsSiteRun, 'requestedAt'> & { requestedAt: FieldValue } {
+  return { kind, state: 'queued', requestedBy, requestedAt: FieldValue.serverTimestamp(), startedAt: null, finishedAt: null, window, part, cursor, requests: 0, matches: 0, results: 0, athletes: 0, log: [], error: null }
 }
 
 // ------------------------------------------------------------------ reading a match
@@ -336,7 +360,7 @@ async function readMatches(c: Ctx, items: ScoposMatchItem[]): Promise<boolean> {
     if (c.read.has(item.MatchID)) continue
     const known = c.matches.get(item.MatchID) ?? (await matchesOf(c.branchId).doc(item.MatchID).get()).data() as OnlineMatch | undefined
     if (known?.settled && known.ours === 0) continue
-    // A league or a postal match runs for weeks, and is in every night's search: without the academy's athletes, it's
+    // A league or a postal match runs for weeks, and is in every check's search: without the academy's athletes, it's
     // read again once a week.
     if (known && known.ours === 0 && diffDays(known.startDate, known.endDate) > 7 && Date.now() - ((known.checkedAt as Timestamp | undefined)?.toMillis?.() ?? 0) < 7 * 86_400_000) continue
     if (timeUp(c)) return false
@@ -566,6 +590,7 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
   }
   const studentName = c.studentName.get(a.studentId) ?? a.studentName ?? a.name
   const evaluations: Partial<Record<Position, string>> = { ...rec.evaluations }
+  const sheets: Partial<Record<Position, SheetTwin>> = { ...rec.sheets }
   const batch = db.batch()
   let changed = 0
   for (const r of found) {
@@ -586,20 +611,22 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
     }
     if (known) continue // deleted by a person: not brought back
     const twin = await sheetTwin(c.branchId, a.studentId, data)
-    if (twin) {
+    if (twin.same) {
       const patch = Object.fromEntries(SOURCE_FIELDS.map((f) => [f, data[f]]))
-      batch.set(twin, { ...patch, match: data.match, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'system' }, { merge: true })
-      audit(batch, c.branchId, { action: 'evaluation.update', entityId: twin.id, summary: `Brought ${studentName}'s results sheet result up to the ${describe(data)}`, dateKey: data.dateKey, studentId: a.studentId, studentName })
-      evaluations[r.position] = twin.id
+      batch.set(twin.same.ref, { ...patch, match: data.match, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'system' }, { merge: true })
+      audit(batch, c.branchId, { action: 'evaluation.update', entityId: twin.same.ref.id, summary: `Brought ${studentName}'s results sheet result up to the ${describe(data)}`, dateKey: data.dateKey, studentId: a.studentId, studentName })
+      evaluations[r.position] = twin.same.ref.id
+      if (twin.same.scan) sheets[r.position] = twin.same.scan
     } else {
       batch.set(ref, { ...data, createdAt: FieldValue.serverTimestamp(), createdBy: 'system', updatedAt: FieldValue.serverTimestamp(), updatedBy: 'system' })
       audit(batch, c.branchId, { action: 'evaluation.add', entityId: id, summary: `Added ${studentName}'s ${describe(data)}`, dateKey: data.dateKey, studentId: a.studentId, studentName })
       evaluations[r.position] = id
+      if (twin.near) sheets[r.position] = twin.near
     }
     changed++
   }
   if (changed) await batch.commit()
-  a.results[resultCofId] = { ...rec, lastUpdated: cof.LastUpdated ?? new Date().toISOString(), evaluations, error: null, tries: 0 }
+  a.results[resultCofId] = { ...rec, lastUpdated: cof.LastUpdated ?? new Date().toISOString(), evaluations, sheets, error: null, tries: 0 }
   touch(c as Ctx, key, resultCofId)
   if (changed) {
     c.counts.results++
@@ -609,18 +636,86 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
 }
 
 /**
- * The student's result this one is already: brought in before under another ID (a results sheet's, brought up to the
- * site's), or a results sheet's result of the same competition saved before the import found it (the same day and
- * position, as many shots and the same whole total), which is brought up to the site's: every shot's place and order.
+ * The student's result this one is already, or may be (shared/src/scores/resultsSite.ts, `SheetTwin`): brought in
+ * before under another ID (a results sheet's, brought up to the site's), or a results sheet's scan of the same day and
+ * position saved before the import found it. With as many shots and the same whole total it's the same (`same`: brought
+ * up to the site's, every shot's place and order); with other numbers it may be (`near`: both stay, for a person to
+ * decide).
  */
-async function sheetTwin(branchId: string, studentId: string, e: Omit<Evaluation, 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>): Promise<DocumentReference | null> {
+async function sheetTwin(
+  branchId: string,
+  studentId: string,
+  e: Omit<Evaluation, 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>,
+): Promise<{ same: { ref: DocumentReference; scan: SheetTwin | null } | null; near: SheetTwin | null }> {
   const snap = await evaluationsOf(branchId).where('studentId', '==', studentId).where('dateKey', '==', e.dateKey).get()
-  const same = (x: Evaluation) => x.position === e.position
-  const twin =
-    snap.docs.find((d) => same(d.data() as Evaluation) && (d.data() as Evaluation).online?.resultCofId === e.online?.resultCofId) ??
-    snap.docs.find((d) => {
-      const x = d.data() as Evaluation
-      return x.source === 'sheet' && same(x) && x.shots === e.shots && x.wholeTotal === e.wholeTotal
+  const list = snap.docs.map((d) => ({ ref: d.ref, x: d.data() as Evaluation })).filter((d) => d.x.position === e.position)
+  const before = list.find((d) => d.x.online?.resultCofId === e.online?.resultCofId)
+  if (before) return { same: { ref: before.ref, scan: null }, near: null }
+  const scans = list.filter((d) => d.x.source === 'sheet' && !d.x.online)
+  const scanOf = (d: (typeof scans)[number], state: SheetTwin['state']): SheetTwin => ({ id: d.ref.id, state, shots: d.x.shots, wholeTotal: d.x.wholeTotal })
+  const same = scans.find((d) => d.x.shots === e.shots && d.x.wholeTotal === e.wholeTotal)
+  if (same) return { same: { ref: same.ref, scan: scanOf(same, 'upgraded') }, near: null }
+  const near = [...scans].sort((a, b) => Math.abs(a.x.shots - e.shots) - Math.abs(b.x.shots - e.shots) || Math.abs(a.x.wholeTotal - e.wholeTotal) - Math.abs(b.x.wholeTotal - e.wholeTotal))[0]
+  return { same: null, near: near ? scanOf(near, 'differs') : null }
+}
+
+/** Who answers, as the audit log names them. */
+export interface Person {
+  uid: string
+  email: string
+  name: string
+  role: string
+}
+
+/**
+ * A person's answer about a results sheet's scan whose numbers differ from the site's result (`SheetTwin`, 'differs'):
+ * use the site's (the scan takes the site's result, keeping its ID, photo and note, and the site's own copy goes), or
+ * keep both. The caller holds the lock: no check writes the athlete meanwhile.
+ */
+export async function answerScan(branchId: string, key: string, resultCofId: string, position: Position, use: 'site' | 'both', who: Person): Promise<void> {
+  const ref = athletesOf(branchId).doc(key)
+  const a = (await ref.get()).data() as OnlineAthlete | undefined
+  const rec = a?.results?.[resultCofId]
+  const scan = rec?.sheets?.[position]
+  if (!a || !rec || !scan || scan.state === 'upgraded' || !a.studentId) throw new Problem('That result isn’t waiting for an answer any more.')
+  const studentName = a.studentName ?? a.name
+  const day = formatDateKey(rec.dateKey, 'medium')
+  const where = `${POSITION_LABELS[position].toLowerCase()}, ${rec.matchName}`
+  const batch = db.batch()
+  const note = (entry: { action: string; entityId: string; summary: string }) =>
+    batch.create(db.collection(`${base(branchId)}/${COL.auditLog}`).doc(), {
+      at: FieldValue.serverTimestamp(),
+      actorUid: who.uid,
+      actorEmail: who.email,
+      actorName: who.name,
+      actorRole: who.role,
+      via: 'function',
+      category: 'reports',
+      entityType: 'evaluation',
+      context: 'Settings → Results site',
+      dateKey: rec.dateKey,
+      studentId: a.studentId,
+      studentName,
+      coachId: null,
+      coachName: null,
+      changes: [],
+      ...entry,
     })
-  return twin?.ref ?? null
+  if (use === 'both') {
+    batch.set(ref, { results: { [resultCofId]: { sheets: { [position]: { ...scan, state: 'kept' } } } }, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+    note({ action: 'evaluation.keep', entityId: scan.id, summary: `Kept both of ${studentName}'s results of ${day} (${where}): the results sheet's and the results site's` })
+  } else {
+    const siteId = rec.evaluations?.[position]
+    const [site, sheet] = await Promise.all([siteId ? evaluationsOf(branchId).doc(siteId).get() : null, evaluationsOf(branchId).doc(scan.id).get()])
+    if (!site?.exists) throw new Problem('The results site’s result isn’t in the scores any more.')
+    if (!sheet.exists) throw new Problem('The results sheet’s result isn’t in the scores any more.')
+    const data = site.data() as Evaluation
+    const patch = Object.fromEntries(SOURCE_FIELDS.map((f) => [f, data[f]]))
+    batch.set(sheet.ref, { ...patch, match: data.match ?? null, updatedAt: FieldValue.serverTimestamp(), updatedBy: who.email }, { merge: true })
+    batch.delete(site.ref)
+    batch.set(ref, { results: { [resultCofId]: { evaluations: { [position]: scan.id }, sheets: { [position]: { ...scan, state: 'upgraded' } } } }, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+    note({ action: 'evaluation.update', entityId: scan.id, summary: `Brought ${studentName}'s results sheet result of ${day} (${where}) up to the ${describe(data)}` })
+    note({ action: 'evaluation.delete', entityId: site.id, summary: `Removed the results site's copy of ${studentName}'s result of ${day} (${where}): it's in the results sheet's result now` })
+  }
+  await batch.commit()
 }

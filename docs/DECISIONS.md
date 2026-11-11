@@ -1373,30 +1373,43 @@ likely make it even harder for [Americans] to engage." Goo: "So no Korean langua
 - **The stores:** the App Store and Google Play listings lose their Korean at the next submission (`docs/TODO.md`).
 - Replaces §36, and the Korean parts of §18 (the website's Korean pages) and §41.
 
-## 43. Competition results from the results site, every night (Goo, 2026-11-10)
+## 43. Competition results from the results site (Goo, 2026-11-10)
 
 The fourth meeting's R1. Goo: the academy has no page of its own on the results site, and nobody should paste a link
 after each competition, whatever its format: "go around all the results website and figure out all … make the
 technology first, then consider the rules later."
 
-- **The app looks by itself, every night** (`functions/src/resultsSite`, the rules in
-  `shared/src/scores/resultsSite.ts`): the last two weeks' matches within 250 km of the academy (a setting), the
-  matches of the clubs and schools where its athletes shot before, and once a week the championships anywhere
-  (invitationals, nationals, championships, the Junior Olympics). **Look back** (3 months to 2 years) finds the older
-  ones, two weeks at a time over a few checks. Settings → Results site shows what it found, and **Check now**.
+- **It looks when asked, or on the academy's schedule** (`functions/src/resultsSite`, the rules in
+  `shared/src/scores/resultsSite.ts`). Goo, after trying it: "make this page so much easier and simple"; a schedule
+  "instead of nightly", off until it's turned on ("every Sunday 10 p.m.", "Monday morning"), and each check looking at
+  "everything that happened in 1 month". **Check now** (and each scheduled check) looks at the last month's matches
+  within 250 km of the academy, those of the clubs and schools where its athletes shot before, and once a week the
+  championships anywhere (invitationals, nationals, championships, the Junior Olympics), two weeks at a time, going on
+  in a new check when one runs out of time. **Look back** (3 months to 2 years) does the same for the months before.
+  The page's gear holds the schedule (days and an hour), how far back a check looks (a week to two months), the team
+  names and the distance.
 - **Its athletes are confirmed once, by a person:** those on the academy's teams (Settings: "ARC 10.9*" and "ARC *" to
   start; `*` stands for anything) and those named exactly like a student (their name, or another name they go by) are
   suggested; an owner or admin links each to a student, or says they aren't the academy's. Nobody is linked on their
-  own (two athletes can share a name); a linked athlete's results come in from then on, wherever they shoot.
+  own (two athletes can share a name); a linked athlete's results come in from then on, wherever they shoot. Each
+  result opens on the results site, to be sure who it is (Goo: "a button that we can open on the site"), and says where
+  it is: in the scores, not published on the site (a host that keeps its scores to itself), no shots yet, or coming with
+  the next check.
+- **A student's other names count** (Goo: Remi Zhou is "Shengzhe Zhou" there, with "Shengzhe" among her other names): a
+  one-word other name is a given name, matched with the family name, and every full name either way round. The same
+  list (`shared/src/names.ts`) serves every search and comparison of a student's name in the app.
 - **A result comes in as the site has it:** a competition per position, every shot where it landed and in the order it
   was fired, scored as the match counts (tenths in a decimal match, inner tens as the site marks them), with its match,
   course and a link back to the site (source `online`, "Results site"). It's updated when the site corrects it or makes
   it official; until then it says it isn't official yet. What people change (the note, the kind) stays.
-- **No duplicates:** a results sheet's result of the same competition (same student, day, position, shots and total)
-  is brought up to the site's instead. A result a person deletes isn't brought back.
-- **The site's key** (Scopos's API needs one) is pasted by an owner or admin in Settings → Results site and stays on the
-  server, as the AI keys do. The shared starter key works to start; Scopos licenses a key per application each year,
-  free for now, "charging soon" with no price published (the estimate is in the private notes).
+- **No duplicates:** a results sheet's scan of the same competition (same student, day, position, shots and whole total)
+  is brought up to the site's instead: it keeps its ID, photo and note and takes every shot's place and order. A scan of
+  the same day and position with other numbers waits on the page ("Results sheet scans to check"): use the site's, or
+  keep both. A result a person deletes isn't brought back.
+- **The site's key** (Scopos's API needs one) stays on the server and isn't on the page (Goo: "we have the key"). When it
+  changes, whoever has it runs `npx tsx scripts/results-site-key.ts`, which asks for it without showing it. Scopos
+  licenses a key per application each year, free for now, "charging soon" with no price published (the estimate is in
+  the private notes).
 - Families hear of a new result as of any score (the last 7 days). The demo academy brings nothing in.
 
 ## 44. A franchise page (the owner and Goo, 2026-11-10)
@@ -1422,8 +1435,10 @@ own screen); Goo: build it, and families "should be able to see only, not upload
   Drive, on the website. The server reads it (`functions/src/scatt`, the arithmetic in `shared/src/scatt`) and keeps
   each session once: dropping the file again, or a newer export with more sessions, adds only what's new. A file that
   holds several people's sessions brings in only those named like the student; the names in the file are never kept.
-  The Drive shows on the file how many sessions came in.
-- **Everyone watches:** staff under the student's Scores (SCATT sessions), the family under Scores (SCATT training), on
+  The Drive shows on the file how many sessions came in. Moved to another student's folder (it was filed in the wrong
+  one), its sessions go with it; trashed, they stay, as a score stays when its PDF is trashed.
+- **Everyone watches:** staff on the student's Scores tab (its SCATT sessions card, open as soon as there's one), the
+  family under Scores (SCATT training), on
   the website and the phone: every shot's aim played back over the target in SCATT's colours (green while aiming,
   yellow the last second, red after the shot), with SCATT's own numbers in plain words (score, direction, aiming
   time, movement in the last second and quarter second, time in the 10, steady hold, the shot against the average aim).

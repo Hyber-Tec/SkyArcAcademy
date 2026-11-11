@@ -27,26 +27,28 @@ TestFlight on your iPhone. When it's good, Claude Code makes the App Store versi
 13 and sends it for review; nothing goes to the App Store before you say so. Android follows once Google Play has
 finished reviewing 1.1.0.
 
-### The results site's key
+### The results site
 
-The app brings the academy's competition results in from the results site by itself, every night
-([DECISIONS.md](DECISIONS.md) §43), once it has the site's key:
+The app brings the academy's competition results in from the results site ([DECISIONS.md](DECISIONS.md) §43). The
+site's key is saved (the shared starter key, 2026-11-10) and isn't on the page.
 
-1. On Scopos's support pages, **Developers → X-API-Key**, copy the shared starter key (public, for everyone to start
-   with).
-2. Settings → **Results site** → paste it → **Save the key**. The app tries it at once and says if the site refuses it.
-3. **Look back** → *The last year* → Look back. It goes two weeks at a time, over several checks of a few minutes each;
-   the page shows how far it got.
-4. Under **Athletes to confirm**, link each one to their student (the student named like them is offered first), or
-   say **Not ours**. Their results come in at once, and every night after.
+1. Settings → **Results site** → **Check now**: the last month's matches, nearby and at the clubs and schools where
+   the academy's athletes shot. A few minutes; the page shows it going.
+2. Under **Who are they?**, open a result on the site to be sure, then link each athlete to their student (the student
+   named like them is offered first, other names counting), or say **Not ours**. Their results come in at once.
+3. **Results sheet scans to check**, when there are any: a scan of the same day and position with other numbers. Use the
+   site's, or keep both. A scan with the same numbers is brought up to the site's by itself.
+4. The gear: the schedule (off until it's turned on: the days and an hour), how far back a check looks, the team names
+   and the distance. **Look back** finds the months before, two weeks at a time over a few checks.
 
-The first checks read many matches, to find the academy's teams once; after that a night is a few dozen requests.
+The first check reads many matches, to find the academy's teams once; after that a check is a few dozen requests.
 
 ### Scopos's own key for the app
 
 The shared starter key is "rate limited, shared and open to the public"; Scopos licenses one key per application each
 year, free today and "charging soon", with no price published. The email to apply, and the price estimate Goo asked
-for, are in the private notes (`docs/internal/`). Once Scopos sends the key: Settings → Results site → Replace the key.
+for, are in the private notes (`docs/internal/`). Once Scopos sends the key, whoever has it runs
+`npx tsx scripts/results-site-key.ts` on their computer and pastes it at the prompt, which doesn't show it.
 
 ### Kiosk PINs before Sunday, November 15
 
