@@ -306,7 +306,7 @@ describe('website content', () => {
     await assertFails(setDoc(doc(d, CONTENT), content({ instagram: 'https://evil.example.test/arc' })))
     await assertFails(setDoc(doc(d, CONTENT), content({ instagram: 'javascript:alert(1)' })))
     await assertFails(setDoc(doc(d, CONTENT), content({ hours: Array.from({ length: 13 }, (_, i) => ({ id: `h${i}`, days: 'Monday', time: '5 PM', note: '' })) })))
-    await assertFails(setDoc(doc(d, CONTENT), content({ team: 'Matt' })))
+    await assertFails(setDoc(doc(d, CONTENT), content({ team: 'Someone' })))
     await assertFails(setDoc(doc(d, CONTENT), content({ html: '<script></script>' })))
     // The academy's profile beside it is unchanged by these checks.
     await assertSucceeds(setDoc(doc(d, `branches/${A}/public/profile`), { name: A, status: 'active', anything: true }, { merge: true }))

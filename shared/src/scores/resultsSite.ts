@@ -202,8 +202,8 @@ export interface StudentName {
 
 /**
  * Each name key with the students who have it: a student's name and the other names they go by, a given name with
- * their family name, each family name first too (`nameFormsOf`: "Shengzhe Zhou" and "Zhou Shengzhe" for Remi Zhou, who
- * goes by Shengzhe).
+ * their family name, each family name first too (`nameFormsOf`: "Lianhua Rowan" and "Rowan Lianhua" for Ivy Rowan, who
+ * goes by Lianhua).
  */
 export function studentIndex(students: readonly StudentName[]): Map<string, StudentName[]> {
   const out = new Map<string, StudentName[]>()

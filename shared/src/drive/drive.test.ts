@@ -142,7 +142,7 @@ describe('the Drive index', () => {
     const idx = buildDriveIndex(
       [folder('f', null)],
       [
-        file('scored', null, { name: 'Chloe - 20shot - Prone.pdf', uploadedAt: at(9000) }),
+        file('scored', null, { name: 'Wren - 20shot - Prone.pdf', uploadedAt: at(9000) }),
         file('named', null, { name: '2026-10-20 Standing 95.0.pdf', uploadedAt: at(1000) }),
         file('renamed', null, { name: 'My result.pdf', originalName: 'SIUS 2026-10-01.pdf', uploadedAt: at(2000) }),
         file('plain', null, { name: 'photo.jpg', uploadedAt: at(8000) }),

@@ -1395,7 +1395,18 @@ technology first, then consider the rules later."
   result opens on the results site, to be sure who it is (Goo: "a button that we can open on the site"), and says where
   it is: in the scores, not published on the site (a host that keeps its scores to itself), no shots yet, or coming with
   the next check.
-- **A student's other names count** (Goo: Remi Zhou is "Shengzhe Zhou" there, with "Shengzhe" among her other names): a
+- **Each athlete opens on their results, and all can be confirmed at once** (Goo, 2026-11-11: "a confirm all button",
+  and each student "foldable … see the scores … just like how we see the scores from the score page"). Each athlete is a
+  row that opens on their results as the Scores page shows them, read from the site before they're linked.
+  **Confirm all** links each athlete to the student suggested for them, after a question that lists who goes to whom
+  and how many results the families will hear of.
+- **Start over** (Goo, 2026-11-11: "a reset button … I'll just manually do it"): the gear's button removes everything
+  the site brought in and puts each results sheet scan it changed back exactly as it was (the server keeps the scan's
+  numbers when the site's first replace them). It's for trying it and showing it from the beginning. The key, the
+  settings and the families' notices stay.
+- **Each result is kept whole** (Goo: "if possible we should keep them even though we're not using yet"): the site's
+  JSON of every result brought in, with each shot's time and every field the app doesn't show yet, server only.
+- **A student's other names count** (Goo: a student is listed there under a given name she goes by, among her other names): a
   one-word other name is a given name, matched with the family name, and every full name either way round. The same
   list (`shared/src/names.ts`) serves every search and comparison of a student's name in the app.
 - **A result comes in as the site has it:** a competition per position, every shot where it landed and in the order it
@@ -1434,11 +1445,18 @@ own screen); Goo: build it, and families "should be able to see only, not upload
 - **Coaches add them:** export the session from SCATT (a `.scatt-basic` file) and drop it in the student's folder in the
   Drive, on the website. The server reads it (`functions/src/scatt`, the arithmetic in `shared/src/scatt`) and keeps
   each session once: dropping the file again, or a newer export with more sessions, adds only what's new. A file that
-  holds several people's sessions brings in only those named like the student; the names in the file are never kept.
-  The Drive shows on the file how many sessions came in. Moved to another student's folder (it was filed in the wrong
+  holds several people's sessions brings in only those named like the student, and since 2026-11-11 a file of one
+  person too (Goo asked how the app knows whose a file is: until then, only from the folder). The name typed in SCATT
+  must be one of the student's names, a first name being enough. A file filed in the wrong folder brings nothing in, and
+  its note in the Drive says the name it holds: added to the student's other names, the file uploaded again brings the
+  sessions in. The names are kept only in that note.
+  The Drive shows on the file how many sessions came in, and on the website the page then opens the student's Scores
+  tab on the file's newest session (Goo, 2026-11-11: "jump me to the score page … and open"). Dropped on the student's
+  Scores tab, the file goes to their Drive folder. Moved to another student's folder (it was filed in the wrong
   one), its sessions go with it; trashed, they stay, as a score stays when its PDF is trashed.
-- **Everyone watches:** staff on the student's Scores tab (its SCATT sessions card, open as soon as there's one), the
-  family under Scores (SCATT training), on
+- **Everyone watches:** staff on the student's Scores tab (its SCATT sessions, folded like the tab's other sections, a
+  row per session like a result's, each opening on its replay: Goo, 2026-11-11), the family under Scores (SCATT
+  training), on
   the website and the phone: every shot's aim played back over the target in SCATT's colours (green while aiming,
   yellow the last second, red after the shot), with SCATT's own numbers in plain words (score, direction, aiming
   time, movement in the last second and quarter second, time in the 10, steady hold, the shot against the average aim).

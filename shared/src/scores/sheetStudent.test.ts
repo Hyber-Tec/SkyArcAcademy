@@ -5,7 +5,7 @@ import { nameIn, sheetStudent } from './sheetStudent'
 // Made-up students: one goes by an English name, her legal name among her other names.
 const students: DriveStudent[] = [
   { id: 'avery', name: 'Avery Rowan' },
-  { id: 'chloe', name: 'Chloe Park', otherNames: ['Seo-yeon Park'] },
+  { id: 'wren', name: 'Wren Park', otherNames: ['Seo-yeon Park'] },
   { id: 'jun', name: 'Jun Park' },
   { id: 'sam', name: 'Sam Quill' },
   { id: 'sam2', name: 'Sam Ortiz' },
@@ -20,9 +20,9 @@ describe('whose a results sheet is', () => {
   })
 
   it('finds a student by another name of theirs, written together or apart', () => {
-    expect(sheetStudent({ name: 'Seoyeon Park' }, students).id).toBe('chloe')
-    expect(sheetStudent({ name: 'Seo-Yeon Park' }, students).id).toBe('chloe')
-    expect(sheetStudent({ name: 'Chloe Park' }, students).id).toBe('chloe')
+    expect(sheetStudent({ name: 'Seoyeon Park' }, students).id).toBe('wren')
+    expect(sheetStudent({ name: 'Seo-Yeon Park' }, students).id).toBe('wren')
+    expect(sheetStudent({ name: 'Wren Park' }, students).id).toBe('wren')
     // A one-word other name is a given name: with the family name, it's hers.
     expect(sheetStudent({ name: 'Lianhua Rowan' }, students).id).toBe('ivy')
     expect(sheetStudent({ name: 'ROWAN, LIANHUA' }, students).id).toBe('ivy')
@@ -32,7 +32,7 @@ describe('whose a results sheet is', () => {
     const r = sheetStudent({ name: 'Sam Lee' }, students)
     expect(r.id).toBeNull()
     expect(r.candidates.sort()).toEqual(['sam', 'sam2'])
-    expect(sheetStudent({ name: 'Min Park' }, students)).toEqual({ id: null, candidates: ['chloe', 'jun'] })
+    expect(sheetStudent({ name: 'Min Park' }, students)).toEqual({ id: null, candidates: ['jun', 'wren'] })
   })
 
   it('looks in the heading when no name was read', () => {

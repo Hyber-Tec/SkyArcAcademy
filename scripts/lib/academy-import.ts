@@ -46,7 +46,7 @@ export interface ImportStudent {
   key: string
   firstName: string
   lastName: string
-  /** A second name the academy writes in brackets ("Olivia (Jiwoo) Park"). */
+  /** A second name the academy writes in brackets ("Ivy (Lianhua) Rowan"). */
   otherName: string | null
   grade: string | null
   /** The grade is on the spreadsheet's grades tab (reviewed), not only beside the contact. */
