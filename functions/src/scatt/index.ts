@@ -9,18 +9,18 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { db } from '../app'
 import { isScattKind } from '@shared/drive/files'
 import { type DriveFile, driveObjectPath } from '@shared/drive/types'
-import { nameFormsOf } from '@shared/names'
+import { nameFitsStudent } from '@shared/names'
 import { COL, ROOT } from '@shared/paths'
 import { type ScattSession, buildSession, scattSessionId } from '@shared/scatt/session'
-import { nameKey } from '@shared/scores/scopos'
 import type { Branch, Student } from '@shared/types'
 import { parseKeys, readScattFile } from './read'
 
 /**
  * A SCATT file dropped in a student's Drive folder (the fourth meeting's R2): once it's uploaded, its sessions become
- * the student's (`scattSessions`, `scattTraces`), each once, for the staff and the family to watch. The file's people
- * are told apart by name when it holds several; their names are never kept. The file stays in the Drive, with the
- * server's note of what it brought in and for whom (`scatt`, which no client writes). Its sessions follow it to another
+ * the student's (`scattSessions`, `scattTraces`), each once, for the staff and the family to watch: those of the people
+ * in it named like the student (the name typed in SCATT, a given name being enough: `nameFitsStudent`). A file filed in
+ * the wrong folder brings nothing in and says so; one holding several people brings in the student's only. The names
+ * are kept only in that note. The file stays in the Drive, with the server's note of what it brought in and for whom (`scatt`, which no client writes). Its sessions follow it to another
  * student's folder (it was filed in the wrong one); they stay when it goes to the Trash, as a score stays when its PDF
  * does, and staff delete one from the student's scores.
  */
@@ -74,16 +74,25 @@ async function importFile(branchId: string, fileId: string, f: DriveFile, dir: s
     await batch.commit()
   }
   const movedFrom = moved.length ? (moved[0].data() as ScattSession).studentName : null
-  // Whose sessions: all of them when the file holds one person; else only those named like the student (their name,
-  // another they go by, either way round: `nameFormsOf`).
-  const names = new Set(nameFormsOf(student).map(nameKey).filter(Boolean))
-  const mine = file.persons.length <= 1 ? null : new Set(file.persons.filter((p) => names.has(nameKey(p.name))).map((p) => p.id))
+  // Whose sessions: those of the file's people named like the student (the name typed in SCATT: their name or another
+  // they go by, a given name alone too, in any order). A person with no name typed counts as the student's; a file
+  // with nobody in it, too. Null: every session.
+  const fits = (p: { name: string }) => !p.name.trim() || nameFitsStudent(student, p.name)
+  const fitting = file.persons.filter(fits)
+  const mine = fitting.length === file.persons.length ? null : new Set(fitting.map((p) => p.id))
   const tz = (branchSnap.data() as Branch | undefined)?.timezone || 'America/New_York'
   let added = 0
   let skipped = 0
   const notes: string[] = []
-  if (mine && !mine.size) notes.push(`This file holds ${file.persons.length} people’s sessions, and none is named like ${student.name}: nothing was brought in.`)
-  else if (mine) notes.push(`Only ${student.name}’s sessions were brought in: the file holds ${file.persons.length} people’s.`)
+  const first = student.firstName || student.name
+  if (mine && !mine.size) {
+    const typed = file.persons.map((p) => `“${p.name.trim()}”`)
+    notes.push(
+      file.persons.length === 1
+        ? `Its sessions are under the name ${typed[0]} in SCATT, which isn’t one of ${student.name}’s names: nothing was brought in. If they’re ${first}’s, add ${typed[0]} to ${first}’s other names (their profile), then upload the file to ${first}’s folder again.`
+        : `This file holds ${file.persons.length} people’s sessions (${typed.join(', ')}), and none is named like ${student.name}: nothing was brought in.`,
+    )
+  } else if (mine) notes.push(`Only ${student.name}’s sessions were brought in: the file holds ${file.persons.length} people’s.`)
   for (const raw of file.sessions) {
     if (mine && !mine.has(raw.personId)) {
       skipped++

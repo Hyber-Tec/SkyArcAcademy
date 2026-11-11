@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { familyNameOf, nameFormsOf, namesOf, otherNamesText, searchFindsName, searchFindsStudent } from './names'
+import { familyNameOf, nameFitsStudent, nameFormsOf, namesOf, otherNamesText, searchFindsName, searchFindsStudent } from './names'
 
 // Made-up students: a given name she's printed under ("Lianhua"), and a two-word legal name.
 const rowan = { name: 'Ivy Rowan', lastName: 'Rowan', otherNames: ['Lianhua'] }
@@ -47,5 +47,15 @@ describe('a search', () => {
   it('gives a picker the other names to search', () => {
     expect(otherNamesText(rowan)).toBe('Lianhua Lianhua Rowan')
     expect(otherNamesText({ name: 'Mia Larkin' })).toBe('')
+  })
+})
+
+describe('a name typed elsewhere (a SCATT file’s shooter)', () => {
+  const milo = { name: 'Milo Hart', otherNames: ['Junho'] }
+  it('fits the student by their given name, family name, initials or another name, in any order', () => {
+    for (const typed of ['Milo', 'milo hart', 'Hart Milo', 'Milo H', 'M. Hart', 'Junho', 'Junho Hart', 'MILO']) expect(nameFitsStudent(milo, typed)).toBe(true)
+  })
+  it('doesn’t fit someone else, a part inside a word, or nothing', () => {
+    for (const typed of ['Nora', 'Milo Lee', 'il', 'Mila', '', '  ']) expect(nameFitsStudent(milo, typed)).toBe(false)
   })
 })
