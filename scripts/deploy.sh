@@ -36,14 +36,16 @@ if ! deploy "$only"; then
   bash scripts/open-callables.sh
   deploy "$only" || echo "::warning::The functions deploy reported errors again."
 fi
-# Then the functions left behind, by this deploy or an earlier one, once the old revisions have let go of their CPU.
+# Then the functions left behind, by this deploy or an earlier one, once the old revisions have let go of their CPU: a
+# minute, then two, then four (on 2026-11-10 a minute wasn't always enough).
 behind=$(left_behind)
-if [ -n "$behind" ]; then
-  echo "::warning::Deploying again the functions whose newest revision didn't start: $behind"
-  sleep 60
+for wait in 60 120 240; do
+  [ -n "$behind" ] || break
+  echo "::warning::Deploying again in ${wait} s the functions whose newest revision didn't start: $behind"
+  sleep "$wait"
   deploy "functions:${behind//,/,functions:}" || true
   behind=$(left_behind)
-fi
+done
 bash scripts/open-callables.sh
 if [ -n "$behind" ]; then
   echo "::error::Still serving their previous revision: $behind"
