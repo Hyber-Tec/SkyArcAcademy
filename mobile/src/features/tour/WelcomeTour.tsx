@@ -190,8 +190,10 @@ function TourOverlay({ tour, step, onStep, onClose }: { tour: Tour; step: number
         ? { top: hole.y + hole.height + space.lg + (tap ? 34 : 0) }
         : { bottom: height - hole.y + space.lg + (tap ? 34 : 0) };
 
+  // Android's Back (the button or the edge swipe) goes back a step, as the card's Back does; on the first step it closes
+  // the tour, as Skip does. An edge swipe is easily made by accident, and ending the tour is remembered.
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => (step > 0 ? go(step - 1) : onClose())}>
       <View style={StyleSheet.absoluteFill} testID="tour" accessibilityViewIsModal>
         <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
           <Path d={`M0 0H${width}V${height}H0Z${hole ? roundRect(hole, r) : ""}`} fill="rgba(8,8,8,0.62)" fillRule="evenodd" />

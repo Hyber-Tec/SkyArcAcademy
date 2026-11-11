@@ -2,6 +2,8 @@ import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { resumeUploads } from "@/features/scan/uploads";
+import { WelcomeTour } from "@/features/tour/WelcomeTour";
+import { useBranch } from "@/state/BranchProvider";
 import { useColors } from "@/theme";
 
 /**
@@ -14,9 +16,14 @@ export const unstable_settings = { anchor: "(tabs)" };
  * The staff's part of the app (owners, admins and coaches, each seeing what the rules give their role): five tabs, and
  * the screens that open over them (a class and its changes, a student, a score, a file, a coach, families' requests; the
  * Scan screens add their own). Every screen loads its record by ID, so links and the back gesture always work.
+ *
+ * The welcome tour sits beside the stack, not in the tabs: on Android a page opened over the tabs takes them off the
+ * screen, and a Modal taken off with them closes, which ended the tour unfinished (and unremembered) whenever it opened a
+ * page or a notification was tapped during it.
  */
 export default function AdminLayout() {
   const colors = useColors();
+  const { isCoach } = useBranch();
   // Cards' copies that didn't reach the Drive before the app was closed go now.
   useEffect(() => resumeUploads(), []);
   const sheet = { presentation: "formSheet", sheetGrabberVisible: true, sheetCornerRadius: 24, contentStyle: { backgroundColor: colors.background } } as const;
@@ -30,41 +37,44 @@ export default function AdminLayout() {
     contentStyle: { backgroundColor: colors.grouped },
   } as const;
   return (
-    <Stack
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-      // A screen the phone presents over the app (a sheet, a modal) is outside the root's gesture handling: each gets
-      // its own root, so swipes and other gestures work in it too.
-      screenLayout={({ route, children }) => (route.name === "(tabs)" ? children : <GestureHandlerRootView style={{ flex: 1 }}>{children}</GestureHandlerRootView>)}
-    >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="class/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
-      {/* The office's changes to a class (a student added, one moved to another class), and families' requests. */}
-      <Stack.Screen name="add-seat" options={{ ...page, title: "Add a student" }} />
-      <Stack.Screen name="move-seat" options={{ ...page, title: "Move to another class" }} />
-      <Stack.Screen name="requests" options={{ ...page, title: "Requests from families" }} />
-      <Stack.Screen name="request/[id]" options={{ ...sheet, sheetAllowedDetents: [0.75, 1] }} />
-      <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
-      <Stack.Screen name="student/[id]" options={page} />
-      <Stack.Screen name="score/[id]" options={page} />
-      <Stack.Screen name="scatt/[id]" options={page} />
-      <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
-      {/* The Drive (its top, then a folder at a time) and the progress reports (the list, one report). */}
-      <Stack.Screen name="drive/index" options={{ ...page, title: "Drive" }} />
-      <Stack.Screen name="drive/[id]" options={page} />
-      <Stack.Screen name="reports/index" options={{ ...page, title: "Reports" }} />
-      <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
-      {/* The academy's announcements (the list, a post, a post's file) and the person's notifications (Home's bell). */}
-      <Stack.Screen name="news/index" options={{ ...page, title: "News" }} />
-      <Stack.Screen name="news/[id]" options={page} />
-      <Stack.Screen name="news/attachment" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
-      <Stack.Screen name="inbox" options={{ ...page, title: "Notifications" }} />
-      {/* A day of the coach's availability: a sheet sized to what it holds, as the owner's True Education design. */}
-      <Stack.Screen name="availability-day" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
-      {/* Scanning a paper card: the camera, then the card's check. Full screen, and no swipe away from a half-checked card. */}
-      <Stack.Screen name="scan/camera" options={{ presentation: "fullScreenModal", gestureEnabled: false, contentStyle: { backgroundColor: "#000" } }} />
-      <Stack.Screen name="scan/review" options={{ ...page, title: "Check the card", presentation: "fullScreenModal", gestureEnabled: false }} />
-      {/* A competition's results from a photo of its results sheet. */}
-      <Stack.Screen name="scan/sheet" options={{ ...page, title: "Add a competition" }} />
-    </Stack>
+    <>
+      <Stack
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+        // A screen the phone presents over the app (a sheet, a modal) is outside the root's gesture handling: each gets
+        // its own root, so swipes and other gestures work in it too.
+        screenLayout={({ route, children }) => (route.name === "(tabs)" ? children : <GestureHandlerRootView style={{ flex: 1 }}>{children}</GestureHandlerRootView>)}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="class/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
+        {/* The office's changes to a class (a student added, one moved to another class), and families' requests. */}
+        <Stack.Screen name="add-seat" options={{ ...page, title: "Add a student" }} />
+        <Stack.Screen name="move-seat" options={{ ...page, title: "Move to another class" }} />
+        <Stack.Screen name="requests" options={{ ...page, title: "Requests from families" }} />
+        <Stack.Screen name="request/[id]" options={{ ...sheet, sheetAllowedDetents: [0.75, 1] }} />
+        <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
+        <Stack.Screen name="student/[id]" options={page} />
+        <Stack.Screen name="score/[id]" options={page} />
+        <Stack.Screen name="scatt/[id]" options={page} />
+        <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
+        {/* The Drive (its top, then a folder at a time) and the progress reports (the list, one report). */}
+        <Stack.Screen name="drive/index" options={{ ...page, title: "Drive" }} />
+        <Stack.Screen name="drive/[id]" options={page} />
+        <Stack.Screen name="reports/index" options={{ ...page, title: "Reports" }} />
+        <Stack.Screen name="report/[id]" options={{ ...page, title: "Progress report" }} />
+        {/* The academy's announcements (the list, a post, a post's file) and the person's notifications (Home's bell). */}
+        <Stack.Screen name="news/index" options={{ ...page, title: "News" }} />
+        <Stack.Screen name="news/[id]" options={page} />
+        <Stack.Screen name="news/attachment" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
+        <Stack.Screen name="inbox" options={{ ...page, title: "Notifications" }} />
+        {/* A day of the coach's availability: a sheet sized to what it holds, as the owner's True Education design. */}
+        <Stack.Screen name="availability-day" options={{ ...sheet, sheetAllowedDetents: "fitToContents" }} />
+        {/* Scanning a paper card: the camera, then the card's check. Full screen, and no swipe away from a half-checked card. */}
+        <Stack.Screen name="scan/camera" options={{ presentation: "fullScreenModal", gestureEnabled: false, contentStyle: { backgroundColor: "#000" } }} />
+        <Stack.Screen name="scan/review" options={{ ...page, title: "Check the card", presentation: "fullScreenModal", gestureEnabled: false }} />
+        {/* A competition's results from a photo of its results sheet. */}
+        <Stack.Screen name="scan/sheet" options={{ ...page, title: "Add a competition" }} />
+      </Stack>
+      <WelcomeTour kind={isCoach ? "coach" : "office"} />
+    </>
   );
 }

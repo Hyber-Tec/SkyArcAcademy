@@ -37,6 +37,26 @@ appId: com.skyarcacademy.app
       visible: "Not Now"
     commands:
       - tapOn: "Not Now"
+# The welcome tour opens over Home after an account's first sign-in on a phone (a cleared app counts as a new phone):
+# skipped, as the flows check the screens behind it. More's "Take the tour" plays it again. Its card comes a moment
+# after Home shows (the first step opens its tab first), so it's waited for on its own; an account that has had it
+# waits those seconds for nothing.
+- extendedWaitUntil:
+    visible:
+      id: "tour-skip|tab-today|today-screen|family-tab-home|family-home"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: "tour-skip"
+    timeout: 8000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "tour-skip"
+    commands:
+      - tapOn:
+          id: "tour-skip"
 # Home (the staff's or the family's): its tab on iPhone; on Android Maestro can't see a tab's id, so the screen's own.
 - extendedWaitUntil:
     visible:
