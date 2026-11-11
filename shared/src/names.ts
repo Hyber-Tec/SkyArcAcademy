@@ -99,4 +99,19 @@ export function searchFindsStudent(s: Named, query: string): { found: boolean; a
 }
 
 /** A student's other names as words for a picker's search (its label already holds their name). */
+/**
+ * Whether a name typed elsewhere can be this student's (a SCATT file's shooter: "Jason", "Kang Jason", "Jason K"): each
+ * of its words starts a word of one name they go by (`namesOf`), in any order. A part inside a word doesn't count ("an"
+ * isn't Jason's).
+ */
+export function nameFitsStudent(s: Named, typed: string): boolean {
+  const words = (t: string) => foldName(t).split(/[\s'’.,_-]+/).filter(Boolean)
+  const asked = words(typed)
+  if (!asked.length) return false
+  return namesOf(s).some((n) => {
+    const own = words(n)
+    return asked.every((w) => own.some((x) => x.startsWith(w)))
+  })
+}
+
 export const otherNamesText = (s: Named): string => namesOf(s).slice(1).join(' ')
