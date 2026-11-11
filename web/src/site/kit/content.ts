@@ -692,31 +692,72 @@ export const CONTACT = {
 /**
  * The franchise page (the owner's idea, 2026-11-10: "information about franchise opportunities … at the very
  * bottom"): for people who'd like to open an academy on Sky Arc's model. No prices, and only what the site already
- * says of the academy; the terms come later, in person.
+ * says of the academy, or docs/DECISIONS.md confirms of its app; the terms come later, in person (§44). The app is
+ * part of the model (the owner and Goo: "the system would be part of it").
  */
 export const FRANCHISE = {
   eyebrow: 'Franchise opportunity',
   title: 'Bring Sky Arc to your community.',
   text: 'Sky Arc Sports Academy is growing. If you’d like to open an air rifle academy built on the same program, coaching and tools, we’d like to hear from you.',
-  builtTitle: 'What Sky Arc has built',
-  built: [
-    {
+  /** The hero's button, down to the form. */
+  cta: 'Start the conversation',
+  model: {
+    eyebrow: 'The model',
+    title: 'What Sky Arc has built.',
+    text: 'The program, the coaching and the tools that run the academy in Suwanee, Georgia.',
+    path: {
       title: 'A clear path for every athlete',
       text: 'Four program levels, from bench-supported first shots to Sporter and NCAA Precision competition, with placement by readiness, not school grade.',
+      more: 'See the program',
     },
-    { title: 'Safety before the first shot', text: 'Every athlete starts with Trial One: safety, range commands and the rifle, before any shooting.' },
-    {
+    safety: {
+      title: 'Safety before the first shot',
+      text: 'Every athlete starts with Trial One: safety, range commands and the rifle, before any shooting.',
+    },
+    coaching: {
       title: 'Coaching that has been there',
-      text: 'Coached by an NCAA National Championship competitor and an Elite Military Rifle Marksman, with NRA Level 1 Certified Instructors.',
+      text: 'Competition experience, certified instruction and elite military rifle marksmanship, held to one shared standard.',
+      credentials: ['NCAA National Championship competitor', 'Junior Olympic competition experience', 'NRA Level 1 Certified Instructors', 'Elite Military Rifle Marksman'],
     },
-    { title: 'Electronic scoring', text: 'Shots scored on SIUS electronic targets, so every athlete sees where each shot went.' },
-    {
-      title: 'Its own app',
-      text: 'Families follow classes, scores, progress reports and news on the web and on their phones. Coaches and the office run the schedule, the front desk and the scores in the same system.',
+    scoring: {
+      title: 'Electronic scoring',
+      text: 'Shots scored on SIUS electronic targets, so every athlete sees where each shot went.',
+      live: 'Live electronic scoring',
     },
-  ],
-  stepsTitle: 'How it starts',
-  steps: ['Tell us about yourself and where you’d like to open.', 'The academy gets in touch to talk it through.'],
+  },
+  system: {
+    eyebrow: 'The system',
+    title: 'One system runs the academy.',
+    text: 'Sky Arc runs on its own app, on the web and on iPhone and Android phones, for families, coaches and the office alike. The system is part of the model.',
+    roles: [
+      {
+        title: 'Families',
+        text: 'Follow their athlete on the web and on their phones.',
+        items: ['Classes, cancellations and makeups', 'Scores, and where the shots went', 'Progress reports from the coaches', 'Notifications and academy news'],
+      },
+      {
+        title: 'Coaches',
+        text: 'Run their day from their phones.',
+        items: ['Their schedule and their students', 'Their availability', 'Paper targets scored from a photo', 'Clocking in at the front desk'],
+      },
+      {
+        title: 'The office',
+        text: 'Runs the academy in one place.',
+        items: ['The schedule, students and families', 'Trial requests and messages from the website', 'SIUS results, read into each athlete’s scores', 'Progress reports and news'],
+      },
+    ],
+  },
+  start: {
+    eyebrow: 'How it starts',
+    title: 'Start the conversation.',
+    text: 'Thinking of bringing Sky Arc to your area? It starts with a message.',
+    steps: [
+      { title: 'Send a message', text: 'Tell us about yourself and where you’d like to open.' },
+      { title: 'Hear from the academy', text: 'The academy gets in touch to talk it through.' },
+      { title: 'The details, in person', text: 'The details and the terms come in person.' },
+    ],
+    email: 'Prefer email?',
+  },
   fields: {
     name: 'Your name',
     email: 'Email',
@@ -725,7 +766,7 @@ export const FRANCHISE = {
     message: 'Tell us about yourself',
     messageHint: 'Your background, why air rifle, and when you’re hoping to start.',
   },
-  send: 'Send',
+  send: 'Send message',
   sending: 'Sending…',
   sent: { title: 'Thank you.', text: 'The academy will reply to', again: 'Send another message' },
   note: 'This page shares information only. It isn’t an offer to sell a franchise.',

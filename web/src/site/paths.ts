@@ -32,7 +32,7 @@ export const PAGE_META: Record<Page | 'news-post', { title: string; description:
   contact: { title: 'Contact · Sky Arc Sports Academy', description: 'Questions about programs, tuition, equipment or placement? Send a message to Sky Arc Sports Academy in Suwanee, GA.' },
   franchise: {
     title: 'Franchise opportunity · Sky Arc Sports Academy',
-    description: 'Interested in opening an air rifle academy built on Sky Arc’s program, coaching and tools? Tell us about yourself and where you’d like to open.',
+    description: 'Interested in opening an air rifle academy built on Sky Arc’s program, coaching and its own app? Tell us about yourself and where you’d like to open.',
   },
   'get-app': { title: 'The Sky Arc app · Sky Arc Sports Academy', description: 'Classes, scores, progress reports and academy news on your iPhone or Android phone. Get Sky Arc on the App Store or Google Play.' },
   portal: { title: 'Parent portal · Sky Arc Sports Academy', description: 'One login for class schedules, scores, progress reports and academy news.' },
