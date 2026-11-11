@@ -173,6 +173,9 @@ describe('what the Drive takes', () => {
   it('accepts ordinary files and refuses the rest with a reason', () => {
     expect(classifyFile({ name: 'result.PDF', size: 10 })).toEqual({ ok: true, name: 'result.PDF', kind: 'pdf', mime: 'application/pdf' })
     expect(classifyFile({ name: 'IMG_0001.HEIC', size: 10 })).toMatchObject({ ok: true, mime: 'image/heic' })
+    // SCATT's session files, which the server reads into the student's SCATT sessions.
+    expect(classifyFile({ name: 'Tuesday.scatt-basic', size: 10 })).toEqual({ ok: true, name: 'Tuesday.scatt-basic', kind: 'scatt-basic', mime: 'application/x-scatt' })
+    expect(classifyFile({ name: 'match.SCATT-EXPERT', size: 10 })).toMatchObject({ ok: true, kind: 'scatt-expert' })
     expect(classifyFile({ name: 'run.exe', size: 10 })).toMatchObject({ ok: false, reason: '.exe files can’t be stored in the Drive.' })
     expect(classifyFile({ name: 'page.html', size: 10 }).ok).toBe(false)
     expect(classifyFile({ name: 'big.mp4', size: 200 * 1024 * 1024 })).toMatchObject({ ok: false, reason: 'It’s over 100 MB.' })

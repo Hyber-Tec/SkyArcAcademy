@@ -77,6 +77,13 @@ export const COL = {
   resultsSiteRuns: 'resultsSiteRuns',
   onlineAthletes: 'onlineAthletes',
   onlineMatches: 'onlineMatches',
+  /**
+   * SCATT sessions (shared/src/scatt/session.ts): each session's shots and numbers, and apart, each shot's trace. The
+   * server writes them from a SCATT file in a student's Drive folder (functions/src/scatt); staff and the student's
+   * family read them.
+   */
+  scattSessions: 'scattSessions',
+  scattTraces: 'scattTraces',
 } as const
 
 export type BranchCollection = (typeof COL)[keyof typeof COL]

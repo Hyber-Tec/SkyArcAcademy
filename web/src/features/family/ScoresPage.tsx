@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { LuArrowDownRight, LuArrowRight, LuArrowUpRight, LuTarget, LuTrophy } from 'react-icons/lu'
+import { useScattSessions } from '@/features/scatt/api'
+import { ScattSessions } from '@/features/scatt/ScattSessions'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { type Evaluation, POSITION_LABELS, wholePer10, type ResultKind, kindOf } from '@shared/shooting/evaluation'
 import { personalBestIds, positionProgress } from '@shared/shooting/progress'
@@ -30,7 +32,7 @@ import { PositionCards, ScoresOverTime, ShotPattern } from './ScoreWidgets'
  * (`?child=…&score=…&original=1`), so links, reloads and Back keep them.
  */
 export function FamilyScoresPage() {
-  const { timezone } = useBranch()
+  const { timezone, branchId } = useBranch()
   const family = useFamily()
   const navigate = useNavigate()
   const location = useLocation()
@@ -45,6 +47,7 @@ export function FamilyScoresPage() {
   const childParam = params.get('child')
   // The child of the result in the address, the one picked, or the one who shot last.
   const kid = fromScore?.studentId ?? (childParam && kids.some((k) => k.id === childParam) ? childParam : (linked[linked.length - 1]?.studentId ?? kids[0]?.id ?? null))
+  const scatt = useScattSessions(branchId, kid)
   const theirs = useMemo(() => linked.filter((e) => e.studentId === kid), [linked, kid])
   // Practice, competitions (a student's whole competition history, bad days too) or evaluations (§23).
   const kindParam = params.get('kind')
@@ -203,6 +206,13 @@ export function FamilyScoresPage() {
             today={todayKey(timezone)}
             label={`${student ? 'Your' : `${name}’s`} scores per 10 shots over time`}
           />
+          {scatt.data.length ? (
+            <section className="@container rounded-xl border bg-card p-5" aria-label="SCATT training" data-testid="family-scatt">
+              <h2 className="text-base font-semibold">SCATT training</h2>
+              <p className="mt-0.5 mb-4 text-sm text-muted-foreground">Each shot of a training session on SCATT: how the aim moved before it and where it went. Tap a shot to play it.</p>
+              <ScattSessions key={kid} sessions={scatt.data} loading={scatt.loading} canDelete={false} />
+            </section>
+          ) : null}
           <ShotPattern key={`pattern-${kid}`} evaluations={mine} />
           <CompareCard key={`compare-${kid}`} evaluations={mine.filter((e) => e.shots > 0)} />
         </div>

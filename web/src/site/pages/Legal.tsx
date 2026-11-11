@@ -167,7 +167,8 @@ export function Privacy() {
             </>,
             <>
               <strong>Students.</strong> Name, grade, school, date of birth, level and program, contact details we’re given, class schedule, attendance, and notes from
-              coaches and staff. As the academy adds results: scores, score reports from the range’s electronic scoring system, and photos of paper targets.
+              coaches and staff. As the academy adds results: scores, score reports from the range’s electronic scoring system, training sessions from its SCATT
+              trainer (how the aim moved before each shot), competition results published on the tournaments’ results site, and photos of paper targets.
             </>,
             <>
               <strong>Coaches and staff.</strong> Name, contact details, date of birth and address, availability, schedule, clock-in and clock-out times, pay rates and
@@ -448,7 +449,8 @@ export function Terms() {
       title: 'Students’ records, scores and reports',
       body: (
         <p>
-          The academy records attendance, scores and results (from the range’s electronic scoring system and from photos of paper targets) and writes progress reports,
+          The academy records attendance, scores and results (from the range’s electronic scoring system, its SCATT trainer, the tournaments’ public results site
+          and photos of paper targets) and writes progress reports,
           and shares them with each student’s own family in the app, to follow the student’s progress. The academy checks them, but a score read from a photo, or a
           report, can hold a mistake: if something looks wrong, tell the academy and it will look into it. For a competition, the organizer’s results are the official
           ones.

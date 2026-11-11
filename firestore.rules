@@ -891,6 +891,19 @@ service cloud.firestore {
         allow read: if isAdmin(b);
       }
 
+      // SCATT sessions (shared/src/scatt/session.ts): the server brings them in from a SCATT file in a student's Drive
+      // folder. Staff and the student's family watch them (families only watch: Goo, 2026-11-10); staff may delete one
+      // that's in the wrong student's scores. No client writes them.
+      match /scattSessions/{sessionId} {
+        allow read: if isStaff(b) || isFamilyOf(b, resource.data.studentId);
+        allow delete: if isStaff(b);
+      }
+
+      match /scattTraces/{sessionId} {
+        allow read: if isStaff(b) || isFamilyOf(b, resource.data.studentId);
+        allow delete: if isStaff(b);
+      }
+
       // Progress reports: admins make and edit drafts; admins and coaches share them (docs/DECISIONS.md §6, Q11:
       // coaches read every report and may share one, never change or delete it); families read their own children's
       // shared reports. Who was told, and the first view, are written by Cloud Functions.

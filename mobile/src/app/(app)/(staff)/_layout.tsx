@@ -46,6 +46,7 @@ export default function AdminLayout() {
       <Stack.Screen name="coach/[id]" options={{ ...sheet, sheetAllowedDetents: [0.6, 1] }} />
       <Stack.Screen name="student/[id]" options={page} />
       <Stack.Screen name="score/[id]" options={page} />
+      <Stack.Screen name="scatt/[id]" options={page} />
       <Stack.Screen name="file/[id]" options={{ ...page, presentation: "modal", headerStyle: { backgroundColor: colors.background }, contentStyle: { backgroundColor: colors.background } }} />
       {/* The Drive (its top, then a folder at a time) and the progress reports (the list, one report). */}
       <Stack.Screen name="drive/index" options={{ ...page, title: "Drive" }} />

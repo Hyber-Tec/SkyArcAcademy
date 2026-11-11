@@ -3,6 +3,7 @@ import { type DocumentData, type Query, collection, doc, getDocs, limit, onSnaps
 import { ACADEMY_SIGNER_ID, type AcademySigner, type ContractLink, type ContractTemplate, type SignedContract } from "@shared/contracts/types";
 import { COL, DOC, ROOT } from "@shared/paths";
 import type { ProgressReportDoc } from "@shared/reports/types";
+import type { ScattSession } from "@shared/scatt/session";
 import type { ClassRequest } from "@shared/schedule/requests";
 import { type Evaluation, inOrder } from "@shared/shooting/evaluation";
 import type { DateKey } from "@shared/time";
@@ -204,6 +205,17 @@ export function useFamilyEvaluations(ids: readonly string[]) {
   );
   // The reverse of the charts' order (shared/src/shooting/evaluation.ts), so ties read the same way everywhere.
   const data = useMemo<EvaluationDoc[]>(() => inOrder(state.data).reverse(), [state.data]);
+  return { ...state, data };
+}
+
+/** The given students' SCATT sessions (shared/src/scatt/session.ts), newest first: one query per student. Watch only. */
+export function useFamilyScatt(ids: readonly string[]) {
+  const { branchId } = useBranch();
+  const list = stable(ids);
+  const state = useMerged<ScattSession>(list.length ? `family-scatt-${branchId}-${list.join(",")}` : null, () =>
+    list.map((id) => ({ kind: "query", ref: query(col(branchId, COL.scattSessions), where("studentId", "==", id)) })),
+  );
+  const data = useMemo(() => state.data.slice().sort((a, b) => b.dateKey.localeCompare(a.dateKey) || b.timeMin - a.timeMin), [state.data]);
   return { ...state, data };
 }
 

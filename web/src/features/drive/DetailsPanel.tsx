@@ -1,6 +1,6 @@
 import { LuArrowRight, LuLock, LuUsers } from 'react-icons/lu'
 import { Link } from 'react-router'
-import { categoryOf } from '@shared/drive/files'
+import { categoryOf, isScattKind } from '@shared/drive/files'
 import { type DriveIndex, type DriveItem, countLabel, formatBytes, itemOwner, itemUpdated, updatedText } from '@shared/drive/model'
 import { scoreTotal } from '@shared/drive/scores'
 import { DRIVE_ACCESS_LABELS, type DriveAccess, accessOf, isFixedFolder } from '@shared/drive/types'
@@ -148,7 +148,22 @@ export function DetailsPanel({
           {isAdmin ? <AccessRow access={accessOf(f)} note={f.folderId ? 'Like the folder it’s in.' : undefined} /> : null}
           <Row label="Uploaded">{[when(f.uploadedAt), f.uploadedBy?.name].filter(Boolean).join(' by ')}</Row>
           {f.originalName && f.originalName !== f.name ? <Row label="Original name">{f.originalName}</Row> : null}
+          {isScattKind(f.kind) ? (
+            <Row label="SCATT sessions">
+              {!f.studentId
+                ? 'Put it in a student’s folder to bring its sessions in.'
+                : f.scatt
+                  ? [`${f.scatt.sessions} brought in`, f.scatt.skipped ? `${f.scatt.skipped} not` : null].filter(Boolean).join(', ')
+                  : 'Reading…'}
+            </Row>
+          ) : null}
         </dl>
+        {isScattKind(f.kind) && f.scatt?.note ? <p className="text-xs text-amber-800 dark:text-amber-300">{f.scatt.note}</p> : null}
+        {isScattKind(f.kind) && f.studentId && f.scatt?.sessions ? (
+          <Link className="inline-flex items-center gap-1 text-sm font-medium underline-offset-2 hover:underline" to={`/${portal}/students/${f.studentId}/scores`}>
+            Watch them in Scores <LuArrowRight className="size-3.5" />
+          </Link>
+        ) : null}
       </>
     )
   }

@@ -158,7 +158,7 @@ Set up on 2026-10-15. HyberTec's organization shapes three things here:
   run as their own account, **`functions@skyarcacademy.iam.gserviceaccount.com`** (`setGlobalOptions` in
   `functions/src/app.ts`), with only what they use: Cloud Datastore User, Firebase Authentication Admin, Firebase Cloud
   Messaging Admin, Eventarc Event Receiver, Cloud Run Invoker, Logs Writer, Storage Object Admin on the default
-  bucket, Secret Accessor on `GMAIL_APP_PASSWORD`, and Service Usage Consumer, to call Google's text reader (Cloud
+  bucket, Secret Accessor on `GMAIL_APP_PASSWORD` and `SCATT_KEYS`, and Service Usage Consumer, to call Google's text reader (Cloud
   Vision, `readResultsSheet`: a competition's results sheet read from its photo; switched on with Goo's OK on
   2026-10-28).
 - **Builds run as the Compute Engine default account** (`cloudbuild.useComputeServiceAccount`), which therefore holds
@@ -221,6 +221,11 @@ for sa in $RUNTIME $COMPUTE; do
 done
 printf unset | gcloud secrets create GMAIL_APP_PASSWORD --project $P --replication-policy automatic --data-file=-
 gcloud secrets add-iam-policy-binding GMAIL_APP_PASSWORD --project $P --member serviceAccount:$RUNTIME \
+  --role roles/secretmanager.secretAccessor
+# SCATT's product keys, hex, a comma between keys (docs/DECISIONS.md §45): the SCATT import reads files with them.
+# Never in the code or a chat: copied from the decoding research's private notes. Added 2026-11-10.
+gcloud secrets create SCATT_KEYS --project $P --replication-policy automatic --data-file=<the keys' file>
+gcloud secrets add-iam-policy-binding SCATT_KEYS --project $P --member serviceAccount:$RUNTIME \
   --role roles/secretmanager.secretAccessor
 ```
 

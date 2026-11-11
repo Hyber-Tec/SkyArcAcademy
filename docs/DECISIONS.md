@@ -1413,3 +1413,23 @@ page too … we don't mention price there."
 - **No prices, and no terms:** those come in person. One line says the page shares information only and isn't an offer
   to sell a franchise (a franchise is offered with the documents the law requires, never from a web page).
 
+## 45. SCATT sessions in the app, to watch (Goo, 2026-11-10)
+
+The fourth meeting's R2. The research decoded SCATT's session file completely (every trace, checked against SCATT's
+own screen); Goo: build it, and families "should be able to see only, not uploading."
+
+- **Coaches add them:** export the session from SCATT (a `.scatt-basic` file) and drop it in the student's folder in the
+  Drive, on the website. The server reads it (`functions/src/scatt`, the arithmetic in `shared/src/scatt`) and keeps
+  each session once: dropping the file again, or a newer export with more sessions, adds only what's new. A file that
+  holds several people's sessions brings in only those named like the student; the names in the file are never kept.
+  The Drive shows on the file how many sessions came in.
+- **Everyone watches:** staff under the student's Scores (SCATT sessions), the family under Scores (SCATT training), on
+  the website and the phone: every shot's aim played back over the target in SCATT's colours (green while aiming,
+  yellow the last second, red after the shot), with SCATT's own numbers in plain words (score, direction, aiming
+  time, movement in the last second and quarter second, time in the 10, steady hold, the shot against the average aim).
+  Families can't add, change or delete anything; staff may delete a session filed under the wrong student.
+- **SCATT's key** stays out of the public code: it's the Secret Manager secret `SCATT_KEYS` (docs/DEPLOY.md). A file from
+  a SCATT whose key the app doesn't have says so on the file, and nothing is read.
+- **SCATT's scores are its sensor's,** not the paper's (the coaches' point): they stay with the sessions and don't go
+  into the scores, charts or reports.
+

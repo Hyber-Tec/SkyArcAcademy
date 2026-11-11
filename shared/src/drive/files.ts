@@ -28,12 +28,18 @@ export const DRIVE_TYPES: Record<string, string> = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   mp4: 'video/mp4',
   mov: 'video/quicktime',
+  // SCATT's session files (the fourth meeting's R2): the server reads their sessions (functions/src/scatt).
+  'scatt-basic': 'application/x-scatt',
+  'scatt-expert': 'application/x-scatt',
 }
+
+/** A SCATT session file, which the server reads into the student's SCATT sessions. */
+export const isScattKind = (kind: string | null | undefined): boolean => kind === 'scatt-basic' || kind === 'scatt-expert'
 
 export type FileCategory = 'pdf' | 'image' | 'document' | 'spreadsheet' | 'presentation' | 'video' | 'text' | 'other'
 
 export function extOf(name: string): string {
-  const m = /\.([a-z0-9]{1,8})$/i.exec(name.trim())
+  const m = /\.(scatt-basic|scatt-expert|[a-z0-9]{1,8})$/i.exec(name.trim())
   return m ? m[1].toLowerCase() : ''
 }
 

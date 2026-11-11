@@ -77,7 +77,7 @@ service firebase.storage {
       allow read: if isAdmin(b) || (isStaff(b) && staffSees(record())) || (isMember(b) && familyResult(record()));
       allow create: if isStaff(b)
         && request.resource.size <= 100 * 1024 * 1024
-        && request.resource.contentType.matches('application/pdf|image/(jpeg|png|heic|heif|webp|gif)|text/(plain|csv)|application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint|vnd[.]openxmlformats-officedocument[.][a-z.]+)|video/(mp4|quicktime)')
+        && request.resource.contentType.matches('application/pdf|image/(jpeg|png|heic|heif|webp|gif)|text/(plain|csv)|application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint|vnd[.]openxmlformats-officedocument[.][a-z.]+)|video/(mp4|quicktime)|application/x-scatt')
         && record().status == 'uploading'
         && record().size == request.resource.size
         && (isAdmin(b) || staffSees(record()));

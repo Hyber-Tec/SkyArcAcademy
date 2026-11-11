@@ -1,5 +1,5 @@
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { CalendarDays, ExternalLink, HardDrive, Info, Target, Trophy, UserRoundX, Users } from "lucide-react-native";
+import { Activity, CalendarDays, ExternalLink, HardDrive, Info, Target, Trophy, UserRoundX, Users } from "lucide-react-native";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { totalWithTens } from "@shared/shooting/evaluation";
@@ -7,7 +7,7 @@ import { formatBytes } from "@shared/drive/model";
 import { STUDENT_STATUS_LABELS, formatPhone, gradeLabel, parentLabel } from "@shared/people";
 import { SESSION_STATUS_LABELS } from "@shared/schedule/status";
 import type { SessionStatus } from "@shared/settings/defaults";
-import { formatDateKey, formatInstant } from "@shared/time";
+import { formatDateKey, formatInstant, formatMinutes } from "@shared/time";
 import { showActions } from "@/components/ActionSheet";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/Badge";
@@ -22,7 +22,7 @@ import { Screen } from "@/components/Screen";
 import { Skeleton } from "@/components/Skeleton";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { T } from "@/components/Text";
-import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useStudentEvaluations, useStudentFiles, useStudentPrivate } from "@/features/data/hooks";
+import { type EvaluationDoc, useAcademyNow, useStudent, useStudentClasses, useStudentEvaluations, useStudentFiles, useStudentPrivate, useStudentScatt } from "@/features/data/hooks";
 import { timeRange } from "@/features/schedule/format";
 import { StudentContract } from "@/features/contracts/StudentContract";
 import { deleteEvaluation } from "@/features/scores/api";
@@ -55,6 +55,7 @@ export default function StudentScreen() {
   const profile = useStudentPrivate(id ?? null);
   const classes = useStudentClasses(id ?? null, today);
   const scores = useStudentEvaluations(id ?? null);
+  const scatt = useStudentScatt(id ?? null);
   const files = useStudentFiles(id ?? null);
   const tones = useMemo(() => scoreTones(scores.data), [scores.data]);
   const s = student.data;
@@ -225,6 +226,20 @@ export default function StudentScreen() {
             testID="student-add-competition"
           />
         </ListSection>
+
+        {scatt.data.length ? (
+          <ListSection title="SCATT sessions" icon={Activity} tone="green" testID="student-scatt">
+            {scatt.data.map((x) => (
+              <ListRow
+                key={x.id}
+                title={`${formatDateKey(x.dateKey, "medium")} · ${formatMinutes(x.timeMin)}`}
+                subtitle={`${x.matchShots} shots${x.total !== null ? ` · total ${x.total.toFixed(1)}` : ""}`}
+                onPress={() => router.push({ pathname: "/(app)/(staff)/scatt/[id]", params: { id: x.id } })}
+                testID={`student-scatt-${x.id}`}
+              />
+            ))}
+          </ListSection>
+        ) : null}
 
         <ListSection title="Drive" icon={HardDrive} tone="amber" detail={files.data.length > FILES_SHOWN ? `Newest ${FILES_SHOWN} of ${files.data.length}` : undefined} testID="student-files">
           {files.data.slice(0, FILES_SHOWN).map((f) => {
