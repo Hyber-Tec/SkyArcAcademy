@@ -70,11 +70,14 @@ export function PayRate({ rate }: { rate: number }) {
   )
 }
 
-/** The pay: its worked time and extra time when there is extra time, then the total. */
+/**
+ * The pay: its worked time and extra time when there is extra time, then the total. Three tiles keep the width they
+ * had when the pages stopped at 6xl: the page fills the window now (docs/DECISIONS.md §46).
+ */
 export function PayTiles({ sum }: { sum: PayLineTotals }) {
   const tiles = [...(sum.extra.hours > 0 ? [{ label: 'Worked', v: sum.worked }, { label: 'Extra time', v: sum.extra }] : []), { label: 'Total pay', v: sum.total, total: true }]
   return (
-    <div className={cn('grid gap-2 sm:gap-3', tiles.length === 3 ? 'grid-cols-3' : 'grid-cols-1 sm:max-w-xs')} data-testid="payroll-tiles">
+    <div className={cn('grid gap-2 sm:gap-3', tiles.length === 3 ? 'max-w-6xl grid-cols-3' : 'grid-cols-1 sm:max-w-xs')} data-testid="payroll-tiles">
       {tiles.map((t) => (
         <div key={t.label} className={cn('min-w-0 rounded-lg border px-3 py-2.5 sm:px-4 sm:py-3', 'total' in t && 'bg-muted/40')}>
           <div className="truncate text-[11px] font-semibold text-muted-foreground uppercase sm:text-xs">{t.label}</div>

@@ -126,8 +126,10 @@ export function ScattReplay({ session, traces, loading }: { session: ScattSessio
     ['Shot vs. average aim', 'DA', `${one(shot.da)} mm`],
   ]
 
+  // Beside its shot, the target grows no larger than it was when the student page stopped at 7xl (38rem): the page fills
+  // the window now (docs/DECISIONS.md §46), and the target would grow taller than the window.
   return (
-    <div className="grid gap-4 @3xl:grid-cols-[minmax(0,1fr)_17rem]" data-testid="scatt-replay">
+    <div className="grid gap-4 @3xl:grid-cols-[minmax(0,38rem)_17rem]" data-testid="scatt-replay">
       <div className="min-w-0">
         <div className="relative">
           <canvas ref={canvas} className="block aspect-square w-full rounded-xl bg-[#c0c0c0]" role="img" aria-label={`Target with the aim of ${shotLabel(shot).toLowerCase()}: ${one(shot.score)}, ${SCATT_ARROWS[shot.dir]}.`} />

@@ -99,7 +99,7 @@ export function CoachHomePage() {
 
   if (wide) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="w-full">
         {header}
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)_22rem] items-start gap-6">
           <div className="space-y-6">

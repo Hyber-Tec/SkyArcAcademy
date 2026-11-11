@@ -66,7 +66,7 @@ export function CoachAvailabilityPage() {
   if (!staffId) return <p className="text-sm text-muted-foreground">{NOT_LINKED}</p>
   const { lastSet, gaps } = status
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader
         title="Availability"
         description={

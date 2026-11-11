@@ -258,77 +258,75 @@ export function ScoresTab({ student, mode }: { student: WithId<Student>; mode: '
         )}
       </section>
 
-      <div className="@container overflow-hidden rounded-xl border bg-card">
-        {/* First, right under the scores (Goo's place for them), folded like the rest (Goo, 2026-11-11). */}
-        <FoldedSection
-          icon={LuActivity}
-          title="SCATT sessions"
-          sub={scattSub}
-          open={sections.has('scatt')}
-          onToggle={() => toggleSection('scatt')}
-          testId="scatt-section"
-          id="scatt"
-          flush={scatt.data.length > 0}
-        >
-          {scatt.data.length ? (
-            <ScattSessions sessions={scatt.data} staff rows={scattRows} />
-          ) : scatt.loading ? (
-            <Skeleton className="my-2 h-16 rounded-lg" />
-          ) : (
-            <p className="py-2 text-sm text-muted-foreground">
-              Export the session from SCATT (a .scatt-basic file) and drop it on this page or in {student.name}’s folder in the Drive: each session comes in
-              here once, with every shot’s aim to play back. The family watches them in their app too.
-            </p>
-          )}
-        </FoldedSection>
-        <FoldedSection
-          icon={LuChartLine}
-          title="Scores over time"
-          sub={points.length ? `Per 10 shots, ${shortDate(points[0].dateKey, today)} – ${shortDate(points[points.length - 1].dateKey, today)}, each position` : 'Per 10 shots, each position'}
-          open={sections.has('chart')}
-          onToggle={() => toggleSection('chart')}
-          testId="scores-over-time"
-        >
-          {points.length >= 2 ? (
-            <div className="rounded-xl border bg-white p-4 text-[#0b0b0b]">
-              <TrendChart series={trendSeries(points)} from={points[0].dateKey} to={today > points[points.length - 1].dateKey ? today : points[points.length - 1].dateKey} label={`${student.name}'s scores per 10 shots over time`} />
-            </div>
-          ) : (
-            <p className="py-4 text-sm text-muted-foreground">Two results are needed to draw a line.</p>
-          )}
-        </FoldedSection>
-        <FoldedSection icon={LuGitCompareArrows} title="Compare" sub="Two results of a position side by side" open={sections.has('compare')} onToggle={() => toggleSection('compare')} testId="compare-section">
-          <CompareCard evaluations={scored} bare />
-        </FoldedSection>
-        <FoldedSection icon={LuFileText} title="Progress reports" sub={`${reportsSub} · for the family, from these scores`} open={sections.has('reports')} onToggle={() => toggleSection('reports')} testId="student-reports">
-          {reports.length ? (
-            <ul className="divide-y rounded-lg border">
-              {reports.map((r) => (
-                <li key={r.id}>
-                  <button type="button" onClick={() => navigate(`/${mode}/reports/${r.id}`)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{r.customName || r.period.label}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {r.evaluationCount} {r.evaluationCount === 1 ? 'evaluation' : 'evaluations'}
-                        {r.facts?.average != null ? ` · average ${one(r.facts.average)}` : ''}
-                      </div>
+      {/* First, right under the scores (Goo's place for them), folded like the rest, each a card (Goo, 2026-11-11). */}
+      <FoldedSection
+        icon={LuActivity}
+        title="SCATT sessions"
+        sub={scattSub}
+        open={sections.has('scatt')}
+        onToggle={() => toggleSection('scatt')}
+        testId="scatt-section"
+        id="scatt"
+        flush={scatt.data.length > 0}
+      >
+        {scatt.data.length ? (
+          <ScattSessions sessions={scatt.data} staff rows={scattRows} />
+        ) : scatt.loading ? (
+          <Skeleton className="my-2 h-16 rounded-lg" />
+        ) : (
+          <p className="py-2 text-sm text-muted-foreground">
+            Export the session from SCATT (a .scatt-basic file) and drop it on this page or in {student.name}’s folder in the Drive: each session comes in
+            here once, with every shot’s aim to play back. The family watches them in their app too.
+          </p>
+        )}
+      </FoldedSection>
+      <FoldedSection
+        icon={LuChartLine}
+        title="Scores over time"
+        sub={points.length ? `Per 10 shots, ${shortDate(points[0].dateKey, today)} – ${shortDate(points[points.length - 1].dateKey, today)}, each position` : 'Per 10 shots, each position'}
+        open={sections.has('chart')}
+        onToggle={() => toggleSection('chart')}
+        testId="scores-over-time"
+      >
+        {points.length >= 2 ? (
+          <div className="rounded-xl border bg-white p-4 text-[#0b0b0b]">
+            <TrendChart series={trendSeries(points)} from={points[0].dateKey} to={today > points[points.length - 1].dateKey ? today : points[points.length - 1].dateKey} label={`${student.name}'s scores per 10 shots over time`} />
+          </div>
+        ) : (
+          <p className="py-4 text-sm text-muted-foreground">Two results are needed to draw a line.</p>
+        )}
+      </FoldedSection>
+      <FoldedSection icon={LuGitCompareArrows} title="Compare" sub="Two results of a position side by side" open={sections.has('compare')} onToggle={() => toggleSection('compare')} testId="compare-section">
+        <CompareCard evaluations={scored} bare />
+      </FoldedSection>
+      <FoldedSection icon={LuFileText} title="Progress reports" sub={`${reportsSub} · for the family, from these scores`} open={sections.has('reports')} onToggle={() => toggleSection('reports')} testId="student-reports">
+        {reports.length ? (
+          <ul className="divide-y rounded-lg border">
+            {reports.map((r) => (
+              <li key={r.id}>
+                <button type="button" onClick={() => navigate(`/${mode}/reports/${r.id}`)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{r.customName || r.period.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.evaluationCount} {r.evaluationCount === 1 ? 'evaluation' : 'evaluations'}
+                      {r.facts?.average != null ? ` · average ${one(r.facts.average)}` : ''}
                     </div>
-                    {r.facts?.trend?.level ? <TrendChip level={r.facts.trend.level} audience="staff" size="sm" /> : null}
-                    {r.status === 'draft' ? <Badge variant="secondary">Draft</Badge> : <span className="text-xs font-medium whitespace-nowrap text-emerald-700 dark:text-emerald-400">{stateLabel(r, timezone)}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-2 text-sm text-muted-foreground">No reports for {name} yet.</p>
-          )}
-          {admin ? (
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreating(true)} disabled={!all.some((e) => e.shots > 0)}>
-              <LuFilePlus /> New report
-            </Button>
-          ) : null}
-        </FoldedSection>
-      </div>
+                  </div>
+                  {r.facts?.trend?.level ? <TrendChip level={r.facts.trend.level} audience="staff" size="sm" /> : null}
+                  {r.status === 'draft' ? <Badge variant="secondary">Draft</Badge> : <span className="text-xs font-medium whitespace-nowrap text-emerald-700 dark:text-emerald-400">{stateLabel(r, timezone)}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-2 text-sm text-muted-foreground">No reports for {name} yet.</p>
+        )}
+        {admin ? (
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreating(true)} disabled={!all.some((e) => e.shots > 0)}>
+            <LuFilePlus /> New report
+          </Button>
+        ) : null}
+      </FoldedSection>
 
       <AddPaperScoresDialog open={adding} onOpenChange={setAdding} studentId={student.id} onSaved={added} savedAction={(ids) => ({ label: 'Show', onClick: () => showRow(ids, true) })} />
       <CompetitionDialog open={competing} onOpenChange={setCompeting} studentId={student.id} studentName={student.name} />

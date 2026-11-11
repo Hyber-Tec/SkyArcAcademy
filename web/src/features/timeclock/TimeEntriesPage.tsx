@@ -64,7 +64,7 @@ export function TimeEntriesPage() {
   const time = (ms: number) => formatInstantTime(ms, timezone)
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <PageHeader
         title="Time Entries"
         description="Clock-ins from the kiosk and time added by admins, with the time each one pays and any extra time."

@@ -26,6 +26,9 @@ import { useTextDraft } from './useTextDraft'
 /** A photo card dragged by its handle (not files from the computer, which add photos). */
 const DRAG_TYPE = 'application/x-skyarc-website-photo'
 
+/** The photos side by side: as many as fit (each 18rem at the least), so a wider window shows more of them, not bigger. */
+const GRID = 'grid gap-4 sm:grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]'
+
 /**
  * The website's photo library: the gallery (in this order, new photos first) and the photos the pages and coach cards
  * choose from. Photos dropped anywhere on the tab, or chosen, are resized and uploaded in the background; each one's
@@ -177,7 +180,7 @@ export function PhotosTab({ photos, content, loading }: { photos: WithId<Website
       </section>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className={GRID}>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-96 rounded-xl" />
           ))}
@@ -199,7 +202,7 @@ export function PhotosTab({ photos, content, loading }: { photos: WithId<Website
             {hiddenCount ? ` (${hiddenCount} hidden)` : ''}, in the gallery’s order. Move one with its arrows<span className="hidden md:inline">, or drag it by its handle</span>.
           </p>
           <div
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+            className={GRID}
             onDragEnd={() => {
               setDragging(null)
               setOver(null)

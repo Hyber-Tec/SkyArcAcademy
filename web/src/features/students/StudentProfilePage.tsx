@@ -49,7 +49,7 @@ export function StudentProfilePage({ mode = 'admin' }: { mode?: 'admin' | 'coach
     void updateDoc(ref, { followUpReviewedAt: serverTimestamp(), updatedBy: actor.email }).catch(() => undefined)
   }, [isAdmin, student, ref, actor.email])
 
-  if (loading) return <Skeleton className="h-96 w-full max-w-7xl rounded-xl" />
+  if (loading) return <Skeleton className="h-96 w-full rounded-xl" />
   if (!student) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ function StudentProfile({ student, mode, base }: { student: WithId<Student>; mod
   }
 
   return (
-    <div className="max-w-7xl">
+    <div>
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2.5">
         <Link to={base}>
           <LuArrowLeft /> Students

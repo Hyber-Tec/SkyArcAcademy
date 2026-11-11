@@ -1466,3 +1466,20 @@ own screen); Goo: build it, and families "should be able to see only, not upload
 - **SCATT's scores are its sensor's,** not the paper's (the coaches' point): they stay with the sessions and don't go
   into the scores, charts or reports.
 
+## 46. Pages as wide as the window (Goo, 2026-11-11)
+
+Goo, on a student's Drive tab in a wide window: the names were cut while the page stopped short of the window's edge.
+"Not only for this specific Drive page but also other pages … so that if we want, then we should be able to see more."
+
+- **Pages that show data fill the window:** the student page and its tabs, Home, Reports, the Drive's Trash, Payroll,
+  Time Entries, the employees' calendar, a coach's availability and pay, and the settings pages made of lists (the
+  Website's messages and photos, the Results site, the Activity log, the AI's requests and spend). A wider window
+  shows more: longer names in a row, more photos in a row. The pages that already filled it still do (the schedule,
+  Students, the Drive, Scores, a report).
+- **Forms and text keep a reading width,** where a wider window would only stretch the fields and the lines: the
+  settings forms and their home, an employee's page, Pay Rates, Access Control, the account pages, announcements and
+  their editor, and the families' pages (made like the phone's).
+- **What would only grow bigger keeps its size:** the SCATT target beside its shot stays as large as it was (38rem), the
+  pay's three tiles as wide as they were, and the website's photos fit more in a row instead of growing.
+- **The Scores tab's folded sections are apart:** the SCATT sessions, Scores over time, Compare and Progress reports are
+  each a card of their own, with the scores' gap between them.
