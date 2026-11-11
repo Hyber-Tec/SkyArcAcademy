@@ -11,10 +11,12 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 ## Strict Rules
 
 ### Branches & pull requests
-- `main` is reached **only through a pull request**: CI green, plus the code owner's approval wherever a shared file changed.
-- A session works on a **branch**, opens the pull request, and **says so**.
-- It **never pushes to `main`** and **never merges** unless the owner asks for exactly that. Low-risk pull requests merge
-  themselves ("Small PRs: auto-merge", below: the owner's rule of 2026-10-28).
+- `main` is reached **only through a pull request** with CI green. A session works on a **branch**, opens the pull
+  request, and **says so**. It **never pushes to `main`**.
+- **Claude Code merges its own pull requests** once CI is green, every kind of change, shared files included, unless the
+  owner says not to for that change (the owner's rule of 2026-11-10, "Merging", below). It then checks the deploy.
+- **Phone releases are the owner's call:** no TestFlight, App Store, Google Play or kiosk build unless the owner asks for
+  it.
 
 ### Your accounts and local setup
 - Commit and push with **your own personal GitHub account**, never a shared or work account. If your global git identity is another account, set `user.name` and `user.email` in this repository's `.git/config`; never change another developer's setup.
@@ -64,23 +66,18 @@ Read next: [`docs/DECISIONS.md`](docs/DECISIONS.md) (the owner's answers; they w
 
 ---
 
-## Small PRs: auto-merge
-For low-risk changes, open the PR and enable auto-merge so it merges itself when CI passes. Don't wait for me.
+## Merging
+The owner, 2026-11-10: "From now on … just any change, everything you're doing, just do the PR and merge by yourself …
+unless I ever tell you not to do it. … It doesn't mean I want you to put the new updates on the mobile phone. That's
+something that I'll tell you manually."
 
-Low-risk means ONLY:
-- Docs, README, comments, typos
-- Config/tooling tweaks that don't change app behavior (lint, formatting, CI tweaks)
-- Dependency patch bumps
-
-Steps for low-risk changes:
-1. Create a branch, commit, push
-2. `gh pr create --fill`
-3. `gh pr merge --auto --squash`
-4. Tell me the PR link in one line
-
-Everything else (app code, logic, database, auth, deploy config, anything that changes behavior): open the PR normally and do NOT enable auto-merge. I'll review it.
-
-If you're unsure whether something is low-risk, treat it as not low-risk and ask me.
+1. Create a branch, commit, push; `gh pr create` with the body this file asks for (what changed, how it was checked,
+   what the deploy does: `scripts/deploy-plan.ts`).
+2. **Docs, comments and config that change no behaviour:** `gh pr merge --auto --squash`, and say the PR's link in one
+   line.
+3. **Everything else** (app code, logic, rules, the database, auth, deploy config): wait for CI to be green, merge
+   (`gh pr merge --squash`), then watch `main`'s deploy to the end and fix what it leaves behind.
+4. When the owner says to hold a change for his review, open it and leave it.
 
 ---
 
@@ -237,8 +234,8 @@ don't redraw, recolor, stretch, crop or rebuild them from other images.
 ## Git and commits
 
 - The repository is HyberTec's: **https://github.com/Hyber-Tec/SkyArcAcademy** (public).
-- **`main` is reached through a pull request** (Strict Rules): CI green, plus the code owner's approval where a shared file changed. `.github/CODEOWNERS` lists the shared files; the code owner is the project owner.
-  - GitHub enforces the first part with a ruleset on `main`: a pull request, with the CI checks "Typecheck, tests and builds" and "Security rules tests" passing. Code-owner approval stays a convention: GitHub doesn't let authors approve their own pull requests.
+- **`main` is reached through a pull request** (Strict Rules): CI green, and Claude Code merges its own ("Merging"). `.github/CODEOWNERS` lists the shared files; the code owner is the project owner, who asks for a review when he wants one.
+  - GitHub enforces the first part with a ruleset on `main`: a pull request, with the CI checks "Typecheck, tests and builds" and "Security rules tests" passing. Code-owner approval isn't required (GitHub doesn't let authors approve their own pull requests): Claude Code merges its own, as "Merging" says.
   - Start the branch from the latest `main`, named `<type>/<topic>` (`feat/kiosk-pin`). Open the pull request with `gh pr create`: the title is a Conventional Commits subject; the body says what changed, how it was checked, and what the deploy after merging will do (or that it changes nothing in production). Give the owner its link.
   - CI (`.github/workflows/ci.yml`) runs the repository guard, typecheck, unit tests, lint, the website and functions builds, and the rules tests. Run the parts the change touches before pushing.
 - Scopes name the part of the app (e.g. `auth`, `access`, `settings`, `schedule`, `availability`, `trial`, `students`, `parents`, `coaches`, `payroll`, `kiosk`, `reports`, `announcements`, `i18n`, `home`, `rules`, `functions`, `shared`, `deploy`). Leave the scope off when a change spans several.
