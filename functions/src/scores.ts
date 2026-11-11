@@ -3,13 +3,10 @@ import { db, LIGHT } from './app'
 import { sendNotifications } from './notify'
 import { familyOf, noticesFor } from './recipients'
 import { COL, ROOT } from '@shared/paths'
-import { scoreAddedNotice } from '@shared/schedule/familyNotices'
+import { isScoreNews, scoreAddedNotice } from '@shared/schedule/familyNotices'
 import type { Evaluation } from '@shared/shooting/evaluation'
-import { addDays, todayKey } from '@shared/time'
+import { todayKey } from '@shared/time'
 import type { Branch } from '@shared/types'
-
-/** How recent a score must be for its family to hear of it: older ones are the past being filled in, not news. */
-const NEWS_DAYS = 7
 
 /**
  * A new score (a SIUS result, a paper card): the student's family hears of it ("every time I upload something: hey,
@@ -20,7 +17,7 @@ export const onScoreCreated = onDocumentCreated({ document: `${ROOT.branches}/{b
   const { branchId, evaluationId } = event.params
   if (!e?.studentId) return
   const branch = (await db.doc(`${ROOT.branches}/${branchId}`).get()).data() as Branch | undefined
-  if (branch?.status !== 'active' || e.dateKey < addDays(todayKey(branch.timezone || 'America/New_York'), -NEWS_DAYS)) return
+  if (branch?.status !== 'active' || !isScoreNews(e.dateKey, todayKey(branch.timezone || 'America/New_York'))) return
   const family = await familyOf(branchId, e.studentId)
   const notice = scoreAddedNotice(e)
   await sendNotifications(

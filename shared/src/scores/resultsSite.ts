@@ -1,5 +1,6 @@
 import { nameFormsOf } from '../names'
-import type { Position } from '../shooting/evaluation'
+import { isScoreNews } from '../schedule/familyNotices'
+import type { Evaluation, Position } from '../shooting/evaluation'
 import { type DateKey, addDays, formatMinutesShort, minutesOf, todayKey, weekdayIndex } from '../time'
 import type { TimestampLike } from '../types'
 import { athleteName, isAcademyTeam, nameKey, type ScoposParticipant } from './scopos'
@@ -356,4 +357,86 @@ export const RESULT_STATE_WORDS: Record<ResultState, string> = {
   noShots: 'No shots on the results site yet: asked again at each check',
   waiting: 'Comes in with the next check',
   stopped: `Not on the results site after ${MAX_TRIES} checks: asked again if its match changes`,
+}
+
+// ------------------------------------------------------------------ the whole result, and putting a scan back
+
+/** `branches/{b}/resultsSiteRaw/{id}` (server only): a result brought in, whole, as the site gave it. */
+export interface ResultsSiteRaw {
+  resultCofId: string
+  /**
+   * The site's JSON of the result, unchanged: every field, the ones the app shows and the rest (each shot's time, the
+   * firing point, the course of fire, the remarks), kept for later.
+   */
+  json: string
+  lastUpdated: string | null
+  studentId: string
+  savedAt: TimestampLike | null
+}
+
+/**
+ * `branches/{b}/resultsSiteUndo/{evaluationId}` (server only): a results sheet scan as it was before the site's result
+ * replaced its numbers (brought up to the site's, or "Use the site's"). Start over puts it back.
+ */
+export interface ResultsSiteUndo {
+  evaluationId: string
+  resultCofId: string
+  /** The fields the site's result changed, as the scan had them, and those it didn't have. */
+  before: Record<string, unknown>
+  absent: string[]
+  at: TimestampLike | null
+}
+
+/** What Start over took away and put back, for its message and the activity log. */
+export interface ResetCounts {
+  athletes: number
+  results: number
+  scans: number
+  matches: number
+  checks: number
+}
+
+/** "Removed 18 athletes, 31 results from the scores, 244 matches looked at and 3 checks; 24 results sheet scans are as they were." */
+export function resetWords(c: ResetCounts): string {
+  const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : many}`
+  const removed = [n(c.athletes, 'athlete'), `${n(c.results, 'result')} from the scores`, n(c.matches, 'match looked at', 'matches looked at'), n(c.checks, 'check')]
+  const list = `${removed.slice(0, -1).join(', ')} and ${removed[removed.length - 1]}`
+  return `Removed ${list}${c.scans ? `; ${n(c.scans, 'results sheet scan')} ${c.scans === 1 ? 'is' : 'are'} as ${c.scans === 1 ? 'it was' : 'they were'}` : ''}.`
+}
+
+// ------------------------------------------------------------------ the page
+
+/** "The last month": how far back a check looks (`checkDays`). */
+export function checkWindowWords(days: number): string {
+  if (days === 7) return 'The last week'
+  if (days === 30) return 'The last month'
+  if (days % 30 === 0) return `The last ${days / 30} months`
+  if (days % 7 === 0) return `The last ${days / 7} weeks`
+  return `The last ${days} days`
+}
+
+/** A result of the site, read for the page before its athlete is linked: its positions as the scores would show them. */
+export interface ResultPreview {
+  results: Omit<Evaluation, 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>[]
+  /** Why there's nothing to show: not published, or no shots yet. */
+  error: string | null
+}
+
+/**
+ * Confirm all: each athlete still to confirm whose student is suggested (and still in the academy), linked to them.
+ * With how many results that brings in, and how many of them are recent enough that the family hears of them, as of any
+ * new score (`isScoreNews`).
+ */
+export function confirmAllPlan(
+  athletes: readonly (Pick<OnlineAthlete, 'status' | 'suggestedStudentId' | 'results'> & { id: string })[],
+  today: DateKey,
+  isStudent: (id: string) => boolean,
+): { links: { key: string; studentId: string }[]; results: number; news: number } {
+  const ready = athletes.filter((a) => a.status === 'new' && a.suggestedStudentId && isStudent(a.suggestedStudentId))
+  const results = ready.flatMap((a) => Object.values(a.results ?? {}))
+  return {
+    links: ready.map((a) => ({ key: a.id, studentId: a.suggestedStudentId as string })),
+    results: results.length,
+    news: results.filter((r) => isScoreNews(r.dateKey, today)).length,
+  }
 }

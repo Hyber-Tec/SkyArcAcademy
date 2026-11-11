@@ -7,19 +7,22 @@ import { db, LIGHT } from '../app'
 import { requireAdmin } from '../contracts'
 import { ACADEMY_ID } from '@shared/academy'
 import { COL, ROOT } from '@shared/paths'
-import { type OnlineAthlete, type ResultsSiteRun, isScheduledHour, isUnderWay } from '@shared/scores/resultsSite'
+import { type OnlineAthlete, type ResetCounts, type ResultPreview, type ResultsSiteRun, isScheduledHour, isUnderWay } from '@shared/scores/resultsSite'
+import { type ScoposResultCof, athleteName, onlineEvaluation, onlineResults } from '@shared/scores/scopos'
 import { POSITIONS, type Position } from '@shared/shooting/evaluation'
 import { resolveSettings } from '@shared/settings/resolve'
 import { type DateKey, addDays, isDateKey, minutesOf, todayKey } from '@shared/time'
 import type { Branch, Student } from '@shared/types'
-import { SiteClient } from './client'
-import { Problem, answerScan, base, bringIn, holdLock, loadKey, newRun, releaseLock, runCheck, runsOf, statusRef } from './run'
+import { SiteClient, SiteError } from './client'
+import { Problem, answerScan, base, bringInFor, holdLock, loadKey, newRun, releaseLock, runCheck, runsOf, startOver, statusRef } from './run'
 
 /**
  * The results site import's functions (shared/src/scores/resultsSite.ts): the academy's schedule (off until it sets
  * one), the page's buttons (Check now, Look back), and a person's answers (an athlete is a student or not; a results
  * sheet's scan that differs from the site's). Only the academy brings results in: the demo academy's people are made
- * up. The site's key is kept on the server (scripts/results-site-key.ts sets it).
+ * up. The site's key is kept on the server (scripts/results-site-key.ts sets it). Confirm all links every athlete whose
+ * student is suggested; an athlete's results can be looked at on the page before they're linked; Start over removes
+ * everything it brought in (Goo's asks of 2026-11-11).
  */
 
 const onlyTheAcademy = (branchId: unknown) => {
@@ -174,33 +177,124 @@ export const resultsSiteAthlete = onCall({ timeoutSeconds: 300, ...LIGHT }, asyn
  * otherwise the check under way brings them in as it ends.
  */
 async function bringInNow(key: string, athlete: OnlineAthlete): Promise<{ ok: true; brought: number; waiting: number }> {
-  const ids = Object.entries(athlete.results ?? {})
-    .filter(([, r]) => !r.lastUpdated)
-    .map(([id]) => id)
+  const ids = Object.values(athlete.results ?? {}).filter((r) => !r.lastUpdated)
   if (!ids.length) return { ok: true, brought: 0, waiting: 0 }
-  const apiKey = await loadKey(ACADEMY_ID)
   const runId = `link-${key}`
-  if (!apiKey || !(await holdLock(ACADEMY_ID, runId))) return { ok: true, brought: 0, waiting: ids.length }
-  const branch = (await db.doc(`${ROOT.branches}/${ACADEMY_ID}`).get()).data() as Branch | undefined
-  const c = {
-    branchId: ACADEMY_ID,
-    tz: branch?.timezone || 'America/New_York',
-    client: new SiteClient(apiKey, ids.length * 2 + 5),
-    athletes: new Map([[key, athlete]]),
-    counts: { matches: 0, results: 0, athletes: 0 },
-    touched: new Map<string, Set<string>>(),
-    studentName: new Map(athlete.studentId && athlete.studentName ? [[athlete.studentId, athlete.studentName]] : []),
-    log: [] as string[],
-  }
-  let brought = 0
+  if (!(await holdLock(ACADEMY_ID, runId))) return { ok: true, brought: 0, waiting: ids.length }
   try {
-    for (const id of ids.slice(0, 120)) if (await bringIn(c, key, id)) brought++
-  } catch (e) {
-    logger.warn('Bringing in a linked athlete’s results stopped', { key, error: (e as Error).message })
+    return { ok: true, ...(await bringInFor(ACADEMY_ID, [[key, athlete]], Date.now() + 240_000)) }
   } finally {
-    const results = Object.fromEntries([...(c.touched.get(key) ?? [])].map((id) => [id, athlete.results[id]]))
-    if (Object.keys(results).length) await db.doc(`${base(ACADEMY_ID)}/${COL.onlineAthletes}/${key}`).set({ results, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
     await releaseLock(ACADEMY_ID, runId)
   }
-  return { ok: true, brought, waiting: Math.max(0, ids.length - brought) }
 }
+
+const safeId = (x: unknown): x is string => typeof x === 'string' && /^[A-Za-z0-9._-]{1,120}$/.test(x)
+
+/**
+ * Confirm all (Goo's ask of 2026-11-11): the athletes the page shows to confirm, each linked to the student it suggests
+ * for them, as one person's answer each (the activity log has one entry per athlete); then their results come in, as
+ * far as the time allows (the rest with the next check). Not while a check is under way: it holds the athletes.
+ */
+export const resultsSiteLinkAll = onCall({ timeoutSeconds: 540, ...LIGHT }, async (req) => {
+  const { branchId, links } = (req.data ?? {}) as { branchId?: unknown; links?: unknown }
+  const caller = await requireAdmin(branchId, req.auth, 'link athletes from the results site')
+  onlyTheAcademy(branchId)
+  const pairs = Array.isArray(links) ? links.filter((l): l is { key: string; studentId: string } => safeId(l?.key) && safeId(l?.studentId)) : []
+  if (!pairs.length || pairs.length > 200 || pairs.length !== (links as unknown[]).length) throw new HttpsError('invalid-argument', 'Choose the athletes to link.')
+  const runId = 'link-all'
+  if (!(await holdLock(ACADEMY_ID, runId))) throw new HttpsError('failed-precondition', 'A check is under way: confirm them once it’s done.')
+  try {
+    const athleteRefs = pairs.map((p) => db.doc(`${base(ACADEMY_ID)}/${COL.onlineAthletes}/${p.key}`))
+    const studentIds = [...new Set(pairs.map((p) => p.studentId))]
+    const [athleteSnaps, studentSnaps] = await Promise.all([db.getAll(...athleteRefs), db.getAll(...studentIds.map((id) => db.doc(`${base(ACADEMY_ID)}/${COL.students}/${id}`)))])
+    const studentOf = new Map(studentSnaps.filter((d) => d.exists).map((d) => [d.id, d.data() as Student]))
+    const linked: [string, OnlineAthlete][] = []
+    const batch = db.batch()
+    pairs.forEach((p, i) => {
+      const a = athleteSnaps[i].data() as OnlineAthlete | undefined
+      const student = studentOf.get(p.studentId)
+      // Answered meanwhile, or gone: left as it is.
+      if (!a || a.status !== 'new' || !student) return
+      batch.update(athleteRefs[i], { status: 'linked', studentId: p.studentId, studentName: student.name, decidedAt: FieldValue.serverTimestamp(), decidedBy: caller.email })
+      batch.create(db.collection(`${base(ACADEMY_ID)}/${COL.auditLog}`).doc(), {
+        at: FieldValue.serverTimestamp(),
+        actorUid: caller.uid,
+        actorEmail: caller.email,
+        actorName: caller.name,
+        actorRole: caller.role,
+        action: 'resultsSite.link',
+        category: 'reports',
+        entityType: 'onlineAthlete',
+        entityId: p.key,
+        summary: `Linked ${a.name} on the results site to ${student.name} (Confirm all)`,
+        context: 'Settings → Results site',
+        dateKey: null,
+        studentId: p.studentId,
+        studentName: student.name,
+        coachId: null,
+        coachName: null,
+        changes: [{ field: 'status', label: 'Answer', from: a.status, to: 'linked' }],
+        via: 'function',
+      })
+      linked.push([p.key, { ...a, status: 'linked', studentId: p.studentId, studentName: student.name }])
+    })
+    if (linked.length) await batch.commit()
+    const r = await bringInFor(ACADEMY_ID, linked, Date.now() + 420_000)
+    return { linked: linked.length, ...r }
+  } finally {
+    await releaseLock(ACADEMY_ID, runId)
+  }
+})
+
+/**
+ * An athlete's results, read from the site for the page before they're linked: each result's positions as the scores
+ * would show them, its shots on the target. Nothing is saved.
+ */
+export const resultsSitePreview = onCall({ timeoutSeconds: 120, ...LIGHT }, async (req) => {
+  const { branchId, resultCofIds } = (req.data ?? {}) as { branchId?: unknown; resultCofIds?: unknown }
+  await requireAdmin(branchId, req.auth, 'look at results on the results site')
+  onlyTheAcademy(branchId)
+  const ids = Array.isArray(resultCofIds) ? resultCofIds.filter(safeId) : []
+  if (!ids.length || ids.length > 20 || ids.length !== (resultCofIds as unknown[]).length) throw new HttpsError('invalid-argument', 'Choose the results.')
+  const apiKey = await loadKey(ACADEMY_ID)
+  if (!apiKey) throw new HttpsError('failed-precondition', NO_KEY)
+  const branch = (await db.doc(`${ROOT.branches}/${ACADEMY_ID}`).get()).data() as Branch | undefined
+  const tz = branch?.timezone || 'America/New_York'
+  const client = new SiteClient(apiKey, ids.length * 3 + 2)
+  const previews: Record<string, ResultPreview> = {}
+  for (const id of ids) {
+    try {
+      const cof = (await client.get<{ ResultCOF?: ScoposResultCof }>(`/resultcof/${encodeURIComponent(id)}`))?.ResultCOF ?? null
+      if (!cof?.ResultCOFID) {
+        previews[id] = { results: [], error: 'Not published on the results site.' }
+        continue
+      }
+      const name = cof.Participant ? athleteName(cof.Participant) : ''
+      const found = onlineResults(cof, tz)
+      previews[id] = found.length
+        ? { results: found.map((r) => onlineEvaluation(r, cof, { studentId: '', studentName: name, team: null, host: null })), error: null }
+        : { results: [], error: 'No shots on the results site yet.' }
+    } catch (e) {
+      previews[id] = { results: [], error: e instanceof SiteError ? e.message : 'The results site didn’t answer.' }
+    }
+  }
+  return { previews }
+})
+
+/**
+ * Start over (Goo's ask of 2026-11-11): everything the results site brought in goes, and each results sheet scan it
+ * changed is put back (run.ts, `startOver`). Not while a check is under way.
+ */
+export const resultsSiteReset = onCall({ timeoutSeconds: 300, ...LIGHT }, async (req): Promise<ResetCounts> => {
+  const { branchId } = (req.data ?? {}) as { branchId?: unknown }
+  const caller = await requireAdmin(branchId, req.auth, 'start the results site over')
+  onlyTheAcademy(branchId)
+  if (await checkUnderWay()) throw new HttpsError('failed-precondition', 'A check is under way: start over once it’s done.')
+  const runId = 'reset'
+  if (!(await holdLock(ACADEMY_ID, runId))) throw new HttpsError('failed-precondition', 'A check is under way: start over once it’s done.')
+  try {
+    return await startOver(ACADEMY_ID, caller)
+  } finally {
+    await releaseLock(ACADEMY_ID, runId)
+  }
+})

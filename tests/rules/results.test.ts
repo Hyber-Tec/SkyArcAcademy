@@ -74,6 +74,8 @@ beforeEach(async () => {
     await setDoc(doc(d, `branches/${A}/members/parent@a.test`), member('parent@a.test', 'parent', { studentIds: ['s1'] }))
     await setDoc(doc(d, `branches/${A}/resultsSite/status`), { keyEnd: '1234', running: null, hosts: {} })
     await setDoc(doc(d, `branches/${A}/resultsSiteKey/main`), { key: 'made-up-key-not-real-1234' })
+    await setDoc(doc(d, `branches/${A}/resultsSiteRaw/r-1`), { resultCofId: 'r-1', json: '{"MatchName":"Made-up October 3P"}', lastUpdated: null, studentId: 's1' })
+    await setDoc(doc(d, `branches/${A}/resultsSiteUndo/scan-1`), { evaluationId: 'scan-1', resultCofId: 'r-1', before: { source: 'sheet' }, absent: ['online'] })
     await setDoc(doc(d, `branches/${A}/resultsSiteRuns/r1`), { kind: 'scheduled', state: 'done', log: [] })
     await setDoc(doc(d, `branches/${A}/onlineAthletes/averystone`), { name: 'Avery Stone', status: 'new', results: {} })
     await setDoc(doc(d, `branches/${A}/onlineMatches/m-1`), { name: 'Made-up October 3P', ours: 1 })
@@ -101,6 +103,12 @@ describe('the results site import', () => {
     await assertFails(updateDoc(doc(db('owner@a.test'), `branches/${A}/onlineAthletes/averystone`), { status: 'linked', studentId: 's1' }))
     await assertFails(getDoc(doc(db('owner@a.test'), `branches/${A}/resultsSiteKey/main`)))
     await assertFails(setDoc(doc(db('owner@a.test'), `branches/${A}/resultsSiteKey/main`), { key: 'another-made-up-key' }))
+    // Each result whole, and the scans as they were: the server's only.
+    for (const p of ['resultsSiteRaw/r-1', 'resultsSiteUndo/scan-1']) {
+      await assertFails(getDoc(doc(db('owner@a.test'), `branches/${A}/${p}`)))
+      await assertFails(setDoc(doc(db('admin@a.test'), `branches/${A}/${p}`), { made: 'up' }))
+      await assertFails(deleteDoc(doc(db('owner@a.test'), `branches/${A}/${p}`)))
+    }
   })
 
   it('its results are scores like any other: staff correct them, families read their own', async () => {

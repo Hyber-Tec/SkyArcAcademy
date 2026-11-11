@@ -1,5 +1,5 @@
 import type { NotificationType } from '../comms'
-import { type DateKey, formatDateKey, formatMinutes, formatTimeRange } from '../time'
+import { type DateKey, addDays, formatDateKey, formatMinutes, formatTimeRange } from '../time'
 import { seatKind } from './classes'
 import type { SessionSnapshot } from './notify'
 import { type ClassOffer, type ClassRequest, REQUEST_KIND_LABELS } from './requests'
@@ -175,6 +175,15 @@ export function decidedNotice(r: Pick<ClassRequest, 'kind' | 'studentName' | 'da
     body: `${who}’s request for ${at(r)} wasn’t approved.${note ? ` “${note}”` : ''} Another time can be asked for in Classes.`
   }
 }
+
+/**
+ * How recent a new score must be for its family to hear of it (functions/src/scores.ts): shot on this day or the 7
+ * before. Older ones are the past being filled in, not news.
+ */
+export const SCORE_NEWS_DAYS = 7
+
+/** Whether a score of this day, added today, tells the family. */
+export const isScoreNews = (dateKey: DateKey, today: DateKey): boolean => dateKey >= addDays(today, -SCORE_NEWS_DAYS)
 
 /** A new score, as its family hears of it: "Standing, 186.8 over 20 shots", a competition with its match and inner tens. */
 export function scoreAddedNotice(e: {

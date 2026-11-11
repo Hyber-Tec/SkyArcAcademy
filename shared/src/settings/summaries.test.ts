@@ -10,6 +10,7 @@ import {
   hoursSummary,
   noticesSummary,
   paySummary,
+  resultsSiteSummary,
   signupSummary,
   studentsSummary,
   weekHoursSummary,
@@ -22,6 +23,19 @@ const with_ = (patch: (s: BranchSettings) => void) => {
 }
 
 describe('the Settings home’s sentences', () => {
+  it('says when the results site is checked, and how far back', () => {
+    expect(resultsSiteSummary(DEFAULT_SETTINGS)).toBe('Competition results from the tournaments’ results site. Checks when someone presses Check now, looking at the last month.')
+    const on = with_((s) => {
+      s.resultsSite.schedule = { on: true, days: [0], hour: 22 }
+      s.resultsSite.checkDays = 14
+    })
+    expect(resultsSiteSummary(on)).toBe('Competition results from the tournaments’ results site. Checks on its own every Sunday at 10 PM, looking at the last 2 weeks.')
+    const two = with_((s) => {
+      s.resultsSite.schedule = { on: true, days: [1, 4], hour: 8 }
+    })
+    expect(resultsSiteSummary(two)).toBe('Competition results from the tournaments’ results site. Checks on its own Mondays and Thursdays at 8 AM, looking at the last month.')
+  })
+
   it('says time ranges short', () => {
     expect(compactRange(960, 1260)).toBe('4–9 PM')
     expect(compactRange(990, 1080)).toBe('4:30–6 PM')

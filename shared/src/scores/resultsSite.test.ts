@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { CHAMPIONSHIP_WORDS, dueForRecheck, entrantOf, isScheduledHour, newestFirst, nextScheduled, resultState, runSummary, scheduleWords, studentIndex, verdictFor, whyWords, windowsBack } from './resultsSite'
+import {
+  type AthleteResult,
+  type OnlineAthlete,
+  CHAMPIONSHIP_WORDS,
+  checkWindowWords,
+  confirmAllPlan,
+  dueForRecheck,
+  entrantOf,
+  isScheduledHour,
+  newestFirst,
+  nextScheduled,
+  resetWords,
+  resultState,
+  runSummary,
+  scheduleWords,
+  studentIndex,
+  verdictFor,
+  whyWords,
+  windowsBack,
+} from './resultsSite'
 
 // Made-up athletes and students only.
 const students = studentIndex([
@@ -117,5 +136,36 @@ describe('what became of a result', () => {
     expect(resultState({ evaluations: {}, error: null, tries: 1 })).toBe('noShots')
     expect(resultState({ evaluations: {} })).toBe('waiting')
     expect(resultState({ evaluations: {}, error: 'x', tries: 10 })).toBe('stopped')
+  })
+})
+
+describe('the page’s answers', () => {
+  const result = (dateKey: string): AthleteResult => ({ matchId: 'm', matchName: 'Made-up October 3P', dateKey: dateKey as AthleteResult['dateKey'], team: 'ARC 10.9', host: null, lastUpdated: null, evaluations: {} })
+  const athletes: (Pick<OnlineAthlete, 'status' | 'suggestedStudentId' | 'results'> & { id: string })[] = [
+    { id: 'averystone', status: 'new', suggestedStudentId: 's-avery', results: { r1: result('2026-11-05'), r2: result('2026-10-20') } },
+    { id: 'ivyrowan', status: 'new', suggestedStudentId: null, results: { r3: result('2026-11-09') } },
+    { id: 'milohart', status: 'new', suggestedStudentId: 's-gone', results: { r4: result('2026-11-10') } },
+    { id: 'noraquinn', status: 'linked', suggestedStudentId: 's-nora', results: { r5: result('2026-11-10') } },
+  ]
+  it('Confirm all links only the athletes to confirm whose suggested student is still there, and counts the families’ news', () => {
+    const plan = confirmAllPlan(athletes, '2026-11-11', (id) => id !== 's-gone')
+    expect(plan.links).toEqual([{ key: 'averystone', studentId: 's-avery' }])
+    expect(plan.results).toBe(2)
+    // Nov 5 is within the last week of Nov 11 (the family hears of it); Oct 20 isn't.
+    expect(plan.news).toBe(1)
+    expect(confirmAllPlan(athletes, '2026-11-13', () => true).news).toBe(1)
+  })
+  it('says how far back a check looks', () => {
+    expect([7, 14, 30, 60].map(checkWindowWords)).toEqual(['The last week', 'The last 2 weeks', 'The last month', 'The last 2 months'])
+    expect(checkWindowWords(10)).toBe('The last 10 days')
+  })
+  it('says what Start over took away and put back', () => {
+    expect(resetWords({ athletes: 16, results: 9, scans: 3, matches: 198, checks: 2 })).toBe(
+      'Removed 16 athletes, 9 results from the scores, 198 matches looked at and 2 checks; 3 results sheet scans are as they were.',
+    )
+    expect(resetWords({ athletes: 1, results: 1, scans: 1, matches: 1, checks: 1 })).toBe(
+      'Removed 1 athlete, 1 result from the scores, 1 match looked at and 1 check; 1 results sheet scan is as it was.',
+    )
+    expect(resetWords({ athletes: 0, results: 0, scans: 0, matches: 0, checks: 0 })).toBe('Removed 0 athletes, 0 results from the scores, 0 matches looked at and 0 checks.')
   })
 })

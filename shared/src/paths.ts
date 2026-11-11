@@ -78,6 +78,13 @@ export const COL = {
   onlineAthletes: 'onlineAthletes',
   onlineMatches: 'onlineMatches',
   /**
+   * Server only: each result brought in, whole, as the site gave it (`resultsSiteRaw`, by its result's ID: every field,
+   * the shots' times among them, kept for later), and each results sheet scan the site's result replaced, as it was
+   * (`resultsSiteUndo`, by the scan's ID), for Start over to put back.
+   */
+  resultsSiteRaw: 'resultsSiteRaw',
+  resultsSiteUndo: 'resultsSiteUndo',
+  /**
    * SCATT sessions (shared/src/scatt/session.ts): each session's shots and numbers, and apart, each shot's trace. The
    * server writes them from a SCATT file in a student's Drive folder (functions/src/scatt); staff and the student's
    * family read them.

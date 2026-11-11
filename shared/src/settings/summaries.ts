@@ -1,4 +1,5 @@
 import { payRule } from '../pay/paidTime'
+import { checkWindowWords, scheduleWords } from '../scores/resultsSite'
 import { type DateKey, type Weekday, WEEKDAY_SHORT, formatDateKey, formatMinutesShort, orderedWeekdays } from '../time'
 import type { BusinessRules } from './businessRules'
 import type { BranchSettings, DayHours, WeekHours } from './defaults'
@@ -119,6 +120,13 @@ export function noticesSummary(s: BranchSettings): string {
 
 export function websiteSummary(newMessages: number): string {
   return newMessages ? `${plural(newMessages, 'new message')} from families. Photos, coaches, reviews and the hours it shows.` : 'Photos, coaches, reviews, the hours it shows, and the trial requests it sends.'
+}
+
+/** "Checks on its own every Sunday at 10 PM, looking at the last month." — the Results site's tile. */
+export function resultsSiteSummary(s: BranchSettings): string {
+  const r = s.resultsSite
+  const when = r.schedule.on ? `Checks on its own ${scheduleWords(r.schedule).replace(/^Every/, 'every')}` : 'Checks when someone presses Check now'
+  return `Competition results from the tournaments’ results site. ${when}, looking at ${checkWindowWords(r.checkDays).toLowerCase()}.`
 }
 
 /** "Changed Pay & time clock settings (Goo C., 2 h ago)" */
