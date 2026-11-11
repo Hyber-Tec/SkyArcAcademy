@@ -163,6 +163,17 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     → Results site, and their results come in as competitions, shot by shot in firing order (`docs/DECISIONS.md` §43).
     Tried on the practice copy against the real site: the first check read 152 nearby matches and found the 16 ARC 10.9
     athletes in the two Walton matches of Oct 31.
+  - *After Goo tried it (2026-11-10 and 11):* the page made simpler (#165): Check now looks at the last month; a
+    schedule (the gear: days and an hour, off until it's turned on) replaces the nightly check; the key is off the page
+    (`scripts/results-site-key.ts`); every result opens on the site and says where it is ("not published" when a host
+    keeps its scores to itself); a results sheet scan with other numbers waits for a person (use the site's, or keep
+    both). A student's other names count everywhere a name is searched or matched (#164: one-word other names with the
+    family name, either way round). Each shot keeps its tenths in a 3P match (#167).
+  - *Tried on production, then cleared (2026-11-11):* a month's check took 9 minutes (two parts, 411 requests) and found
+    18 athletes, each offered with their student (four through their other names). Linked, their results came in a
+    minute later: the 24 results sheet scans of the Oct 31 3P match were brought up to the site's by themselves (all 24
+    had the site's totals; 478 of 480 shots the same score, the places within 0.1 mm but for the swapped ones), and the
+    Oct 31 60-shot match's 7 results, which the academy never had, came in new. Two Nov 5 results say "not published".
 - ✅ **R2. SCATT sessions** in the app: what the export holds, how reliably it reads, how a session would come in
   (most likely dropped in the Drive, as SIUS PDFs are) and how a student and a parent would see the trace, its approach
   and follow-through, and the shots. What one sample allows, and which samples are still needed.
@@ -177,6 +188,10 @@ In this order: B2 (before the kiosk starts), then B3, B4, B5, then B6, then B1.
     `.scatt-basic` file in the student's Drive folder; each session comes in once, and staff and the family watch every
     shot's aim played back with SCATT's numbers, on the website and the phone (`docs/DECISIONS.md` §45). Checked on the
     academy's sample file: all 85 shots' numbers match SCATT's screen.
+  - *After Goo tried it (2026-11-10):* a SCATT file the server had read couldn't be trashed, moved or renamed ("Missing
+    or insufficient permissions"), and its sessions sat folded at the bottom of the Scores tab (#163): fixed, and the
+    sessions are their own card. A file moved to another student's folder takes its sessions with it. Tried on
+    production on 2026-11-11, then cleared: dropped in the student's folder, the file's 3 sessions came in 9 seconds.
 - ✅ **R3. Shot order on competition sheets:** how the app orders shots today, especially equal scores; when the
   order is certain (SIUS's arrows, the results site) and when it's a guess; and how to show coaches the difference.
   - *Proposed 2026-11-10:* a sheet prints every score in firing order, so the order is certain; each shot's place is
