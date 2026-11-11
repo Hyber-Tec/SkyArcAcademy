@@ -14,12 +14,14 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **iPhone 1.2.0 (build 13) on TestFlight:** install it and try it (English only, the detailed tour, coaches' own
   PIN, the ≈ marks, results-site results, SCATT sessions). When it's good, Claude Code sends it to the App Store. No
   Android build until Google Play's 1.1.0 is live
-- [ ] **The results site: your test, then Matt's.** The page is simpler (2026-11-10): Settings → Results site → **Check
-  now** (the last month), say who each athlete is (open a result on the site to be sure), and their results come into
-  their scores. The gear holds the schedule (off until you turn it on). Then Claude Code clears it all, so you can show
-  Matt from the start
+- [ ] **The results site: your test, then Matt's.** Claude Code ran it on production and cleared it (2026-11-11). Settings →
+  Results site → **Check now** (the last month, about 9 minutes the first time), say who each athlete is (open a result
+  on the site to be sure), and their results come into their scores. The gear holds the schedule (off until you turn it
+  on). A result from the last 7 days tells the family, as any new score does. Then Claude Code clears it all, so you
+  can show Matt from the start
 - [ ] **SCATT sessions:** ask the coaches to export a session from SCATT (a `.scatt-basic` file) and drop it in the
-  student's folder in the Drive; it shows under the student's Scores, for them and the family
+  student's folder in the Drive; it shows on the student's Scores tab, for them and the family (tried on production and
+  cleared, 2026-11-11)
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
   too. Until then the starter key works; a new key goes in with `npx tsx scripts/results-site-key.ts`
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
