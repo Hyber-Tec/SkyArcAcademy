@@ -877,8 +877,9 @@ service cloud.firestore {
 
       // Competition results from the tournaments' results site (shared/src/scores/resultsSite.ts): the server finds
       // them (Check now, or the academy's schedule) and writes all of it; owners and admins read what it found
-      // (Settings → Results site) and answer through its callable. Its key (`resultsSiteKey`) has no rule: the server's
-      // only.
+      // (Settings → Results site) and answer through its callables. Its key (`resultsSiteKey`), each result whole as the
+      // site gave it (`resultsSiteRaw`) and each results sheet scan as it was before the site's result replaced it
+      // (`resultsSiteUndo`) have no rule: the server's only.
       match /resultsSite/{docId} {
         allow read: if isAdmin(b);
       }

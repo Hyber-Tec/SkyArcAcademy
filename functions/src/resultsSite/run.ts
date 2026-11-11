@@ -7,8 +7,10 @@ import {
   type Entrant,
   type OnlineAthlete,
   type OnlineMatch,
+  type ResetCounts,
   type ResultsSiteRun,
   type ResultsSiteStatus,
+  type ResultsSiteUndo,
   type SheetTwin,
   type StudentName,
   CHAMPIONSHIPS_EVERY_DAYS,
@@ -19,6 +21,7 @@ import {
   dueForRecheck,
   entrantOf,
   newestFirst,
+  resetWords,
   runSummary,
   studentIndex,
   verdictFor,
@@ -67,6 +70,9 @@ export const runsOf = (branchId: string) => db.collection(`${base(branchId)}/${C
 const athletesOf = (branchId: string) => db.collection(`${base(branchId)}/${COL.onlineAthletes}`)
 const matchesOf = (branchId: string) => db.collection(`${base(branchId)}/${COL.onlineMatches}`)
 const evaluationsOf = (branchId: string) => db.collection(`${base(branchId)}/${COL.evaluations}`)
+/** A result's whole JSON from the site (`ResultsSiteRaw`), by its result's ID as a document's. */
+const rawRef = (branchId: string, resultCofId: string) => db.doc(`${base(branchId)}/${COL.resultsSiteRaw}/${resultCofId.replace(/[^A-Za-z0-9-]/g, '') || 'unknown'}`)
+const undoOf = (branchId: string) => db.collection(`${base(branchId)}/${COL.resultsSiteUndo}`)
 
 /** Who the import is in the audit log and on the results it writes. */
 export const SYSTEM = { actorUid: 'system', actorEmail: 'system', actorName: 'Results site', actorRole: 'system', via: 'function' } as const
@@ -547,6 +553,22 @@ async function importPending(c: Ctx) {
 }
 
 const SOURCE_FIELDS = ['source', 'dateKey', 'timeMin', 'shots', 'total', 'wholeTotal', 'innerTens', 'mpi', 'groupMm', 'series', 'problems', 'online'] as const
+/** What the site's result changes in a results sheet scan it replaces: the fields above, and the match. */
+const REPLACED_FIELDS = [...SOURCE_FIELDS, 'match'] as const
+
+/**
+ * A results sheet scan as it is, before the site's result replaces its numbers (`ResultsSiteUndo`): kept once, the
+ * first time, for Start over to put back. A scan already brought up to the site's has nothing of its own to keep.
+ */
+async function keepScan(batch: WriteBatch, branchId: string, scan: { id: string; data: Evaluation }, resultCofId: string) {
+  if (scan.data.source === 'online') return
+  const ref = undoOf(branchId).doc(scan.id)
+  if ((await ref.get()).exists) return
+  const data = scan.data as unknown as Record<string, unknown>
+  const before = Object.fromEntries(REPLACED_FIELDS.filter((f) => data[f] !== undefined).map((f) => [f, data[f]]))
+  const absent = REPLACED_FIELDS.filter((f) => data[f] === undefined)
+  batch.set(ref, { evaluationId: scan.id, resultCofId, before, absent, at: FieldValue.serverTimestamp() } satisfies Omit<ResultsSiteUndo, 'at'> & { at: FieldValue })
+}
 
 const describe = (e: Pick<Evaluation, 'position' | 'dateKey' | 'total' | 'shots'>) =>
   `results site ${POSITION_LABELS[e.position].toLowerCase()} result of ${formatDateKey(e.dateKey, 'medium')} (${e.total} over ${e.shots} shots, ${per10(e.total, e.shots) ?? 0} per 10)`
@@ -592,6 +614,8 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
   const evaluations: Partial<Record<Position, string>> = { ...rec.evaluations }
   const sheets: Partial<Record<Position, SheetTwin>> = { ...rec.sheets }
   const batch = db.batch()
+  // The result whole, as the site gave it: what the scores show, and every other field, kept for later.
+  batch.set(rawRef(c.branchId, resultCofId), { resultCofId, json: JSON.stringify(cof), lastUpdated: cof.LastUpdated ?? null, studentId: a.studentId, savedAt: FieldValue.serverTimestamp() })
   let changed = 0
   for (const r of found) {
     const data = onlineEvaluation(r, cof, { studentId: a.studentId, studentName, team: rec.team, host: rec.host })
@@ -613,6 +637,7 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
     const twin = await sheetTwin(c.branchId, a.studentId, data)
     if (twin.same) {
       const patch = Object.fromEntries(SOURCE_FIELDS.map((f) => [f, data[f]]))
+      await keepScan(batch, c.branchId, { id: twin.same.ref.id, data: twin.same.data }, resultCofId)
       batch.set(twin.same.ref, { ...patch, match: data.match, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'system' }, { merge: true })
       audit(batch, c.branchId, { action: 'evaluation.update', entityId: twin.same.ref.id, summary: `Brought ${studentName}'s results sheet result up to the ${describe(data)}`, dateKey: data.dateKey, studentId: a.studentId, studentName })
       evaluations[r.position] = twin.same.ref.id
@@ -625,7 +650,7 @@ export async function bringIn(c: Pick<Ctx, 'branchId' | 'tz' | 'client' | 'athle
     }
     changed++
   }
-  if (changed) await batch.commit()
+  await batch.commit()
   a.results[resultCofId] = { ...rec, lastUpdated: cof.LastUpdated ?? new Date().toISOString(), evaluations, sheets, error: null, tries: 0 }
   touch(c as Ctx, key, resultCofId)
   if (changed) {
@@ -646,15 +671,15 @@ async function sheetTwin(
   branchId: string,
   studentId: string,
   e: Omit<Evaluation, 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>,
-): Promise<{ same: { ref: DocumentReference; scan: SheetTwin | null } | null; near: SheetTwin | null }> {
+): Promise<{ same: { ref: DocumentReference; data: Evaluation; scan: SheetTwin | null } | null; near: SheetTwin | null }> {
   const snap = await evaluationsOf(branchId).where('studentId', '==', studentId).where('dateKey', '==', e.dateKey).get()
   const list = snap.docs.map((d) => ({ ref: d.ref, x: d.data() as Evaluation })).filter((d) => d.x.position === e.position)
   const before = list.find((d) => d.x.online?.resultCofId === e.online?.resultCofId)
-  if (before) return { same: { ref: before.ref, scan: null }, near: null }
+  if (before) return { same: { ref: before.ref, data: before.x, scan: null }, near: null }
   const scans = list.filter((d) => d.x.source === 'sheet' && !d.x.online)
   const scanOf = (d: (typeof scans)[number], state: SheetTwin['state']): SheetTwin => ({ id: d.ref.id, state, shots: d.x.shots, wholeTotal: d.x.wholeTotal })
   const same = scans.find((d) => d.x.shots === e.shots && d.x.wholeTotal === e.wholeTotal)
-  if (same) return { same: { ref: same.ref, scan: scanOf(same, 'upgraded') }, near: null }
+  if (same) return { same: { ref: same.ref, data: same.x, scan: scanOf(same, 'upgraded') }, near: null }
   const near = [...scans].sort((a, b) => Math.abs(a.x.shots - e.shots) - Math.abs(b.x.shots - e.shots) || Math.abs(a.x.wholeTotal - e.wholeTotal) - Math.abs(b.x.wholeTotal - e.wholeTotal))[0]
   return { same: null, near: near ? scanOf(near, 'differs') : null }
 }
@@ -711,6 +736,7 @@ export async function answerScan(branchId: string, key: string, resultCofId: str
     if (!sheet.exists) throw new Problem('The results sheet’s result isn’t in the scores any more.')
     const data = site.data() as Evaluation
     const patch = Object.fromEntries(SOURCE_FIELDS.map((f) => [f, data[f]]))
+    await keepScan(batch, branchId, { id: sheet.id, data: sheet.data() as Evaluation }, resultCofId)
     batch.set(sheet.ref, { ...patch, match: data.match ?? null, updatedAt: FieldValue.serverTimestamp(), updatedBy: who.email }, { merge: true })
     batch.delete(site.ref)
     batch.set(ref, { results: { [resultCofId]: { evaluations: { [position]: scan.id }, sheets: { [position]: { ...scan, state: 'upgraded' } } } }, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
@@ -718,4 +744,119 @@ export async function answerScan(branchId: string, key: string, resultCofId: str
     note({ action: 'evaluation.delete', entityId: site.id, summary: `Removed the results site's copy of ${studentName}'s result of ${day} (${where}): it's in the results sheet's result now` })
   }
   await batch.commit()
+}
+
+// ------------------------------------------------------------------ people's answers: many at once, and starting over
+
+/**
+ * Linked athletes' results not brought in yet, brought in now, one after another until `until` (the caller holds the
+ * lock). What's left comes in with the next check.
+ */
+export async function bringInFor(branchId: string, list: readonly [string, OnlineAthlete][], until: number): Promise<{ brought: number; waiting: number }> {
+  const pending = list.map(([key, a]) => [key, a, Object.entries(a.results ?? {}).filter(([, r]) => !r.lastUpdated).map(([id]) => id)] as const)
+  const total = pending.reduce((n, [, , ids]) => n + ids.length, 0)
+  const apiKey = await loadKey(branchId)
+  if (!total || !apiKey) return { brought: 0, waiting: total }
+  const branch = (await db.doc(base(branchId)).get()).data() as Branch | undefined
+  const c = {
+    branchId,
+    tz: branch?.timezone || 'America/New_York',
+    client: new SiteClient(apiKey, total * 2 + 10),
+    athletes: new Map(list),
+    counts: { matches: 0, results: 0, athletes: 0 },
+    touched: new Map<string, Set<string>>(),
+    studentName: new Map(list.flatMap(([, a]) => (a.studentId && a.studentName ? [[a.studentId, a.studentName] as [string, string]] : []))),
+    log: [] as string[],
+  }
+  let brought = 0
+  let tried = 0
+  try {
+    all: for (const [key, , ids] of pending)
+      for (const id of ids) {
+        if (Date.now() > until) break all
+        tried++
+        if (await bringIn(c, key, id)) brought++
+      }
+  } catch (e) {
+    logger.warn('Bringing in linked athletes’ results stopped', { error: (e as Error).message })
+  } finally {
+    const writes = [...c.touched].flatMap(([key, ids]) => {
+      const a = c.athletes.get(key)
+      const results = Object.fromEntries([...ids].flatMap((id) => (a?.results[id] ? [[id, a.results[id]]] : [])))
+      return Object.keys(results).length ? [[key, results] as const] : []
+    })
+    for (let i = 0; i < writes.length; i += 400) {
+      const batch = db.batch()
+      for (const [key, results] of writes.slice(i, i + 400)) batch.set(athletesOf(branchId).doc(key), { results, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+      await batch.commit()
+    }
+  }
+  return { brought, waiting: total - tried }
+}
+
+/** Deletes documents, a few hundred at a time. */
+async function deleteAll(refs: readonly DocumentReference[]) {
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = db.batch()
+    for (const r of refs.slice(i, i + 400)) batch.delete(r)
+    await batch.commit()
+  }
+}
+
+/**
+ * Start over (Goo's ask of 2026-11-11, to try it and then show it from the beginning): what the results site brought in
+ * goes. Each results sheet scan the site's result replaced is put back as it was (`ResultsSiteUndo`); the results it
+ * added leave the scores; its athletes and their answers, matches, checks and whole results go, and the status keeps
+ * only the key. The settings stay. The families' "new score" notices stay too, so bringing the same results in again
+ * doesn't tell them twice. The caller holds the lock.
+ */
+export async function startOver(branchId: string, who: Person): Promise<ResetCounts> {
+  const counts: ResetCounts = { athletes: 0, results: 0, scans: 0, matches: 0, checks: 0 }
+  const undos = await undoOf(branchId).get()
+  for (let i = 0; i < undos.docs.length; i += 200) {
+    const chunk = undos.docs.slice(i, i + 200)
+    const scans = await db.getAll(...chunk.map((d) => evaluationsOf(branchId).doc((d.data() as ResultsSiteUndo).evaluationId)))
+    const batch = db.batch()
+    chunk.forEach((d, k) => {
+      const u = d.data() as ResultsSiteUndo
+      if (scans[k].exists) {
+        batch.update(scans[k].ref, { ...u.before, ...Object.fromEntries(u.absent.map((f) => [f, FieldValue.delete()])), updatedAt: FieldValue.serverTimestamp(), updatedBy: who.email })
+        counts.scans++
+      }
+      batch.delete(d.ref)
+    })
+    await batch.commit()
+  }
+  // The results it added (their IDs are the site's: a scan it brought up to the site's, without the note of how it was,
+  // stays as it is).
+  const added = (await evaluationsOf(branchId).where('source', '==', 'online').get()).docs.filter((d) => d.id.startsWith('online-'))
+  counts.results = added.length
+  await deleteAll(added.map((d) => d.ref))
+  const [athletes, matches, runs, raw] = await Promise.all([athletesOf(branchId).get(), matchesOf(branchId).get(), runsOf(branchId).get(), db.collection(`${base(branchId)}/${COL.resultsSiteRaw}`).get()])
+  counts.athletes = athletes.size
+  counts.matches = matches.size
+  counts.checks = runs.size
+  await deleteAll([...athletes.docs, ...matches.docs, ...runs.docs, ...raw.docs].map((d) => d.ref))
+  if ((await statusRef(branchId).get()).exists) await statusRef(branchId).update({ lastRun: null, going: null, hosts: {}, nationalAt: null })
+  await db.collection(`${base(branchId)}/${COL.auditLog}`).add({
+    at: FieldValue.serverTimestamp(),
+    actorUid: who.uid,
+    actorEmail: who.email,
+    actorName: who.name,
+    actorRole: who.role,
+    via: 'function',
+    action: 'resultsSite.reset',
+    category: 'reports',
+    entityType: 'resultsSite',
+    entityId: 'status',
+    summary: `Started the results site over. ${resetWords(counts)}`,
+    context: 'Settings → Results site',
+    dateKey: null,
+    studentId: null,
+    studentName: null,
+    coachId: null,
+    coachName: null,
+    changes: [],
+  })
+  return counts
 }

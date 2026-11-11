@@ -12,6 +12,7 @@ import {
   hoursSummary,
   noticesSummary,
   paySummary,
+  resultsSiteSummary,
   signupSummary,
   studentsSummary,
   websiteSummary,
@@ -69,6 +70,7 @@ export function SettingsHome() {
     notices: noticesSummary(settings),
     academy: [branch.name, zoneWords(timezone), branch.contact?.email].filter(Boolean).join(' · '),
     website: websiteSummary(newMessages),
+    results: resultsSiteSummary(settings),
     contract: contract.loading ? '' : contract.current ? `Version ${contract.current.version} is published: each family fills it in and signs it before using the app.` : 'Not published yet. Write the contract families sign in the app.',
     activity: activitySummary(last ? { summary: last.summary, who: last.actorName || 'Someone', atMs: last.at?.toMillis?.() ?? now } : null, now),
   }
