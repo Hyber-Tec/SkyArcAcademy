@@ -91,6 +91,20 @@ to Apple); Google's first took up to eight days (2026-10-26 to live by 2026-11-0
 Apple reviews 90% of submissions within a day, and Google an update within hours to a few days (up to a week for a
 new developer account). Both review at weekends too, sometimes more slowly.
 
+## 1.2.0, sent on 2026-11-11 (both stores)
+
+- **App Store:** build **13**, from `main` as of #159, tried by Goo on TestFlight. Claude Code made version 1.2.0 in App
+  Store Connect with its What's New and the review notes ([store/](store/)) and **Automatically release this version**,
+  and submitted it for review. The support, marketing and privacy links moved to skyarcacademy.com with it.
+- **Google Play:** build **14**, from `main` as of #176. That's the iPhone's 1.2.0 plus the search by other names (#164)
+  and the welcome tour's fix for Android (#175).
+  - Claude Code checked it on an Android emulator, and Google Play validated the release in a draft edit that was then
+    deleted.
+  - Goo tried it on his Android phone (`npm run android`).
+  - Then Claude Code sent it to the production track for everyone, with its release notes
+    ([store/listing.md](store/listing.md)), through the API. No Play Console form changed with it.
+- **Next build:** the iPhone's next one carries #164 and #175. Its build number is 15 or more.
+
 ## Keep in mind
 
 - **The review login** must keep working for every review. Since 2026-10-26 it's one admin with the academy's real

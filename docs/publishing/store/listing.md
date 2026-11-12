@@ -122,7 +122,7 @@ And smaller fixes.
 • Many smaller fixes.
 ```
 
-For 1.2.0 (build 14), 494 characters, to send with it once Goo has tried it on his phone:
+For 1.2.0 (build 14), as sent on 2026-11-11 (494 characters):
 
 ```
 • A short tour after you first sign in shows what each button does.
