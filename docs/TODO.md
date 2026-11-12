@@ -28,6 +28,10 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Scopos's own key for the app:** send them the email in the private notes (price, limits); the estimate is there
   too. Until then the starter key works; a new key goes in with `npx tsx scripts/results-site-key.ts`
 - [ ] **Google Search Console:** verified; send the sitemap with its full address, `https://skyarcacademy.com/sitemap.xml`
+- [ ] **Live SIUS scores on the TV (research, nothing built):** the range check (about 20 minutes with the manager:
+  photos of a target, the USB dongle's colour, each SIUS PC's program and Help → About, SIUSLane's export settings,
+  which PC feeds the TV) and the email asking SIUS for its developer kit. The checklist and the email are on Claude
+  Code's page "Live SIUS Scores"; with the photos, Claude Code sends the build plan
 
 ## The manager
 
