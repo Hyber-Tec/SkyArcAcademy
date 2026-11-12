@@ -11,10 +11,9 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 - [ ] **Kiosk PINs before Sunday, November 15** (everyone starts then): the two coaches with accounts set theirs at the
   meeting. Three employee records still have none (the manager's, and two people without an account): Employees →
   the person → Kiosk PIN. Coaches can now set and change their own (Profile → Kiosk PIN)
-- [ ] **Android 1.2.0 (build 14): try it on your Android phone.** Plug it into the Mac (USB debugging on). If Sky Arc
-  came from Google Play, delete it from the phone first. Then, in Terminal, in the Sky Arc folder: `npm run android`.
-  Once it looks right, tell Claude Code: it sends this build to Google Play's review, and it goes live by itself once
-  approved
+- [ ] **Google Play 1.2.0 is in Google's review** (build 14, the one you tried on your phone; sent 2026-11-11): it goes
+  live by itself once approved. Then delete the copy from the Mac on your phone and install Sky Arc from Google Play,
+  so it updates by itself again. If Google writes, give Claude Code the message
 - [ ] **iPhone 1.2.0 is in Apple's review** (build 13, the one you tried; sent 2026-11-11): it goes live by itself once
   approved. If Apple writes, give Claude Code the message. The phone's search by other names, and the tour's fix for
   Android (#175), come with the next iPhone build
@@ -88,6 +87,7 @@ When something is done, Claude Code ticks it, adds ✅ and the date, and moves i
 
 ## Done ✅
 
+- [x] ✅ 2026-11-11 · Android 1.2.0 (build 14) tried on Goo's phone, and sent to Google Play's review
 - [x] ✅ 2026-11-11 · Google Play 1.1.0 (build 12) live, after 3 days 16 hours in Google's review
 - [x] ✅ 2026-11-11 · iPhone 1.2.0 (build 13) tried on TestFlight (Goo), and sent to the App Store's review
 - [x] ✅ 2026-11-11 · The franchise page made better, to show the owner (#169)

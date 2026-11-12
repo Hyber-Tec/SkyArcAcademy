@@ -20,37 +20,32 @@ From Claude Code, as PDFs, letter size (8.5 × 11 in) and 5 × 7 in, for acrylic
 To make them again (another size, a new address): `npx tsx scripts/signs.ts --out <folder>` writes both signs in both
 sizes, with a picture of each. Since 2026-11-10 they're in English only (§42): make them again before printing.
 
-### Android 1.2.0 (build 14): try it on your Android phone
+### Google Play 1.2.0 is in Google's review
 
-Built on 2026-11-11 from `main` as of #175: everything in the iPhone's 1.2.0, plus the search by other names (#164)
-and a fix to the welcome tour (#175). On Android the family's tour vanished when it opened a result ("Open a result"),
-then started again at every launch, and the notifications question that waits for it never came. The iPhone wasn't
-affected. Its number is 14 because the iPhone's 1.2.0 (13) was built from an earlier `main`.
+Built on 2026-11-11 from `main` as of #176 (the code of #175): everything in the iPhone's 1.2.0, plus the search by
+other names (#164) and a fix to the welcome tour (#175). On Android the family's tour vanished when it opened a result
+("Open a result"), then started again at every launch, and the notifications question that waits for it never came.
+The iPhone wasn't affected. Its number is 14 because the iPhone's 1.2.0 (13) was built from an earlier `main`.
 
-**Checked before your test:**
+**Checked before Goo's test:**
 - the phone's test flows on an Android emulator (Pixel 9, Android 16, the practice copy);
 - each role's tour, the SCATT sessions, results site and results sheet competitions (with ≈), other names in the
   search, and the coach's Kiosk PIN, on Android;
 - the bundle: it targets Android 16 (API 36, which Google Play requires since August 31, 2026), supports 16 KB memory
   pages, asks only for the camera and notifications (as 1.1.0 does), and is signed with the upload key;
-- the release itself: Google Play validated it in a draft edit that was then deleted, so nothing was sent;
-- the install command, on an emulator standing in for a phone.
+- Google Play's validation of the release, in a draft edit deleted afterwards.
 
-1. **Install it.** Plug the phone into the Mac with USB debugging on ([phone/testing.md](phone/testing.md), section 1).
-   If Sky Arc came from Google Play, delete it from the phone first: that copy is signed by Google, and the install
-   would stop. Then, in the Sky Arc folder: `npm run android`. It ends with "✓ Sky Arc is on …". This is the real Sky
-   Arc.
-2. **Try it.**
-   - More → Version says 1.2.0 (14).
-   - The tour after signing in: Back on the phone goes back a step. The notifications question comes after it.
-   - Google sign-in.
-   - A student's SCATT sessions and results site scores.
-   - Your kiosk PIN.
-3. **Then tell Claude Code.** It sends this build to Google Play's production track, with the release notes in
-   [publishing/store/listing.md](publishing/store/listing.md). Google reviews it (1.1.0 took 3 days 16 hours), and
-   it goes live by itself once approved.
-4. **Once 1.2.0 is live on Google Play,** delete this copy from the phone and install Sky Arc from Google Play. The
-   copy from the Mac is signed with the upload key, so Google Play can't update it.
+**Sent:** Goo tried it on his Android phone (`npm run android`, 2026-11-11) and said it's all good. That evening Claude
+Code sent the same commit's bundle to Google Play's production track for everyone, through Google Play's API, with the
+release notes in [publishing/store/listing.md](publishing/store/listing.md). That sends it for review by itself. No
+Play Console form changed with it.
+
+- **Next:** it goes live by itself once approved; Android phones update on their own. Google gives no fixed time; 1.1.0
+  took 3 days 16 hours. Only Goo can see the review's state: Play Console → Publishing overview, and the Inbox.
+- **Goo's phone:** once 1.2.0 is live, delete the copy from the Mac and install Sky Arc from Google Play. The copy from
+  the Mac is signed with the upload key, so Google Play can't update it.
+- **If Google rejects it or asks something,** it says so in the Play Console's inbox and by email: send it to Claude
+  Code. No new Android build meanwhile: a new release would replace this one and start the review again.
 
 ### iPhone 1.2.0 is in Apple's review
 
