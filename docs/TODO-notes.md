@@ -117,6 +117,23 @@ Tells Google the website lives at skyarcacademy.com, and lets it find every page
 
 The site's pages already name skyarcacademy.com as their address (#119).
 
+### Live SIUS scores on the TV
+
+Goo asked on 2026-11-12 whether the website could show each shot from the academy's SIUS targets live, full screen on
+the range's TV instead of SIUS's screen. The research says yes, most likely without taking SIUS's software apart:
+
+- The academy's printouts match SIUS's **SIUSLane** program (one target per Windows PC, through a USB dongle). The
+  targets are probably **HS10s** (pale green). SIUS's programs run on Windows only.
+- SIUSLane can save each session by itself, as a PDF and a CSV, when it ends. SIUS gives its developer kit (SiusAPI)
+  to customers who ask by email, and SIUS's range program, SiusData, hands every shot to other programs.
+- Nothing would reach a student's scores unless a coach saves it (the manager's wish at the first meeting). The rule
+  proposed: live shots kept 1 day, unsaved sessions 30 days (a setting), saved sessions kept as results with a PDF in
+  the Drive.
+
+Goo's page "Live SIUS Scores" has the range checklist, the email to SIUS and the decisions. The research, its sources
+and the plan are in the private notes (`docs/internal/research/`). Nothing is built or installed at the academy until
+Goo decides.
+
 ## The manager
 
 ### The signature for the contract
