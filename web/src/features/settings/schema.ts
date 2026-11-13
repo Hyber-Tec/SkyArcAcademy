@@ -122,6 +122,16 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
         max: 365,
         suffix: 'days',
       },
+      {
+        kind: 'number',
+        path: 'home.attendanceLookbackDays',
+        more: true,
+        label: 'Home lists classes not marked from the last',
+        keywords: 'home attendance here no-show mark missed forgot',
+        min: 1,
+        max: 365,
+        suffix: 'days',
+      },
     ],
   },
   {

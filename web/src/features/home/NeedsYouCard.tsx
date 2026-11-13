@@ -7,6 +7,7 @@ import {
   LuCalendarX2,
   LuChevronRight,
   LuCircleCheck,
+  LuClipboardCheck,
   LuClockAlert,
   LuGraduationCap,
   LuSignature,
@@ -91,6 +92,20 @@ export function NeedsYouCard({ attention, onFixClock }: { attention: Attention; 
           ),
         }
       }),
+    })
+  }
+  if (attention.toMark.length) {
+    // The classes are listed in the Attendance card, where they're marked: the line takes the page there.
+    const students = attention.toMark.reduce((n, k) => n + k.seats.length, 0)
+    const oldest = attention.toMark[attention.toMark.length - 1].c.dateKey
+    groups.push({
+      id: 'attendance',
+      icon: LuClipboardCheck,
+      tone: 'amber',
+      title: `${plural(attention.toMark.length, 'class')} not marked`,
+      subtitle: `${plural(students, 'student')} · since ${dayLabel(oldest, today).replace(/^(Today|Yesterday)$/, (m) => m.toLowerCase())}`,
+      items: [],
+      onSelect: () => document.getElementById('home-attendance')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     })
   }
   if (attention.pendingRequests.length) {
@@ -235,13 +250,16 @@ interface GroupProps {
   subtitle: string
   items: Item[]
   seeAll?: { label: string; to: string }
+  /** A line that goes somewhere instead of opening to its items. */
+  onSelect?: () => void
 }
 
-function Group({ icon: Icon, tone, title, subtitle, items, seeAll, open, onToggle }: GroupProps & { open: boolean; onToggle: () => void }) {
+function Group({ icon: Icon, tone, title, subtitle, items, seeAll, onSelect, open: opened, onToggle }: GroupProps & { open: boolean; onToggle: () => void }) {
   const navigate = useNavigate()
+  const open = opened && !onSelect
   return (
     <li>
-      <button type="button" onClick={onToggle} aria-expanded={open} className="group flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50">
+      <button type="button" onClick={onSelect ?? onToggle} aria-expanded={onSelect ? undefined : open} className="group flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50">
         <span className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg', TONES[tone])}>
           <Icon className="size-4" />
         </span>

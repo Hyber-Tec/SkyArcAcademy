@@ -1483,3 +1483,20 @@ Goo, on a student's Drive tab in a wide window: the names were cut while the pag
   pay's three tiles as wide as they were, and the website's photos fit more in a row instead of growing.
 - **The Scores tab's folded sections are apart:** the SCATT sessions, Scores over time, Compare and Progress reports are
   each a card of their own, with the scores' gap between them.
+
+## 47. Attendance to take, on Home (Goo, 2026-11-13)
+
+Goo: the manager keeps forgetting to take attendance, so Home should show the attendance missed. The manager marks it
+on the website, and only the schedule said which past classes were still unmarked (`AT1`, the third meeting).
+
+- **Attendance to take**, at the top of the office's Home while there's something to mark: the classes that are over
+  (the days before today, and today's once they've ended) with students nobody marked Here, No-show or Canceled, the
+  newest day first; the three latest days show, the earlier ones open under them. Each student is marked there (Here,
+  No-show, Canceled), a class with **All here**, a day with **Mark everyone on this day here** (after a confirmation),
+  each with a few seconds to Undo; a student marked leaves the list. A class's time opens it on the schedule.
+- **It counts in "Needs you"** and the Home badge, one per class: "N classes not marked" takes the page to the card.
+  Today's classes that are over say "N not marked" instead of Done.
+- **How far back:** six weeks by default, as far back as a missed class still earns a makeup (Settings → Classes &
+  families, More options: "Home lists classes not marked from the last … days").
+- **The website only:** the manager marks attendance there. The phone's Home is unchanged.
+- Home reads only the students not marked (a new index on the sessions' status and day), not every past class.

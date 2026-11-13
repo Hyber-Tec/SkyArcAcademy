@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react'
 import { dayHours } from '@shared/availability'
 import { COL } from '@shared/paths'
 import { isInactiveStudent } from '@shared/people'
+import { classesToMark } from '@shared/schedule/status'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, addDays, dateKeyOf, nowMinutes, todayKey } from '@shared/time'
 import type { ContractRequest } from '@shared/contracts/types'
@@ -32,17 +33,17 @@ export interface NewStudent {
 
 /**
  * What needs an admin's attention (the Home badge): classes in the next four weeks that may not happen as booked
- * (listed first: no coach in, too many students, a student in two classes at once…), automatic clock-outs at the set
- * time not fixed yet, pending sign-up requests, families waiting for a contract they asked for from the academy's sign
- * (docs/DECISIONS.md §39), new students nobody has opened yet, and employees without an hourly
- * rate. It also hands Home
- * those weeks' classes and who's in. The sidebar badge and the Home page run the same queries, so Firestore shares the
- * listeners.
+ * (listed first: no coach in, too many students, a student in two classes at once…), classes that are over with
+ * students nobody marked (docs/DECISIONS.md §47), automatic clock-outs at the set time not fixed yet, pending sign-up
+ * requests, families waiting for a contract they asked for from the academy's sign (docs/DECISIONS.md §39), new students
+ * nobody has opened yet, and employees without an hourly rate. It also hands Home those weeks' classes and who's in. The
+ * sidebar badge and the Home page run the same queries, so Firestore shares the listeners.
  */
 export function useAttention(enabled = true) {
   const { branchId, timezone, settings } = useBranch()
   const now = useNow(60_000)
   const today = todayKey(timezone, now)
+  const nowMin = nowMinutes(timezone, new Date(now))
   const clockFrom = addDays(today, -settings.home.clockLookbackDays)
 
   const shifts = useShifts(clockFrom, today, null, enabled)
@@ -61,6 +62,29 @@ export function useAttention(enabled = true) {
     [branchId, enabled],
   )
   const contractRequests = useQuery<ContractRequest>(contractQ, `attn-contract-requests-${branchId}`)
+
+  // Attendance not taken (docs/DECISIONS.md §47): the students nobody marked in the last weeks (Settings → Classes &
+  // families, "Home lists classes not marked from the last"), then the classes of those days, for their times and to
+  // leave out what's in the Trash. Only the unmarked seats are read (the index on status and day).
+  const markFrom = addDays(today, -settings.home.attendanceLookbackDays)
+  const unmarkedQ = useMemo(
+    () =>
+      enabled
+        ? query(branchCol(branchId, COL.sessions), where('status', 'in', ['pending', 'confirmed']), where('dateKey', '>=', markFrom), where('dateKey', '<=', today))
+        : null,
+    [branchId, markFrom, today, enabled],
+  )
+  const unmarked = useQuery<Session>(unmarkedQ, `attn-unmarked-${branchId}-${markFrom}-${today}`, { keepPrevious: true })
+  const oldestUnmarked = useMemo(
+    () => unmarked.data.reduce<DateKey | null>((m, s) => (s.isDeleted || !s.classId || (m !== null && m <= s.dateKey) ? m : s.dateKey), null),
+    [unmarked.data],
+  )
+  const markClassesQ = useMemo(
+    () => (enabled && oldestUnmarked ? query(branchCol(branchId, COL.classes), where('dateKey', '>=', oldestUnmarked), where('dateKey', '<=', today)) : null),
+    [branchId, oldestUnmarked, today, enabled],
+  )
+  const markClasses = useQuery<AcademyClass>(markClassesQ, `attn-mark-classes-${branchId}-${oldestUnmarked}-${today}`, { keepPrevious: true })
+  const toMark = useMemo(() => classesToMark(markClasses.data, unmarked.data, today, nowMin), [markClasses.data, unmarked.data, today, nowMin])
 
   // The next four weeks' classes, their students and who's in.
   const until = addDays(today, CONFLICT_DAYS - 1)
@@ -93,8 +117,8 @@ export function useAttention(enabled = true) {
     // Until the staff list is in, nobody would count as a coach.
     if (!enabled || staff.loading) return []
     const studentsById = new Map(studentList.data.map((s) => [s.id, s]))
-    return classConflicts(byDate, { hoursOf, studentsById, today, nowMin: nowMinutes(timezone, new Date(now)) })
-  }, [enabled, staff.loading, studentList.data, byDate, hoursOf, today, timezone, now])
+    return classConflicts(byDate, { hoursOf, studentsById, today, nowMin })
+  }, [enabled, staff.loading, studentList.data, byDate, hoursOf, today, nowMin])
 
   // Active employees without the hourly rate their pay needs (their time would be paid $0).
   const { gaps: payGaps } = usePayGaps(enabled)
@@ -135,6 +159,8 @@ export function useAttention(enabled = true) {
       waitingContracts,
       newStudents,
       payGaps,
+      /** Classes that are over with students nobody marked, the newest day first. */
+      toMark,
       shifts: shifts.data,
       /** The next four weeks' classes (from today), with their students and the coaches in. */
       byDate,
@@ -142,10 +168,10 @@ export function useAttention(enabled = true) {
       availability: avail.data,
       hoursOf,
       classesLoading: classes.loading || ahead.loading || avail.loading || staff.loading,
-      total: items.length + newStudents.length + payGaps.length,
+      total: items.length + toMark.length + newStudents.length + payGaps.length,
       loading: shifts.loading || students.loading || requests.loading || contractRequests.loading,
       now,
       today,
     }
-  }, [shifts, students, requests, contractRequests, now, today, timezone, conflicts, payGaps, byDate, avail.data, hoursOf, classes.loading, ahead.loading, avail.loading, staff.loading])
+  }, [shifts, students, requests, contractRequests, now, today, timezone, conflicts, toMark, payGaps, byDate, avail.data, hoursOf, classes.loading, ahead.loading, avail.loading, staff.loading])
 }
