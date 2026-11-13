@@ -240,18 +240,28 @@ export async function setSeatStatus(ctx: ScheduleCtx, s: WithId<Session>, status
 
 /**
  * Marks the seats here at once (the rest of a class or a day, `seatsToMark`), each with its audit entry, as marking
- * them one by one would. Batches of 200 seats (a batch holds 500 writes), so a long day still saves.
+ * them one by one would.
  */
 export async function markSeatsHere(ctx: ScheduleCtx, seats: readonly WithId<Session>[]) {
-  for (let i = 0; i < seats.length; i += 200) {
+  await markSeats(ctx, seats.map((seat) => ({ seat, status: 'present' as const })))
+}
+
+/**
+ * Gives seats each their mark at once (the rest of a class here, or the marks taken back by an Undo on Home), each with
+ * its audit entry, as marking them one by one would. Batches of 200 seats (a batch holds 500 writes), so a long day
+ * still saves.
+ */
+export async function markSeats(ctx: ScheduleCtx, marks: readonly { seat: WithId<Session>; status: SessionStatus }[]) {
+  const changing = marks.filter((m) => m.seat.status !== m.status)
+  for (let i = 0; i < changing.length; i += 200) {
     const batch = writeBatch(db)
-    for (const s of seats.slice(i, i + 200)) {
-      batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { status: 'present', ...stamps(ctx) })
+    for (const { seat: s, status } of changing.slice(i, i + 200)) {
+      batch.update(branchDocRef(ctx.branchId, COL.sessions, s.id), { status, ...stamps(ctx) })
       auditSeat(batch, ctx, s, {
         action: 'session.status',
         entityId: s.id,
-        summary: `Marked ${s.studentName} here`,
-        changes: [{ field: 'status', label: 'Status', from: SESSION_STATUS_LABELS[s.status], to: SESSION_STATUS_LABELS.present }],
+        summary: STATUS_VERB[status] ? `Marked ${s.studentName} ${STATUS_VERB[status]}` : `Changed ${s.studentName}’s status`,
+        changes: [{ field: 'status', label: 'Status', from: SESSION_STATUS_LABELS[s.status], to: SESSION_STATUS_LABELS[status] }],
       })
     }
     await batch.commit()

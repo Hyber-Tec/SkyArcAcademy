@@ -10,6 +10,7 @@ import { coachColor } from '@/features/schedule/seatParts'
 import { useSessionDialog } from '@/features/schedule/useSessionDialog'
 import type { ClockShift } from '@/features/timeclock/api'
 import { useWebsiteMessages } from '@/features/website/api'
+import { AttendanceCard } from './AttendanceCard'
 import { ClockOutDialog } from './ClockOutDialog'
 import { InBuildingCard } from './InBuildingCard'
 import { LatestScoresCard } from './LatestScoresCard'
@@ -28,7 +29,8 @@ function greeting(minutes: number) {
 
 /**
  * Admin → Home (Round 3, option 1 "Today"): a calm agenda of today's classes with a red "now" line, the latest scores,
- * and a side rail with what needs the admin, the messages from the website, and who is in the building.
+ * and a side rail with what needs the admin, the messages from the website, and who is in the building. Above the
+ * agenda, while classes that are over have students nobody marked, the attendance to take (docs/DECISIONS.md §47).
  */
 export function AdminHomePage() {
   const { timezone, actor } = useBranch()
@@ -101,6 +103,7 @@ export function AdminHomePage() {
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="order-2 space-y-6 lg:order-1">
+          {attention.toMark.length ? <AttendanceCard toMark={attention.toMark} today={today} /> : null}
           <TodayCard
             classes={classes}
             loading={loading}

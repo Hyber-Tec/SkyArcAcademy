@@ -60,7 +60,7 @@ export const PAGES: SettingsPageDef[] = [
       { title: 'A new class', items: [b('seats'), f('schedule.defaultSessionMinutes')] },
       { title: 'The schedule', items: [f('general.weekStartsOn'), f('schedule.defaultView')] },
     ],
-    more: ['schedule.snapMinutes', 'schedule.pasteStatus', 'trash.retentionDays'],
+    more: ['schedule.snapMinutes', 'schedule.pasteStatus', 'trash.retentionDays', 'home.attendanceLookbackDays'],
     keywords: 'cancel makeup request seats capacity class',
   },
   {

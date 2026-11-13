@@ -116,6 +116,8 @@ export interface BranchSettings {
   home: {
     /** How far back Home looks for automatic clock-outs to fix. */
     clockLookbackDays: number
+    /** How far back Home looks for classes with students nobody marked (docs/DECISIONS.md §47). */
+    attendanceLookbackDays: number
   }
   announcements: { defaultCategories: string[] }
   notifications: {
@@ -214,6 +216,8 @@ export const DEFAULT_SETTINGS: BranchSettings = {
   timeEntries: { stepMinutes: 5 },
   home: {
     clockLookbackDays: 7,
+    // Six weeks, as far back as a missed class still earns a makeup (MAKEUP_LOOKBACK_DAYS).
+    attendanceLookbackDays: 42,
   },
   announcements: { defaultCategories: ['General', 'Tournaments', 'Updates'] },
   notifications: { retentionDays: 14, sessionChangeWindowHours: 24 },

@@ -3,6 +3,7 @@ import { LuCalendarDays, LuChevronDown, LuSquareArrowOutUpRight } from 'react-ic
 import { useNavigate } from 'react-router'
 import { takesSeat } from '@shared/schedule/classes'
 import { CONFLICT_LABELS, type Conflict } from '@shared/schedule/conflicts'
+import { isUnmarked } from '@shared/schedule/status'
 import type { DayHours } from '@shared/settings/defaults'
 import { type DateKey, formatMinutes, formatTimeRange } from '@shared/time'
 import { ContextMenuFor, menu } from '@/components/app/ItemMenu'
@@ -64,7 +65,11 @@ export function TodayCard({
 
   const stateOf = (v: ClassView): { label: string; tone: Tone; pulse?: boolean; title?: string } => {
     const { c } = v
-    if (c.endMin <= nowMin) return { label: 'Done', tone: 'muted' }
+    if (c.endMin <= nowMin) {
+      // Over: done once every student is marked (the Attendance card lists the rest, docs/DECISIONS.md §47).
+      const left = v.seats.filter((s) => isUnmarked(s.status)).length
+      return left ? { label: `${left} not marked`, tone: 'warn', title: 'Attendance not taken: see Attendance to take, above' } : { label: 'Done', tone: 'muted' }
+    }
     const conflicts = conflictsOf(c.id)
     if (conflicts?.length) return { label: CONFLICT_LABELS[conflicts[0].kind], tone: 'danger', title: conflicts.map((k) => k.message).join(' ') }
     if (c.startMin <= nowMin) return { label: 'In progress', tone: 'live', pulse: true }
